@@ -14,8 +14,6 @@ A web application with two distinct layers:
 
 **Target game**: [Grandes miniVueltas](https://grandesminivueltas.com) — 9 riders per team, budget in hillios (1,500H–2,000H depending on race type), points awarded for GC results, mountain passes, sprint intermediates, and daily stage rankings.
 
-**Target game**: [Grandes miniVueltas](https://grandesminivueltas.com) — 9 riders per team, budget in hillios (1,500H–2,000H depending on race type), points awarded for GC results, mountain passes, sprint intermediates, and daily stage rankings.
-
 ---
 
 ## User Scenarios & Testing *(mandatory)*
@@ -169,9 +167,9 @@ The user wants to manually assemble their team, selecting and deselecting riders
 
 ### Session 2026-03-14
 
-- Q: ¿Dónde se ejecutará la aplicación? → A: Ambos — diseñada para correr en local (`localhost`) como opción principal, con capacidad de desplegarse en un servidor web accesible desde cualquier dispositivo.
-- Q: ¿Cómo debe calcularse la puntuación proyectada de un corredor? → A: Modelo por categoría con ponderación por tipo de carrera y decaimiento temporal — resultados de carreras del mismo tipo (GT/clásica/mini-vuelta), ponderados por recencia (×1.0 / ×0.6 / ×0.3 por temporada), calculando probabilidad proyectada por categoría de puntuación (GC, etapas, montaña, sprint) y multiplicando por el baremo de Grandes miniVueltas.
-- Q: ¿La UI necesita persistencia de datos entre sesiones? → A: La UI es stateless (no sesión, no historial de usuario). Sin embargo, el sistema SÍ requiere un backend de datos persistente: un pipeline que scrapea y almacena resultados de PCS, sobre el cual se calculan los scores al recibir una lista de corredores. Sin datos persistidos, los scores no serían significativos.
-- Q: ¿Cómo resolver mismatches de nombre entre la lista pegada y PCS? → A: Búsqueda fuzzy automática siempre, usando nombre + equipo como señales combinadas (ambos datos están disponibles en la lista y en PCS), sin intervención del usuario.
-- Q: ¿Es necesario exportar el equipo final seleccionado? → A: No por ahora — verlo en pantalla es suficiente.
-- Q: (Aclaración del usuario) ¿La persistencia aplica solo a sesión UI o también a datos de PCS? → A: El sistema necesita scrapear Y persistir los resultados de PCS en un almacén de datos backend. Sin esos datos persistidos, los scores no son significativos. La UI es stateless, pero el backend de datos es permanente.
+- Q: Where will the application run? → A: Both — designed to run locally (`localhost`) as the primary target, with the ability to deploy to a public web server accessible from any device.
+- Q: How should the projected rider score be calculated? → A: Per-category model with race type filtering and temporal decay — historical results from the same race type (GT/classic/mini-tour), weighted by recency (×1.0 / ×0.6 / ×0.3 per season), computing projected probability per scoring category (GC, stages, mountain, sprint) and applying the Grandes miniVueltas scoring rules.
+- Q: Does the UI need data persistence between sessions? → A: The UI is stateless (no session, no user history). However, the system DOES require a persistent backend data store: a pipeline that scrapes and stores PCS results, from which scores are computed when a rider list is received. Without persisted data, scores would not be meaningful.
+- Q: How to resolve name mismatches between the pasted list and PCS? → A: Always automatic fuzzy matching, using name + team as combined signals (both are available in the price list and on PCS), without user intervention.
+- Q: Is it necessary to export the final selected team? → A: Not for now — viewing it on screen is sufficient.
+- Q: (User clarification) Does persistence apply only to UI sessions or also to PCS data? → A: The system needs to scrape AND persist PCS results in a backend data store. Without that persisted data, scores are not meaningful. The UI is stateless, but the backend data layer is permanent.
