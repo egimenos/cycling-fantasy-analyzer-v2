@@ -7,13 +7,34 @@
 
 ## Overview
 
-A web application that helps users select the best team of 9 cyclists for the Grandes miniVueltas fantasy cycling game. Users paste the official rider price list for a given race, the system enriches it with historical performance data from procyclingstats.com, and recommends optimal team combinations within the hillios budget.
+A web application with two distinct layers:
+
+1. **Data layer**: A scraping and persistence pipeline that continuously collects and stores cyclist results from procyclingstats.com. This historical dataset is the foundation that makes meaningful scoring possible.
+2. **UI layer**: A stateless interface where the user pastes a rider price list for a specific race. The system queries the persisted results, computes a score per rider (function of price and historical performance), displays the ranked list, and computes the optimal 9-rider team within the hillios budget. No session state is required in the UI.
+
+**Target game**: [Grandes miniVueltas](https://grandesminivueltas.com) — 9 riders per team, budget in hillios (1,500H–2,000H depending on race type), points awarded for GC results, mountain passes, sprint intermediates, and daily stage rankings.
 
 **Target game**: [Grandes miniVueltas](https://grandesminivueltas.com) — 9 riders per team, budget in hillios (1,500H–2,000H depending on race type), points awarded for GC results, mountain passes, sprint intermediates, and daily stage rankings.
 
 ---
 
 ## User Scenarios & Testing *(mandatory)*
+
+### User Story 0 - Scrape and Persist PCS Results (Priority: P0)
+
+An operator (the app owner) runs the data pipeline to scrape race results from procyclingstats.com and store them persistently. This must happen before any scoring is possible. The pipeline should cover all relevant races (Grand Tours, classics, mini-tours) for at least the last 2 seasons.
+
+**Why this priority**: The entire scoring system depends on this data. Without it, the app cannot compute meaningful rider scores.
+
+**Independent Test**: Can be tested by running the pipeline and verifying that the data store contains race results for a known set of riders and races (e.g., TdF 2024 GC top-20).
+
+**Acceptance Scenarios**:
+
+1. **Given** the pipeline is run, **When** it completes, **Then** the data store contains GC results, stage wins, mountain classification, and sprint classification data for all scraped races.
+2. **Given** a race was already scraped, **When** the pipeline runs again, **Then** it updates existing records without creating duplicates.
+3. **Given** procyclingstats.com rate-limits the pipeline, **When** the limit is hit, **Then** the pipeline pauses, respects the limit, and resumes automatically.
+
+---
 
 ### User Story 1 - Load Race Rider List (Priority: P1)
 
@@ -49,17 +70,17 @@ After loading a rider list, a user wants to see each rider's historical performa
 
 ### User Story 3 - Get Optimal Team Recommendations (Priority: P3)
 
-After stats are loaded, the user wants the system to suggest the best possible teams of 9 riders within the hillios budget, ranked by projected point potential based on historical performance and the Grandes miniVueltas scoring rules.
+After the ranked rider list is displayed, the user sets the hillios budget and the system computes the optimal 9-rider team combination that maximizes total projected score within that budget.
 
-**Why this priority**: This is the differentiating feature — it saves the user from manually calculating hundreds of combinations.
+**Why this priority**: This is the differentiating feature — it solves the combinatorial optimization problem the user cannot do manually.
 
-**Independent Test**: Can be tested by verifying that the top recommended teams respect the budget constraint, contain exactly 9 riders, and the top-ranked team scores higher on the projected metric than a randomly assembled team.
+**Independent Test**: Can be tested by verifying that the recommended team respects the budget constraint, contains exactly 9 riders, and scores higher on projected points than a randomly assembled budget-compliant team.
 
 **Acceptance Scenarios**:
 
-1. **Given** a rider list with stats is loaded and a budget is set, **When** the user requests recommendations, **Then** the system displays the top 5 team combinations ranked by projected points, each with total cost ≤ budget.
-2. **Given** a user wants to lock specific riders into the selection, **When** they mark riders as "must include", **Then** the recommendations only show teams that include those riders.
-3. **Given** the budget is 2,000H and all recommended teams cost exactly 2,000H, **When** the user views them, **Then** each team shows itemized cost and projected point breakdown by scoring category.
+1. **Given** a rider list with scores is loaded and a budget is set, **When** the user requests the optimal team, **Then** the system displays the best team combination with total cost ≤ budget and maximum projected score.
+2. **Given** a user wants to lock specific riders into the selection, **When** they mark riders as "must include", **Then** the recommendation only shows teams that include those riders.
+3. **Given** the budget is 2,000H, **When** the user views the recommended team, **Then** each rider shows their individual score, price, and the team's total projected score breakdown by scoring category.
 
 ---
 
@@ -81,7 +102,7 @@ The user wants to manually assemble their team, selecting and deselecting riders
 
 ### Edge Cases
 
-- What happens when a rider name in the pasted list does not exactly match any profile on procyclingstats.com (e.g., accented characters, abbreviations)?
+- When a rider name does not exactly match PCS, the system uses fuzzy matching on both name and team name simultaneously to automatically resolve the most probable profile match.
 - How does the system handle riders who have just turned pro and have no historical data?
 - What if the budget for a race is non-standard (e.g., 1,750H)?
 - How does the system behave when procyclingstats.com blocks or rate-limits scraping requests?
@@ -93,26 +114,29 @@ The user wants to manually assemble their team, selecting and deselecting riders
 
 ### Functional Requirements
 
+- **FR-000**: System MUST include a data pipeline that scrapes race results from procyclingstats.com and persists them in a local data store. This pipeline runs independently of the UI and must be executable on demand or on a schedule.
 - **FR-001**: System MUST accept a plain-text paste of rider names, teams, and prices in the format used by Grandes miniVueltas race pages.
 - **FR-002**: System MUST parse and display all riders with their team affiliation and price in hillios.
-- **FR-003**: System MUST fetch historical performance data from procyclingstats.com for each rider in the list.
+- **FR-003**: System MUST query the persisted historical results for each rider in the pasted list (not fetch live from PCS at query time) to compute scores.
 - **FR-004**: System MUST display per-rider statistics including: recent GC results (last 2 seasons), stage wins, mountain classification finishes, and sprint classification finishes.
-- **FR-005**: System MUST generate optimal 9-rider team combinations within a configurable hillios budget.
-- **FR-006**: System MUST rank recommended teams by projected points using the Grandes miniVueltas scoring system (GC: up to 200pts, mountain HC: 12pts, sprint intermediates: up to 6pts, daily stage: 15pts for 1st).
+- **FR-004b**: System MUST compute and display a composite score per rider — a function of price (hillios) and projected historical performance — and sort the rider list by this score descending.
+- **FR-005**: System MUST compute the optimal 9-rider team (knapsack optimization) within a configurable hillios budget, maximizing total projected score.
+- **FR-006**: System MUST rank recommended teams by projected points using a weighted model: historical results filtered by race type (Grand Tour / classic / mini-tour), with temporal decay weights (current season ×1.0, previous ×0.6, two seasons ago ×0.3), computing per-category projections (GC, stage wins, mountain, sprint, daily ranking) and applying the Grandes miniVueltas scoring rules (GC: up to 200pts, mountain HC: 12pts, sprint intermediates: up to 6pts, daily stage: 15pts for 1st).
 - **FR-007**: System MUST display at least the top 5 recommended teams with itemized cost and projected score breakdown.
 - **FR-008**: Users MUST be able to lock specific riders as "must include" and exclude others from recommendations.
 - **FR-009**: System MUST provide a manual team builder where users select riders and see live budget and projected score updates.
 - **FR-010**: System MUST validate that a manual team has exactly 9 riders and stays within budget before displaying final summary.
-- **FR-011**: System MUST handle gracefully the cases where rider data is unavailable on procyclingstats.com.
+- **FR-011**: System MUST automatically resolve rider identity via fuzzy matching using both rider name and team name against procyclingstats.com profiles, without requiring user intervention. If no match exceeds the confidence threshold, the rider is flagged as "no data available".
+- **FR-011b**: The fuzzy matching confidence threshold must be tunable to balance precision vs. recall.
 - **FR-012**: System MUST allow the user to set the race budget (hillios) before generating recommendations.
 
 ### Key Entities
 
-- **Race**: A specific cycling competition for which the user is building a team. Has a name, budget in hillios, and an associated rider list.
-- **Rider**: A cyclist available for selection. Has a name, team affiliation, price in hillios, and optionally a linked profile on procyclingstats.com.
-- **RiderStats**: Historical performance data for a rider. Includes GC positions, stage wins, mountain classification results, and sprint classification results from recent seasons.
-- **TeamSelection**: A set of exactly 9 riders assembled for a race. Has a total cost, projected points, and optional lock/exclude flags per rider.
-- **ProjectedScore**: An estimated point total for a team based on historical performance weighted against the Grandes miniVueltas scoring rules.
+- **Rider**: A professional cyclist tracked in the system. Has a canonical identity (name + team) linked to a procyclingstats.com profile. Identified via fuzzy matching on name + team.
+- **RaceResult**: A persisted historical result for a rider in a specific race. Includes: race name, race type (Grand Tour / classic / mini-tour), season, GC position, stage wins, mountain classification finish, sprint classification finish, and daily stage results. Scraped from procyclingstats.com and stored persistently.
+- **RiderScore**: A computed score for a rider in the context of a specific upcoming race type. Derived from RaceResults using the temporal decay model (×1.0 / ×0.6 / ×0.3) and Grandes miniVueltas scoring weights. Computed on-demand, not stored.
+- **PriceListEntry**: A rider entry from the user's pasted price list for a specific race. Contains name, team, and price in hillios. Ephemeral — exists only for the current session.
+- **TeamSelection**: A set of exactly 9 PriceListEntries assembled for a race. Has a total cost and projected score. Ephemeral — not persisted.
 
 ---
 
@@ -135,3 +159,19 @@ The user wants to manually assemble their team, selecting and deselecting riders
 - Historical data from the last 2 seasons is sufficient for projecting performance in upcoming races.
 - The Grandes miniVueltas scoring system remains stable; the system is designed around the rules documented at the time of development.
 - Initial version targets a single user with no authentication or multi-user support needed.
+- The application is designed to run locally (`localhost`) as the primary deployment target, with the option to deploy to a public web server when needed.
+- The UI is stateless — no session history between visits is required. Each use starts fresh with a new paste.
+- The system requires a persistent data store for scraped PCS race results. This is a backend concern, separate from the UI's statelesness.
+
+---
+
+## Clarifications
+
+### Session 2026-03-14
+
+- Q: ¿Dónde se ejecutará la aplicación? → A: Ambos — diseñada para correr en local (`localhost`) como opción principal, con capacidad de desplegarse en un servidor web accesible desde cualquier dispositivo.
+- Q: ¿Cómo debe calcularse la puntuación proyectada de un corredor? → A: Modelo por categoría con ponderación por tipo de carrera y decaimiento temporal — resultados de carreras del mismo tipo (GT/clásica/mini-vuelta), ponderados por recencia (×1.0 / ×0.6 / ×0.3 por temporada), calculando probabilidad proyectada por categoría de puntuación (GC, etapas, montaña, sprint) y multiplicando por el baremo de Grandes miniVueltas.
+- Q: ¿La UI necesita persistencia de datos entre sesiones? → A: La UI es stateless (no sesión, no historial de usuario). Sin embargo, el sistema SÍ requiere un backend de datos persistente: un pipeline que scrapea y almacena resultados de PCS, sobre el cual se calculan los scores al recibir una lista de corredores. Sin datos persistidos, los scores no serían significativos.
+- Q: ¿Cómo resolver mismatches de nombre entre la lista pegada y PCS? → A: Búsqueda fuzzy automática siempre, usando nombre + equipo como señales combinadas (ambos datos están disponibles en la lista y en PCS), sin intervención del usuario.
+- Q: ¿Es necesario exportar el equipo final seleccionado? → A: No por ahora — verlo en pantalla es suficiente.
+- Q: (Aclaración del usuario) ¿La persistencia aplica solo a sesión UI o también a datos de PCS? → A: El sistema necesita scrapear Y persistir los resultados de PCS en un almacén de datos backend. Sin esos datos persistidos, los scores no son significativos. La UI es stateless, pero el backend de datos es permanente.
