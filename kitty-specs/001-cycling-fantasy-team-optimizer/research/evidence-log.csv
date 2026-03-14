@@ -1,0 +1,13 @@
+date,question_id,finding,source_id,confidence,notes
+2026-03-14,RQ1,No native JSON API on PCS - HTML scraping required,S1,HIGH,Confirmed by exploring site and community packages
+2026-03-14,RQ1,URL pattern for GC results: /race/{slug}/{year}/gc,S1,HIGH,Consistent pattern across multiple races verified
+2026-03-14,RQ1,URL pattern for rider profile: /rider/{slug},S1,HIGH,Confirmed with multiple rider examples
+2026-03-14,RQ1,PCS uses server-side rendering - no headless browser needed,S2,HIGH,Standard HTTP headers sufficient per procyclingstats package impl
+2026-03-14,RQ1,HTML layout changes broke scrapers around July 2025,S2,MEDIUM,Reported in GitHub issues of procyclingstats package
+2026-03-14,RQ2,Official Python package procyclingstats exists and is actively maintained,S2,HIGH,Available on PyPI - themm1/procyclingstats
+2026-03-14,RQ2,Python package uses selectolax for CSS selector parsing,S2,HIGH,Documented in package source
+2026-03-14,RQ3,fuzzysort v3.1+ handles diacritics natively without preprocessing,S3,HIGH,Documented in release notes and README
+2026-03-14,RQ3,fuzzysort supports multi-field weighted search via keys option,S3,HIGH,Documented in API reference
+2026-03-14,RQ3,string-similarity is archived (May 2023) - avoid,S4,HIGH,GitHub repo marked as archived
+2026-03-14,RQ3,NFD normalization str.normalize('NFD').replace(/[\u0300-\u036f]/g,'') is standard JS approach,S5,HIGH,MDN documented approach
+2026-03-14,RQ4,0/1 knapsack DP is O(n*B*k) - trivial at n=200 B=2000 k=9,INTERNAL,HIGH,Standard CS algorithm analysis

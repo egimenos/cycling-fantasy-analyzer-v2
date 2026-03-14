@@ -1,0 +1,9 @@
+source_id,title,url,type,accessed_date,reliability,notes
+S1,ProCyclingStats Website,https://www.procyclingstats.com,website,2026-03-14,HIGH,Primary data source for scraping
+S2,procyclingstats Python package,https://github.com/themm1/procyclingstats,github,2026-03-14,HIGH,Community-maintained scraping library - reference implementation
+S3,fuzzysort GitHub repository,https://github.com/farzher/fuzzysort,github,2026-03-14,HIGH,Recommended fuzzy matching library
+S4,string-similarity GitHub repository,https://github.com/aceakash/string-similarity,github,2026-03-14,HIGH,Archived - not recommended
+S5,MDN String.prototype.normalize(),https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/normalize,docs,2026-03-14,HIGH,Unicode normalization reference
+S6,procyclingstats ReadTheDocs,https://procyclingstats.readthedocs.io,docs,2026-03-14,HIGH,API reference for Python package
+S7,Grandes miniVueltas Rules,https://grandesminivueltas.com/index.php/normas/,website,2026-03-14,HIGH,Target fantasy game scoring rules
+S8,fuse.js Documentation,https://www.fusejs.io,docs,2026-03-14,HIGH,Alternative fuzzy matching library evaluated
