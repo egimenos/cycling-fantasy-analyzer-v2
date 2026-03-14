@@ -35,7 +35,8 @@ Canonical identity of a professional cyclist as known by PCS.
 
 ### RaceResult
 
-A single result entry for a rider in a specific race and scoring category.
+A single raw position entry for a rider in a specific race and scoring category.
+**Only raw positions are stored** — no PCS points. All derived scores are computed downstream by the scoring engine.
 
 | Attribute | Type | Notes |
 |-----------|------|-------|
@@ -44,14 +45,27 @@ A single result entry for a rider in a specific race and scoring category.
 | `race_slug` | string | PCS race slug (e.g., `tour-de-france`) |
 | `race_name` | string | Human-readable name |
 | `race_type` | enum | `grand_tour` \| `classic` \| `mini_tour` |
+| `race_class` | enum | `UWT` \| `Pro` \| `1` — only professional men's categories |
 | `year` | integer | Season year |
-| `category` | enum | `gc` \| `stage_win` \| `mountain` \| `sprint` \| `daily_stage` |
+| `category` | enum | See below by race type |
 | `position` | integer | Finishing position (1-based); null if DNF/DNS |
-| `stage_number` | integer | Only for `stage_win` and `daily_stage`; null otherwise |
+| `stage_number` | integer | Only for `stage` category; null otherwise |
 | `dnf` | boolean | Did Not Finish flag |
 | `scraped_at` | datetime | When this record was created/updated |
 
+**Categories by race type:**
+
+| Race Type | Categories |
+|-----------|-----------|
+| Stage race (GT, mini-tour) | `gc`, `stage`, `mountain`, `sprint` |
+| Classic (one-day) | `final` |
+
 **Unique constraint**: `(rider_id, race_slug, year, category, stage_number)`
+
+**Scope constraints:**
+- Men's races only — women's races excluded
+- Professional categories only: UCI WorldTour (.UWT), ProSeries (.Pro), .1 races
+- Excluded: amateur categories (.2, 2.2, 1.2)
 
 ---
 
@@ -130,11 +144,15 @@ A set of 9 PriceListEntries representing the user's or system's optimal team.
 
 Maps PCS race categories to our three internal types:
 
-| Internal Type | PCS Race Examples |
-|--------------|-------------------|
-| `grand_tour` | Tour de France, Giro d'Italia, Vuelta a España |
-| `mini_tour` | Paris-Nice, Tirreno-Adriatico, Critérium du Dauphiné, Tour de Romandie, Volta a Catalunya |
-| `classic` | Milan-San Remo, Tour of Flanders, Paris-Roubaix, Liège-Bastogne-Liège, Il Lombardia |
+| Internal Type | PCS Race Examples | Page Structure |
+|--------------|-------------------|----------------|
+| `grand_tour` | Tour de France, Giro d'Italia, Vuelta a España | Multi-page: `/gc`, `/stage-{n}`, classification sub-tables |
+| `mini_tour` | Paris-Nice, Tirreno-Adriatico, Critérium du Dauphiné, Tour de Romandie, Volta a Catalunya | Multi-page: same as Grand Tour |
+| `classic` | Milan-San Remo, Tour of Flanders, Paris-Roubaix, Liège-Bastogne-Liège, Il Lombardia | Single page: `/race/{slug}/{year}` — one results table |
+
+**Excluded from scope:**
+- Women's races (all categories)
+- Amateur/continental: .2, 2.2, 1.2 race classes
 
 ---
 

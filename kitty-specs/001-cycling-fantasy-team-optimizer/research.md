@@ -58,11 +58,10 @@ No native JSON API exists on procyclingstats.com. All data extraction requires H
 | Reliability | Higher (community monitors layout changes) | Lower (we own breakage detection) |
 | Complexity | Adds Python service to Docker Compose | Simpler — single language |
 
-**Decision**: Use TypeScript (Axios + Cheerio) for v1 to keep the stack simple. Accept the maintenance risk by:
-1. Writing integration tests that run against real PCS pages on a schedule
-2. Structuring scrapers as isolated adapters (hexagonal pattern) so they can be swapped for the Python package later if maintenance cost grows.
-
-**If scraper breakage becomes frequent post-launch, migrate to Python sidecar wrapping the `procyclingstats` package.** This is the defined fallback path.
+**Decision**: Use TypeScript (Axios + Cheerio) for v1 to keep the stack simple. No Python fallback — if the scraper breaks, it must self-heal. Mitigation:
+1. Integration tests running against live PCS pages on a schedule
+2. Auto-health system: detect structural HTML changes, alert on parse failures, validate output shape before persisting
+3. Scrapers isolated as hexagonal adapters — easy to refactor when PCS layout changes
 
 ---
 
@@ -89,7 +88,37 @@ No native JSON API exists on procyclingstats.com. All data extraction requires H
 
 ---
 
-### RQ4 — Knapsack Optimization Algorithm
+### RQ4 — PCS Page Structure: Classics vs. Stage Races
+
+PCS presents data differently for one-day races (classics) and multi-stage races (Grand Tours, mini-tours). The scraper must handle both page structures.
+
+**Stage races** (Grand Tours, mini-tours):
+- `/race/{slug}/{year}/gc` — GC final standings (position per rider)
+- `/race/{slug}/{year}/stage-{n}` — Individual stage results (position per rider)
+- `/race/{slug}/{year}/gc` sub-tables — Mountain classification and sprint/points classification final positions
+
+**One-day races** (classics):
+- `/race/{slug}/{year}` — Single results table with finishing positions
+
+**Scraper scope constraints:**
+- **Men's races only** — exclude all women's races
+- **Professional categories only** — include UCI WorldTour (.UWT), ProSeries (.Pro), and .1 races. Exclude amateur categories (.2, 2.2, 1.2)
+
+**Data captured per result: raw positions only** (not PCS points). Rationale:
+- PCS points are their own weighting system, incompatible with Grandes miniVueltas scoring
+- Raw positions give maximum flexibility for any scoring model
+- Positions are the atomic data — all projections are computed downstream in the scoring engine
+
+**What to capture per race type:**
+
+| Race Type | Data Points |
+|-----------|-------------|
+| Stage race | GC position, position per stage, mountain classification position, sprint/points classification position |
+| Classic | Final finishing position |
+
+---
+
+### RQ5 — Knapsack Optimization Algorithm
 
 **Requirement**: Select 9 riders from ~200 that maximize total projected score within a hillios budget constraint. This is a **0/1 knapsack problem**.
 
@@ -107,17 +136,20 @@ No native JSON API exists on procyclingstats.com. All data extraction requires H
 
 | # | Decision | Rationale |
 |---|----------|-----------|
-| D1 | Use TypeScript (Axios + Cheerio) for PCS scraping, not the Python package | Keep stack simple; accept maintenance risk; scrapers isolated as hexagonal adapters for easy future swap |
+| D1 | Use TypeScript (Axios + Cheerio) for PCS scraping — no Python fallback | Keep stack simple; auto-health system for breakage detection; scrapers isolated as hexagonal adapters |
 | D2 | Use `fuzzysort` for rider name/team matching | Best accent handling, multi-field support, smallest bundle, active maintenance |
 | D3 | Apply NFD unicode normalization before fuzzy matching as preprocessing step | Defense-in-depth; handles edge cases fuzzysort may miss |
 | D4 | Implement knapsack optimization as a pure TypeScript domain function (DP) | No external dependency needed; O(n×B×k) is trivial at this scale |
 | D5 | Scrape GC, stage wins, mountain classification, and sprint classification from per-race pages, not rider profile pages | Race result pages have structured tables; rider profile pages aggregate but are harder to parse by race type |
+| D6 | Capture raw positions only — not PCS points | Maximum flexibility for any scoring model; positions are atomic; PCS points are a different weighting system incompatible with Grandes miniVueltas |
+| D7 | Men's professional races only — exclude women's and amateur categories (.2, 2.2, 1.2) | Scope aligned with Grandes miniVueltas target; reduces scraping volume and data noise |
+| D8 | Different scraper strategies for classics (single page) vs. stage races (multi-page) | PCS presents these differently; scraper must detect race type and apply correct parsing strategy |
 
 ---
 
 ## Open Questions / Risks
 
-- **R1 (HIGH)**: PCS HTML layout changes can break scrapers silently. Mitigation: scheduled integration tests against live pages; alerts on parse failures. Fallback: Python sidecar with `procyclingstats` package.
+- **R1 (HIGH)**: PCS HTML layout changes can break scrapers silently. Mitigation: auto-health system with scheduled integration tests against live pages, output shape validation before persisting, alerts on parse failures. No Python fallback — scraper must be self-maintaining.
 - **R2 (MEDIUM)**: `robots.txt` on PCS not verified. Must check before deploying scraping pipeline at scale. Implement polite scraping (1-2s delays, respectful User-Agent).
 - **R3 (MEDIUM)**: Rider slug generation for PCS URLs (e.g., "Tadej Pogačar" → `tadej-pogacar`) needs a reliable normalization function. Edge cases: compound surnames, generational suffixes (Jr./Sr.).
 - **R4 (LOW)**: The scoring model uses historical data from "the same race type". Need to define canonical race type taxonomy that maps PCS race categories to our three types: Grand Tour, Classic, Mini-Tour.
