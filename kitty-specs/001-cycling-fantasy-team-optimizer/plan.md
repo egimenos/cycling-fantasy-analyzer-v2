@@ -1,108 +1,399 @@
-# Implementation Plan: [FEATURE]
-*Path: [templates/plan-template.md](templates/plan-template.md)*
+# Implementation Plan: Cycling Fantasy Team Optimizer
 
-
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/kitty-specs/[###-feature-name]/spec.md`
-
-**Note**: This template is filled in by the `/spec-kitty.plan` command. See `src/specify_cli/missions/software-dev/command-templates/plan.md` for the execution workflow.
-
-The planner will not begin until all planning questions have been answered—capture those answers in this document before progressing to later phases.
+**Branch**: `001-cycling-fantasy-team-optimizer` | **Date**: 2026-03-15 | **Spec**: [spec.md](./spec.md)
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Build a Turborepo monorepo web application that scrapes cyclist results from procyclingstats.com, persists them in PostgreSQL, and exposes a stateless web UI where users paste a Grandes miniVueltas price list to get riders ranked by a composite score (function of price + historical performance) and compute the optimal 9-rider team within a hillios budget via knapsack optimization.
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
-
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: TypeScript 5.x (strict mode)
+**Primary Dependencies**: NestJS (backend), React 18+ with TanStack Start (frontend), Drizzle ORM, Axios, Cheerio, fuzzysort, Tailwind CSS, shadcn/ui
+**Storage**: PostgreSQL (local via Docker Compose, production via VPS) — full environment parity
+**Testing**: Vitest + React Testing Library (frontend), Jest (backend, 100% on scoring), Playwright (E2E)
+**Target Platform**: Docker Compose (local), VPS containerized (production)
+**Project Type**: Web application (monorepo with Turborepo)
+**Performance Goals**: Scraping pipeline async (no time constraints); scoring prioritizes accuracy over speed
+**Constraints**: Single-user v1; men's professional races only (UWT, Pro, .1); no Python
+**Scale/Scope**: ~200 riders per race, ~50 races/season, budget ≤ 2000 hillios
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+| Principle | Status | Notes |
+|-----------|--------|-------|
+| Turborepo monorepo | PASS | `apps/web` + `apps/api` + `packages/` |
+| React + TanStack Start + Tailwind + shadcn/ui | PASS | Frontend stack as specified |
+| NestJS backend | PASS | API + scraping + scoring in one service |
+| DDD/Hexagonal architecture (backend) | PASS | Domain/Application/Infrastructure layers |
+| Feature-Sliced Design (frontend) | PASS | `/features/` + `/shared/` structure |
+| Drizzle ORM | PASS | Behind repository ports (hexagonal) |
+| TypeScript strict, no `any` | PASS | Enforced via ESLint + tsconfig |
+| Conventional Commits | PASS | Enforced via commitlint + Husky |
+| 90% unit coverage, 100% scoring | PASS | Jest thresholds configured |
+| Docker Compose local + VPS prod | PASS | PostgreSQL in both environments |
+| ESLint + Prettier + Husky + lint-staged | PASS | All tooling configured in monorepo root |
+| English only | PASS | All code, docs, commits in English |
+| ADRs for architectural decisions | PASS | `docs/adr/` directory |
+
+No constitution violations detected.
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```
-kitty-specs/[###-feature]/
-├── plan.md              # This file (/spec-kitty.plan command output)
-├── research.md          # Phase 0 output (/spec-kitty.plan command)
-├── data-model.md        # Phase 1 output (/spec-kitty.plan command)
-├── quickstart.md        # Phase 1 output (/spec-kitty.plan command)
-├── contracts/           # Phase 1 output (/spec-kitty.plan command)
-└── tasks.md             # Phase 2 output (/spec-kitty.tasks command - NOT created by /spec-kitty.plan)
+kitty-specs/001-cycling-fantasy-team-optimizer/
+├── spec.md
+├── plan.md              # This file
+├── research.md
+├── data-model.md
+├── quickstart.md
+├── contracts/
+│   └── api.md
+├── checklists/
+│   └── requirements.md
+├── research/
+│   ├── evidence-log.csv
+│   └── source-register.csv
+└── tasks.md             # Generated by /spec-kitty.tasks
 ```
 
 ### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
 
 ```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+/
+├── apps/
+│   ├── web/                          # React + TanStack Start frontend
+│   │   ├── src/
+│   │   │   ├── features/             # Feature-Sliced Design
+│   │   │   │   ├── rider-list/       # Price list paste + rider table
+│   │   │   │   │   ├── components/
+│   │   │   │   │   ├── hooks/
+│   │   │   │   │   └── types.ts
+│   │   │   │   ├── team-builder/     # Manual team selection
+│   │   │   │   │   ├── components/
+│   │   │   │   │   ├── hooks/
+│   │   │   │   │   └── types.ts
+│   │   │   │   └── optimizer/        # Optimal team display
+│   │   │   │       ├── components/
+│   │   │   │       ├── hooks/
+│   │   │   │       └── types.ts
+│   │   │   ├── shared/
+│   │   │   │   ├── ui/               # shadcn/ui wrappers, layout
+│   │   │   │   ├── lib/              # API client, utils
+│   │   │   │   └── types/            # Shared frontend types
+│   │   │   └── routes/               # TanStack Start file-based routing
+│   │   ├── tests/
+│   │   │   ├── unit/
+│   │   │   └── e2e/                  # Playwright specs
+│   │   ├── tailwind.config.ts
+│   │   ├── tsconfig.json
+│   │   └── package.json
+│   │
+│   └── api/                          # NestJS backend
+│       └── src/
+│           ├── domain/               # Pure domain logic (NO framework deps)
+│           │   ├── rider/
+│           │   │   ├── rider.entity.ts
+│           │   │   └── rider.repository.port.ts
+│           │   ├── race-result/
+│           │   │   ├── race-result.entity.ts
+│           │   │   ├── race-result.repository.port.ts
+│           │   │   └── race-type.enum.ts
+│           │   ├── scoring/
+│           │   │   ├── scoring.service.ts          # Temporal decay + category scoring
+│           │   │   ├── rider-score.value-object.ts
+│           │   │   └── scoring-weights.config.ts
+│           │   ├── matching/
+│           │   │   ├── rider-matcher.port.ts
+│           │   │   └── price-list-entry.value-object.ts
+│           │   └── optimizer/
+│           │       ├── knapsack.service.ts          # DP algorithm (pure function)
+│           │       └── team-selection.value-object.ts
+│           │
+│           ├── application/          # Use cases (orchestration only)
+│           │   ├── analyze/
+│           │   │   └── analyze-price-list.use-case.ts
+│           │   ├── optimize/
+│           │   │   └── optimize-team.use-case.ts
+│           │   └── scraping/
+│           │       ├── trigger-scrape.use-case.ts
+│           │       └── scrape-health-check.use-case.ts
+│           │
+│           ├── infrastructure/       # Adapters (framework + external deps)
+│           │   ├── database/
+│           │   │   ├── schema/       # Drizzle table definitions
+│           │   │   ├── migrations/   # Drizzle Kit generated migrations
+│           │   │   ├── rider.repository.adapter.ts
+│           │   │   └── race-result.repository.adapter.ts
+│           │   ├── scraping/
+│           │   │   ├── pcs-client.adapter.ts        # Axios + Cheerio HTTP
+│           │   │   ├── parsers/
+│           │   │   │   ├── stage-race.parser.ts     # GT + mini-tour pages
+│           │   │   │   └── classic.parser.ts        # One-day race page
+│           │   │   ├── race-catalog.ts              # Men's UWT/Pro/.1 race list
+│           │   │   └── health/
+│           │   │       ├── scraper-health.service.ts # Auto-health monitoring
+│           │   │       └── html-shape-validator.ts   # Output shape checks
+│           │   └── matching/
+│           │       └── fuzzysort-matcher.adapter.ts  # fuzzysort implementation
+│           │
+│           └── presentation/         # REST controllers (NestJS)
+│               ├── analyze.controller.ts
+│               ├── optimize.controller.ts
+│               ├── scraping.controller.ts
+│               └── dto/              # Request/response DTOs
+│
+├── packages/
+│   ├── shared-types/                 # Shared TS types (API contracts)
+│   │   ├── src/
+│   │   │   ├── rider.ts
+│   │   │   ├── race-result.ts
+│   │   │   ├── scoring.ts
+│   │   │   └── api.ts               # Request/response type definitions
+│   │   ├── tsconfig.json
+│   │   └── package.json
+│   └── eslint-config/               # Shared ESLint configuration
+│       └── package.json
+│
+├── docker/
+│   ├── docker-compose.yml            # PostgreSQL + API + Web
+│   ├── docker-compose.dev.yml        # Dev overrides (hot reload, volumes)
+│   ├── Dockerfile.api
+│   └── Dockerfile.web
+│
+├── docs/
+│   └── adr/                          # Architectural Decision Records
+│
+├── turbo.json
+├── package.json
+├── .husky/
+│   └── pre-commit                    # lint-staged hook
+├── .prettierrc
+├── commitlint.config.js
+└── README.md
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Turborepo monorepo with `apps/web` (frontend), `apps/api` (backend), and `packages/shared-types` (shared contract types). Backend follows strict DDD/hexagonal layering: `domain/` → `application/` → `infrastructure/` → `presentation/`. Frontend follows Feature-Sliced Design with `features/`, `shared/`, and `routes/`.
+
+---
+
+## Architecture Decisions
+
+### ADR-001: Drizzle ORM behind Repository Ports
+
+Drizzle is used exclusively in the `infrastructure/database/` layer. Domain entities are plain TypeScript objects — they never import Drizzle. Repository ports (interfaces) live in `domain/`, and Drizzle-based adapters implement them in `infrastructure/database/`. This ensures domain logic is testable without any framework or DB dependency.
+
+### ADR-002: Scoring Engine as Pure Domain Logic
+
+The scoring service (`domain/scoring/scoring.service.ts`) is a pure function: given a list of RaceResults and a target race type, it returns a RiderScore. No I/O, no side effects. This ensures 100% testability and correctness guarantees required by the constitution.
+
+### ADR-003: Two Scraper Strategies (Strategy Pattern)
+
+PCS presents data differently for classics (single page) and stage races (multi-page). Two parser implementations exist in `infrastructure/scraping/parsers/`:
+- `stage-race.parser.ts`: Scrapes `/gc`, `/stage-{n}`, classification sub-tables
+- `classic.parser.ts`: Scrapes single results page
+
+The `pcs-client.adapter.ts` detects race type from the race catalog and delegates to the appropriate parser.
+
+### ADR-004: Scraper Auto-Health System
+
+Instead of a Python fallback, the scraper includes a self-monitoring system:
+- `html-shape-validator.ts`: Validates that parsed output matches expected schema before persisting
+- `scraper-health.service.ts`: Runs scheduled checks against known PCS pages, alerts on structural changes
+- Integration tests run against live PCS pages on a schedule (outside CI, as a cron job)
+- On failure: logs detailed error, marks ScrapeJob as `failed`, never persists corrupted data
+
+### ADR-005: PostgreSQL Everywhere
+
+Same database engine in development (Docker Compose) and production (VPS). Eliminates environment parity issues. Drizzle supports PostgreSQL natively.
+
+---
+
+## API Contracts
+
+### `POST /api/analyze`
+
+Main endpoint: parses price list, matches riders, computes scores.
+
+**Request:**
+```json
+{
+  "rawText": "string (pasted price list)",
+  "raceType": "grand_tour" | "classic" | "mini_tour",
+  "budget": 2000
+}
+```
+
+**Response:**
+```json
+{
+  "riders": [
+    {
+      "rawName": "Tadej Pogacar",
+      "rawTeam": "UAE Team Emirates",
+      "priceHillios": 700,
+      "matchedRider": {
+        "id": "uuid",
+        "pcsSlug": "tadej-pogacar",
+        "fullName": "Tadej Pogačar",
+        "currentTeam": "UAE Team Emirates-XRG"
+      },
+      "matchConfidence": 0.95,
+      "score": {
+        "projectedGcPts": 180.5,
+        "projectedStagePts": 45.0,
+        "projectedMountainPts": 10.2,
+        "projectedSprintPts": 0.0,
+        "projectedDailyPts": 12.0,
+        "totalProjectedPts": 247.7,
+        "seasonsUsed": 2
+      }
+    }
+  ],
+  "unmatchedCount": 3,
+  "parseErrors": []
+}
+```
+
+### `POST /api/optimize`
+
+Computes optimal team via knapsack DP.
+
+**Request:**
+```json
+{
+  "riders": [ /* AnalyzedRider[] from /api/analyze response */ ],
+  "budget": 2000,
+  "mustInclude": ["rider-uuid-1"],
+  "mustExclude": ["rider-uuid-2"]
+}
+```
+
+**Response:**
+```json
+{
+  "optimalTeam": {
+    "riders": [ /* 9 riders */ ],
+    "totalCostHillios": 1950,
+    "totalProjectedPts": 890.5,
+    "budgetRemaining": 50
+  },
+  "alternativeTeams": [ /* top 4 other combinations */ ]
+}
+```
+
+### `GET /api/scraping/jobs`
+
+Returns recent scraping job statuses.
+
+### `POST /api/scraping/trigger`
+
+Triggers a scraping run.
+
+**Request:**
+```json
+{
+  "raceSlug": "tour-de-france",
+  "year": 2025
+}
+```
+
+### `GET /api/scraping/health`
+
+Returns auto-health status: last check timestamp, any structural changes detected, failing parsers.
+
+---
+
+## Implementation Phases
+
+### Phase 1: Monorepo Foundation & Infrastructure
+
+Set up Turborepo monorepo, configure tooling (TypeScript, ESLint, Prettier, Husky, commitlint), Docker Compose with PostgreSQL, Drizzle ORM schema + migrations, and NestJS app scaffold with hexagonal layer structure.
+
+**Deliverables:**
+- Working `turbo.json`, `package.json` at root
+- `apps/api` with NestJS + Drizzle connected to PostgreSQL
+- `apps/web` with TanStack Start + Tailwind + shadcn/ui initialized
+- `packages/shared-types` with base type definitions
+- Docker Compose running PostgreSQL + API + Web
+- CI pipeline: lint, build, unit tests, E2E stub
+- Database migrations for Rider, RaceResult, ScrapeJob tables
+
+### Phase 2: Scraping Pipeline
+
+Implement the PCS scraping infrastructure: HTTP client, parsers (stage race + classic), race catalog, rate limiting, upsert logic, ScrapeJob tracking, and auto-health monitoring.
+
+**Deliverables:**
+- `pcs-client.adapter.ts` with Axios + Cheerio
+- `stage-race.parser.ts` and `classic.parser.ts`
+- `race-catalog.ts` with men's UWT/Pro/.1 race list
+- Scrape trigger use case + REST endpoint
+- ScrapeJob status tracking
+- Auto-health validator + scheduled checks
+- Integration tests against live PCS pages
+- Polite scraping: 1-2s delays, respectful User-Agent
+
+### Phase 3: Scoring Engine & Fuzzy Matching
+
+Implement the domain-pure scoring engine (temporal decay, per-category projections, Grandes miniVueltas rules), fuzzy matching via fuzzysort, and the analyze endpoint.
+
+**Deliverables:**
+- `scoring.service.ts` (pure domain, 100% test coverage)
+- `fuzzysort-matcher.adapter.ts` with NFD normalization
+- `analyze-price-list.use-case.ts`
+- `POST /api/analyze` endpoint
+- Price list parser (Grandes miniVueltas format)
+- Unit tests: scoring model edge cases, fuzzy matching accuracy
+
+### Phase 4: Optimizer & Team Selection
+
+Implement the knapsack DP optimizer, must-include/must-exclude constraints, alternative team generation, and the optimize endpoint.
+
+**Deliverables:**
+- `knapsack.service.ts` (pure domain, 100% test coverage)
+- `optimize-team.use-case.ts`
+- `POST /api/optimize` endpoint
+- Unit tests: budget constraint validation, lock/exclude logic
+
+### Phase 5: Frontend UI
+
+Build the stateless web interface: price list paste area, rider table with scores, optimal team display, manual team builder with live budget tracking.
+
+**Deliverables:**
+- `features/rider-list/`: paste input, parsed table, score columns, sort by score
+- `features/optimizer/`: optimal team display, alternative teams, score breakdown
+- `features/team-builder/`: manual selection, budget counter, projected score
+- `shared/ui/`: shadcn/ui components, layout
+- `shared/lib/`: API client (typed with shared-types)
+- E2E tests: full workflow with Playwright
+
+### Phase 6: Integration, E2E & Polish
+
+End-to-end integration testing, Docker Compose production build, README documentation, final polish.
+
+**Deliverables:**
+- Full E2E test suite (paste → analyze → optimize → manual build)
+- Docker Compose production config
+- README with setup instructions
+- ADRs committed for all architecture decisions
+
+---
 
 ## Complexity Tracking
 
-*Fill ONLY if Constitution Check has violations that must be justified*
+No constitution violations to justify. All design choices align with established principles.
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+---
+
+## Risk Mitigation
+
+| Risk | Severity | Mitigation |
+|------|----------|------------|
+| R1: PCS HTML layout changes | HIGH | Auto-health system + scheduled integration tests + isolated parsers (easy to refactor) |
+| R2: PCS robots.txt / rate limiting | MEDIUM | Check robots.txt before scraping; 1-2s delays; respectful User-Agent |
+| R3: Rider name slug normalization edge cases | MEDIUM | NFD normalization + fuzzysort dual-field matching (name + team) |
+| R4: Race type taxonomy mapping | LOW | Maintained race catalog with explicit type assignments per race |

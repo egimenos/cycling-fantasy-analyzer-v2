@@ -170,7 +170,8 @@ ScrapeJob (1) ──── (N) RaceResult  [tracks what was scraped]
 
 ## Storage Notes
 
-- Persistent entities: relational DB (SQLite for local, PostgreSQL for production)
+- Persistent entities: PostgreSQL (both local via Docker Compose and production) — full environment parity
+- ORM: Drizzle ORM (TypeScript-native, SQL-like query builder, fits DDD/hexagonal behind repository ports)
 - No caching layer required for v1 — RiderScore is computed on-demand from DB queries
 - RaceResult records are upserted (not duplicated) on re-scrape
 - DB schema should be managed via migrations (not auto-sync)
