@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: Scraping Pipeline Orchestration & Health
-lane: "doing"
+lane: "for_review"
 dependencies: [WP02, WP03]
 base_branch: 001-cycling-fantasy-team-optimizer-WP04-merge-base
 base_commit: 893be44358c59467de51aa5f24597df2f7721088
@@ -528,3 +528,4 @@ spec-kitty implement WP04 --base WP03
 |-----------|-------|--------|
 | 2026-03-14T23:51:57Z | system | Prompt generated via /spec-kitty.tasks |
 - 2026-03-15T18:58:38Z – claude-opus – shell_pid=43434 – lane=doing – Assigned agent via workflow command
+- 2026-03-15T19:15:29Z – claude-opus – shell_pid=43434 – lane=for_review – Ready for review: scraping pipeline orchestration with TriggerScrapeUseCase, GetScrapeJobsUseCase, ScraperHealthService, ScrapingController. 115 tests passing, lint clean, build clean.
