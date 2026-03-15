@@ -196,11 +196,11 @@
 **Requirements Refs**: FR-001, FR-002, FR-003, FR-004, FR-004b, FR-011, FR-011b
 
 ### Included Subtasks
-- [ ] T028 Implement price list parser (`domain/matching/price-list-parser.ts`) — parse Grandes miniVueltas paste format: extract rider name, team name, price in hillios from raw text
-- [ ] T029 Implement fuzzysort matcher adapter (`infrastructure/matching/fuzzysort-matcher.adapter.ts`) — NFD normalization preprocessing + fuzzysort multi-field weighted matching (name ×2, team ×1), configurable confidence threshold
-- [ ] T030 Implement analyze price list use case (`application/analyze/analyze-price-list.use-case.ts`) — parse raw text → fuzzy match each rider → fetch RaceResults → compute RiderScore → compute pool stats → compute compositeScore per rider → sort by compositeScore descending
-- [ ] T031 Create POST /api/analyze endpoint (`presentation/analyze.controller.ts`) with request/response DTOs matching contracts/api.md
-- [ ] T032 Add shared API types to `packages/shared-types` — AnalyzeRequest, AnalyzeResponse, AnalyzedRider, MatchedRider, RiderScore types
+- [x] T028 Implement price list parser (`domain/matching/price-list-parser.ts`) — parse Grandes miniVueltas paste format: extract rider name, team name, price in hillios from raw text
+- [x] T029 Implement fuzzysort matcher adapter (`infrastructure/matching/fuzzysort-matcher.adapter.ts`) — NFD normalization preprocessing + fuzzysort multi-field weighted matching (name ×2, team ×1), configurable confidence threshold
+- [x] T030 Implement analyze price list use case (`application/analyze/analyze-price-list.use-case.ts`) — parse raw text → fuzzy match each rider → fetch RaceResults → compute RiderScore → compute pool stats → compute compositeScore per rider → sort by compositeScore descending
+- [x] T031 Create POST /api/analyze endpoint (`presentation/analyze.controller.ts`) with request/response DTOs matching contracts/api.md
+- [x] T032 Add shared API types to `packages/shared-types` — AnalyzeRequest, AnalyzeResponse, AnalyzedRider, MatchedRider, RiderScore types
 
 ### Implementation Notes
 - Price list format: lines like "CODE FIRSTNAME LASTNAME TEAM PRICE" — parser must handle variations (tabs vs spaces, extra whitespace)
