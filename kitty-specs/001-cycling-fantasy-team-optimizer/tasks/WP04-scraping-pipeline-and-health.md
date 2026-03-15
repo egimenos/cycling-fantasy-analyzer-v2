@@ -6,7 +6,6 @@ dependencies: [WP02, WP03]
 subtasks:
 - T018
 - T019
-- T020
 - T021
 - T022
 phase: Phase 2 - Scraping Pipeline
@@ -29,13 +28,19 @@ requirement_refs:
 
 ## Objectives
 
-Wire together the PCS HTTP client, parsers, database repositories, and job tracking into a
-complete scraping pipeline. This work package delivers the use case that orchestrates an
-end-to-end scrape: triggering a scrape job, fetching pages from PCS, parsing results,
-validating output, and persisting data. It also provides health monitoring to detect when
-PCS changes their HTML structure, and REST endpoints for triggering and monitoring scrapes.
-By completion, a POST to `/api/scraping/trigger` must successfully scrape a race from PCS
-and persist the results in PostgreSQL.
+Wire together the PCS HTTP client, parsers, validation guardrails, database repositories,
+and job tracking into a complete scraping pipeline. This work package delivers the use case
+that orchestrates an end-to-end scrape: triggering a scrape job, fetching pages from PCS,
+parsing results, running validation guardrails (from WP03), and persisting data. It also
+provides health monitoring to detect when PCS changes their HTML structure, and REST
+endpoints for triggering and monitoring scrapes. By completion, a POST to
+`/api/scraping/trigger` must successfully scrape a race from PCS and persist the results
+in PostgreSQL.
+
+> **Note on validation**: WP03 delivers the complete validation guardrails module (T017).
+> This WP **uses** that module — it does NOT re-implement validation. The trigger use case
+> calls `validateClassificationResults()` and `validateStageRaceCompleteness()` from WP03
+> after parsing, before persisting.
 
 ## Project Context
 
@@ -44,9 +49,11 @@ and persist the results in PostgreSQL.
   adapters. Presentation layer exposes REST endpoints with DTOs.
 - **Constitution**: TypeScript strict, no `any`, class-validator for DTO validation,
   Conventional Commits, 90% unit coverage.
-- **Depends on**: WP02 (database, repositories), WP03 (PCS client, parsers, catalog).
+- **Depends on**: WP02 (database, repositories), WP03 (PCS client, parsers, validation
+  guardrails, race catalog, classification URL extractor).
 - **Key reference files**: `contracts/api.md` for endpoint specifications, `spec.md` for
-  behavioral requirements, `.kittify/memory/constitution.md`.
+  behavioral requirements, `research-pcs-scraping.md` for scraping strategy,
+  `.kittify/memory/constitution.md`.
 
 ## Detailed Subtask Guidance
 
@@ -102,19 +109,24 @@ trigger to persistence.
      `scrapeJobRepo.save(runningJob)`. The entity enforces valid state transitions.
    - **Step 4**: Fetch pages from PCS via `pcsScraperPort.fetchPage(path)` based on race type:
      - For **stage races** (GRAND_TOUR, MINI_TOUR):
-       - Fetch the race overview page to detect the number of stages
-       - For each stage: fetch stage results page, parse with `parseStageResults`
-       - Fetch GC page, parse with `parseGcResults`
-       - Fetch mountain classification page, parse with `parseMountainClassification`
-       - Fetch sprint classification page, parse with `parseSprintClassification`
+       - Fetch the race GC page (entry point)
+       - Use `extractClassificationUrls(html)` from WP03/T015 to discover all
+         stage/classification URLs dynamically from the `<select>` navigation menu
+       - For each discovered URL: fetch page, parse with the appropriate parser
+         (`parseGcResults`, `parseStageResults`, `parseMountainClassification`,
+         `parseSprintClassification`) based on `classificationType`
+       - Run `validateStageRaceCompleteness()` (WP03/T017) to verify we got GC +
+         stages + points + KOM
        - Concatenate all parsed results into a single array
      - For **classics** (CLASSIC):
        - Fetch the single results page
        - Parse with `parseClassicResults`
-     Note: Parsers are pure functions imported from `infrastructure/scraping/parsers/`.
-     The use case orchestrates them but the parsing logic itself is infrastructure.
-   - **Step 5**: Validate all parsed results using the shape validator (T020). If validation
-     fails, log the errors and mark the job as failed.
+     Note: Parsers and the classification URL extractor are pure functions from
+     `infrastructure/scraping/parsers/` (WP03). The use case orchestrates them.
+   - **Step 5**: Validate all parsed results using the validation guardrails module
+     (WP03/T017). Call `validateClassificationResults()` for each classification's
+     results. If any validation returns `valid === false`, log the errors and mark
+     the job as failed. Warnings are logged but do not prevent persistence.
    - **Step 6**: Upsert riders — for each unique rider slug in the results, call
      `RiderRepositoryPort.upsert()` to create new riders or update team names.
    - **Step 7**: Map parsed results to domain `RaceResult` entities and call
@@ -135,10 +147,11 @@ trigger to persistence.
    This ensures the job is NEVER left in a "running" state if anything goes wrong.
    The domain entity handles the state transition; the repository persists it.
 4. Stage detection strategy for stage races:
-   - Fetch `race/{slug}/{year}` overview page
-   - Parse the stage list from the sidebar or stages navigation
-   - Alternatively, try stages 1 through N and stop when a 404 is received
-   - The stage count varies: Grand Tours have 21, mini-tours have 5-8
+   - **Do NOT hardcode stage counts or iterate until 404**
+   - Use `extractClassificationUrls()` (WP03/T015) on the GC page to dynamically
+     discover all stages and classifications from the `<select>` navigation menu
+   - This is reliable because PCS consistently includes all stage/classification
+     links in its navigation menu (confirmed via research analysis)
 
 **Validation**: Integration test that mocks the PCS client (returning fixture HTML) and
 uses a real database. Verify that after execution:
@@ -203,93 +216,6 @@ the repository adapter.
 - `markFailed()` on PENDING/SUCCESS/FAILED job throws Error
 - `toProps()` returns all properties correctly
 - `reconstitute()` hydrates from props correctly
-
----
-
-### T020 — Shape Validator
-
-**Goal**: Validate parsed results before persisting them to catch parser regressions early.
-
-**Steps**:
-
-1. Create `apps/api/src/infrastructure/scraping/health/html-shape-validator.ts`:
-   ```typescript
-   import { ParsedResult } from '../parsers/parsed-result.type';
-
-   export interface ValidationResult {
-     readonly valid: boolean;
-     readonly errors: string[];
-     readonly warnings: string[];
-   }
-
-   export function validateParsedResults(results: ParsedResult[]): ValidationResult {
-     const errors: string[] = [];
-     const warnings: string[] = [];
-
-     // Check 1: Results array is not empty
-     if (results.length === 0) {
-       errors.push('Parsed results array is empty — parser may have failed silently');
-     }
-
-     // Check 2: Every entry has a non-empty riderName
-     results.forEach((result, index) => {
-       if (!result.riderName || result.riderName.trim().length === 0) {
-         errors.push(`Result at index ${index} has empty riderName`);
-       }
-     });
-
-     // Check 3: Positions are positive integers or null (for DNF)
-     results.forEach((result, index) => {
-       if (result.position !== null) {
-         if (!Number.isInteger(result.position) || result.position < 1) {
-           errors.push(`Result at index ${index} has invalid position: ${result.position}`);
-         }
-       }
-     });
-
-     // Check 4: No duplicate rider+category+stage combinations
-     const seen = new Set<string>();
-     results.forEach((result) => {
-       const key = `${result.riderSlug}|${result.category}|${result.stageNumber ?? 'none'}`;
-       if (seen.has(key)) {
-         errors.push(`Duplicate entry for ${result.riderSlug} in ${result.category} stage ${result.stageNumber}`);
-       }
-       seen.add(key);
-     });
-
-     // Check 5: Warn if very few results (possible incomplete parse)
-     if (results.length > 0 && results.length < 10) {
-       warnings.push(`Only ${results.length} results parsed — verify completeness`);
-     }
-
-     // Check 6: Warn if more than 50% are DNF
-     const dnfCount = results.filter((r) => r.dnf).length;
-     if (results.length > 0 && dnfCount / results.length > 0.5) {
-       warnings.push(`${dnfCount}/${results.length} results are DNF — unusual ratio`);
-     }
-
-     return {
-       valid: errors.length === 0,
-       errors,
-       warnings,
-     };
-   }
-   ```
-2. This is a **pure function** with no NestJS dependencies. It can be unit tested trivially.
-3. The trigger use case (T018) calls this validator after parsing. If `valid === false`,
-   the use case marks the job as failed with the error messages and does NOT persist
-   results.
-4. Warnings are logged but do not prevent persistence.
-
-**Validation**: Unit tests must cover:
-- Valid results array passes
-- Empty array fails
-- Entry with empty riderName fails
-- Entry with negative position fails
-- Entry with non-integer position fails
-- Duplicate rider+category+stage fails
-- Low count triggers warning but still valid
-- High DNF ratio triggers warning but still valid
 
 ---
 
@@ -365,13 +291,16 @@ the repository adapter.
      }
    }
    ```
-3. Implement the canary checks:
-   - **Stage race check**: Fetch the Tour de France latest GC page. Attempt to parse with
-     `parseGcResults`. If parsing succeeds and returns more than 0 results, status is
-     HEALTHY. If parsing returns 0 results, status is DEGRADED. If an error is thrown,
-     status is FAILING.
+3. Implement the canary checks using WP03's parsers AND validation guardrails:
+   - **Stage race check**: Fetch the Tour de France latest GC page. Parse with
+     `parseGcResults`. Then run `validateClassificationResults()` (WP03/T017) on the
+     parsed results. If validation returns `valid: true` with no errors, status is
+     HEALTHY. If parsing returns results but validation has warnings, status is DEGRADED.
+     If parsing returns 0 results or validation has errors, status is FAILING.
    - **Classic check**: Fetch a recent classic result page (e.g., latest Milan-San Remo).
-     Same logic as above with `parseClassicResults`.
+     Same logic as above with `parseClassicResults` + `validateClassificationResults()`.
+   - This approach catches not just "did parsing return data" but also "is the data
+     structurally correct" — exactly the guardrails WP03 provides.
 4. Compute overall status:
    - If both parsers are HEALTHY: overall is HEALTHY
    - If one parser is DEGRADED: overall is DEGRADED
@@ -521,10 +450,9 @@ Test DTO validation:
 
 | Subtask | Test Type       | What to verify                                           | Coverage Target |
 |---------|-----------------|----------------------------------------------------------|-----------------|
-| T018    | Integration     | Full scrape flow with mocked HTTP, real DB               | 85%             |
+| T018    | Integration     | Full scrape flow with mocked HTTP, real DB, validation   | 85%             |
 | T019    | Unit            | ScrapeJob entity transitions, GetScrapeJobsUseCase       | 95%             |
-| T020    | Unit            | All validation rules, edge cases                         | 100%            |
-| T021    | Unit            | Health check logic with mocked PCS client                | 90%             |
+| T021    | Unit            | Health check logic with mocked PCS client + validation   | 90%             |
 | T022    | E2E / Unit      | Endpoint responses, DTO validation, error handling       | 85%             |
 
 **Integration test setup for T018**: Use a test database (either testcontainers or a
@@ -535,7 +463,7 @@ making real HTTP requests. Verify database state after execution.
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| Stage count detection fails for new races | Medium | Medium | Fall back to iterating stages until 404; cap at 25 max stages |
+| Classification URL extraction fails for new races | Low | Medium | `extractClassificationUrls()` (WP03) reads the `<select>` nav which PCS uses consistently; `validateStageRaceCompleteness()` catches missing classifications |
 | Long-running scrape jobs block the API thread | Medium | High | Run scrape execution asynchronously; return 202 immediately; use a job queue in future iterations |
 | Health check fetches from PCS too frequently | Low | Medium | Cron runs only every 6 hours; add circuit breaker if PCS is consistently down |
 | Stale jobs accumulate in "running" state after crashes | Medium | Medium | Implement stale job recovery in a future WP; `findStale` method is already provided |
@@ -552,8 +480,10 @@ When reviewing this work package, verify:
 2. **Error propagation**: Errors from PCS client, parsers, or database must be caught,
    logged, and stored in the job's `error_message`. The API must never return a 500 for
    scrape failures — the job records the failure.
-3. **Validation before persistence**: Parsed results must pass the shape validator before
-   being written to the database. Invalid data must not be persisted.
+3. **Validation before persistence**: Parsed results must pass WP03's validation guardrails
+   (`validateClassificationResults`, `validateStageRaceCompleteness`) before being written
+   to the database. Invalid data must not be persisted. WP04 does NOT re-implement
+   validation — it uses WP03's module.
 4. **DTO validation**: Send malformed requests to each endpoint and verify they return
    appropriate 400 errors with descriptive messages.
 5. **Health report structure**: Verify the health endpoint returns the correct JSON shape
@@ -569,7 +499,7 @@ When reviewing this work package, verify:
 - [ ] POST `/api/scraping/trigger` accepts a race slug and year, returns 202
 - [ ] Scrape trigger use case fetches pages, parses results, and persists to database
 - [ ] ScrapeJob lifecycle uses domain entity transitions (not raw SQL in app layer)
-- [ ] Shape validator catches empty results, invalid positions, and duplicates
+- [ ] WP03's validation guardrails are called after parsing (not re-implemented locally)
 - [ ] Health service runs canary checks every 6 hours via cron
 - [ ] GET `/api/scraping/jobs` returns recent jobs with optional status filter
 - [ ] GET `/api/scraping/health` returns parser health status
@@ -577,7 +507,9 @@ When reviewing this work package, verify:
 - [ ] Error handling ensures no job is left in "running" state
 - [ ] Use case imports ONLY domain ports and application-layer code (no infrastructure imports)
 - [ ] Controller imports ONLY use cases from application layer (no infrastructure imports)
-- [ ] PcsScraperPort defined in `application/scraping/ports/` and implemented by PcsClientAdapter
+- [ ] Uses `extractClassificationUrls()` from WP03 for stage race URL discovery
+- [ ] Uses `validateClassificationResults()` and `validateStageRaceCompleteness()` from WP03
+- [ ] PcsScraperPort (from WP03) implemented by PcsClientAdapter
 - [ ] All tests pass with target coverage
 - [ ] No `any` types; `pnpm lint` passes
 
