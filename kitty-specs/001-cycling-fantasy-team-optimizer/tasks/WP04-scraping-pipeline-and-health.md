@@ -1,8 +1,11 @@
 ---
 work_package_id: WP04
 title: Scraping Pipeline Orchestration & Health
-lane: planned
+lane: "doing"
 dependencies: [WP02, WP03]
+base_branch: 001-cycling-fantasy-team-optimizer-WP04-merge-base
+base_commit: 893be44358c59467de51aa5f24597df2f7721088
+created_at: '2026-03-15T18:58:38.763153+00:00'
 subtasks:
 - T018
 - T019
@@ -11,7 +14,7 @@ subtasks:
 phase: Phase 2 - Scraping Pipeline
 assignee: ''
 agent: ''
-shell_pid: ''
+shell_pid: "43434"
 review_status: ''
 reviewed_by: ''
 history:
