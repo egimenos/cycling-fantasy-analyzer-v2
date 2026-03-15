@@ -127,11 +127,11 @@
 **Requirements Refs**: FR-000
 
 ### Included Subtasks
-- [ ] T018 Implement scrape trigger use case (`application/scraping/trigger-scrape.use-case.ts`) — orchestrate: create ScrapeJob → detect race type from catalog → call appropriate parser → upsert results via repository → update job status
-- [ ] T019 Implement ScrapeJob lifecycle management — status transitions (pending → running → success/failed), error capture, records_upserted count
+- [x] T018 Implement scrape trigger use case (`application/scraping/trigger-scrape.use-case.ts`) — orchestrate: create ScrapeJob → detect race type from catalog → call appropriate parser → upsert results via repository → update job status
+- [x] T019 Implement ScrapeJob lifecycle management — status transitions (pending → running → success/failed), error capture, records_upserted count
 - [ ] T020 [P] Implement HTML shape validator (`infrastructure/scraping/health/html-shape-validator.ts`) — validate parsed output matches expected schema before persisting; reject and log corrupted data
-- [ ] T021 [P] Implement scraper health service (`infrastructure/scraping/health/scraper-health.service.ts`) — @nestjs/schedule periodic checks against known PCS pages, detect structural changes, log alerts
-- [ ] T022 Create scraping REST endpoints (`presentation/scraping.controller.ts`) — POST /api/scraping/trigger, GET /api/scraping/jobs, GET /api/scraping/health with DTOs
+- [x] T021 [P] Implement scraper health service (`infrastructure/scraping/health/scraper-health.service.ts`) — @nestjs/schedule periodic checks against known PCS pages, detect structural changes, log alerts
+- [x] T022 Create scraping REST endpoints (`presentation/scraping.controller.ts`) — POST /api/scraping/trigger, GET /api/scraping/jobs, GET /api/scraping/health with DTOs
 
 ### Implementation Notes
 - Use case orchestrates: never puts business logic in controller
