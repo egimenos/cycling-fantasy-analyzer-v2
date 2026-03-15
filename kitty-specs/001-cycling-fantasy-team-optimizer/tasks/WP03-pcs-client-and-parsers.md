@@ -15,7 +15,7 @@ subtasks:
 - T017b
 phase: Phase 2 - Scraping Pipeline
 assignee: ''
-agent: ''
+agent: "claude-opus"
 shell_pid: "19665"
 review_status: ''
 reviewed_by: ''
@@ -952,3 +952,4 @@ spec-kitty implement WP03 --base WP02
 | 2026-03-14T23:51:57Z | system | Prompt generated via /spec-kitty.tasks |
 | 2026-03-15T13:30:00Z | claude-opus | Updated with PCS scraping research findings: exact selectors, race discovery, validation guardrails |
 | 2026-03-15T15:00:00Z | claude-opus | Updated with POC results: Axios→got-scraping, actual header structure, URL suffix corrections, fixture capture confirmed |
+- 2026-03-15T18:38:48Z – claude-opus – shell_pid=19665 – lane=doing – Assigned agent via workflow command
