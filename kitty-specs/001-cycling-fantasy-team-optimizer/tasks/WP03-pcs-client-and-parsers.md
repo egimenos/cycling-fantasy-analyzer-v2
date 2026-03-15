@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: PCS HTTP Client & Parsers
-lane: "doing"
+lane: "for_review"
 dependencies: [WP02]
 base_branch: 001-cycling-fantasy-team-optimizer-WP02
 base_commit: 09cedac4ebbc7faeb1aa8a6d1a48f96e77e97a5f
@@ -953,3 +953,4 @@ spec-kitty implement WP03 --base WP02
 | 2026-03-15T13:30:00Z | claude-opus | Updated with PCS scraping research findings: exact selectors, race discovery, validation guardrails |
 | 2026-03-15T15:00:00Z | claude-opus | Updated with POC results: Axios→got-scraping, actual header structure, URL suffix corrections, fixture capture confirmed |
 - 2026-03-15T18:38:48Z – claude-opus – shell_pid=19665 – lane=doing – Assigned agent via workflow command
+- 2026-03-15T18:55:07Z – claude-opus – shell_pid=19665 – lane=for_review – Ready for review: PCS HTTP client with Cloudflare bypass (got-scraping), HTML parsers (results, classic, classification, race-list), race catalog, validation guardrails. 93 tests passing, lint clean.
