@@ -1,8 +1,11 @@
 ---
 work_package_id: WP02
 title: Docker, Database & Hexagonal Layers
-lane: planned
+lane: "doing"
 dependencies: [WP01]
+base_branch: 001-cycling-fantasy-team-optimizer-WP01
+base_commit: e2fd54a34106a5cffaaf529da2e09fd651770e18
+created_at: '2026-03-15T12:00:28.787445+00:00'
 subtasks:
 - T007
 - T008
@@ -13,7 +16,7 @@ subtasks:
 phase: Phase 1 - Foundation
 assignee: ''
 agent: ''
-shell_pid: ''
+shell_pid: "46060"
 review_status: ''
 reviewed_by: ''
 history:
@@ -258,17 +261,72 @@ migration must be idempotent (running it twice must not error).
 
 ---
 
-### T011 — Domain Entities & Repository Ports
+### T011 — Domain Entities, Enums, Repository Ports & ScrapeJob
 
-**Goal**: Define pure domain interfaces for entities and repository ports. These must have
-ZERO framework dependencies — no NestJS, no Drizzle, no external imports. They are the
-innermost ring of the hexagonal architecture.
+**Goal**: Define the complete domain layer: enums, entities with behavior, repository ports,
+and the ScrapeJob aggregate. These must have ZERO framework dependencies — no NestJS, no
+Drizzle, no `@cycling-analyzer/shared-types`, no external imports. They are the innermost
+ring of the hexagonal architecture.
+
+> **DDD guidance**: Entities are NOT plain data bags (anemic model anti-pattern). They
+> encapsulate behavior via methods that enforce invariants and domain rules. Use `static
+> create()` for construction with validation, `static reconstitute()` for hydration from
+> persistence, and domain methods for state transitions. Entities are immutable — methods
+> return new instances.
 
 **Steps**:
 
-1. Create `apps/api/src/domain/rider/rider.entity.ts`:
+1. Create domain enums in `apps/api/src/domain/shared/`. These are the **canonical**
+   definitions — `packages/shared-types` must duplicate or re-export them, never the
+   reverse. The domain layer defines the vocabulary; external packages consume it.
+   - `race-type.enum.ts`:
+     ```typescript
+     export enum RaceType {
+       GRAND_TOUR = 'grand_tour',
+       CLASSIC = 'classic',
+       MINI_TOUR = 'mini_tour',
+     }
+     ```
+   - `race-class.enum.ts`:
+     ```typescript
+     export enum RaceClass {
+       UWT = 'UWT',
+       PRO = 'Pro',
+       ONE = '1',
+     }
+     ```
+   - `result-category.enum.ts`:
+     ```typescript
+     export enum ResultCategory {
+       GC = 'gc',
+       STAGE = 'stage',
+       MOUNTAIN = 'mountain',
+       SPRINT = 'sprint',
+       FINAL = 'final',
+     }
+     ```
+   - `scrape-status.enum.ts`:
+     ```typescript
+     export enum ScrapeStatus {
+       PENDING = 'pending',
+       RUNNING = 'running',
+       SUCCESS = 'success',
+       FAILED = 'failed',
+     }
+     ```
+   - `health-status.enum.ts`:
+     ```typescript
+     export enum HealthStatus {
+       HEALTHY = 'healthy',
+       DEGRADED = 'degraded',
+       FAILING = 'failing',
+     }
+     ```
+   - `index.ts`: re-export all enums from a single barrel file.
+
+2. Create `apps/api/src/domain/rider/rider.entity.ts`:
    ```typescript
-   export interface Rider {
+   export interface RiderProps {
      readonly id: string;
      readonly pcsSlug: string;
      readonly fullName: string;
@@ -277,24 +335,68 @@ innermost ring of the hexagonal architecture.
      readonly nationality: string | null;
      readonly lastScrapedAt: Date | null;
    }
+
+   export class Rider {
+     private constructor(private readonly props: RiderProps) {}
+
+     static create(input: Omit<RiderProps, 'id' | 'normalizedName'>): Rider {
+       return new Rider({
+         ...input,
+         id: crypto.randomUUID(),
+         normalizedName: Rider.normalizeName(input.fullName),
+       });
+     }
+
+     static reconstitute(props: RiderProps): Rider {
+       return new Rider(props);
+     }
+
+     get id(): string { return this.props.id; }
+     get pcsSlug(): string { return this.props.pcsSlug; }
+     get fullName(): string { return this.props.fullName; }
+     get normalizedName(): string { return this.props.normalizedName; }
+     get currentTeam(): string | null { return this.props.currentTeam; }
+     get nationality(): string | null { return this.props.nationality; }
+     get lastScrapedAt(): Date | null { return this.props.lastScrapedAt; }
+
+     updateTeam(team: string): Rider {
+       return new Rider({ ...this.props, currentTeam: team });
+     }
+
+     markScraped(at: Date = new Date()): Rider {
+       return new Rider({ ...this.props, lastScrapedAt: at });
+     }
+
+     toProps(): Readonly<RiderProps> { return { ...this.props }; }
+
+     private static normalizeName(name: string): string {
+       return name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+     }
+   }
    ```
-2. Create `apps/api/src/domain/rider/rider.repository.port.ts`:
+3. Create `apps/api/src/domain/rider/rider.repository.port.ts`:
    ```typescript
    import { Rider } from './rider.entity';
 
    export interface RiderRepositoryPort {
      findByPcsSlug(pcsSlug: string): Promise<Rider | null>;
      findAll(): Promise<Rider[]>;
-     upsert(rider: Omit<Rider, 'id'>): Promise<Rider>;
+     save(rider: Rider): Promise<void>;
    }
 
    export const RIDER_REPOSITORY_PORT = Symbol('RiderRepositoryPort');
    ```
-3. Create `apps/api/src/domain/race-result/race-result.entity.ts`:
-   ```typescript
-   import { RaceType, RaceClass, ResultCategory } from '@cycling-analyzer/shared-types';
+   Note: Use `save()` instead of `upsert()`. The domain expresses intent ("save this
+   rider"); the adapter decides whether to INSERT or UPDATE via ON CONFLICT. This keeps
+   persistence semantics out of the domain contract.
 
-   export interface RaceResult {
+4. Create `apps/api/src/domain/race-result/race-result.entity.ts`:
+   ```typescript
+   import { RaceType } from '../shared/race-type.enum';
+   import { RaceClass } from '../shared/race-class.enum';
+   import { ResultCategory } from '../shared/result-category.enum';
+
+   export interface RaceResultProps {
      readonly id: string;
      readonly riderId: string;
      readonly raceSlug: string;
@@ -308,34 +410,164 @@ innermost ring of the hexagonal architecture.
      readonly dnf: boolean;
      readonly scrapedAt: Date;
    }
+
+   export class RaceResult {
+     private constructor(private readonly props: RaceResultProps) {}
+
+     static create(input: Omit<RaceResultProps, 'id'>): RaceResult {
+       return new RaceResult({ ...input, id: crypto.randomUUID() });
+     }
+
+     static reconstitute(props: RaceResultProps): RaceResult {
+       return new RaceResult(props);
+     }
+
+     get id(): string { return this.props.id; }
+     get riderId(): string { return this.props.riderId; }
+     get raceSlug(): string { return this.props.raceSlug; }
+     get raceName(): string { return this.props.raceName; }
+     get raceType(): RaceType { return this.props.raceType; }
+     get raceClass(): RaceClass { return this.props.raceClass; }
+     get year(): number { return this.props.year; }
+     get category(): ResultCategory { return this.props.category; }
+     get position(): number | null { return this.props.position; }
+     get stageNumber(): number | null { return this.props.stageNumber; }
+     get dnf(): boolean { return this.props.dnf; }
+     get scrapedAt(): Date { return this.props.scrapedAt; }
+
+     /** Returns true if this result earns scoring points (has a valid position). */
+     isScoring(): boolean {
+       return this.props.position !== null && this.props.position >= 1;
+     }
+
+     toProps(): Readonly<RaceResultProps> { return { ...this.props }; }
+   }
    ```
-4. Create `apps/api/src/domain/race-result/race-result.repository.port.ts`:
+5. Create `apps/api/src/domain/race-result/race-result.repository.port.ts`:
    ```typescript
    import { RaceResult } from './race-result.entity';
 
    export interface RaceResultRepositoryPort {
      findByRider(riderId: string): Promise<RaceResult[]>;
+     findByRiderIds(riderIds: string[]): Promise<RaceResult[]>;
      findByRace(raceSlug: string, year: number): Promise<RaceResult[]>;
-     upsert(result: Omit<RaceResult, 'id'>): Promise<RaceResult>;
-     upsertMany(results: Omit<RaceResult, 'id'>[]): Promise<number>;
+     saveMany(results: RaceResult[]): Promise<number>;
    }
 
    export const RACE_RESULT_REPOSITORY_PORT = Symbol('RaceResultRepositoryPort');
    ```
-5. Create `apps/api/src/domain/race-result/race-type.enum.ts` that re-exports enums from
-   shared-types for domain convenience. This keeps the domain layer importable without
-   reaching into infrastructure.
+   Note: `saveMany()` replaces `upsertMany()` — same reasoning as Rider. Added
+   `findByRiderIds()` for batch fetching in the analyze use case (WP06).
+
+6. Create `apps/api/src/domain/scrape-job/scrape-job.entity.ts`:
+   ```typescript
+   import { ScrapeStatus } from '../shared/scrape-status.enum';
+
+   export interface ScrapeJobProps {
+     readonly id: string;
+     readonly raceSlug: string;
+     readonly year: number;
+     readonly status: ScrapeStatus;
+     readonly startedAt: Date | null;
+     readonly completedAt: Date | null;
+     readonly errorMessage: string | null;
+     readonly recordsUpserted: number;
+   }
+
+   export class ScrapeJob {
+     private constructor(private readonly props: ScrapeJobProps) {}
+
+     static create(raceSlug: string, year: number): ScrapeJob {
+       return new ScrapeJob({
+         id: crypto.randomUUID(), raceSlug, year,
+         status: ScrapeStatus.PENDING,
+         startedAt: null, completedAt: null, errorMessage: null, recordsUpserted: 0,
+       });
+     }
+
+     static reconstitute(props: ScrapeJobProps): ScrapeJob {
+       return new ScrapeJob(props);
+     }
+
+     get id(): string { return this.props.id; }
+     get raceSlug(): string { return this.props.raceSlug; }
+     get year(): number { return this.props.year; }
+     get status(): ScrapeStatus { return this.props.status; }
+     get startedAt(): Date | null { return this.props.startedAt; }
+     get completedAt(): Date | null { return this.props.completedAt; }
+     get errorMessage(): string | null { return this.props.errorMessage; }
+     get recordsUpserted(): number { return this.props.recordsUpserted; }
+
+     markRunning(): ScrapeJob {
+       if (this.props.status !== ScrapeStatus.PENDING) {
+         throw new Error(`Cannot start job in '${this.props.status}' state`);
+       }
+       return new ScrapeJob({ ...this.props, status: ScrapeStatus.RUNNING, startedAt: new Date() });
+     }
+
+     markSuccess(recordsUpserted: number): ScrapeJob {
+       if (this.props.status !== ScrapeStatus.RUNNING) {
+         throw new Error(`Cannot complete job in '${this.props.status}' state`);
+       }
+       return new ScrapeJob({
+         ...this.props, status: ScrapeStatus.SUCCESS,
+         completedAt: new Date(), recordsUpserted,
+       });
+     }
+
+     markFailed(error: string): ScrapeJob {
+       if (this.props.status !== ScrapeStatus.RUNNING) {
+         throw new Error(`Cannot fail job in '${this.props.status}' state`);
+       }
+       return new ScrapeJob({
+         ...this.props, status: ScrapeStatus.FAILED,
+         completedAt: new Date(), errorMessage: error,
+       });
+     }
+
+     toProps(): Readonly<ScrapeJobProps> { return { ...this.props }; }
+   }
+   ```
+   ScrapeJob is a **rich entity** with status transition guards. Invalid transitions
+   throw errors (e.g., cannot `markSuccess` a PENDING job). The entity is immutable —
+   each transition returns a new instance.
+
+7. Create `apps/api/src/domain/scrape-job/scrape-job.repository.port.ts`:
+   ```typescript
+   import { ScrapeJob } from './scrape-job.entity';
+
+   export interface ScrapeJobRepositoryPort {
+     save(job: ScrapeJob): Promise<void>;
+     findById(id: string): Promise<ScrapeJob | null>;
+     findRecent(limit: number, status?: string): Promise<ScrapeJob[]>;
+     findStale(olderThanMinutes: number): Promise<ScrapeJob[]>;
+   }
+
+   export const SCRAPE_JOB_REPOSITORY_PORT = Symbol('ScrapeJobRepositoryPort');
+   ```
+
+**Aggregate boundaries**:
+- **Rider** is its own aggregate (accessed by ID, upserted independently).
+- **RaceResult** is its own aggregate (referenced by riderId but managed independently —
+  bulk inserts during scraping would be impractical through the Rider aggregate root).
+  The FK CASCADE is a database convenience, not an aggregate boundary.
+- **ScrapeJob** is its own aggregate (independent lifecycle, no FK to other entities).
 
 **Validation**: These files must compile with `tsc --noEmit` without importing anything
-from `drizzle-orm`, `@nestjs/*`, or any infrastructure package. Run
-`grep -r "drizzle\|@nestjs" apps/api/src/domain/` — must return zero matches.
+from `drizzle-orm`, `@nestjs/*`, `@cycling-analyzer/shared-types`, or any infrastructure
+package. Run:
+```bash
+grep -r "drizzle\|@nestjs\|@cycling-analyzer" apps/api/src/domain/
+```
+Must return zero matches. The domain layer is fully self-contained.
 
 ---
 
 ### T012 — Drizzle Repository Adapters
 
-**Goal**: Implement the repository ports using Drizzle ORM queries. These are the
-infrastructure-layer adapters that fulfill the domain contracts.
+**Goal**: Implement all repository ports using Drizzle ORM queries. These are the
+infrastructure-layer adapters that fulfill the domain contracts. Includes adapters for
+Rider, RaceResult, and ScrapeJob.
 
 **Steps**:
 
@@ -350,32 +582,62 @@ infrastructure-layer adapters that fulfill the domain contracts.
 
    @Injectable()
    export class RiderRepositoryAdapter implements RiderRepositoryPort {
-     // findByPcsSlug: SELECT * FROM riders WHERE pcs_slug = ?
-     // findAll: SELECT * FROM riders ORDER BY full_name
-     // upsert: INSERT ... ON CONFLICT (pcs_slug) DO UPDATE SET ...
+     // findByPcsSlug: SELECT → Rider.reconstitute(row)
+     // findAll: SELECT ORDER BY full_name → Rider.reconstitute(row)[]
+     // save: INSERT ... ON CONFLICT (pcs_slug) DO UPDATE SET ...
+     //   Uses rider.toProps() to extract data for persistence
    }
    ```
 2. Create `apps/api/src/infrastructure/database/race-result.repository.adapter.ts`:
-   - `findByRider`: SELECT with WHERE rider_id = ?, ORDER BY year DESC, race_slug
+   - `findByRider`: SELECT with WHERE rider_id = ?, ORDER BY year DESC, race_slug → `RaceResult.reconstitute()`
+   - `findByRiderIds`: SELECT with WHERE rider_id IN (...) → batch fetch for analyze use case
    - `findByRace`: SELECT with WHERE race_slug = ? AND year = ?
-   - `upsert`: INSERT ... ON CONFLICT (rider_id, race_slug, year, category, stage_number)
-     DO UPDATE SET position, dnf, scraped_at
-   - `upsertMany`: Use a transaction to batch upsert. Iterate over results and call
-     individual upserts within a single transaction. Return the count of affected rows.
-3. Register adapters in `DatabaseModule`:
+   - `saveMany`: Use a transaction to batch INSERT ... ON CONFLICT. Uses `result.toProps()` to
+     extract data. Returns the count of affected rows.
+3. Create `apps/api/src/infrastructure/database/scrape-job.repository.adapter.ts`:
+   ```typescript
+   import { Injectable, Inject } from '@nestjs/common';
+   import { ScrapeJobRepositoryPort } from '../../domain/scrape-job/scrape-job.repository.port';
+   import { ScrapeJob } from '../../domain/scrape-job/scrape-job.entity';
+   // ... inject Drizzle client
+
+   @Injectable()
+   export class ScrapeJobRepositoryAdapter implements ScrapeJobRepositoryPort {
+     // save: INSERT ... ON CONFLICT (id) DO UPDATE SET ... (uses job.toProps())
+     // findById: SELECT → ScrapeJob.reconstitute(row)
+     // findRecent: SELECT ORDER BY started_at DESC LIMIT ?
+     // findStale: SELECT WHERE status = 'running' AND started_at < NOW() - interval
+   }
+   ```
+4. Register all adapters in `DatabaseModule`:
    ```typescript
    {
      provide: RIDER_REPOSITORY_PORT,
      useClass: RiderRepositoryAdapter,
+   },
+   {
+     provide: RACE_RESULT_REPOSITORY_PORT,
+     useClass: RaceResultRepositoryAdapter,
+   },
+   {
+     provide: SCRAPE_JOB_REPOSITORY_PORT,
+     useClass: ScrapeJobRepositoryAdapter,
+   },
+   ```
+5. All adapter methods must map between Drizzle row types and domain entity classes
+   using `Entity.reconstitute()` (DB → domain) and `entity.toProps()` (domain → DB).
+   Create private mapper methods if the mapping is non-trivial:
+   ```typescript
+   private toDomain(row: typeof riders.$inferSelect): Rider {
+     return Rider.reconstitute({ ...row });
    }
    ```
-4. Ensure all adapter methods map between Drizzle row types and domain entity types.
-   Create private mapper methods if needed: `private toDomain(row: typeof riders.$inferSelect): Rider`
 
 **Validation**: Write integration tests in `apps/api/test/infrastructure/database/` that:
 - Start a test database (use testcontainers or a dedicated test DB)
 - Run migrations
 - Execute each repository method and verify results
+- Verify that `reconstitute → toProps` round-trips preserve all fields
 - Clean up after each test
 
 ---
@@ -388,8 +650,8 @@ infrastructure-layer adapters that fulfill the domain contracts.
 | T008    | Integration | Drizzle config loads; `db:generate` runs without error        |
 | T009    | Unit        | Schema types compile; column constraints match data-model.md  |
 | T010    | Integration | Migration runs; tables exist in DB with correct columns       |
-| T011    | Unit        | Domain files compile with zero infrastructure imports         |
-| T012    | Integration | Repository CRUD operations work against real PostgreSQL       |
+| T011    | Unit        | Domain files compile with zero external imports; entity transitions work |
+| T012    | Integration | All repository adapters (Rider, RaceResult, ScrapeJob) work against real PostgreSQL |
 
 **Coverage targets**: Domain entities and ports (T011) have no logic to test — they are
 pure type definitions. Repository adapters (T012) require integration tests against a real
@@ -415,8 +677,9 @@ When reviewing this work package, verify:
    Every column, type, and constraint must match.
 3. **Migration SQL**: Read the generated migration SQL. Verify enum types, foreign keys,
    unique constraints, and default values.
-4. **Domain purity**: Run `grep -r "drizzle\|@nestjs\|pg" apps/api/src/domain/`. Must
-   return zero results. The domain layer must be framework-agnostic.
+4. **Domain purity**: Run `grep -r "drizzle\|@nestjs\|pg\|@cycling-analyzer" apps/api/src/domain/`.
+   Must return zero results. The domain layer must be fully self-contained — no framework
+   deps, no shared-types imports.
 5. **Adapter completeness**: Every method declared in a repository port must be implemented
    in the corresponding adapter with correct SQL behavior.
 6. **Upsert behavior**: The race-result upsert must use ON CONFLICT with the correct
@@ -429,10 +692,15 @@ When reviewing this work package, verify:
 - [ ] Drizzle schema files define all tables from `data-model.md`
 - [ ] `pnpm --filter api db:generate` produces a valid migration
 - [ ] `pnpm --filter api db:migrate` applies the migration successfully
-- [ ] Domain entities and ports have zero infrastructure dependencies
-- [ ] Repository adapters implement all port methods
-- [ ] Upsert operations use ON CONFLICT correctly
-- [ ] Integration tests for repository adapters pass against real PostgreSQL
+- [ ] Domain enums defined in `domain/shared/` (canonical definitions)
+- [ ] Domain entities are classes with `create()`, `reconstitute()`, `toProps()`, and domain methods
+- [ ] ScrapeJob entity has status transition guards (`markRunning/markSuccess/markFailed`)
+- [ ] ScrapeJobRepositoryPort defined in `domain/scrape-job/`
+- [ ] Domain layer has zero imports from `@nestjs`, `drizzle-orm`, or `@cycling-analyzer/shared-types`
+- [ ] Repository adapters implement all port methods (Rider, RaceResult, ScrapeJob)
+- [ ] Adapters use `Entity.reconstitute()` / `entity.toProps()` for mapping
+- [ ] Save operations use ON CONFLICT correctly
+- [ ] Integration tests for all repository adapters pass against real PostgreSQL
 - [ ] All code passes `pnpm lint` with zero errors
 
 ## Implementation Command
