@@ -1,8 +1,11 @@
 ---
 work_package_id: WP05
 title: Scoring Engine
-lane: planned
+lane: "doing"
 dependencies: [WP02]
+base_branch: 001-cycling-fantasy-team-optimizer-WP02
+base_commit: 09cedac4ebbc7faeb1aa8a6d1a48f96e77e97a5f
+created_at: '2026-03-15T19:34:14.717554+00:00'
 subtasks:
 - T023
 - T024
@@ -12,7 +15,7 @@ subtasks:
 phase: Phase 3 - Scoring & Matching
 assignee: ''
 agent: ''
-shell_pid: ''
+shell_pid: "68868"
 review_status: ''
 reviewed_by: ''
 history:
