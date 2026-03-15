@@ -41,16 +41,18 @@ _No review feedback yet._
 
 ## Objectives
 
-1. Build a robust price list parser that handles the messy, variable formatting of pasted text from Grandes miniVueltas race pages.
+1. Accept a structured rider list (name, team, price) from the frontend — no raw text parsing in v1.
 2. Implement a fuzzy matching adapter using `fuzzysort` that reliably maps raw rider names from price lists to canonical riders stored in the database.
-3. Wire up the full `/api/analyze` endpoint that combines parsing, matching, scoring, and ranking into a single request-response cycle.
+3. Wire up the full `/api/analyze` endpoint that combines matching, scoring, and ranking into a single request-response cycle.
 4. Establish the `@cycling-analyzer/shared-types` package with all API contract types so frontend and backend stay aligned.
 
 ---
 
 ## Context
 
-This work package bridges the data layer (riders + race results from WP02/WP05) with the user-facing analysis feature. The user pastes a raw price list from a fantasy cycling site, and the system must parse it, identify each rider, compute projected scores, and return a ranked list. The fuzzy matching step is critical because rider names in price lists rarely match the canonical names exactly — accents, abbreviations, and formatting differences are the norm.
+This work package bridges the data layer (riders + race results from WP02/WP05) with the user-facing analysis feature. The frontend sends a structured rider list (name, team, price), and the system must identify each rider via fuzzy matching, compute projected scores, and return a ranked list. The fuzzy matching step is critical because rider names in price lists rarely match the canonical names exactly — accents, abbreviations, and formatting differences are the norm.
+
+> **V1 decision**: Raw text parsing is deferred to v2 (where an LLM will extract structured data from pasted text). In v1, the frontend constructs the structured payload.
 
 **Key references:**
 - `plan.md` — Phase 3 description and data flow diagrams
@@ -65,73 +67,49 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
 
 ## Subtasks
 
-### T028: Price List Parser
+### T028: Price List Entry Mapping
 
-**File:** `apps/api/src/application/analyze/price-list-parser.ts`
+**File:** `apps/api/src/application/analyze/price-list-entry.ts`
 
-> **DDD note**: Parsing raw text from an external source (pasted from a fantasy cycling
-> website) is **input adaptation**, not domain logic. This function lives in the
-> application layer, close to the use case that consumes it. The domain layer only
-> receives already-structured `PriceListEntry` value objects.
+> **V1 decision**: Raw text parsing is deferred to v2 (LLM-based extraction). In v1 the
+> frontend sends a structured `{ name, team, price }[]` payload. This subtask defines
+> the internal `PriceListEntry` value object and the mapping from the DTO.
 
-**Purpose:** Parse raw text pasted from Grandes miniVueltas race pages into structured `PriceListEntry[]` objects.
+**Purpose:** Define the `PriceListEntry` value object and map validated DTO entries into it.
 
 **Step-by-step instructions:**
 
 1. Define the `PriceListEntry` interface:
    ```typescript
-   interface PriceListEntry {
-     rawName: string;
-     rawTeam: string;
-     priceHillios: number;
+   export interface PriceListEntry {
+     readonly rawName: string;
+     readonly rawTeam: string;
+     readonly priceHillios: number;
    }
    ```
 
-2. Define the `ParseResult` interface:
+2. Define the DTO interface (mirrors the request body):
    ```typescript
-   interface ParseResult {
-     entries: PriceListEntry[];
-     errors: ParseError[];
-   }
-
-   interface ParseError {
-     line: number;
-     rawText: string;
-     reason: string;
+   export interface PriceListEntryDto {
+     name: string;
+     team: string;
+     price: number;
    }
    ```
 
-3. Implement `parsePriceList(rawText: string): ParseResult` as a pure function:
-   - Split input by newline characters (`\n`, `\r\n`)
-   - Trim each line; skip empty lines and header lines (detect via heuristics: lines containing "Rider", "Name", "Team", "Price" as column headers)
-   - For each candidate line, attempt to extract three fields: rider name, team name, price
-   - Handle multiple whitespace separators: tabs (`\t`), multiple spaces, pipe characters (`|`)
-   - Price extraction: look for numeric value (possibly with decimators), strip non-numeric characters except decimal point
-   - Normalize whitespace within extracted name and team fields
-   - If a line cannot be parsed into all three fields, add it to the errors array with a descriptive reason
+3. Implement `mapPriceListEntries(dtos: PriceListEntryDto[]): PriceListEntry[]`:
+   - Map each DTO to a `PriceListEntry`, trimming whitespace on name and team
+   - Filter out entries with empty name or price <= 0
+   - Allow empty team (set `rawTeam` to `''`)
 
-4. Handle edge cases:
-   - Lines with only two fields (missing team) — attempt to parse as name + price, set rawTeam to empty string
-   - Price values with currency symbols or suffixes (e.g., "H", "hillios")
-   - Lines with trailing comments or extra columns — take first three meaningful columns
-   - Accented characters: preserve as-is in rawName/rawTeam (normalization happens in the matcher)
-   - Completely blank or whitespace-only lines: skip silently without adding to errors
-
-5. Export the function and all interfaces from the module.
+4. Export the function and all interfaces from the module.
 
 **Validation criteria:**
-- Given a well-formatted 3-column tab-separated input, returns all entries with zero errors
-- Given a mixed-format input (tabs + spaces), still extracts all valid entries
-- Given lines with accented names like "POGACAR Tadej" or "POGACAR Tadej", preserves characters
-- Given a header line "Rider Team Price", skips it
-- Given a completely unparseable line "???!!!", adds it to errors with reason
-
-**Edge cases to test:**
-- Empty string input returns empty entries and empty errors
-- Single rider input returns exactly one entry
-- Input with Windows-style line endings (`\r\n`)
-- Price values: "150", "150H", "150.5", "1,500", "1.500" (European format)
-- Unicode BOM at start of input
+- Given valid DTOs, returns matching PriceListEntry array
+- Given entries with empty name, filters them out
+- Given entries with price <= 0, filters them out
+- Given entries with extra whitespace, trims name and team
+- Given entries with empty team, preserves as empty string
 
 ---
 
@@ -238,7 +216,7 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
    import { RiderRepositoryPort, RIDER_REPOSITORY_PORT } from '../../domain/rider/rider.repository.port';
    import { RaceResultRepositoryPort, RACE_RESULT_REPOSITORY_PORT } from '../../domain/race-result/race-result.repository.port';
    import { ScoringService } from '../../domain/scoring/scoring.service';
-   import { parsePriceList } from './price-list-parser';
+   import { mapPriceListEntries } from './price-list-entry';
 
    @Injectable()
    class AnalyzePriceListUseCase {
@@ -250,13 +228,13 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
      ) {}
    }
    ```
-   > **Hexagonal compliance**: The use case imports `parsePriceList` from its own
+   > **Hexagonal compliance**: The use case imports `mapPriceListEntries` from its own
    > application layer (co-located). It depends on domain ports (`RiderMatcherPort`,
    > `RiderRepositoryPort`, `RaceResultRepositoryPort`) and the domain scoring service.
    > No infrastructure imports.
 
 2. Implement `execute(input: AnalyzeInput): Promise<AnalyzeResponse>`:
-   - Step 1: Parse raw text using `parsePriceList(input.rawText)`
+   - Step 1: Map DTO entries to PriceListEntry via `mapPriceListEntries(input.riders)`
    - Step 2: Load all riders from DB via `riderRepo.findAll()`
    - Step 3: Feed riders into matcher via `matcher.loadRiders(riderTargets)`
    - Step 4: For each `PriceListEntry`, call `matcher.matchRider(entry.rawName, entry.rawTeam)`
@@ -276,21 +254,19 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
    is still available in the response for transparency but is not the primary ranking metric.
 
 3. Aggregate metadata in response:
-   - `totalParsed`: number of entries from parser
+   - `totalSubmitted`: number of entries received from frontend
    - `totalMatched`: number of entries that matched a rider
-   - `unmatchedCount`: totalParsed - totalMatched
-   - `parseErrors`: errors from parser step
+   - `unmatchedCount`: totalSubmitted - totalMatched
    - `riders`: the sorted AnalyzedRider array
 
 4. Performance consideration: batch the DB queries. Load all riders once, not per entry. Similarly, batch race result fetching if possible (use `findByRiderIds(ids[])`).
 
 **Validation criteria:**
-- Given valid rawText with 20 riders, all matching DB riders: returns 20 AnalyzedRiders sorted by `compositeScore` descending
+- Given valid rider list with 20 riders, all matching DB riders: returns 20 AnalyzedRiders sorted by `compositeScore` descending
 - The `compositeScore` reflects both historical performance AND price efficiency relative to the pool
 - A cheap rider with decent projected points ranks above an expensive rider with only slightly better projected points (price-quality relationship captured)
-- Given rawText with 5 unmatched riders: unmatchedCount is 5, those riders appear with null compositeScore
-- Given empty rawText: returns 422 error (zero riders parsed)
-- Parse errors are included in response metadata
+- Given rider list with 5 unmatched riders: unmatchedCount is 5, those riders appear with null compositeScore
+- Given empty riders array: returns 422 error (zero riders)
 
 **Edge cases to test:**
 - All riders unmatched — returns riders with null scores, unmatchedCount = totalParsed
@@ -322,10 +298,25 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
 
 2. Define and validate the request DTO:
    ```typescript
-   class AnalyzeRequestDto {
+   class PriceListEntryDto {
      @IsString()
      @IsNotEmpty()
-     rawText: string;
+     name: string;
+
+     @IsString()
+     team: string;
+
+     @IsNumber()
+     @Min(1)
+     price: number;
+   }
+
+   class AnalyzeRequestDto {
+     @IsArray()
+     @ArrayMinSize(1)
+     @ValidateNested({ each: true })
+     @Type(() => PriceListEntryDto)
+     riders: PriceListEntryDto[];
 
      @IsEnum(RaceType)
      raceType: 'grand_tour' | 'classic' | 'mini_tour';
@@ -337,8 +328,8 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
    ```
 
 3. Error handling:
-   - 400 Bad Request: validation failures (empty rawText, invalid raceType, budget <= 0)
-   - 422 Unprocessable Entity: parser returns zero valid entries
+   - 400 Bad Request: validation failures (empty riders array, invalid raceType, budget <= 0)
+   - 422 Unprocessable Entity: zero valid riders after filtering
    - 500 Internal Server Error: unexpected failures (DB down, etc.)
    - Use NestJS exception filters for consistent error response shape
 
@@ -348,10 +339,10 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
 
 **Validation criteria:**
 - POST with valid body returns 200 with AnalyzeResponse shape
-- POST with empty rawText returns 400
+- POST with empty riders array returns 400
 - POST with invalid raceType returns 400
 - POST with budget=0 returns 400
-- POST with valid body but all unparseable text returns 422
+- POST with riders missing name returns 400
 
 ---
 
@@ -380,8 +371,9 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
    presentation layer ensures they stay in sync.
 
 2. In `packages/shared-types/src/api.ts`, define API contract types aligned with domain:
-   - `AnalyzeRequest`: `{ rawText: string; raceType: RaceType; budget: number }`
-   - `AnalyzeResponse`: `{ riders: AnalyzedRider[]; totalParsed: number; totalMatched: number; unmatchedCount: number; parseErrors: ParseError[] }`
+   - `PriceListEntryDto`: `{ name: string; team: string; price: number }`
+   - `AnalyzeRequest`: `{ riders: PriceListEntryDto[]; raceType: RaceType; budget: number }`
+   - `AnalyzeResponse`: `{ riders: AnalyzedRider[]; totalSubmitted: number; totalMatched: number; unmatchedCount: number }`
    - `AnalyzedRider`:
      ```typescript
      {
@@ -442,13 +434,13 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
 
 **Unit tests (target 90%+ coverage):**
 
-- `apps/api/test/application/analyze/price-list-parser.spec.ts`:
-  - Test well-formatted input (tab-separated, space-separated, pipe-separated)
-  - Test malformed lines are captured in errors array
-  - Test header line detection and skipping
-  - Test accented character preservation
-  - Test edge cases: empty input, single line, BOM character
-  - Minimum 3 different fixture formats from real race pages
+- `apps/api/test/application/analyze/price-list-entry.spec.ts`:
+  - Test valid DTOs map to PriceListEntry correctly
+  - Test entries with empty name are filtered out
+  - Test entries with price <= 0 are filtered out
+  - Test whitespace trimming on name and team
+  - Test empty team preserved as empty string
+  - Test empty input array returns empty result
 
 - `apps/api/test/infrastructure/matching/fuzzysort-matcher.adapter.spec.ts`:
   - Test exact name match returns high confidence
@@ -470,7 +462,6 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
   - Test 422 for zero parseable riders
 
 **Test fixtures:**
-- Create `apps/api/test/fixtures/price-lists/` directory with at least 3 sample price list texts
 - Create `apps/api/test/fixtures/riders/` with sample rider data for matching tests
 
 ---
@@ -479,7 +470,6 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| Price list format varies significantly across races | High | High | Capture 3+ real fixtures; build parser to handle multiple separator types; add error reporting for unparseable lines |
 | Fuzzy matching false positives (similar names) | Medium | High | Use weighted multi-field matching (name + team); set conservative threshold; log low-confidence matches for review |
 | fuzzysort library performance with large rider pools | Low | Medium | Pre-normalize all text; benchmark with 500+ riders; consider caching normalized targets |
 | Shared types package build/export issues in monorepo | Medium | Medium | Test import from both apps/api and apps/web before merging; verify tsconfig paths |
@@ -490,9 +480,9 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
 
 When reviewing this WP, check the following:
 
-1. **Parser robustness**: Does the parser handle at least 3 different real-world price list formats? Are error messages descriptive enough to help users fix their input?
+1. **Entry mapping**: Does `mapPriceListEntries` correctly filter invalid entries and trim whitespace?
 2. **Matcher accuracy**: Run the matcher against the test fixtures — are there false positives or false negatives? Is the threshold appropriate?
-3. **Hexagonal compliance**: Is the domain logic (parser, matcher port) free of framework dependencies? Is the adapter properly implementing the port interface?
+3. **Hexagonal compliance**: Is the domain logic (matcher port) free of framework dependencies? Is the adapter properly implementing the port interface?
 4. **Type safety**: Do all shared types compile under strict mode? Are there any `as` casts or type assertions that could hide bugs?
 5. **API contract alignment**: Does the endpoint response exactly match `contracts/api.md`? Test with the actual frontend client code if available.
 6. **Performance**: Time the analyze endpoint with a 200-rider price list. Should complete under 3 seconds.

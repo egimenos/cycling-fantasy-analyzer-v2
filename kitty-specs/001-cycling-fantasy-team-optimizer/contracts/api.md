@@ -9,23 +9,33 @@
 
 ### POST /api/analyze
 
-Parse a pasted price list, match riders against PCS database, and compute scores.
+Match riders against PCS database and compute scores from a structured rider list.
 
 **Request Body:**
 ```typescript
+interface PriceListEntryDto {
+  name: string;              // Rider name (as shown in price list)
+  team: string;              // Team name (may be empty if unknown)
+  price: number;             // Price in hillios
+}
+
 interface AnalyzeRequest {
-  rawText: string;           // Pasted price list from Grandes miniVueltas
-  raceType: RaceType;        // "grand_tour" | "classic" | "mini_tour"
-  budget: number;            // Budget in hillios (e.g., 2000)
+  riders: PriceListEntryDto[];  // Structured rider list (frontend constructs this)
+  raceType: RaceType;           // "grand_tour" | "classic" | "mini_tour"
+  budget: number;               // Budget in hillios (e.g., 2000)
 }
 ```
+
+> **V2 enhancement**: A future iteration may add a `rawText` field as an alternative input,
+> using an LLM to extract the structured rider list from pasted plain text.
 
 **Response Body (200):**
 ```typescript
 interface AnalyzeResponse {
   riders: AnalyzedRider[];   // Sorted by compositeScore descending
+  totalSubmitted: number;    // Total riders in request
+  totalMatched: number;      // Riders matched to PCS database
   unmatchedCount: number;    // Riders with no PCS match
-  parseErrors: string[];     // Lines that could not be parsed
 }
 
 interface AnalyzedRider {
@@ -34,9 +44,18 @@ interface AnalyzedRider {
   priceHillios: number;
   matchedRider: MatchedRider | null;
   matchConfidence: number;   // 0–1 from fuzzysort
-  score: RiderScore | null;  // null if unmatched
+  unmatched: boolean;
   compositeScore: number | null;    // Price-aware value score (primary ranking metric)
   pointsPerHillio: number | null;   // totalProjectedPts / priceHillios
+  totalProjectedPts: number | null; // Raw historical projection (for transparency)
+  categoryScores: {
+    gc: number;
+    stage: number;
+    mountain: number;
+    sprint: number;
+    final: number;
+  } | null;
+  seasonsUsed: number | null;
 }
 
 interface MatchedRider {
@@ -45,20 +64,11 @@ interface MatchedRider {
   fullName: string;
   currentTeam: string;
 }
-
-interface RiderScore {
-  projectedGcPts: number;
-  projectedStagePts: number;
-  projectedMountainPts: number;
-  projectedSprintPts: number;
-  totalProjectedPts: number;
-  seasonsUsed: number;       // 1–3
-}
 ```
 
 **Error Responses:**
-- `400`: Invalid raceType or empty rawText
-- `422`: rawText could not be parsed (zero riders extracted)
+- `400`: Invalid raceType, empty riders array, or budget <= 0
+- `422`: Zero valid riders in the request
 
 ---
 

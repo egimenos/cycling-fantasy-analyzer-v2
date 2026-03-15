@@ -41,7 +41,7 @@ _No review feedback yet._
 1. Set up the frontend application shell using TanStack Start with proper routing, layout, and Tailwind + shadcn/ui theming.
 2. Build a typed API client that uses shared types from `@cycling-analyzer/shared-types` for full type safety between frontend and backend.
 3. Create a reusable shared UI component library (data table, budget indicator, score badges, loading/error states).
-4. Implement the rider list feature: paste input, API call, and sortable/expandable rider table display.
+4. Implement the rider list feature: structured rider input form, API call, and sortable/expandable rider table display.
 
 ---
 
@@ -263,32 +263,42 @@ This work package establishes the entire frontend foundation. It only depends on
 
 **Step-by-step instructions:**
 
-1. **`components/paste-input.tsx`**:
-   - Large `<textarea>` (minimum 8 rows) with placeholder text: "Paste rider price list here..."
+1. **`components/rider-input.tsx`**:
+   - A form where the user adds riders one-by-one or in bulk:
+     - **Option A (simple)**: A `<textarea>` where each line is `name, team, price` (CSV-like).
+       The frontend parses this into the structured `PriceListEntryDto[]` before sending.
+       Placeholder: "One rider per line: Name, Team, Price\ne.g. Pogačar, UAE, 700"
+     - **Option B (rich)**: A dynamic form with Add/Remove rider rows (name, team, price inputs).
+       Start with Option A for simplicity — Option B can be a v2 enhancement.
    - Race type dropdown using shadcn/ui `Select`:
      - Options: "Grand Tour", "Classic", "Mini Tour"
      - Values: "grand_tour", "classic", "mini_tour"
      - Default: "grand_tour"
    - Budget number input using shadcn/ui `Input` with type="number", min=1, placeholder="Budget in Hillios"
    - "Analyze" button using shadcn/ui `Button`:
-     - Disabled when textarea is empty
+     - Disabled when no valid riders entered
      - Shows loading state during API call
+   - Client-side parsing: split textarea by newlines, split each line by comma/tab,
+     map to `{ name, team, price }` array, filter invalid lines, show count of valid entries
    - Layout: textarea full width, controls row below with race type + budget + button
 
+   > **V2 enhancement**: Add a "Paste raw text" mode that sends the raw text to an LLM
+   > endpoint to extract structured rider data automatically.
+
 2. **`components/rider-list-page.tsx`**:
-   - Orchestrates the full flow: paste-input -> loading -> rider-table
+   - Orchestrates the full flow: rider-input -> loading -> rider-table
    - State management:
      ```typescript
-     const [rawText, setRawText] = useState('');
+     const [riders, setRiders] = useState<PriceListEntryDto[]>([]);
      const [raceType, setRaceType] = useState<RaceType>('grand_tour');
      const [budget, setBudget] = useState(2000);
      const { analyze, result, isLoading, error } = useAnalyze();
      ```
    - Conditional rendering:
-     - Before analysis: show PasteInput + EmptyState ("Paste a rider list to get started")
-     - During loading: show PasteInput + LoadingSpinner
-     - On error: show PasteInput + ErrorAlert with retry
-     - On success: show PasteInput (collapsed or smaller) + RiderTable + metadata summary
+     - Before analysis: show RiderInput + EmptyState ("Enter riders to get started")
+     - During loading: show RiderInput + LoadingSpinner
+     - On error: show RiderInput + ErrorAlert with retry
+     - On success: show RiderInput (collapsed or smaller) + RiderTable + metadata summary
 
 3. **`hooks/use-analyze.ts`**:
    ```typescript
@@ -316,11 +326,12 @@ This work package establishes the entire frontend foundation. It only depends on
 4. **`types.ts`**: local feature types if needed (re-export or extend shared types for UI-specific concerns like selected state, expanded state).
 
 **Validation criteria:**
-- Pasting text into textarea and clicking Analyze triggers API call
+- Entering riders and clicking Analyze triggers API call with structured `{ riders, raceType, budget }` payload
+- Client-side parsing of CSV lines produces correct `PriceListEntryDto[]`
 - Loading state is shown during API call
 - Successful response renders the rider table
 - Error response shows error alert with retry button
-- Empty textarea disables the Analyze button
+- Empty/invalid rider input disables the Analyze button
 
 ---
 
@@ -420,14 +431,14 @@ This work package establishes the entire frontend foundation. It only depends on
   - `empty-state.spec.tsx`: renders title and description
 
 - `apps/web/src/features/rider-list/__tests__/`:
-  - `paste-input.spec.tsx`: button disabled when empty, calls onAnalyze with correct params
+  - `rider-input.spec.tsx`: button disabled when empty, CSV parsing produces correct DTOs, calls onAnalyze with structured payload
   - `rider-list-page.spec.tsx`: renders all states (empty, loading, error, success)
   - `use-analyze.spec.ts`: hook state transitions
   - `rider-table.spec.tsx`: renders riders, sorting, expandable rows, unmatched display
 
 **Testing tools:** Vitest + React Testing Library + MSW (Mock Service Worker) for API mocking.
 
-**Visual smoke test:** Run `pnpm dev`, paste a sample price list, verify the full flow works visually.
+**Visual smoke test:** Run `pnpm dev`, enter sample riders (CSV lines or form), verify the full flow works visually.
 
 ---
 

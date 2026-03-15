@@ -36,17 +36,19 @@ An operator (the app owner) runs the data pipeline to scrape race results from p
 
 ### User Story 1 - Load Race Rider List (Priority: P1)
 
-A user navigates to the app for a specific race (e.g., Tour de France 2025). They paste the rider list and prices copied from the Grandes miniVueltas race page. The system parses the content and displays a clean table of all available riders with their team and price in hillios.
+A user navigates to the app for a specific race (e.g., Tour de France 2025). They submit a structured list of riders with names, teams, and prices. The system displays a clean table of all available riders with their team and price in hillios.
 
 **Why this priority**: Without this input step, no other feature is possible. It is the entry point for all analysis.
 
-**Independent Test**: Can be fully tested by pasting a rider list and verifying that the app correctly displays all rider names, teams, and prices in a structured table.
+**Independent Test**: Can be fully tested by submitting a rider list and verifying that the app correctly displays all rider names, teams, and prices in a structured table.
 
 **Acceptance Scenarios**:
 
-1. **Given** a user has copied a rider price list from Grandes miniVueltas, **When** they paste it into the input area and confirm, **Then** the system displays a table with all riders showing name, team, and price in hillios.
-2. **Given** a pasted list contains formatting inconsistencies (extra spaces, mixed case), **When** the system parses it, **Then** it normalizes the data and displays clean entries without manual correction.
-3. **Given** the pasted content is empty or unrecognizable, **When** the user submits, **Then** the system displays a clear error message explaining the expected format.
+1. **Given** a user submits a structured rider list (name, team, price per rider), **When** the system receives it, **Then** it displays a table with all riders showing name, team, and price in hillios.
+2. **Given** the submitted list is empty or contains zero valid entries, **When** the user submits, **Then** the system displays a clear error message.
+3. **Given** rider names contain accents or mixed case, **When** the system processes them, **Then** fuzzy matching handles normalization transparently.
+
+> **V2 enhancement**: Accept raw pasted text and use an LLM to extract the structured payload automatically, removing the need for the user to construct the JSON manually.
 
 ---
 
@@ -113,8 +115,8 @@ The user wants to manually assemble their team, selecting and deselecting riders
 ### Functional Requirements
 
 - **FR-000**: System MUST include a data pipeline that scrapes race results from procyclingstats.com and persists them in a local data store. This pipeline runs independently of the UI and must be executable on demand or on a schedule.
-- **FR-001**: System MUST accept a plain-text paste of rider names, teams, and prices in the format used by Grandes miniVueltas race pages.
-- **FR-002**: System MUST parse and display all riders with their team affiliation and price in hillios.
+- **FR-001**: System MUST accept a structured list of riders (name, team, price) via a JSON payload. In v1 the frontend is responsible for constructing this structured input. A future v2 iteration may accept raw pasted text and use an LLM to extract the structured payload automatically.
+- **FR-002**: System MUST display all riders with their team affiliation and price in hillios.
 - **FR-003**: System MUST query the persisted historical results for each rider in the pasted list (not fetch live from PCS at query time) to compute scores.
 - **FR-004**: System MUST display per-rider statistics including: recent GC results (last 2 seasons), stage wins, mountain classification finishes, and sprint classification finishes.
 - **FR-004b**: System MUST compute and display a composite score per rider — a function of price (hillios) and projected historical performance — and sort the rider list by this score descending.
@@ -145,14 +147,14 @@ The user wants to manually assemble their team, selecting and deselecting riders
 - **SC-001**: A user can go from pasting a rider list to seeing enriched stats for all riders in under 60 seconds.
 - **SC-002**: The top recommended team consistently scores higher projected points than a randomly assembled budget-compliant team in at least 80% of test cases.
 - **SC-003**: Users can complete the full workflow (paste list → view stats → get recommendations → finalize team) without reading any documentation.
-- **SC-004**: The system correctly parses rider lists from Grandes miniVueltas for at least the last 3 published races without manual correction.
+- **SC-004**: The system correctly processes structured rider lists and fuzzy-matches rider names against the PCS database for at least the last 3 published races.
 - **SC-005**: Budget constraints are respected in 100% of generated recommendations — no team exceeds the configured hillios limit.
 
 ---
 
 ## Assumptions
 
-- The format of rider price lists on Grandes miniVueltas is consistent enough across races to be parsed with a single parser (may need minor adjustments per race).
+- In v1, the frontend constructs and sends a structured JSON payload (rider name, team, price). Raw text parsing via LLM is deferred to v2.
 - procyclingstats.com allows scraping for personal/non-commercial use; rate limiting and polite scraping practices will be applied.
 - Historical data from the last 2 seasons is sufficient for projecting performance in upcoming races.
 - The Grandes miniVueltas scoring system remains stable; the system is designed around the rules documented at the time of development.
