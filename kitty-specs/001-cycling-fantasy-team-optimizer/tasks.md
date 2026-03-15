@@ -231,11 +231,11 @@
 **Requirements Refs**: FR-005, FR-007, FR-008, FR-010, FR-012
 
 ### Included Subtasks
-- [ ] T033 Implement knapsack DP algorithm (`domain/optimizer/knapsack.service.ts`) — 0/1 knapsack with dual constraint: team size = 9, total cost ≤ budget; returns optimal rider combination
-- [ ] T034 Implement must-include/must-exclude constraint handling — pre-filter rider pool, subtract locked rider costs from budget, validate feasibility before running DP
-- [ ] T035 Implement alternative team generation — find top 5 distinct team combinations by iteratively excluding riders from the optimal set and re-running
-- [ ] T036 Implement optimize team use case + POST /api/optimize endpoint with DTOs per contracts/api.md
-- [ ] T037 Write 100% coverage unit tests for knapsack — edge cases: budget too low, all riders locked exceed budget, fewer than 9 eligible riders, all same price, single rider per team slot
+- [x] T033 Implement knapsack DP algorithm (`domain/optimizer/knapsack.service.ts`) — 0/1 knapsack with dual constraint: team size = 9, total cost ≤ budget; returns optimal rider combination
+- [x] T034 Implement must-include/must-exclude constraint handling — pre-filter rider pool, subtract locked rider costs from budget, validate feasibility before running DP
+- [x] T035 Implement alternative team generation — find top 5 distinct team combinations by iteratively excluding riders from the optimal set and re-running
+- [x] T036 Implement optimize team use case + POST /api/optimize endpoint with DTOs per contracts/api.md
+- [x] T037 Write 100% coverage unit tests for knapsack — edge cases: budget too low, all riders locked exceed budget, fewer than 9 eligible riders, all same price, single rider per team slot
 
 ### Implementation Notes
 - Knapsack is a pure domain function: `(riders: ScoredRider[], budget: number, teamSize: number, mustInclude: string[], mustExclude: string[]) => TeamSelection[]`
