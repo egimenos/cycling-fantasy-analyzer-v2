@@ -1,8 +1,11 @@
 ---
 work_package_id: WP03
 title: PCS HTTP Client & Parsers
-lane: planned
+lane: "doing"
 dependencies: [WP02]
+base_branch: 001-cycling-fantasy-team-optimizer-WP02
+base_commit: 09cedac4ebbc7faeb1aa8a6d1a48f96e77e97a5f
+created_at: '2026-03-15T18:38:47.965815+00:00'
 subtasks:
 - T013
 - T014
@@ -13,7 +16,7 @@ subtasks:
 phase: Phase 2 - Scraping Pipeline
 assignee: ''
 agent: ''
-shell_pid: ''
+shell_pid: "19665"
 review_status: ''
 reviewed_by: ''
 history:
