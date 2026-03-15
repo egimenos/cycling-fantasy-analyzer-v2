@@ -1,10 +1,13 @@
 ---
 work_package_id: WP06
 title: Fuzzy Matching & Analyze Endpoint
-lane: planned
+lane: "doing"
 dependencies:
 - WP02
 - WP05
+base_branch: 001-cycling-fantasy-team-optimizer-WP06-merge-base
+base_commit: 43451bedd9fd18c5ac8d2caa1afc91a0d42e6971
+created_at: '2026-03-15T23:07:42.808880+00:00'
 subtasks:
 - T028
 - T029
@@ -14,7 +17,7 @@ subtasks:
 phase: Phase 3 - Scoring & Matching
 assignee: ''
 agent: ''
-shell_pid: ''
+shell_pid: "22853"
 review_status: ''
 reviewed_by: ''
 history:
