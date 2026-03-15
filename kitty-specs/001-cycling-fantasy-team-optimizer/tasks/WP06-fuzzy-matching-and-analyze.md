@@ -1,7 +1,7 @@
 ---
 work_package_id: WP06
 title: Fuzzy Matching & Analyze Endpoint
-lane: "for_review"
+lane: "doing"
 dependencies:
 - WP02
 - WP05
@@ -17,7 +17,7 @@ subtasks:
 phase: Phase 3 - Scoring & Matching
 assignee: ''
 agent: "claude-opus"
-shell_pid: "22853"
+shell_pid: "37508"
 review_status: ''
 reviewed_by: ''
 history:
@@ -499,3 +499,4 @@ When reviewing this WP, check the following:
 | 2026-03-14T23:51:57Z | Created | system | Prompt generated via /spec-kitty.tasks |
 - 2026-03-15T23:07:42Z – claude-opus – shell_pid=22853 – lane=doing – Assigned agent via workflow command
 - 2026-03-15T23:20:18Z – claude-opus – shell_pid=22853 – lane=for_review – Ready for review: all 5 subtasks implemented with tests passing (104/104)
+- 2026-03-15T23:20:54Z – claude-opus – shell_pid=37508 – lane=doing – Started review via workflow command
