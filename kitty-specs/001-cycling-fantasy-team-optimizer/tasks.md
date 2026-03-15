@@ -96,7 +96,7 @@
 - [x] T014 [P] Implement stage race parser (`infrastructure/scraping/parsers/stage-race.parser.ts`) — scrape `/gc`, `/stage-{n}`, mountain + sprint classification sub-tables; extract raw positions per rider
 - [x] T015 [P] Implement classic race parser (`infrastructure/scraping/parsers/classic.parser.ts`) — scrape single results page; extract finishing positions
 - [x] T016 Create men's professional race catalog (`infrastructure/scraping/race-catalog.ts`) — list of UWT/Pro/.1 races with slug, type mapping (grand_tour/classic/mini_tour), and race class
-- [ ] T017 Write unit tests for parsers using captured HTML fixtures — at least TdF 2024 GC page + Milan-San Remo 2024 results page
+- [x] T017 Write unit tests for parsers using captured HTML fixtures — at least TdF 2024 GC page + Milan-San Remo 2024 results page
 
 ### Implementation Notes
 - Capture real HTML pages from PCS as test fixtures (stored in `apps/api/test/fixtures/pcs/`)
