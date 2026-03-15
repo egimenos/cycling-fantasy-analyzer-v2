@@ -14,7 +14,7 @@ subtasks:
 - T027
 phase: Phase 3 - Scoring & Matching
 assignee: ''
-agent: ''
+agent: "claude-opus"
 shell_pid: "68868"
 review_status: ''
 reviewed_by: ''
@@ -837,3 +837,4 @@ spec-kitty implement WP05 --base WP02
 | Timestamp | Agent | Action |
 |-----------|-------|--------|
 | 2026-03-14T23:51:57Z | system | Prompt generated via /spec-kitty.tasks |
+- 2026-03-15T19:34:14Z – claude-opus – shell_pid=68868 – lane=doing – Assigned agent via workflow command
