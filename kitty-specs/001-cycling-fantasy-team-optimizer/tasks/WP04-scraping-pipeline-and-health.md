@@ -13,7 +13,7 @@ subtasks:
 - T022
 phase: Phase 2 - Scraping Pipeline
 assignee: ''
-agent: ''
+agent: "claude-opus"
 shell_pid: "43434"
 review_status: ''
 reviewed_by: ''
@@ -527,3 +527,4 @@ spec-kitty implement WP04 --base WP03
 | Timestamp | Agent | Action |
 |-----------|-------|--------|
 | 2026-03-14T23:51:57Z | system | Prompt generated via /spec-kitty.tasks |
+- 2026-03-15T18:58:38Z – claude-opus – shell_pid=43434 – lane=doing – Assigned agent via workflow command
