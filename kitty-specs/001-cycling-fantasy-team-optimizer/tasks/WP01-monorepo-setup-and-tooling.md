@@ -1,8 +1,11 @@
 ---
 work_package_id: WP01
 title: Monorepo Setup & Tooling
-lane: planned
+lane: "doing"
 dependencies: []
+base_branch: main
+base_commit: e3d975e7a71c964bfcadbd2c63a93978c2188eb1
+created_at: '2026-03-15T11:18:20.201207+00:00'
 subtasks:
 - T001
 - T002
@@ -13,7 +16,7 @@ subtasks:
 phase: Phase 1 - Foundation
 assignee: ''
 agent: ''
-shell_pid: ''
+shell_pid: "5666"
 review_status: ''
 reviewed_by: ''
 history:
