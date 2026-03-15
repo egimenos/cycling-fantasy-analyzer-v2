@@ -13,3 +13,4 @@
 .github/copilot/
 .kittify/.dashboard
 .kittify/missions/__pycache__/
+.turbo/
