@@ -2,8 +2,8 @@
 
 **Feature**: 001-cycling-fantasy-team-optimizer
 **Date**: 2026-03-15
-**Status**: Complete
-**Depends on**: research.md (general findings), previous project analysis (egimenos/cycling-fantasy-league-analyzer)
+**Status**: Complete (updated with POC results 2026-03-15)
+**Depends on**: research.md (general findings), previous project analysis (egimenos/cycling-fantasy-league-analyzer), **practical POC** (poc-axios.mjs, poc-full-parse.mjs)
 
 ---
 
@@ -15,7 +15,7 @@ This document details the complete scraping strategy for ProCyclingStats (PCS), 
 3. **Validation guardrails** — checks to ensure parsed data is correct, not just "some data"
 4. **Cloudflare mitigation** — handling anti-bot protection
 
-All strategies are based on analysis of a working Python scraper (egimenos/cycling-fantasy-league-analyzer, ~August 2025) and the `themm1/procyclingstats` community package.
+All strategies are based on analysis of a working Python scraper (egimenos/cycling-fantasy-league-analyzer, ~August 2025), the `themm1/procyclingstats` community package, and a **practical POC** (March 2026) that tested multiple HTTP clients against live PCS pages.
 
 ---
 
@@ -44,35 +44,41 @@ https://www.procyclingstats.com/races.php?year={year}&circuit={circuit_id}&filte
 
 #### 1.2 Calendar Page HTML Structure
 
+> **POC verified** (2026-03-15): Actual headers are `[Date, Date, Race, Winner, Class]`.
+> There is NO `Cat.` column when filtering by circuit. The previous research assumed
+> a `Cat.` column existed — it does not on circuit-filtered pages.
+
 ```html
 <table class="basic">
   <thead>
     <tr>
       <th>Date</th>
+      <th>Date</th>        <!-- two Date columns (start + end date) -->
       <th>Race</th>
-      <th>Cat.</th>
-      <th>Class</th>
       <th>Winner</th>
+      <th>Class</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>25.01 - 02.02</td>
-      <td><a href="race/tour-down-under/2025/gc">Tour Down Under</a></td>
-      <td>ME</td>
-      <td>2.UWT</td>
+      <td>25.01</td>
+      <td>02.02</td>
+      <td><a href="race/tour-down-under/2025/gc">Santos Tour Down Under</a></td>
       <td><a href="rider/...">Winner Name</a></td>
+      <td>2.UWT</td>
     </tr>
     <tr>
       <td>22.03</td>
+      <td></td>
       <td><a href="race/milano-sanremo/2025/result">Milano-Sanremo</a></td>
-      <td>ME</td>
-      <td>1.UWT</td>
       <td><a href="rider/...">Winner Name</a></td>
+      <td>1.UWT</td>
     </tr>
   </tbody>
 </table>
 ```
+
+**POC result**: WorldTour 2025 calendar yielded **36 races** (15 stage, 21 one-day). All 3 Grand Tours found.
 
 #### 1.3 Parsing Strategy
 
@@ -84,7 +90,7 @@ For each row in tbody:
   3. Read Class column text:
      - Starts with "2." → STAGE_RACE (e.g., "2.UWT", "2.Pro")
      - Starts with "1." → ONE_DAY (e.g., "1.UWT", "1.Pro")
-  4. Read Cat. column: filter to "ME" only (men's elite)
+  4. NOTE: No Cat. column filtering needed — circuit filter already limits to relevant races
   5. Deduplicate by base race URL
 ```
 
@@ -96,7 +102,6 @@ For each row in tbody:
 | **Expected races present** | Grand Tours (tour-de-france, giro-d-italia, vuelta-a-espana) must appear | WARN — scraping may have missed them |
 | **No duplicate slugs** | After deduplication, no race appears twice | FAIL — parsing logic error |
 | **Valid href format** | Every href must match `race/[a-z0-9-]+/\d{4}` | SKIP entry — malformed link |
-| **Only men's races** | Cat. column must be "ME" (filter out WE = women's elite) | SKIP entry |
 | **Class validation** | Class must start with "1." or "2." | SKIP entry — unknown category |
 
 ---
@@ -116,20 +121,26 @@ URL: /race/{slug}/{year}/gc
 **Purpose**: Get race metadata AND discover all classification/stage URLs.
 
 **HTML Structure for navigation**:
+
+> **POC verified** (2026-03-15): The `<select>` option values contain a `/result/result`
+> suffix (e.g., `race/tour-de-france/2024/stage-1/result/result`). URLs work with or
+> without this suffix. The extractor should normalize them.
+> 26 total URLs found for TdF 2024: 21 stages + points + KOM + GC + 2 others.
+
 ```html
 <div class="selectNav">
   <a>« PREV</a>
   <a>NEXT »</a>
   <select>
-    <option value="race/tour-de-france/2024/stage-1">Stage 1</option>
-    <option value="race/tour-de-france/2024/stage-2">Stage 2</option>
+    <option value="race/tour-de-france/2024/stage-1/result/result">Stage 1</option>
+    <option value="race/tour-de-france/2024/stage-2/result/result">Stage 2</option>
     ...
-    <option value="race/tour-de-france/2024/stage-21">Stage 21</option>
-    <option value="race/tour-de-france/2024/points">Points classification</option>
-    <option value="race/tour-de-france/2024/kom">Mountains classification</option>
-    <option value="race/tour-de-france/2024/gc">Final GC</option>
-    <option value="race/tour-de-france/2024/teams">Teams classification</option>
-    <option value="race/tour-de-france/2024/youth">Youth classification</option>
+    <option value="race/tour-de-france/2024/stage-21/result/result">Stage 21</option>
+    <option value="race/tour-de-france/2024/points/result/result">Points classification</option>
+    <option value="race/tour-de-france/2024/kom/result/result">Mountains classification</option>
+    <option value="race/tour-de-france/2024/gc/result/result">Final GC</option>
+    <option value="race/tour-de-france/2024/teams/result/result">Teams classification</option>
+    <option value="race/tour-de-france/2024/youth/result/result">Youth classification</option>
   </select>
 </div>
 ```
@@ -155,12 +166,18 @@ URL: /race/{slug}/{year}/gc
 
 Every classification page (GC, stage, points, KOM) uses the same table structure:
 
+> **POC verified** (2026-03-15): Actual TdF 2024 GC headers:
+> `[Rnk, Prev, ▼▲, BIB, H2H, Specialty, Age, Rider, Team, UCI, Pnt, , Time, Time won/lost]`
+> Rider is at index 7, Team at index 8. Header count varies by page type — always use
+> `indexOf('Rider')` for column detection, never hardcode indices.
+
 ```html
 <div class="resTab">               <!-- may have class "hide" if not active tab -->
   <table class="results">
     <thead>
       <tr>
-        <th></th>                   <!-- rank/position column (sometimes empty header) -->
+        <th>Rnk</th>               <!-- rank/position column -->
+        <!-- ... various metadata columns ... -->
         <th>Rider</th>
         <th>Team</th>              <!-- or "Tm" for compact tables -->
         <th>Time</th>              <!-- or "Points" or "Pnt" depending on classification -->
@@ -252,11 +269,16 @@ For each <tr> in tbody:
 
 #### 2.2.1 Entry Point
 
+> **POC verified** (2026-03-15): The base URL `/race/{slug}/{year}` returns an **overview
+> page WITHOUT results table**. The `/result` suffix is **REQUIRED** for classic results.
+
 ```
-URL: /race/{slug}/{year}/result  (or just /race/{slug}/{year})
+URL: /race/{slug}/{year}/result     ← REQUIRED for results table
+URL: /race/{slug}/{year}            ← overview page only, NO results table
+URL: /race/{slug}/{year}/result/result  ← also works, same as /result
 ```
 
-The URL from the calendar page may end in `/result` or `/gc`. For one-day races, both typically work, but `/result` is the canonical endpoint.
+**MSR 2024 POC**: `/race/milano-sanremo/2024` → 0 results table; `/race/milano-sanremo/2024/result` → 175 riders, winner Jasper Philipsen.
 
 #### 2.2.2 HTML Structure
 
@@ -496,43 +518,69 @@ function validateStageRaceCompleteness(
 
 ## 5. Cloudflare / Anti-Bot Mitigation
 
-### Current Situation
-As of March 2026, PCS uses Cloudflare protection that returns 403 for standard HTTP clients (curl, Axios, WebFetch). The previous Python project (~August 2025) used plain `requests.get()` successfully, meaning Cloudflare protection was either weaker or not present at that time.
+### POC Results (2026-03-15)
 
-### Mitigation Options (ranked by preference)
+Practical testing against live PCS pages confirmed the Cloudflare situation:
 
-| Option | Complexity | Reliability | Performance |
-|--------|-----------|-------------|-------------|
-| **A. Axios with full browser headers + cookies** | Low | Medium | Fast |
-| **B. cloudscraper or similar anti-bot library** | Low | Medium-High | Fast |
-| **C. Playwright headless browser** | Medium | High | Slow (~2s/page) |
-| **D. Proxy rotation service** | High | High | Variable |
+| Method | HTTP Status | Data Retrieved | Verdict |
+|--------|------------|----------------|---------|
+| **Axios** (full browser headers) | 403 | Cloudflare block | BLOCKED |
+| **Axios** (minimal UA) | 403 | Cloudflare block | BLOCKED |
+| **Axios** (no headers) | 403 | Cloudflare block | BLOCKED |
+| **Node native fetch** (undici) | 403 | Cloudflare block | BLOCKED |
+| **Python requests** (full headers) | 403 | Blocked (non-CF) | BLOCKED |
+| **Python requests** (minimal) | 403 | Cloudflare block | BLOCKED |
+| **cloudscraper** (Python) | **200** | **Full HTML** | WORKS |
+| **got-scraping** (Node, Apify) | **200** | **Full HTML** | **RECOMMENDED** |
+| **Playwright** (headless browser) | **200** | **Full HTML** | WORKS (heavy) |
 
-### Recommendation for v1
+### Root Cause
 
-**Try Option A first** (Axios with proper headers), fall back to **Option C** (Playwright) if needed.
+Cloudflare uses **TLS fingerprinting** (JA3/JA4 hashes), not just header inspection.
+Standard HTTP libraries (Axios, node-fetch, Python requests) produce non-browser TLS
+ClientHello patterns that Cloudflare detects regardless of headers. Libraries like
+`got-scraping` and `cloudscraper` impersonate real browser TLS fingerprints.
 
-For Axios, set these headers:
+### Decision: Use `got-scraping` (Node)
+
+**`got-scraping`** from the Apify team is the recommended HTTP client because:
+
+1. **Works against PCS** — confirmed via POC with full parsing
+2. **Pure Node.js** — no Python sidecar, no browser process, stays in our stack
+3. **Lightweight** — ~85ms per request vs ~2s for Playwright
+4. **Browser TLS impersonation** — handles Cloudflare transparently
+5. **Configurable** — browser version, OS, locale can be set per request
+6. **Active maintenance** — from the Apify team, regularly updated for anti-bot changes
+
 ```typescript
-{
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ...',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-  'Accept-Language': 'en-US,en;q=0.9',
-  'Accept-Encoding': 'gzip, deflate, br',
-  'Connection': 'keep-alive',
-  'Sec-Fetch-Dest': 'document',
-  'Sec-Fetch-Mode': 'navigate',
-  'Sec-Fetch-Site': 'none',
-  'Sec-Fetch-User': '?1',
-  'Upgrade-Insecure-Requests': '1',
-}
+// Usage in PcsClientAdapter:
+import { gotScraping } from 'got-scraping';
+
+const response = await gotScraping({
+  url: `https://www.procyclingstats.com/${path}`,
+  headerGeneratorOptions: {
+    browsers: [{ name: 'chrome', minVersion: 100 }],
+    locales: ['en-US'],
+    operatingSystems: ['windows'],
+  },
+});
+return response.body; // HTML string
 ```
 
-If Cloudflare requires a JS challenge, Axios won't work and we'll need Playwright. The PcsClientAdapter should be designed as a port/adapter so the HTTP transport can be swapped without changing parsers.
+### Fallback Strategy
+
+If `got-scraping` stops working in the future (Cloudflare updates):
+
+1. **First fallback**: `cloudscraper` Python sidecar (simple HTTP endpoint)
+2. **Last resort**: Playwright headless browser (confirmed working, but ~25x slower
+   and adds ~300MB dependency for browser binaries)
+
+The `PcsScraperPort` interface ensures the transport can be swapped without changing
+any parser or use case code.
 
 ### Key Design Principle
 **Parsers must be pure functions**: They accept HTML strings, return parsed data. They don't know HOW the HTML was fetched. This means:
-- If we switch from Axios to Playwright, only the fetcher changes
+- If we switch from got-scraping to Playwright, only the adapter changes
 - Parsers remain testable with static HTML fixtures
 - Validation runs the same regardless of transport
 
@@ -592,34 +640,54 @@ If Cloudflare requires a JS challenge, Axios won't work and we'll need Playwrigh
 
 ### Known Results for Fixture Validation
 
-| Race | Year | GC Winner | Stage 1 Winner |
-|------|------|-----------|----------------|
-| Tour de France | 2024 | Tadej Pogačar (rider/tadej-pogacar) | Romain Bardet |
-| Milano-Sanremo | 2024 | Jasper Philipsen | — |
-| Paris-Nice | 2024 | Matteo Jorgenson | — |
+> **All verified via POC** (2026-03-15) — parsed from live PCS pages with got-scraping.
+
+| Race | Year | GC/Final Winner | Slug | Rider Count | Stage 1 Winner |
+|------|------|-----------------|------|-------------|----------------|
+| Tour de France | 2024 | Pogačar Tadej | rider/tadej-pogacar | 141 (GC) | Romain Bardet |
+| Milano-Sanremo | 2024 | Philipsen Jasper | rider/jasper-philipsen | 175 | — |
+| Paris-Nice | 2024 | Jorgenson Matteo | rider/matteo-jorgenson | — | — |
+
+TdF 2024 GC Top 3: 1. Pogačar (UAE), 2. Vingegaard (Visma), 3. Evenepoel (Soudal QS)
 
 ### How to Capture Fixtures
 
-Since PCS blocks automated requests, fixtures must be captured manually:
+**`got-scraping` can capture fixtures automatically** — Cloudflare is not an obstacle.
+No manual browser saving needed.
 
-1. Open the URL in a real browser
-2. Right-click → "Save Page As" → "Web Page, HTML Only"
-3. Save to `apps/api/test/fixtures/pcs/`
-4. Trim to relevant sections if > 500KB (keep `<table class="results">` and `<div class="selectNav">`)
+```javascript
+// One-time fixture capture script (poc-save-fixtures.mjs)
+import { gotScraping } from 'got-scraping';
+import fs from 'fs';
 
-Alternatively, use a one-time Playwright script to capture all fixtures in batch.
+const response = await gotScraping({ url, headerGeneratorOptions: { ... } });
+fs.writeFileSync(outPath, response.body);
+```
+
+Fixtures already captured in `/tmp/pcs/fixtures/`:
+- `tdf-2024-gc.html` (555 KB) — GC results + classification select menu
+- `tdf-2024-stage-1.html` (471 KB) — Stage 1 results
+- `msr-2024-result.html` (171 KB) — Classic results
+- `paris-nice-2024-gc.html` (380 KB) — Mini tour GC
+- `races-calendar-2025-uwt.html` (32 KB) — WorldTour calendar
+
+**Note**: These fixtures should be copied to `apps/api/test/fixtures/pcs/` during WP03
+implementation. If > 500KB, trim to keep only `<div class="resTab">` and
+`<div class="selectNav">` sections.
 
 ---
 
 ## 9. Open Questions
 
-| # | Question | Impact | Proposed Resolution |
-|---|----------|--------|-------------------|
-| Q1 | Has PCS changed their HTML structure since the Python project (Aug 2025)? | HIGH | Capture fresh fixtures and validate selectors before coding parsers |
-| Q2 | Does Axios with browser headers bypass Cloudflare in 2026? | HIGH | Test during T013 implementation; have Playwright fallback ready |
+| # | Question | Impact | Status |
+|---|----------|--------|--------|
+| Q1 | Has PCS changed their HTML structure since the Python project (Aug 2025)? | HIGH | **RESOLVED** — POC confirms same selectors work. Key differences: more header columns in results table (14 vs 5), need `indexOf('Rider')` not hardcoded index. Calendar headers are `[Date, Date, Race, Winner, Class]` (no Cat. column). |
+| Q2 | Does Axios with browser headers bypass Cloudflare in 2026? | HIGH | **RESOLVED** — No. Axios, node-fetch, Python requests ALL get 403. **`got-scraping`** (Node, TLS impersonation) works. See Section 5 for full POC results. |
 | Q3 | Should we capture rider nationality from result pages or separate rider profile pages? | LOW | Skip for v1; nationality is in the riders table but not critical for scoring |
 | Q4 | How to handle split/cancelled stages (e.g., TdF 2024 had a rest day stage renumbering)? | MEDIUM | Use the stage numbers from PCS URLs; our system doesn't care about gaps |
 | Q5 | Rate limiting: is 1500ms between requests sufficient, or will PCS still throttle/block? | MEDIUM | Start with 1500ms; increase to 2500ms if we see 429 responses |
+| Q6 | Classic URL: base URL vs /result suffix? | MEDIUM | **RESOLVED** — `/result` suffix is **required**. Base URL is overview page only. |
+| Q7 | Classification URL format from `<select>`? | MEDIUM | **RESOLVED** — Option values contain `/result/result` suffix. URLs work with or without it. Extractor should normalize. |
 
 ---
 
@@ -632,4 +700,7 @@ Alternatively, use a one-time Playwright script to capture all fixtures in batch
 | D3 | Capture positions, not PCS points | Positions are atomic data; scoring is computed downstream |
 | D4 | Pure parser functions + separate HTTP fetcher | Testability, Cloudflare transport swappable |
 | D5 | Validation module runs after every parse operation, before persistence | Catch silent breakage before bad data enters the database |
-| D6 | Fixture files captured manually from browser | Cloudflare blocks automated capture; fixtures are stable test data |
+| D6 | ~~Fixture files captured manually from browser~~ **Fixtures captured via `got-scraping`** | **UPDATED**: `got-scraping` bypasses Cloudflare — automated capture works. 5 fixtures already saved in `/tmp/pcs/fixtures/`. |
+| D7 | **Use `got-scraping` instead of Axios** for PCS HTTP client | **NEW**: POC confirmed Axios/node-fetch/Python requests all blocked by Cloudflare TLS fingerprinting. `got-scraping` (Apify) impersonates browser TLS and works. Stays in Node ecosystem, ~85ms/request, no browser process needed. |
+| D8 | **Classic URLs require `/result` suffix** | **NEW**: POC confirmed base URL `/race/{slug}/{year}` is overview-only. Must append `/result` for results table. |
+| D9 | **Classification URLs need normalization** | **NEW**: `<select>` option values have `/result/result` suffix. Extractor should strip or normalize before use. |

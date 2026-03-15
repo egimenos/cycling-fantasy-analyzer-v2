@@ -51,8 +51,8 @@ parsed but incorrect."
 
 ## Project Context
 
-- **Stack**: NestJS backend, Axios for HTTP (with Cloudflare fallback strategy), Cheerio
-  for HTML parsing.
+- **Stack**: NestJS backend, **`got-scraping`** for HTTP (Cloudflare TLS bypass), Cheerio
+  for HTML parsing. POC confirmed Axios/node-fetch/Python requests ALL blocked by Cloudflare.
 - **Architecture**: All scraping infrastructure lives under
   `apps/api/src/infrastructure/scraping/`. Parsers are **pure functions** with no NestJS
   dependencies — they accept HTML strings and return typed data structures. The validation
@@ -68,13 +68,17 @@ parsed but incorrect."
 ### T013 — PCS HTTP Client & Scraper Port
 
 **Goal**: Create a robust HTTP client for fetching pages from PCS with rate limiting, retry
-logic, Cloudflare-aware headers, and a clean port interface.
+logic, Cloudflare TLS bypass via `got-scraping`, and a clean port interface.
+
+> **POC result (2026-03-15)**: Axios, node-fetch, and Python requests are ALL blocked by
+> Cloudflare TLS fingerprinting (403). `got-scraping` from Apify impersonates browser TLS
+> and successfully returns full HTML (~85ms/request). See `research-pcs-scraping.md` §5.
 
 **Steps**:
 
 1. Install dependencies:
    ```bash
-   pnpm --filter api add axios cheerio
+   pnpm --filter api add got-scraping cheerio
    pnpm --filter api add -D @types/cheerio
    ```
 
@@ -90,47 +94,40 @@ logic, Cloudflare-aware headers, and a clean port interface.
 
 3. Create `apps/api/src/infrastructure/scraping/pcs-client.adapter.ts`:
    ```typescript
+   import { gotScraping } from 'got-scraping';
+
    @Injectable()
    export class PcsClientAdapter implements PcsScraperPort {
-     private readonly client: AxiosInstance;
+     private readonly baseUrl = 'https://www.procyclingstats.com/';
      private readonly requestDelayMs: number;
      private lastRequestAt = 0;
 
      constructor() {
        this.requestDelayMs = parseInt(process.env.PCS_REQUEST_DELAY_MS ?? '1500', 10);
-       this.client = axios.create({
-         baseURL: 'https://www.procyclingstats.com/',
-         timeout: 30000,
-         headers: {
-           // Full browser-like headers required for Cloudflare bypass
-           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-           'Accept-Language': 'en-US,en;q=0.9',
-           'Accept-Encoding': 'gzip, deflate, br',
-           'Connection': 'keep-alive',
-           'Sec-Fetch-Dest': 'document',
-           'Sec-Fetch-Mode': 'navigate',
-           'Sec-Fetch-Site': 'none',
-           'Sec-Fetch-User': '?1',
-           'Upgrade-Insecure-Requests': '1',
+     }
+
+     async fetchPage(path: string): Promise<string> {
+       await this.throttle();
+       const response = await gotScraping({
+         url: `${this.baseUrl}${path}`,
+         headerGeneratorOptions: {
+           browsers: [{ name: 'chrome', minVersion: 100 }],
+           locales: ['en-US'],
+           operatingSystems: ['windows'],
          },
+         timeout: { request: 30000 },
        });
+       return response.body;
      }
    }
    ```
-   > **Cloudflare note**: PCS uses Cloudflare protection that blocks standard HTTP clients
-   > with 403. As of March 2026, curl/Axios with basic User-Agent headers are blocked. The
-   > full browser-like headers above may be sufficient; if not, the adapter must be swapped
-   > for a Playwright-based implementation (same port interface). The adapter MUST be designed
-   > so the transport is swappable without changing parsers or use cases.
+   > **Why `got-scraping`**: PCS uses Cloudflare TLS fingerprinting. Standard HTTP clients
+   > produce non-browser JA3/JA4 hashes → 403. `got-scraping` impersonates Chrome TLS.
+   > The `PcsScraperPort` interface ensures the transport can be swapped to Playwright
+   > if `got-scraping` stops working, without changing parsers or use cases.
 
-4. Implement rate limiting in `fetchPage`:
+4. Implement rate limiting:
    ```typescript
-   async fetchPage(path: string): Promise<string> {
-     await this.throttle();
-     // ... fetch with retry, return HTML string
-   }
-
    private async throttle(): Promise<void> {
      const now = Date.now();
      const elapsed = now - this.lastRequestAt;
@@ -144,11 +141,11 @@ logic, Cloudflare-aware headers, and a clean port interface.
 5. Implement retry logic:
    - HTTP 429 (Too Many Requests): retry up to 3 times with exponential backoff (2s, 4s, 8s)
    - HTTP 5xx: retry once after 5s
-   - HTTP 403 (Cloudflare block): log error with clear message suggesting Playwright fallback
+   - HTTP 403 (Cloudflare TLS change): log error with clear message, do not retry
    - HTTP 4xx (except 429, 403): throw immediately, do not retry
    - Network errors (ECONNRESET, ETIMEDOUT): retry once after 3s
 
-**Validation**: Unit test the retry logic by mocking Axios responses. Test that:
+**Validation**: Unit test the retry logic by mocking `gotScraping`. Test that:
 - A 429 response triggers exponential backoff and retries
 - A 200 response returns the HTML body
 - Three consecutive 429 responses followed by a 200 succeeds
@@ -163,9 +160,11 @@ logic, Cloudflare-aware headers, and a clean port interface.
 **Goal**: Parse PCS HTML results tables. This is the core parsing logic shared by GC,
 stage, classic, and classification pages — they all use the same table structure.
 
-> **Key finding from research**: All PCS result pages use the same HTML structure:
-> `div.resTab:not(.hide) table.results` with `thead` for column headers and `tbody tr`
-> for each rider result. The previous Python project confirmed this selector works.
+> **POC verified** (2026-03-15): All PCS result pages use `div.resTab:not(.hide)
+> table.results`. Actual TdF 2024 GC headers have **14 columns**:
+> `[Rnk, Prev, ▼▲, BIB, H2H, Specialty, Age, Rider, Team, UCI, Pnt, , Time, Time won/lost]`
+> — Rider at index 7, Team at index 8. **Always use `indexOf('Rider')` for column
+> detection, never hardcode indices.** Header count varies by page type.
 
 **Steps**:
 
@@ -310,6 +309,11 @@ stage races.
    Classics use the exact same table structure — they're just a one-table page with
    category `FINAL` and no `stageNumber`.
 
+   > **POC finding**: Classic URLs **require** the `/result` suffix. The base URL
+   > `/race/{slug}/{year}` returns an overview page WITHOUT a results table.
+   > `/race/{slug}/{year}/result` returns the actual results (175 riders for MSR 2024).
+   > The use case (WP04) must construct the correct URL.
+
 2. Create `apps/api/src/infrastructure/scraping/parsers/classification-extractor.ts`:
 
    This extracts the list of classification/stage URLs from a stage race GC page:
@@ -393,12 +397,19 @@ stage races.
    > `ProCyclingStatsRaceDataScraper._extract_classification_urls()` and
    > `_parse_select_menu_options()`.
 
+   > **POC finding**: The `<select>` option values contain a `/result/result` suffix
+   > (e.g., `race/tour-de-france/2024/stage-1/result/result`). URLs work with or without
+   > this suffix. The extractor should **normalize URLs** by stripping `/result/result`
+   > before returning them. POC found **26 total URLs** for TdF 2024: 21 stages + points
+   > + KOM + GC + 2 others (teams, youth — filtered out).
+
 **Validation**:
-- Test `parseClassicResults` with Milano-Sanremo 2024 fixture — must return correct winner
+- Test `parseClassicResults` with Milano-Sanremo 2024 fixture — must return Philipsen as winner, 175 riders
 - Test `extractClassificationUrls` with TdF 2024 GC fixture — must return 21 stages +
   points + KOM + GC (at least 24 entries)
 - Verify stage numbers are sequential (1, 2, ..., 21)
 - Verify no "teams" or "youth" entries are included
+- Verify returned URLs do NOT contain `/result/result` suffix
 
 ---
 
@@ -436,11 +447,12 @@ stage races.
     * Circuit IDs: 1 = WorldTour, 26 = ProSeries
     *
     * HTML structure: table.basic (or table[class*="basic"])
-    *   thead: Race, Class columns (+ Date, Cat., Winner)
+    *   thead: [Date, Date, Race, Winner, Class] — POC verified 2026-03-15
     *   tbody tr: one row per race
     *     - Race column: <a href="race/{slug}/{year}/gc">Race Name</a>
     *     - Class column: "2.UWT" (stage race) or "1.UWT" (one-day)
-    *     - Cat. column: "ME" (men's elite) — filter to this only
+    *   NOTE: No "Cat." column on circuit-filtered pages. No ME filtering needed.
+    *   POC result: WorldTour 2025 → 36 races (15 stage, 21 one-day)
     *
     * @param html - Raw HTML of the calendar page
     * @returns List of discovered races
@@ -462,18 +474,12 @@ stage races.
      const classCol = headers.indexOf('Class');
      if (raceCol === -1 || classCol === -1) return [];
 
-     // Optional: Cat. column for filtering men's elite
-     const catCol = headers.indexOf('Cat.');
+     // NOTE: No "Cat." column on circuit-filtered pages (POC verified).
+     // Circuit filter already limits to relevant races.
 
      table.find('tbody tr').each((_, row) => {
        const cells = $(row).find('td');
        if (cells.length <= Math.max(raceCol, classCol)) return;
-
-       // Filter to men's elite only (if Cat. column exists)
-       if (catCol !== -1) {
-         const catText = $(cells[catCol]).text().trim();
-         if (catText !== 'ME') return;
-       }
 
        // Race type from Class column
        const classText = $(cells[classCol]).text().trim();
@@ -692,11 +698,11 @@ with **known-result assertions** that verify parsed data matches actual race out
 
 1. Create the fixture directory: `apps/api/test/fixtures/pcs/`
 
-2. Capture real HTML pages from PCS and save as fixtures. **Since PCS blocks automated
-   requests (Cloudflare 403), fixtures must be captured manually** from a browser:
-   - Open URL in Chrome/Firefox
-   - Right-click → "Save Page As" → "Web Page, HTML Only"
-   - Save to `apps/api/test/fixtures/pcs/`
+2. Capture real HTML pages from PCS and save as fixtures. **`got-scraping` bypasses
+   Cloudflare** — fixtures can be captured automatically (see POC script
+   `poc-save-fixtures.mjs`). Pre-captured fixtures exist in `/tmp/pcs/fixtures/`.
+   - Copy from `/tmp/pcs/fixtures/` to `apps/api/test/fixtures/pcs/`
+   - Or capture fresh using `got-scraping` in a one-time script
    - If file > 500KB, trim to keep only the `<div class="resTab">` and
      `<div class="selectNav">` sections plus any necessary wrapping elements
 
@@ -878,18 +884,20 @@ by the health monitor in WP04.
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
 | PCS changes HTML structure | High | High | Fixtures test against known HTML; validation guardrails detect live breakage; selectors based on working Python project |
-| Cloudflare blocks Axios (403) | High | High | Full browser headers in adapter; PcsScraperPort interface allows swapping to Playwright without changing parsers/use cases |
+| Cloudflare blocks HTTP client | Medium | High | **MITIGATED**: `got-scraping` (TLS impersonation) confirmed working via POC. PcsScraperPort interface allows swapping to Playwright if got-scraping stops working |
 | Parser returns data but wrong data | Medium | Critical | **Validation guardrails** catch: position gaps, duplicate positions, rider count anomalies, empty results, DNF inconsistencies |
 | PCS returns different HTML for different locales | Medium | Medium | Set `Accept-Language: en-US` header |
 | Large HTML fixtures bloat repository | Low | Low | Trim to relevant sections; .gitattributes for LFS if needed |
-| Calendar page structure differs from research | Medium | Medium | Race list parser has its own test fixtures; validate against known race count |
+| Calendar page structure differs from research | Low | Medium | **MITIGATED**: POC verified actual headers `[Date, Date, Race, Winner, Class]`. No Cat. column. 36 races found for 2025 UWT. |
+| Classic URL missing /result suffix | Low | Medium | **MITIGATED**: POC confirmed `/result` suffix required. Use case must construct correct URL. |
+| Classification URLs have /result/result suffix | Low | Low | **MITIGATED**: POC confirmed. Extractor normalizes URLs by stripping suffix. |
 
 ## Review Guidance
 
 When reviewing this work package, verify:
 
-1. **Cloudflare awareness**: Client must have full browser-like headers. Must throw
-   descriptive error on 403, not retry indefinitely.
+1. **Cloudflare awareness**: Client must use `got-scraping` (NOT Axios — POC confirmed
+   Axios is blocked). Must throw descriptive error on 403, not retry indefinitely.
 2. **Rate limiting**: Consecutive calls enforce minimum delay. Test covers timing.
 3. **Retry behavior**: Exponential backoff on 429, single retry on 5xx, no retry on 4xx.
 4. **Selector correctness**: Verify `div.resTab:not(.hide) table.results` is the primary
@@ -905,8 +913,8 @@ When reviewing this work package, verify:
 
 ## Definition of Done
 
-- [ ] PCS HTTP client implements rate limiting with configurable delay
-- [ ] Full browser-like headers for Cloudflare mitigation
+- [ ] PCS HTTP client uses `got-scraping` with TLS impersonation (NOT Axios)
+- [ ] Rate limiting with configurable delay (default 1500ms)
 - [ ] Retry logic handles 429 (exponential backoff), 5xx (single retry), 403 (descriptive error)
 - [ ] `PcsScraperPort` interface defined for transport swappability
 - [ ] Results table parser with exact selector: `div.resTab:not(.hide) table.results`
@@ -940,3 +948,4 @@ spec-kitty implement WP03 --base WP02
 |-----------|-------|--------|
 | 2026-03-14T23:51:57Z | system | Prompt generated via /spec-kitty.tasks |
 | 2026-03-15T13:30:00Z | claude-opus | Updated with PCS scraping research findings: exact selectors, race discovery, validation guardrails |
+| 2026-03-15T15:00:00Z | claude-opus | Updated with POC results: Axios→got-scraping, actual header structure, URL suffix corrections, fixture capture confirmed |
