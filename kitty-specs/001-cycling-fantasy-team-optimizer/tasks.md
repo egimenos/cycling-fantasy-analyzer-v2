@@ -21,12 +21,12 @@
 **Requirements Refs**: FR-000
 
 ### Included Subtasks
-- [ ] T001 Initialize Turborepo monorepo with pnpm workspaces and `turbo.json` pipeline config
-- [ ] T002 Configure root TypeScript (`tsconfig.base.json`, strict mode), shared ESLint, Prettier
-- [ ] T003 [P] Set up Husky + lint-staged + commitlint for Conventional Commits enforcement
-- [ ] T004 [P] Initialize `apps/api` — NestJS scaffold with hexagonal layer directories (domain, application, infrastructure, presentation)
-- [ ] T005 [P] Initialize `apps/web` — TanStack Start + Tailwind CSS + shadcn/ui base setup
-- [ ] T006 [P] Create `packages/shared-types` (base enums, API types) and `packages/eslint-config` (shared rules)
+- [x] T001 Initialize Turborepo monorepo with pnpm workspaces and `turbo.json` pipeline config
+- [x] T002 Configure root TypeScript (`tsconfig.base.json`, strict mode), shared ESLint, Prettier
+- [x] T003 [P] Set up Husky + lint-staged + commitlint for Conventional Commits enforcement
+- [x] T004 [P] Initialize `apps/api` — NestJS scaffold with hexagonal layer directories (domain, application, infrastructure, presentation)
+- [x] T005 [P] Initialize `apps/web` — TanStack Start + Tailwind CSS + shadcn/ui base setup
+- [x] T006 [P] Create `packages/shared-types` (base enums, API types) and `packages/eslint-config` (shared rules)
 
 ### Implementation Notes
 - Use `pnpm` as package manager (Turborepo native support)
