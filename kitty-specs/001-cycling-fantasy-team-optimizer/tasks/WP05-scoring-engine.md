@@ -1,7 +1,7 @@
 ---
 work_package_id: WP05
 title: Scoring Engine
-lane: "doing"
+lane: "for_review"
 dependencies: [WP02]
 base_branch: 001-cycling-fantasy-team-optimizer-WP02
 base_commit: 09cedac4ebbc7faeb1aa8a6d1a48f96e77e97a5f
@@ -838,3 +838,4 @@ spec-kitty implement WP05 --base WP02
 |-----------|-------|--------|
 | 2026-03-14T23:51:57Z | system | Prompt generated via /spec-kitty.tasks |
 - 2026-03-15T19:34:14Z – claude-opus – shell_pid=68868 – lane=doing – Assigned agent via workflow command
+- 2026-03-15T19:43:56Z – claude-opus – shell_pid=68868 – lane=for_review – Ready for review: Scoring engine with temporal decay, per-category weighted averaging, composite price-aware scoring, and ScoringService DI wrapper. 62 tests, 100% coverage on all production files.
