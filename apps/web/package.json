@@ -1,0 +1,28 @@
+{
+  "name": "@cycling-analyzer/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite dev --port 3000",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@cycling-analyzer/shared-types": "workspace:*",
+    "@tanstack/react-router": "^1.120.20",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.7",
+    "@tanstack/router-plugin": "^1.120.20",
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.5.2",
+    "tailwindcss": "^4.1.7",
+    "vite": "^6.4.1",
+    "vitest": "^3.2.1"
+  }
+}

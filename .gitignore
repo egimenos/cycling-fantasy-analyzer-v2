@@ -1,3 +1,32 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+.next
+.output
+.vinxi
+.turbo
+*.tsbuildinfo
+
+# Coverage
+coverage
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
 # Added by Spec Kitty CLI (auto-managed)
 .claude/
 .codex/
