@@ -15,7 +15,7 @@ subtasks:
 - T006
 phase: Phase 1 - Foundation
 assignee: ''
-agent: ''
+agent: "claude-opus"
 shell_pid: "5666"
 review_status: ''
 reviewed_by: ''
@@ -398,3 +398,4 @@ spec-kitty implement WP01
 | Timestamp | Agent | Action |
 |-----------|-------|--------|
 | 2026-03-14T23:51:57Z | system | Prompt generated via /spec-kitty.tasks |
+- 2026-03-15T11:18:20Z – claude-opus – shell_pid=5666 – lane=doing – Assigned agent via workflow command
