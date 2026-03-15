@@ -1,7 +1,7 @@
 ---
 work_package_id: WP01
 title: Monorepo Setup & Tooling
-lane: "doing"
+lane: "for_review"
 dependencies: []
 base_branch: main
 base_commit: e3d975e7a71c964bfcadbd2c63a93978c2188eb1
@@ -399,3 +399,4 @@ spec-kitty implement WP01
 |-----------|-------|--------|
 | 2026-03-14T23:51:57Z | system | Prompt generated via /spec-kitty.tasks |
 - 2026-03-15T11:18:20Z – claude-opus – shell_pid=5666 – lane=doing – Assigned agent via workflow command
+- 2026-03-15T11:30:07Z – claude-opus – shell_pid=5666 – lane=for_review – Ready for review: Full monorepo setup with Turborepo, NestJS, Vite+React+TanStack Router, shared packages. All pipelines pass (build/lint/test). Used Vite+TanStack Router fallback instead of TanStack Start due to dependency conflicts.
