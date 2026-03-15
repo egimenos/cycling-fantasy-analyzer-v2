@@ -9,6 +9,7 @@ subtasks:
 - T015
 - T016
 - T017
+- T017b
 phase: Phase 2 - Scraping Pipeline
 assignee: ''
 agent: ''
@@ -25,34 +26,49 @@ requirement_refs:
 - FR-000
 ---
 
-# WP03 — PCS HTTP Client & Parsers
+# WP03 — PCS HTTP Client, Parsers & Validation Guardrails
 
 ## Objectives
 
-Build the scraping infrastructure for extracting race results from ProCyclingStats (PCS).
-This work package delivers an HTTP client with rate limiting and retry logic, HTML parsers
-for stage races and classics, a race catalog defining all tracked races, and comprehensive
-unit tests backed by real HTML fixtures. By completion, the parsers must correctly extract
-rider names, positions, and classifications from captured PCS HTML pages.
+Build the complete scraping infrastructure for extracting race results from ProCyclingStats
+(PCS). This work package delivers:
+
+1. **An HTTP client** with rate limiting, retry logic, and Cloudflare mitigation
+2. **A race discovery parser** that dynamically obtains the list of races for a season
+3. **Results parsers** for stage races and classics with exact CSS selectors
+4. **A classification URL extractor** for discovering all stages/classifications in a stage race
+5. **A validation module** with guardrails to detect silent parsing failures
+6. **Comprehensive tests** backed by real HTML fixtures with known-result assertions
+
+By completion, the parsers must correctly extract rider names, positions, and classifications
+from captured PCS HTML pages, and the validation module must catch cases where "data is
+parsed but incorrect."
+
+> **Key reference**: `research-pcs-scraping.md` contains the detailed HTML analysis,
+> selector reference, and validation rules derived from analyzing the previous Python
+> project (egimenos/cycling-fantasy-league-analyzer) and the `themm1/procyclingstats`
+> community package.
 
 ## Project Context
 
-- **Stack**: NestJS backend, Axios for HTTP, Cheerio for HTML parsing.
+- **Stack**: NestJS backend, Axios for HTTP (with Cloudflare fallback strategy), Cheerio
+  for HTML parsing.
 - **Architecture**: All scraping infrastructure lives under
-  `apps/api/src/infrastructure/scraping/`. Parsers are pure functions with no NestJS
-  dependencies — they accept HTML strings and return typed data structures.
+  `apps/api/src/infrastructure/scraping/`. Parsers are **pure functions** with no NestJS
+  dependencies — they accept HTML strings and return typed data structures. The validation
+  module is also a pure function layer.
 - **Constitution**: TypeScript strict, no `any`, 90% unit coverage minimum. Parser tests
   must use real HTML fixtures to catch regressions if PCS changes their markup.
 - **Depends on**: WP02 (domain entities and enums must exist for type definitions).
-- **Key reference files**: `research.md` for PCS URL patterns and HTML structure,
-  `data-model.md` for result types, `contracts/api.md` for API shapes.
+- **Key reference files**: `research-pcs-scraping.md` for PCS HTML structure and selectors,
+  `research.md` for general findings, `data-model.md` for result types.
 
 ## Detailed Subtask Guidance
 
-### T013 — PCS HTTP Client
+### T013 — PCS HTTP Client & Scraper Port
 
-**Goal**: Create a robust HTTP client for fetching pages from ProCyclingStats with rate
-limiting, retry logic, and HTML parsing utilities.
+**Goal**: Create a robust HTTP client for fetching pages from PCS with rate limiting, retry
+logic, Cloudflare-aware headers, and a clean port interface.
 
 **Steps**:
 
@@ -61,15 +77,21 @@ limiting, retry logic, and HTML parsing utilities.
    pnpm --filter api add axios cheerio
    pnpm --filter api add -D @types/cheerio
    ```
-2. Create `apps/api/src/infrastructure/scraping/pcs-client.adapter.ts`:
-   ```typescript
-   import { Injectable, Logger } from '@nestjs/common';
-   import axios, { AxiosInstance, AxiosError } from 'axios';
-   import * as cheerio from 'cheerio';
 
+2. Create the driven port that the application layer will depend on:
+   ```typescript
+   // apps/api/src/application/scraping/ports/pcs-scraper.port.ts
+   export interface PcsScraperPort {
+     fetchPage(path: string): Promise<string>;
+   }
+   export const PCS_SCRAPER_PORT = Symbol('PcsScraperPort');
+   ```
+   The application layer (use cases) depends on `PcsScraperPort`, never on the adapter directly.
+
+3. Create `apps/api/src/infrastructure/scraping/pcs-client.adapter.ts`:
+   ```typescript
    @Injectable()
-   export class PcsClientAdapter {
-     private readonly logger = new Logger(PcsClientAdapter.name);
+   export class PcsClientAdapter implements PcsScraperPort {
      private readonly client: AxiosInstance;
      private readonly requestDelayMs: number;
      private lastRequestAt = 0;
@@ -78,58 +100,53 @@ limiting, retry logic, and HTML parsing utilities.
        this.requestDelayMs = parseInt(process.env.PCS_REQUEST_DELAY_MS ?? '1500', 10);
        this.client = axios.create({
          baseURL: 'https://www.procyclingstats.com/',
-         headers: {
-           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-         },
          timeout: 30000,
+         headers: {
+           // Full browser-like headers required for Cloudflare bypass
+           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+           'Accept-Language': 'en-US,en;q=0.9',
+           'Accept-Encoding': 'gzip, deflate, br',
+           'Connection': 'keep-alive',
+           'Sec-Fetch-Dest': 'document',
+           'Sec-Fetch-Mode': 'navigate',
+           'Sec-Fetch-Site': 'none',
+           'Sec-Fetch-User': '?1',
+           'Upgrade-Insecure-Requests': '1',
+         },
        });
      }
    }
    ```
-3. Implement rate limiting in the `fetchPage` method:
+   > **Cloudflare note**: PCS uses Cloudflare protection that blocks standard HTTP clients
+   > with 403. As of March 2026, curl/Axios with basic User-Agent headers are blocked. The
+   > full browser-like headers above may be sufficient; if not, the adapter must be swapped
+   > for a Playwright-based implementation (same port interface). The adapter MUST be designed
+   > so the transport is swappable without changing parsers or use cases.
+
+4. Implement rate limiting in `fetchPage`:
    ```typescript
    async fetchPage(path: string): Promise<string> {
      await this.throttle();
-     // ... fetch logic with retry
+     // ... fetch with retry, return HTML string
    }
 
    private async throttle(): Promise<void> {
      const now = Date.now();
      const elapsed = now - this.lastRequestAt;
      if (elapsed < this.requestDelayMs) {
-       await this.sleep(this.requestDelayMs - elapsed);
+       await new Promise(resolve => setTimeout(resolve, this.requestDelayMs - elapsed));
      }
      this.lastRequestAt = Date.now();
    }
+   ```
 
-   private sleep(ms: number): Promise<void> {
-     return new Promise((resolve) => setTimeout(resolve, ms));
-   }
-   ```
-4. Implement retry logic:
-   - On HTTP 429 (Too Many Requests): retry up to 3 times with exponential backoff
-     (2000ms, 4000ms, 8000ms). Log a warning on each retry.
-   - On HTTP 5xx: retry once after 5000ms. Log a warning.
-   - On HTTP 4xx (except 429): throw immediately, do not retry.
-   - On network errors (ECONNRESET, ETIMEDOUT): retry once after 3000ms.
-5. Add a utility method for Cheerio parsing:
-   ```typescript
-   parseHtml(html: string): cheerio.CheerioAPI {
-     return cheerio.load(html);
-   }
-   ```
-6. Create the driven port that the application layer will depend on:
-   ```typescript
-   // apps/api/src/application/scraping/ports/pcs-scraper.port.ts
-   export interface PcsScraperPort {
-     fetchPage(path: string): Promise<string>;
-   }
-   export const PCS_SCRAPER_PORT = Symbol('PcsScraperPort');
-   ```
-   The `PcsClientAdapter` implements this port. The application layer (use cases) depends
-   on `PcsScraperPort`, never on `PcsClientAdapter` directly.
-7. Make the client injectable via NestJS but ensure the core logic (retry, throttle) is
-   testable without NestJS by extracting it into pure functions if needed.
+5. Implement retry logic:
+   - HTTP 429 (Too Many Requests): retry up to 3 times with exponential backoff (2s, 4s, 8s)
+   - HTTP 5xx: retry once after 5s
+   - HTTP 403 (Cloudflare block): log error with clear message suggesting Playwright fallback
+   - HTTP 4xx (except 429, 403): throw immediately, do not retry
+   - Network errors (ECONNRESET, ETIMEDOUT): retry once after 3s
 
 **Validation**: Unit test the retry logic by mocking Axios responses. Test that:
 - A 429 response triggers exponential backoff and retries
@@ -137,13 +154,18 @@ limiting, retry logic, and HTML parsing utilities.
 - Three consecutive 429 responses followed by a 200 succeeds
 - Four consecutive 429 responses throws an error
 - Rate limiting enforces the minimum delay between requests
+- A 403 response throws with a descriptive error (not silently retried forever)
 
 ---
 
-### T014 — Stage Race Parser
+### T014 — Results Table Parser (shared for all page types)
 
-**Goal**: Parse PCS HTML pages for stage race results including GC, stage, mountain, and
-sprint classifications.
+**Goal**: Parse PCS HTML results tables. This is the core parsing logic shared by GC,
+stage, classic, and classification pages — they all use the same table structure.
+
+> **Key finding from research**: All PCS result pages use the same HTML structure:
+> `div.resTab:not(.hide) table.results` with `thead` for column headers and `tbody tr`
+> for each rider result. The previous Python project confirmed this selector works.
 
 **Steps**:
 
@@ -152,107 +174,342 @@ sprint classifications.
    import { ResultCategory } from '../../../domain/shared/result-category.enum';
 
    export interface ParsedResult {
-     readonly riderName: string;
-     readonly riderSlug: string;
-     readonly teamName: string;
-     readonly position: number | null;
-     readonly category: ResultCategory;
-     readonly stageNumber?: number;
-     readonly dnf: boolean;
+     readonly riderName: string;    // "POGAČAR Tadej" (as displayed on PCS)
+     readonly riderSlug: string;    // "rider/tadej-pogacar" (from href)
+     readonly teamName: string;     // "UAE Team Emirates"
+     readonly position: number | null;  // 1, 2, 3... or null for DNF/DNS
+     readonly category: ResultCategory; // GC, STAGE, MOUNTAIN, SPRINT, FINAL
+     readonly stageNumber: number | null; // stage number or null
+     readonly dnf: boolean;         // true if DNF, DNS, OTL, DSQ
    }
    ```
-2. Create `apps/api/src/infrastructure/scraping/parsers/stage-race.parser.ts`:
+
+2. Create `apps/api/src/infrastructure/scraping/parsers/results-table.parser.ts`:
+
+   This is the **core parsing function** used by all page-specific parsers:
    ```typescript
    import * as cheerio from 'cheerio';
    import { ParsedResult } from './parsed-result.type';
    import { ResultCategory } from '../../../domain/shared/result-category.enum';
 
-   export function parseGcResults(html: string): ParsedResult[] { /* ... */ }
-   export function parseStageResults(html: string, stageNumber: number): ParsedResult[] { /* ... */ }
-   export function parseMountainClassification(html: string): ParsedResult[] { /* ... */ }
-   export function parseSprintClassification(html: string): ParsedResult[] { /* ... */ }
-   ```
-3. Implementation guidance for each parser function:
-   - **parseGcResults**: Load HTML with Cheerio. Find the results table (typically
-     `table.results` or the main standings table). For each row:
-     - Extract position from the rank column (first `td` or column with class `rank`)
-     - Extract rider name from the link (`a[href*="/rider/"]`)
-     - Extract rider slug from the href attribute (last path segment)
-     - Extract team name from the team column
-     - Handle DNF/DNS/OTL: if position cell contains "DNF", "DNS", or "OTL", set
-       `position = null` and `dnf = true`
-     - Set `category = ResultCategory.GC`
-   - **parseStageResults**: Same table parsing logic but with `category = ResultCategory.STAGE`
-     and the `stageNumber` parameter attached to each result. Position comes from the
-     finishing order, not the GC rank.
-   - **parseMountainClassification**: Parse the KOM/mountain standings page. Same approach,
-     `category = ResultCategory.MOUNTAIN`.
-   - **parseSprintClassification**: Parse the sprint/points classification page.
-     `category = ResultCategory.SPRINT`.
-4. Handle edge cases:
-   - Riders who abandon mid-stage (listed as DNF in stage results)
-   - Riders with no time gap shown (first rider, or riders in the same group)
-   - Tables with different column counts depending on race
-   - Empty tables (race not yet started or no data available)
+   /**
+    * Parses a PCS results table from an HTML string.
+    * Pure function: HTML in, ParsedResult[] out. No side effects.
+    *
+    * @param html - Raw HTML string of the page
+    * @param category - The classification category (GC, STAGE, etc.)
+    * @param stageNumber - Stage number (null for non-stage classifications)
+    */
+   export function parseResultsTable(
+     html: string,
+     category: ResultCategory,
+     stageNumber: number | null = null,
+   ): ParsedResult[] {
+     const $ = cheerio.load(html);
+     const results: ParsedResult[] = [];
 
-**Validation**: Parser functions must be pure (no side effects, no HTTP calls). They
+     // KEY SELECTOR: active results table (not hidden tabs)
+     const table = $('div.resTab:not(.hide) table.results');
+     if (table.length === 0) return [];
+
+     // Determine column indices from headers
+     const headers: string[] = [];
+     table.find('thead th').each((_, th) => {
+       headers.push($(th).text().trim());
+     });
+
+     const riderCol = headers.indexOf('Rider');
+     // Team header varies: "Team" or "Tm" depending on page
+     const teamCol = Math.max(headers.indexOf('Team'), headers.indexOf('Tm'));
+
+     if (riderCol === -1 || teamCol === -1) return []; // structure changed
+
+     table.find('tbody tr').each((_, row) => {
+       const cells = $(row).find('td');
+       if (cells.length <= Math.max(riderCol, teamCol)) return;
+
+       // Position: first cell text
+       const posText = $(cells[0]).text().trim();
+       const isNonFinisher = /^(DNF|DNS|OTL|DSQ)$/i.test(posText);
+       const position = isNonFinisher ? null : parseInt(posText, 10);
+       if (!isNonFinisher && isNaN(position!)) return; // skip header/separator rows
+
+       // Rider: find <a> with rider link
+       const riderLink = $(cells[riderCol]).find('a').first();
+       if (riderLink.length === 0) return;
+       const riderName = riderLink.text().trim();
+       const riderSlug = riderLink.attr('href') ?? '';
+
+       // Team name
+       const teamName = $(cells[teamCol]).text().trim();
+
+       results.push({
+         riderName,
+         riderSlug,
+         teamName,
+         position: position ?? null,
+         category,
+         stageNumber,
+         dnf: isNonFinisher,
+       });
+     });
+
+     return results;
+   }
+   ```
+
+3. Create thin wrapper functions for each classification type:
+   ```typescript
+   // apps/api/src/infrastructure/scraping/parsers/stage-race.parser.ts
+   export function parseGcResults(html: string): ParsedResult[] {
+     return parseResultsTable(html, ResultCategory.GC);
+   }
+
+   export function parseStageResults(html: string, stageNumber: number): ParsedResult[] {
+     return parseResultsTable(html, ResultCategory.STAGE, stageNumber);
+   }
+
+   export function parseMountainClassification(html: string): ParsedResult[] {
+     return parseResultsTable(html, ResultCategory.MOUNTAIN);
+   }
+
+   export function parseSprintClassification(html: string): ParsedResult[] {
+     return parseResultsTable(html, ResultCategory.SPRINT);
+   }
+   ```
+
+4. Handle edge cases in `parseResultsTable`:
+   - Riders who abandon mid-stage (listed as DNF/DNS/OTL/DSQ in position cell)
+   - Tables with different column counts (header detection handles this)
+   - Empty tables (race not yet started or no data) → return `[]`
+   - Rows with insufficient cells → skip silently
+   - Missing rider link → skip row
+
+**Validation**: Parser functions must be **pure** (no side effects, no HTTP calls). They
 accept an HTML string and return `ParsedResult[]`. Test with real fixtures (T017).
 
 ---
 
-### T015 — Classic Race Parser
+### T015 — Classic Race Parser & Classification URL Extractor
 
-**Goal**: Parse PCS HTML pages for one-day classic race results.
+**Goal**: Parse classic race results AND implement the classification URL extractor for
+stage races.
 
 **Steps**:
 
 1. Create `apps/api/src/infrastructure/scraping/parsers/classic.parser.ts`:
    ```typescript
-   import * as cheerio from 'cheerio';
-   import { ParsedResult } from './parsed-result.type';
+   import { parseResultsTable } from './results-table.parser';
    import { ResultCategory } from '../../../domain/shared/result-category.enum';
+   import { ParsedResult } from './parsed-result.type';
 
    export function parseClassicResults(html: string): ParsedResult[] {
-     const $ = cheerio.load(html);
-     const results: ParsedResult[] = [];
+     return parseResultsTable(html, ResultCategory.FINAL);
+   }
+   ```
+   Classics use the exact same table structure — they're just a one-table page with
+   category `FINAL` and no `stageNumber`.
 
-     // Classic races have a single results table
-     // Category is always ResultCategory.FINAL
-     // No stage numbers
-     // Parse each row for position, rider, team
-     // Handle DNF/DNS entries
+2. Create `apps/api/src/infrastructure/scraping/parsers/classification-extractor.ts`:
+
+   This extracts the list of classification/stage URLs from a stage race GC page:
+   ```typescript
+   import * as cheerio from 'cheerio';
+
+   export interface ClassificationUrl {
+     readonly urlPath: string;          // "race/tour-de-france/2024/stage-1"
+     readonly classificationType: 'GC' | 'STAGE' | 'SPRINT' | 'MOUNTAIN';
+     readonly stageNumber: number | null;
+   }
+
+   /**
+    * Extracts classification URLs from a stage race GC page.
+    *
+    * PCS stage race pages have a <div class="selectNav"> containing a <select>
+    * element with PREV/NEXT links. Each <option> has a value attribute pointing
+    * to a classification or stage URL.
+    *
+    * @param html - HTML of the GC page (entry point for stage races)
+    * @returns List of classification URLs to scrape
+    */
+   export function extractClassificationUrls(html: string): ClassificationUrl[] {
+     const $ = cheerio.load(html);
+     const results: ClassificationUrl[] = [];
+
+     // Find the selectNav that has PREV/NEXT navigation links
+     $('div.selectNav').each((_, container) => {
+       const linkTexts = $(container).find('a').map((_, a) => $(a).text()).get();
+       const hasPrevNext = linkTexts.some(t =>
+         /PREV|NEXT|«|»/i.test(t)
+       );
+       if (!hasPrevNext) return;
+
+       // Found the right nav container — parse its <select> options
+       $(container).find('select option').each((_, option) => {
+         const urlPath = $(option).attr('value');
+         if (!urlPath) return;
+
+         const optionText = $(option).text().toLowerCase();
+
+         // Skip irrelevant classifications
+         if (urlPath.includes('teams') || urlPath.includes('youth')) return;
+
+         // Stage results: URL contains /stage-{n} but NOT /points or /kom
+         const stageMatch = urlPath.match(/stage-(\d+)/);
+         if (stageMatch && !urlPath.includes('points') && !urlPath.includes('kom')) {
+           results.push({
+             urlPath,
+             classificationType: 'STAGE',
+             stageNumber: parseInt(stageMatch[1], 10),
+           });
+           return;
+         }
+
+         // Points/Sprint classification
+         if (optionText.includes('points classification')) {
+           results.push({ urlPath, classificationType: 'SPRINT', stageNumber: null });
+           return;
+         }
+
+         // Mountain/KOM classification
+         if (optionText.includes('mountains classification')) {
+           results.push({ urlPath, classificationType: 'MOUNTAIN', stageNumber: null });
+           return;
+         }
+
+         // Final GC
+         if (optionText.includes('final gc')) {
+           results.push({ urlPath, classificationType: 'GC', stageNumber: null });
+           return;
+         }
+       });
+     });
 
      return results;
    }
    ```
-2. Classic results are simpler than stage races:
-   - Single table with final results
-   - No sub-classifications (no GC, mountain, sprint)
-   - Category is always `ResultCategory.FINAL`
-   - No `stageNumber` field
-3. The table structure is similar to stage results but typically contains:
-   - Rank column (position)
-   - Rider name with link
-   - Team name
-   - Time gap or points
-   - Sometimes UCI points column
-4. Handle same edge cases as stage race parser: DNF, DNS, empty tables.
 
-**Validation**: Test with Milan-San Remo 2024 fixture (T017). Must extract correct winner,
-correct top-5 positions, and handle any DNF riders.
+   > **Source**: This logic is directly adapted from the working Python implementation in
+   > `ProCyclingStatsRaceDataScraper._extract_classification_urls()` and
+   > `_parse_select_menu_options()`.
+
+**Validation**:
+- Test `parseClassicResults` with Milano-Sanremo 2024 fixture — must return correct winner
+- Test `extractClassificationUrls` with TdF 2024 GC fixture — must return 21 stages +
+  points + KOM + GC (at least 24 entries)
+- Verify stage numbers are sequential (1, 2, ..., 21)
+- Verify no "teams" or "youth" entries are included
 
 ---
 
-### T016 — Race Catalog
+### T016 — Race Discovery Parser & Domain Catalog
 
-**Goal**: Define a static catalog of all races tracked by the system with their metadata.
+**Goal**: Implement two complementary systems:
+1. A **race list parser** that dynamically discovers races from PCS calendar pages
+2. A **domain race catalog** that defines expected/known races for validation
 
-> **DDD note**: The race catalog is **domain knowledge** — it defines which races exist
-> and their classifications. It belongs in the domain layer, not infrastructure.
+> **Architecture decision**: Race discovery is **infrastructure** (it scrapes PCS). The
+> race catalog is **domain knowledge** (it defines what races we care about). The use case
+> (WP04) intersects them: discover available races, validate against known races, scrape
+> the intersection.
 
 **Steps**:
 
-1. Create `apps/api/src/domain/race/race-catalog.ts`:
+1. Create `apps/api/src/infrastructure/scraping/parsers/race-list.parser.ts`:
+   ```typescript
+   import * as cheerio from 'cheerio';
+
+   export type DiscoveredRaceType = 'STAGE_RACE' | 'ONE_DAY';
+
+   export interface DiscoveredRace {
+     readonly urlPath: string;        // "race/tour-de-france/2025" (base, stripped of /gc /result)
+     readonly slug: string;           // "tour-de-france" (extracted from URL)
+     readonly name: string;           // "Tour de France" (from link text)
+     readonly raceType: DiscoveredRaceType;
+     readonly classText: string;      // "2.UWT", "1.Pro" etc. (raw from page)
+   }
+
+   /**
+    * Parses a PCS race calendar page to discover available races.
+    *
+    * URL pattern: /races.php?year={year}&circuit={circuitId}&filter=Filter
+    * Circuit IDs: 1 = WorldTour, 26 = ProSeries
+    *
+    * HTML structure: table.basic (or table[class*="basic"])
+    *   thead: Race, Class columns (+ Date, Cat., Winner)
+    *   tbody tr: one row per race
+    *     - Race column: <a href="race/{slug}/{year}/gc">Race Name</a>
+    *     - Class column: "2.UWT" (stage race) or "1.UWT" (one-day)
+    *     - Cat. column: "ME" (men's elite) — filter to this only
+    *
+    * @param html - Raw HTML of the calendar page
+    * @returns List of discovered races
+    */
+   export function parseRaceList(html: string): DiscoveredRace[] {
+     const $ = cheerio.load(html);
+     const races: DiscoveredRace[] = [];
+
+     const table = $('table.basic, table[class*="basic"]').first();
+     if (table.length === 0) return [];
+
+     // Determine column indices from headers
+     const headers: string[] = [];
+     table.find('thead th').each((_, th) => {
+       headers.push($(th).text().trim());
+     });
+
+     const raceCol = headers.indexOf('Race');
+     const classCol = headers.indexOf('Class');
+     if (raceCol === -1 || classCol === -1) return [];
+
+     // Optional: Cat. column for filtering men's elite
+     const catCol = headers.indexOf('Cat.');
+
+     table.find('tbody tr').each((_, row) => {
+       const cells = $(row).find('td');
+       if (cells.length <= Math.max(raceCol, classCol)) return;
+
+       // Filter to men's elite only (if Cat. column exists)
+       if (catCol !== -1) {
+         const catText = $(cells[catCol]).text().trim();
+         if (catText !== 'ME') return;
+       }
+
+       // Race type from Class column
+       const classText = $(cells[classCol]).text().trim();
+       const raceType: DiscoveredRaceType = classText.startsWith('2.')
+         ? 'STAGE_RACE'
+         : 'ONE_DAY';
+
+       // Race URL from link
+       const link = $(cells[raceCol]).find('a').first();
+       if (link.length === 0) return;
+
+       const href = link.attr('href');
+       if (!href) return;
+
+       // Strip trailing /gc, /result, /results
+       const urlPath = href.replace(/\/(gc|result|results)$/, '');
+       // Extract slug: "race/tour-de-france/2025" → "tour-de-france"
+       const slugMatch = urlPath.match(/^race\/([^/]+)\//);
+       const slug = slugMatch ? slugMatch[1] : '';
+
+       const name = link.text().trim();
+
+       races.push({ urlPath, slug, name, raceType, classText });
+     });
+
+     return races;
+   }
+   ```
+
+   **Calendar URL construction** (used by the use case in WP04):
+   ```
+   WorldTour:  /races.php?year={year}&circuit=1&filter=Filter
+   ProSeries:  /races.php?year={year}&circuit=26&filter=Filter
+   ```
+
+2. Create `apps/api/src/domain/race/race-catalog.ts` (domain layer — validation data):
    ```typescript
    import { RaceType } from '../shared/race-type.enum';
    import { RaceClass } from '../shared/race-class.enum';
@@ -262,206 +519,414 @@ correct top-5 positions, and handle any DNF riders.
      readonly name: string;
      readonly raceType: RaceType;
      readonly raceClass: RaceClass;
-     readonly gender: 'men';
+     readonly expectedStages?: number;  // for stage races: expected number of stages
    }
 
    export const RACE_CATALOG: readonly RaceCatalogEntry[] = [
-     // Grand Tours
-     { slug: 'tour-de-france', name: 'Tour de France', raceType: RaceType.GRAND_TOUR, raceClass: RaceClass.UWT, gender: 'men' },
-     { slug: 'giro-d-italia', name: 'Giro d\'Italia', raceType: RaceType.GRAND_TOUR, raceClass: RaceClass.UWT, gender: 'men' },
-     { slug: 'vuelta-a-espana', name: 'Vuelta a Espana', raceType: RaceType.GRAND_TOUR, raceClass: RaceClass.UWT, gender: 'men' },
+     // Grand Tours (21 stages each)
+     { slug: 'tour-de-france', name: 'Tour de France', raceType: RaceType.GRAND_TOUR, raceClass: RaceClass.UWT, expectedStages: 21 },
+     { slug: 'giro-d-italia', name: "Giro d'Italia", raceType: RaceType.GRAND_TOUR, raceClass: RaceClass.UWT, expectedStages: 21 },
+     { slug: 'vuelta-a-espana', name: 'Vuelta a España', raceType: RaceType.GRAND_TOUR, raceClass: RaceClass.UWT, expectedStages: 21 },
 
      // Monument Classics
-     { slug: 'milan-san-remo', name: 'Milan-San Remo', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT, gender: 'men' },
-     { slug: 'ronde-van-vlaanderen', name: 'Tour of Flanders', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT, gender: 'men' },
-     { slug: 'paris-roubaix', name: 'Paris-Roubaix', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT, gender: 'men' },
-     { slug: 'liege-bastogne-liege', name: 'Liege-Bastogne-Liege', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT, gender: 'men' },
-     { slug: 'il-lombardia', name: 'Il Lombardia', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT, gender: 'men' },
+     { slug: 'milano-sanremo', name: 'Milano-Sanremo', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT },
+     { slug: 'ronde-van-vlaanderen', name: 'Tour of Flanders', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT },
+     { slug: 'paris-roubaix', name: 'Paris-Roubaix', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT },
+     { slug: 'liege-bastogne-liege', name: 'Liège-Bastogne-Liège', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT },
+     { slug: 'il-lombardia', name: 'Il Lombardia', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT },
 
      // Other UWT Classics
-     { slug: 'strade-bianche', name: 'Strade Bianche', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT, gender: 'men' },
-     { slug: 'amstel-gold-race', name: 'Amstel Gold Race', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT, gender: 'men' },
-     { slug: 'la-fleche-wallone', name: 'La Fleche Wallonne', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT, gender: 'men' },
-     // ... additional classics
+     { slug: 'strade-bianche', name: 'Strade Bianche', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT },
+     { slug: 'amstel-gold-race', name: 'Amstel Gold Race', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT },
+     { slug: 'la-fleche-wallone', name: 'La Flèche Wallonne', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT },
+     { slug: 'san-sebastian', name: 'Clásica San Sebastián', raceType: RaceType.CLASSIC, raceClass: RaceClass.UWT },
 
      // Mini Tours (Stage Races)
-     { slug: 'paris-nice', name: 'Paris-Nice', raceType: RaceType.MINI_TOUR, raceClass: RaceClass.UWT, gender: 'men' },
-     { slug: 'tirreno-adriatico', name: 'Tirreno-Adriatico', raceType: RaceType.MINI_TOUR, raceClass: RaceClass.UWT, gender: 'men' },
-     { slug: 'volta-a-catalunya', name: 'Volta a Catalunya', raceType: RaceType.MINI_TOUR, raceClass: RaceClass.UWT, gender: 'men' },
-     { slug: 'criterium-du-dauphine', name: 'Criterium du Dauphine', raceType: RaceType.MINI_TOUR, raceClass: RaceClass.UWT, gender: 'men' },
-     { slug: 'tour-de-romandie', name: 'Tour de Romandie', raceType: RaceType.MINI_TOUR, raceClass: RaceClass.UWT, gender: 'men' },
-     { slug: 'tour-de-suisse', name: 'Tour de Suisse', raceType: RaceType.MINI_TOUR, raceClass: RaceClass.UWT, gender: 'men' },
-     { slug: 'itzulia-basque-country', name: 'Itzulia Basque Country', raceType: RaceType.MINI_TOUR, raceClass: RaceClass.UWT, gender: 'men' },
-     // ... additional mini tours
-   ] as const;
-   ```
-2. Add a lookup helper:
-   ```typescript
+     { slug: 'paris-nice', name: 'Paris-Nice', raceType: RaceType.MINI_TOUR, raceClass: RaceClass.UWT, expectedStages: 8 },
+     { slug: 'tirreno-adriatico', name: 'Tirreno-Adriatico', raceType: RaceType.MINI_TOUR, raceClass: RaceClass.UWT, expectedStages: 7 },
+     { slug: 'volta-a-catalunya', name: 'Volta a Catalunya', raceType: RaceType.MINI_TOUR, raceClass: RaceClass.UWT, expectedStages: 7 },
+     { slug: 'criterium-du-dauphine', name: 'Critérium du Dauphiné', raceType: RaceType.MINI_TOUR, raceClass: RaceClass.UWT, expectedStages: 8 },
+     { slug: 'tour-de-romandie', name: 'Tour de Romandie', raceType: RaceType.MINI_TOUR, raceClass: RaceClass.UWT, expectedStages: 6 },
+     { slug: 'tour-de-suisse', name: 'Tour de Suisse', raceType: RaceType.MINI_TOUR, raceClass: RaceClass.UWT, expectedStages: 8 },
+     { slug: 'itzulia-basque-country', name: 'Itzulia Basque Country', raceType: RaceType.MINI_TOUR, raceClass: RaceClass.UWT, expectedStages: 6 },
+   ];
+
+   /** Lookup by slug. Returns undefined if not in catalog. */
    export function findRaceBySlug(slug: string): RaceCatalogEntry | undefined {
-     return RACE_CATALOG.find((race) => race.slug === slug);
+     return RACE_CATALOG.find(race => race.slug === slug);
+   }
+
+   /** Returns true if this slug is a known/expected race. */
+   export function isKnownRace(slug: string): boolean {
+     return RACE_CATALOG.some(race => race.slug === slug);
    }
    ```
-3. Ensure the catalog explicitly excludes:
-   - Women's races (all entries have `gender: 'men'`)
-   - Lower-category races (.2, 2.2, 1.2 classifications)
-   - Non-road events (track, cyclocross, mountain bike)
-4. Add inline comments explaining the inclusion criteria and how to add new races.
 
-**Validation**: The catalog must type-check. Every entry must have valid enum values. A
-unit test should verify no duplicate slugs exist and all required fields are present.
+   > **Role of the catalog**: The catalog is NOT the source of truth for which races to
+   > scrape. That comes from the PCS calendar (dynamic discovery). The catalog serves as:
+   > - **Validation**: "did we find the races we expected?"
+   > - **Metadata enrichment**: maps slugs to our domain RaceType/RaceClass enums
+   > - **Expected stage counts**: used by guardrails to validate completeness
+
+**Validation**:
+- Race list parser test: parse the calendar fixture, verify correct extraction
+- Catalog test: no duplicate slugs, Grand Tours + Monuments present, `findRaceBySlug` works
+- Race list must parse at least 25 races from a WorldTour calendar fixture
+- All href values match pattern `race/[a-z0-9-]+/\d{4}`
 
 ---
 
-### T017 — Unit Tests with HTML Fixtures
+### T017 — Validation Guardrails Module
 
-**Goal**: Create comprehensive unit tests for all parsers using real HTML captured from PCS.
+**Goal**: Create a dedicated validation layer that runs after each parse operation to
+detect silent failures — cases where scraping "works" but produces incorrect data.
+
+> **Why this matters**: A broken parser might return 3 riders for a Grand Tour GC instead
+> of 150, or duplicate positions, or all positions as null. Without guardrails, this bad
+> data would be silently persisted. The validation module catches these cases BEFORE
+> data enters the database.
+
+**Steps**:
+
+1. Create `apps/api/src/infrastructure/scraping/validation/parse-validator.ts`:
+   ```typescript
+   export interface ValidationResult {
+     readonly valid: boolean;
+     readonly warnings: string[];
+     readonly errors: string[];
+   }
+   ```
+
+2. Implement classification results validation:
+   ```typescript
+   export function validateClassificationResults(
+     results: ParsedResult[],
+     context: {
+       raceSlug: string;
+       classificationType: string;
+       stageNumber?: number;
+       expectedMinRiders?: number;
+       expectedMaxRiders?: number;
+     },
+   ): ValidationResult
+   ```
+
+   **Checks to implement**:
+
+   | # | Check | Severity | Rule |
+   |---|-------|----------|------|
+   | 1 | **Non-empty results** | ERROR | `results.length > 0` — empty means page structure changed |
+   | 2 | **Position sequence** | ERROR | Positions must be sequential: 1, 2, 3, ... with no gaps. DNFs appear with `position = null` |
+   | 3 | **No duplicate positions** | ERROR | No two riders share the same numeric position |
+   | 4 | **Rider count in range** | WARN | Must be within expected range (see table below) |
+   | 5 | **DNF consistency** | ERROR | If `dnf = true` then `position` must be `null`. If `position = null` and not DNF, warn |
+   | 6 | **Rider name non-empty** | ERROR | Every parsed rider must have a non-empty `riderName` |
+   | 7 | **Rider slug format** | WARN | Every `riderSlug` should match `rider/[a-z0-9-]+` |
+   | 8 | **Team name present** | WARN | Every rider should have a non-empty `teamName` |
+   | 9 | **Category consistency** | ERROR | All results must have the same `category` as the declared classification |
+
+   **Expected rider count ranges**:
+
+   | Race Type | Classification | Min | Max |
+   |-----------|---------------|-----|-----|
+   | Grand Tour | GC Final | 100 | 180 |
+   | Grand Tour | Stage | 80 | 200 |
+   | Grand Tour | Points/KOM | 20 | 180 |
+   | Mini Tour | GC Final | 60 | 200 |
+   | Mini Tour | Stage | 50 | 200 |
+   | Classic | Final | 80 | 250 |
+
+3. Implement stage race completeness validation:
+   ```typescript
+   export function validateStageRaceCompleteness(
+     classifications: { type: string; stageNumber?: number }[],
+     raceSlug: string,
+     expectedStages?: number,
+   ): ValidationResult
+   ```
+
+   **Checks**:
+
+   | # | Check | Severity | Rule |
+   |---|-------|----------|------|
+   | 1 | **GC present** | ERROR | Must have a GC classification |
+   | 2 | **Sprint/Points present** | WARN | Should have sprint/points classification |
+   | 3 | **Mountain/KOM present** | WARN | Should have mountain/KOM classification |
+   | 4 | **Stage count** | WARN | If `expectedStages` provided, actual count should match |
+   | 5 | **Stage sequence** | WARN | Stage numbers should be sequential (1, 2, ..., N) |
+   | 6 | **Select menu found** | ERROR | The `div.selectNav` with `<select>` must exist |
+
+4. Implement race discovery validation:
+   ```typescript
+   export function validateRaceDiscovery(
+     discovered: DiscoveredRace[],
+     catalog: RaceCatalogEntry[],
+   ): ValidationResult
+   ```
+
+   **Checks**:
+
+   | # | Check | Severity | Rule |
+   |---|-------|----------|------|
+   | 1 | **Minimum race count** | ERROR | WorldTour must yield >= 25 races per year |
+   | 2 | **Grand Tours present** | WARN | All 3 Grand Tour slugs should appear |
+   | 3 | **No duplicate slugs** | ERROR | After deduplication, no race appears twice |
+   | 4 | **Valid URL format** | WARN | Every urlPath matches `race/[a-z0-9-]+/\d{4}` |
+
+**Validation**: The validator itself must be thoroughly tested:
+- Test with valid data → `valid: true`, no errors/warnings
+- Test with empty results → `valid: false`, error about empty results
+- Test with duplicate positions → error detected
+- Test with gap in positions → error detected
+- Test with DNF having numeric position → error detected
+- Test with rider count out of range → warning generated
+
+---
+
+### T017b — Unit Tests with HTML Fixtures
+
+**Goal**: Create comprehensive unit tests for all parsers using real HTML captured from PCS,
+with **known-result assertions** that verify parsed data matches actual race outcomes.
 
 **Steps**:
 
 1. Create the fixture directory: `apps/api/test/fixtures/pcs/`
-2. Capture real HTML pages from PCS and save as fixtures:
-   - `apps/api/test/fixtures/pcs/tdf-2024-gc.html` — Tour de France 2024 GC standings
-   - `apps/api/test/fixtures/pcs/tdf-2024-stage1.html` — Tour de France 2024 Stage 1 results
-   - `apps/api/test/fixtures/pcs/tdf-2024-mountain.html` — Tour de France 2024 KOM classification
-   - `apps/api/test/fixtures/pcs/tdf-2024-sprint.html` — Tour de France 2024 Sprint classification
-   - `apps/api/test/fixtures/pcs/milan-san-remo-2024.html` — Milan-San Remo 2024 results
-3. Create test files:
-   - `apps/api/test/infrastructure/scraping/parsers/stage-race.parser.spec.ts`
-   - `apps/api/test/infrastructure/scraping/parsers/classic.parser.spec.ts`
-   - `apps/api/test/infrastructure/scraping/pcs-client.adapter.spec.ts`
-   - `apps/api/test/domain/race/race-catalog.spec.ts`
-4. Stage race parser tests:
+
+2. Capture real HTML pages from PCS and save as fixtures. **Since PCS blocks automated
+   requests (Cloudflare 403), fixtures must be captured manually** from a browser:
+   - Open URL in Chrome/Firefox
+   - Right-click → "Save Page As" → "Web Page, HTML Only"
+   - Save to `apps/api/test/fixtures/pcs/`
+   - If file > 500KB, trim to keep only the `<div class="resTab">` and
+     `<div class="selectNav">` sections plus any necessary wrapping elements
+
+   **Required fixtures**:
+
+   | Fixture File | Source URL | Tests |
+   |-------------|-----------|-------|
+   | `races-calendar-2024-uwt.html` | `/races.php?year=2024&circuit=1&filter=Filter` | Race list parser |
+   | `tdf-2024-gc.html` | `/race/tour-de-france/2024/gc` | GC parser + classification extractor |
+   | `tdf-2024-stage-1.html` | `/race/tour-de-france/2024/stage-1` | Stage parser |
+   | `tdf-2024-points.html` | `/race/tour-de-france/2024/points` | Sprint classification parser |
+   | `tdf-2024-kom.html` | `/race/tour-de-france/2024/kom` | Mountain classification parser |
+   | `msr-2024.html` | `/race/milano-sanremo/2024/result` | Classic parser |
+   | `paris-nice-2024-gc.html` | `/race/paris-nice/2024/gc` | Mini tour + classification extractor |
+
+3. Create test files with **known-result assertions**:
+
    ```typescript
+   // apps/api/test/infrastructure/scraping/parsers/stage-race.parser.spec.ts
    describe('StageRaceParser', () => {
-     let gcHtml: string;
-     let stageHtml: string;
-
-     beforeAll(() => {
-       gcHtml = fs.readFileSync('test/fixtures/pcs/tdf-2024-gc.html', 'utf-8');
-       stageHtml = fs.readFileSync('test/fixtures/pcs/tdf-2024-stage1.html', 'utf-8');
+     describe('parseGcResults (TdF 2024)', () => {
+       it('should identify Tadej Pogačar as GC winner (position 1)', () => { });
+       it('should identify rider slug as "rider/tadej-pogacar"', () => { });
+       it('should extract >= 140 riders in GC', () => { });
+       it('should have sequential positions starting from 1', () => { });
+       it('should have no duplicate positions', () => { });
+       it('should set category to GC for all results', () => { });
+       it('should handle DNF entries with position = null', () => { });
+       it('should extract valid rider slugs matching rider/[a-z0-9-]+', () => { });
      });
 
-     describe('parseGcResults', () => {
-       it('should extract the correct number of riders', () => { /* ... */ });
-       it('should identify the correct GC winner', () => { /* ... */ });
-       it('should extract correct top-5 positions', () => { /* ... */ });
-       it('should handle DNF entries with null position', () => { /* ... */ });
-       it('should set category to GC for all results', () => { /* ... */ });
-       it('should extract valid rider slugs', () => { /* ... */ });
+     describe('parseStageResults (TdF 2024 Stage 1)', () => {
+       it('should identify Romain Bardet as stage winner', () => { });
+       it('should attach stageNumber = 1 to all results', () => { });
+       it('should set category to STAGE for all results', () => { });
      });
 
-     describe('parseStageResults', () => {
-       it('should extract stage winner correctly', () => { /* ... */ });
-       it('should attach the correct stage number', () => { /* ... */ });
-       it('should handle DNS entries', () => { /* ... */ });
+     describe('parseMountainClassification (TdF 2024)', () => {
+       it('should identify Richard Carapaz as KOM winner', () => { });
+       it('should set category to MOUNTAIN for all results', () => { });
      });
 
-     describe('parseMountainClassification', () => { /* ... */ });
-     describe('parseSprintClassification', () => { /* ... */ });
+     describe('parseSprintClassification (TdF 2024)', () => {
+       it('should identify Biniam Girmay as sprint winner', () => { });
+       it('should set category to SPRINT for all results', () => { });
+     });
+   });
+
+   // apps/api/test/infrastructure/scraping/parsers/classification-extractor.spec.ts
+   describe('extractClassificationUrls (TdF 2024)', () => {
+     it('should find 21 individual stage URLs', () => { });
+     it('should find points classification URL', () => { });
+     it('should find mountains classification URL', () => { });
+     it('should find final GC URL', () => { });
+     it('should NOT include teams or youth classifications', () => { });
+     it('should have sequential stage numbers from 1 to 21', () => { });
    });
    ```
-5. Classic parser tests:
+
    ```typescript
+   // apps/api/test/infrastructure/scraping/parsers/classic.parser.spec.ts
    describe('ClassicParser', () => {
-     it('should extract Milan-San Remo 2024 winner', () => { /* ... */ });
-     it('should extract correct top-5 positions', () => { /* ... */ });
-     it('should set category to FINAL for all results', () => { /* ... */ });
-     it('should not include stageNumber', () => { /* ... */ });
+     describe('parseClassicResults (Milano-Sanremo 2024)', () => {
+       it('should identify Jasper Philipsen as winner', () => { });
+       it('should set category to FINAL for all results', () => { });
+       it('should have stageNumber = null for all results', () => { });
+       it('should have sequential positions', () => { });
+       it('should extract >= 100 riders', () => { });
+     });
    });
    ```
-6. PCS client tests (mock Axios):
+
    ```typescript
+   // apps/api/test/infrastructure/scraping/parsers/race-list.parser.spec.ts
+   describe('RaceListParser', () => {
+     it('should extract >= 25 races from WorldTour calendar', () => { });
+     it('should identify Tour de France as STAGE_RACE', () => { });
+     it('should identify Milano-Sanremo as ONE_DAY', () => { });
+     it('should extract valid slugs matching [a-z0-9-]+', () => { });
+     it('should not include duplicate slugs', () => { });
+   });
+   ```
+
+   ```typescript
+   // apps/api/test/infrastructure/scraping/validation/parse-validator.spec.ts
+   describe('ParseValidator', () => {
+     describe('validateClassificationResults', () => {
+       it('should pass for valid sequential results', () => { });
+       it('should fail for empty results', () => { });
+       it('should fail for duplicate positions', () => { });
+       it('should fail for position gaps', () => { });
+       it('should fail for DNF with numeric position', () => { });
+       it('should warn for rider count out of range', () => { });
+       it('should fail for empty rider names', () => { });
+       it('should warn for invalid rider slug format', () => { });
+     });
+
+     describe('validateStageRaceCompleteness', () => {
+       it('should pass when GC + stages + points + KOM all present', () => { });
+       it('should fail when GC is missing', () => { });
+       it('should warn when expected stage count does not match', () => { });
+     });
+
+     describe('validateRaceDiscovery', () => {
+       it('should pass when >= 25 races and Grand Tours present', () => { });
+       it('should fail when < 25 races', () => { });
+       it('should warn when a Grand Tour is missing', () => { });
+     });
+   });
+   ```
+
+4. PCS client tests (mock Axios):
+   ```typescript
+   // apps/api/test/infrastructure/scraping/pcs-client.adapter.spec.ts
    describe('PcsClientAdapter', () => {
-     it('should enforce rate limiting between requests', () => { /* ... */ });
-     it('should retry on 429 with exponential backoff', () => { /* ... */ });
-     it('should retry once on 5xx errors', () => { /* ... */ });
-     it('should not retry on 4xx errors', () => { /* ... */ });
-     it('should throw after max retries exceeded', () => { /* ... */ });
+     it('should enforce rate limiting between requests', () => { });
+     it('should retry on 429 with exponential backoff', () => { });
+     it('should retry once on 5xx errors', () => { });
+     it('should not retry on 4xx errors (except 429)', () => { });
+     it('should throw after max retries exceeded', () => { });
+     it('should throw descriptive error on 403 (Cloudflare)', () => { });
    });
    ```
-7. Race catalog tests:
+
+5. Domain catalog tests:
    ```typescript
+   // apps/api/test/domain/race/race-catalog.spec.ts
    describe('RaceCatalog', () => {
-     it('should have no duplicate slugs', () => { /* ... */ });
-     it('should include all three Grand Tours', () => { /* ... */ });
-     it('should include all five Monuments', () => { /* ... */ });
-     it('should only contain men races', () => { /* ... */ });
-     it('should findRaceBySlug return correct entry', () => { /* ... */ });
+     it('should have no duplicate slugs', () => { });
+     it('should include all three Grand Tours', () => { });
+     it('should include all five Monuments', () => { });
+     it('should have expectedStages for all stage races', () => { });
+     it('should findRaceBySlug return correct entry', () => { });
+     it('should isKnownRace return false for unknown slug', () => { });
    });
    ```
 
-**Validation**: All tests must pass with `pnpm --filter api test`. Coverage for parser
-files must be at least 90%. Fixture files must be committed to the repository (they are
-test data, not secrets).
+**Validation**: All tests must pass with `pnpm --filter api test`. Coverage for parser and
+validation files must be at least 90%.
 
-**Notes**: When capturing HTML fixtures, save only the relevant portion of the page if the
-full page is too large. Ensure fixtures are representative of the actual PCS markup
-structure. If PCS changes their HTML structure, these tests will fail — this is intentional
-and desirable as it alerts us to required parser updates.
+**Notes**: Fixture files must be committed to the repository (they are test data, not
+secrets). If PCS changes their HTML structure, fixture-based tests will continue to pass
+(testing our parser against known HTML), but live scraping will break — this is detected
+by the health monitor in WP04.
+
+---
+
+## CSS Selectors Quick Reference
+
+| Page | Element | Selector | Notes |
+|------|---------|----------|-------|
+| Calendar | Race table | `table.basic` or `table[class*="basic"]` | All races for a circuit/year |
+| Calendar | Race link | `tbody tr td a` (Race column) | href = race URL |
+| Calendar | Race class | `tbody tr td` (Class column) | "2.UWT", "1.Pro" etc. |
+| Any race | Results table | `div.resTab:not(.hide) table.results` | Active tab's results |
+| Any race | Table headers | `thead th` | "Rider", "Team"/"Tm", "Pnt" |
+| Any race | Result row | `tbody tr` | Each row = one rider |
+| Any race | Rider link | `td a` (Rider column) | Name in text, slug in href |
+| Any race | Position | First `td` text | Numeric or "DNF"/"DNS"/"OTL"/"DSQ" |
+| Stage race | Navigation | `div.selectNav` with PREV/NEXT links | Contains `<select>` with all URLs |
+| Stage race | Classification URLs | `div.selectNav select option` | `value` attr = URL path |
+| Any race | Race title | `h1` | Year + race name |
 
 ---
 
 ## Test Strategy
 
-| Subtask | Test Type | What to verify                                             | Coverage Target |
-|---------|-----------|------------------------------------------------------------|-----------------|
-| T013    | Unit      | Rate limiting, retry logic, error handling                 | 90%             |
-| T014    | Unit      | GC/stage/mountain/sprint parsing against real HTML         | 95%             |
-| T015    | Unit      | Classic race parsing against real HTML                     | 95%             |
-| T016    | Unit      | No duplicate slugs, all required races present             | 100%            |
-| T017    | —         | Test infrastructure setup (fixtures, test file structure)  | —               |
-
-**Parser testing philosophy**: Parsers are the most fragile part of the system because they
-depend on external HTML structure. Tests must use real HTML to detect breakage early. Each
-parser function should have at minimum:
-- Happy path with a real page
-- DNF/DNS handling
-- Empty table handling (graceful return of empty array, not a crash)
-- Correct categorization (every result has the right `category` and `stageNumber`)
+| Subtask | Test Type | What to verify | Coverage Target |
+|---------|-----------|----------------|-----------------|
+| T013 | Unit | Rate limiting, retry logic, Cloudflare 403 handling | 90% |
+| T014 | Unit | Results table parsing with real fixtures, known winners | 95% |
+| T015 | Unit | Classic parsing + classification URL extraction | 95% |
+| T016 | Unit | Race list parsing, catalog validation, no duplicate slugs | 100% |
+| T017 | Unit | All guardrail checks (valid, invalid, edge cases) | 100% |
+| T017b | — | Test infrastructure (fixtures, integration of all parsers) | — |
 
 ## Risks & Mitigations
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| PCS changes HTML structure without notice | High | High | Fixtures capture known-good HTML; health monitor (WP04) detects breakage; parsers are isolated for targeted fixes |
-| PCS blocks automated requests (IP ban, CAPTCHA) | Medium | High | Rate limiting (1500ms default), browser-like User-Agent, no concurrent requests; consider proxy rotation in future |
-| Cheerio cannot parse malformed HTML | Low | Medium | Cheerio is tolerant of malformed HTML; test with edge cases |
-| PCS returns different HTML for different locales | Medium | Medium | Always request English locale; set Accept-Language header |
-| Large HTML fixtures bloat the repository | Low | Low | Trim fixtures to relevant sections; use .gitattributes for binary treatment if needed |
-| Retry logic causes cascading delays | Low | Medium | Cap max retries at 3; total worst-case delay is under 30 seconds per request |
+| PCS changes HTML structure | High | High | Fixtures test against known HTML; validation guardrails detect live breakage; selectors based on working Python project |
+| Cloudflare blocks Axios (403) | High | High | Full browser headers in adapter; PcsScraperPort interface allows swapping to Playwright without changing parsers/use cases |
+| Parser returns data but wrong data | Medium | Critical | **Validation guardrails** catch: position gaps, duplicate positions, rider count anomalies, empty results, DNF inconsistencies |
+| PCS returns different HTML for different locales | Medium | Medium | Set `Accept-Language: en-US` header |
+| Large HTML fixtures bloat repository | Low | Low | Trim to relevant sections; .gitattributes for LFS if needed |
+| Calendar page structure differs from research | Medium | Medium | Race list parser has its own test fixtures; validate against known race count |
 
 ## Review Guidance
 
 When reviewing this work package, verify:
 
-1. **Rate limiting**: Review the throttle implementation. Consecutive calls to `fetchPage`
-   must wait at least `requestDelayMs` milliseconds between actual HTTP requests.
-2. **Retry behavior**: Review retry logic. Verify exponential backoff timings. Ensure non-
-   retryable errors (4xx except 429) throw immediately.
-3. **Parser accuracy**: Run parser tests against fixtures. Verify the extracted data matches
-   the actual race results (cross-reference with PCS website).
-4. **Type safety**: No `any` types. All parsed values must be properly typed. The
-   `ParsedResult` interface must be consistently used across all parsers.
-5. **Pure functions**: Parser functions must be pure — no HTTP calls, no database access,
-   no side effects. They take HTML strings and return arrays.
-6. **Catalog completeness**: Verify the race catalog includes all major men's UWT and Pro
-   races. No women's races, no lower-category races.
-7. **Fixture validity**: Open the HTML fixtures in a browser to verify they are real PCS
-   pages with correct content.
+1. **Cloudflare awareness**: Client must have full browser-like headers. Must throw
+   descriptive error on 403, not retry indefinitely.
+2. **Rate limiting**: Consecutive calls enforce minimum delay. Test covers timing.
+3. **Retry behavior**: Exponential backoff on 429, single retry on 5xx, no retry on 4xx.
+4. **Selector correctness**: Verify `div.resTab:not(.hide) table.results` is the primary
+   selector. Verify `div.selectNav select option` for classification URLs.
+5. **Parser purity**: All parser functions are pure — HTML in, data out. No HTTP, no DB.
+6. **Known-result assertions**: Fixture tests verify actual race winners, not just "parsed
+   something." TdF 2024 GC winner must be Pogačar, MSR 2024 winner must be Philipsen.
+7. **Validation guardrails**: Check that every guardrail rule is implemented AND tested.
+   Test both valid and invalid inputs.
+8. **Race discovery**: Calendar parser extracts >= 25 races, correctly classifies stage vs
+   one-day from class text.
+9. **Catalog role**: Catalog is validation/enrichment only, NOT the source of scraping targets.
 
 ## Definition of Done
 
 - [ ] PCS HTTP client implements rate limiting with configurable delay
-- [ ] Retry logic handles 429 (exponential backoff, 3 retries) and 5xx (single retry)
-- [ ] Stage race parser extracts GC, stage, mountain, and sprint classifications
-- [ ] Classic parser extracts final results from one-day races
-- [ ] All parsers handle DNF/DNS entries correctly (position = null, dnf = true)
-- [ ] Race catalog includes all Grand Tours, Monuments, and major UWT/Pro races
-- [ ] Race catalog excludes women's races and lower-category events
-- [ ] HTML fixtures from real PCS pages are committed as test data
-- [ ] All parser tests pass with at least 90% code coverage
-- [ ] PCS client tests cover rate limiting and all retry scenarios
-- [ ] No `any` types in any file; `pnpm lint` passes
+- [ ] Full browser-like headers for Cloudflare mitigation
+- [ ] Retry logic handles 429 (exponential backoff), 5xx (single retry), 403 (descriptive error)
+- [ ] `PcsScraperPort` interface defined for transport swappability
+- [ ] Results table parser with exact selector: `div.resTab:not(.hide) table.results`
+- [ ] Parsers for GC, stage, mountain, sprint, and classic classifications
+- [ ] Classification URL extractor from `div.selectNav select option`
+- [ ] Race list parser for PCS calendar pages (`table.basic`)
+- [ ] Domain race catalog with `expectedStages` for stage races
+- [ ] All parsers handle DNF/DNS/OTL/DSQ correctly (position = null, dnf = true)
+- [ ] **Validation guardrails module** with checks for:
+  - [ ] Position sequence (no gaps, no duplicates)
+  - [ ] Rider count in expected range
+  - [ ] DNF consistency
+  - [ ] Rider name/slug format
+  - [ ] Stage race completeness (GC + stages + points + KOM)
+  - [ ] Race discovery minimum count and expected races
+- [ ] HTML fixtures from real PCS pages committed as test data
+- [ ] **Known-result assertions** in tests (Pogačar wins TdF 2024, Philipsen wins MSR 2024)
+- [ ] All parser + validation tests pass with >= 90% coverage
+- [ ] No `any` types; `pnpm lint` passes
+- [ ] Domain layer (race catalog) has zero infrastructure imports
 
 ## Implementation Command
 
@@ -474,3 +939,4 @@ spec-kitty implement WP03 --base WP02
 | Timestamp | Agent | Action |
 |-----------|-------|--------|
 | 2026-03-14T23:51:57Z | system | Prompt generated via /spec-kitty.tasks |
+| 2026-03-15T13:30:00Z | claude-opus | Updated with PCS scraping research findings: exact selectors, race discovery, validation guardrails |
