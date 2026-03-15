@@ -161,11 +161,11 @@
 **Requirements Refs**: FR-004, FR-004b, FR-006
 
 ### Included Subtasks
-- [ ] T023 Implement scoring weights configuration (`domain/scoring/scoring-weights.config.ts`) — Grandes miniVueltas point values per position for each category (GC: 200pts for 1st..., mountain HC: 12pts..., sprint: 6pts..., daily stage: 15pts...)
-- [ ] T024 Implement temporal decay logic in scoring service — weight multipliers: current season ×1.0, previous ×0.6, two seasons ago ×0.3
-- [ ] T025 Implement per-category projected score computation (`domain/scoring/scoring.service.ts`) — for each category, compute weighted average of historical positions mapped to points
-- [ ] T026 Implement composite rider score aggregation — sum all category projections into `totalProjectedPts` (pure performance), AND implement `computeCompositeScore` that produces a price-aware value score relative to the rider pool (FR-004b: score = f(price, historical performance))
-- [ ] T027 Write 100% coverage unit tests — edge cases: rider with no data (0 score), single season only, all DNFs, rider only in classics (no GC data), mixed race types with filtering
+- [x] T023 Implement scoring weights configuration (`domain/scoring/scoring-weights.config.ts`) — Grandes miniVueltas point values per position for each category (GC: 200pts for 1st..., mountain HC: 12pts..., sprint: 6pts..., daily stage: 15pts...)
+- [x] T024 Implement temporal decay logic in scoring service — weight multipliers: current season ×1.0, previous ×0.6, two seasons ago ×0.3
+- [x] T025 Implement per-category projected score computation (`domain/scoring/scoring.service.ts`) — for each category, compute weighted average of historical positions mapped to points
+- [x] T026 Implement composite rider score aggregation — sum all category projections into `totalProjectedPts` (pure performance), AND implement `computeCompositeScore` that produces a price-aware value score relative to the rider pool (FR-004b: score = f(price, historical performance))
+- [x] T027 Write 100% coverage unit tests — edge cases: rider with no data (0 score), single season only, all DNFs, rider only in classics (no GC data), mixed race types with filtering
 
 ### Implementation Notes
 - Scoring service is a **pure function**: `(raceResults: RaceResult[], targetRaceType: RaceType) => RiderScore`
