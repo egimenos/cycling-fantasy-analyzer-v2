@@ -118,7 +118,17 @@ limiting, retry logic, and HTML parsing utilities.
      return cheerio.load(html);
    }
    ```
-6. Make the client injectable via NestJS but ensure the core logic (retry, throttle) is
+6. Create the driven port that the application layer will depend on:
+   ```typescript
+   // apps/api/src/application/scraping/ports/pcs-scraper.port.ts
+   export interface PcsScraperPort {
+     fetchPage(path: string): Promise<string>;
+   }
+   export const PCS_SCRAPER_PORT = Symbol('PcsScraperPort');
+   ```
+   The `PcsClientAdapter` implements this port. The application layer (use cases) depends
+   on `PcsScraperPort`, never on `PcsClientAdapter` directly.
+7. Make the client injectable via NestJS but ensure the core logic (retry, throttle) is
    testable without NestJS by extracting it into pure functions if needed.
 
 **Validation**: Unit test the retry logic by mocking Axios responses. Test that:
@@ -139,7 +149,7 @@ sprint classifications.
 
 1. Create `apps/api/src/infrastructure/scraping/parsers/parsed-result.type.ts`:
    ```typescript
-   import { ResultCategory } from '@cycling-analyzer/shared-types';
+   import { ResultCategory } from '../../../domain/shared/result-category.enum';
 
    export interface ParsedResult {
      readonly riderName: string;
@@ -155,7 +165,7 @@ sprint classifications.
    ```typescript
    import * as cheerio from 'cheerio';
    import { ParsedResult } from './parsed-result.type';
-   import { ResultCategory } from '@cycling-analyzer/shared-types';
+   import { ResultCategory } from '../../../domain/shared/result-category.enum';
 
    export function parseGcResults(html: string): ParsedResult[] { /* ... */ }
    export function parseStageResults(html: string, stageNumber: number): ParsedResult[] { /* ... */ }
@@ -200,7 +210,7 @@ accept an HTML string and return `ParsedResult[]`. Test with real fixtures (T017
    ```typescript
    import * as cheerio from 'cheerio';
    import { ParsedResult } from './parsed-result.type';
-   import { ResultCategory } from '@cycling-analyzer/shared-types';
+   import { ResultCategory } from '../../../domain/shared/result-category.enum';
 
    export function parseClassicResults(html: string): ParsedResult[] {
      const $ = cheerio.load(html);
@@ -237,11 +247,15 @@ correct top-5 positions, and handle any DNF riders.
 
 **Goal**: Define a static catalog of all races tracked by the system with their metadata.
 
+> **DDD note**: The race catalog is **domain knowledge** — it defines which races exist
+> and their classifications. It belongs in the domain layer, not infrastructure.
+
 **Steps**:
 
-1. Create `apps/api/src/infrastructure/scraping/race-catalog.ts`:
+1. Create `apps/api/src/domain/race/race-catalog.ts`:
    ```typescript
-   import { RaceType, RaceClass } from '@cycling-analyzer/shared-types';
+   import { RaceType } from '../shared/race-type.enum';
+   import { RaceClass } from '../shared/race-class.enum';
 
    export interface RaceCatalogEntry {
      readonly slug: string;
@@ -315,7 +329,7 @@ unit test should verify no duplicate slugs exist and all required fields are pre
    - `apps/api/test/infrastructure/scraping/parsers/stage-race.parser.spec.ts`
    - `apps/api/test/infrastructure/scraping/parsers/classic.parser.spec.ts`
    - `apps/api/test/infrastructure/scraping/pcs-client.adapter.spec.ts`
-   - `apps/api/test/infrastructure/scraping/race-catalog.spec.ts`
+   - `apps/api/test/domain/race/race-catalog.spec.ts`
 4. Stage race parser tests:
    ```typescript
    describe('StageRaceParser', () => {

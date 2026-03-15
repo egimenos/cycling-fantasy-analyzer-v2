@@ -37,9 +37,10 @@ types. By completion, the scoring engine must be fully testable with zero framew
 and achieve 100% test coverage as mandated by the constitution.
 
 **CRITICAL CONSTRAINT**: This is pure domain logic. There must be ZERO NestJS imports, ZERO
-database imports, ZERO external framework dependencies. Every function must be testable by
-calling it directly with plain TypeScript objects. The only allowed imports are from
-`@cycling-analyzer/shared-types` and other files within the `domain/scoring/` directory.
+database imports, ZERO external framework dependencies, ZERO `@cycling-analyzer/shared-types`
+imports. Every function must be testable by calling it directly with plain TypeScript objects.
+The only allowed imports are from other files within `domain/` (enums from `domain/shared/`,
+entities from `domain/race-result/`, etc.).
 
 ## Project Context
 
@@ -63,7 +64,7 @@ readonly constant.
 
 1. Create `apps/api/src/domain/scoring/scoring-weights.config.ts`:
    ```typescript
-   import { ResultCategory } from '@cycling-analyzer/shared-types';
+   import { ResultCategory } from '../shared/result-category.enum';
 
    /**
     * Position-to-points mapping for each result category.
@@ -209,9 +210,10 @@ across matching race results.
    `apps/api/src/domain/scoring/scoring.service.ts`:
    ```typescript
    import { RaceResult } from '../race-result/race-result.entity';
-   import { RaceType, ResultCategory } from '@cycling-analyzer/shared-types';
+   import { RaceType } from '../shared/race-type.enum';
+   import { ResultCategory } from '../shared/result-category.enum';
    import { getPointsForPosition } from './scoring-weights.config';
-   import { getTemporalWeight } from './scoring.service'; // or same file
+   import { getTemporalWeight } from './temporal-decay';
 
    /**
     * Computes the weighted average score for a rider in a specific category.
@@ -494,7 +496,36 @@ and leaves budget room for other strong riders.
      mid-tier riders with great value can surface above expensive riders with only slightly
      better stats.
 
-7. Future extensions (out of scope for this WP):
+7. **DI wrapper class**: To enable injection in NestJS use cases, wrap the pure functions
+   in a stateless domain service class:
+   ```typescript
+   // apps/api/src/domain/scoring/scoring.service.ts (bottom of file or separate file)
+   export class ScoringService {
+     computeRiderScore(
+       riderId: string, results: readonly RaceResult[],
+       targetRaceType: RaceType, currentYear: number,
+     ): RiderScore {
+       return computeRiderScore(riderId, results, targetRaceType, currentYear);
+     }
+
+     computeCompositeScore(
+       riderScore: RiderScore, priceHillios: number, poolStats: PoolStats,
+     ): CompositeRiderScore {
+       return computeCompositeScore(riderScore, priceHillios, poolStats);
+     }
+
+     computePoolStats(
+       entries: ReadonlyArray<{ totalProjectedPts: number; priceHillios: number }>,
+     ): PoolStats {
+       return computePoolStats(entries);
+     }
+   }
+   ```
+   The class delegates to the pure functions — it adds no logic, only provides a
+   DI-compatible interface. Tests can use either the class or the functions directly.
+   WP06's `AnalyzePriceListUseCase` injects `ScoringService` as a class.
+
+8. Future extensions (out of scope for this WP):
    - Confidence intervals based on result variance
    - Race-class weighting (UWT results worth more than Pro results)
    - Specialization detection (climber vs. sprinter vs. GC rider)
@@ -520,7 +551,9 @@ This is a constitution mandate — not optional.
    ```typescript
    // apps/api/test/domain/scoring/fixtures.ts
    import { RaceResult } from '../../../src/domain/race-result/race-result.entity';
-   import { RaceType, RaceClass, ResultCategory } from '@cycling-analyzer/shared-types';
+   import { RaceType } from '../../../src/domain/shared/race-type.enum';
+   import { RaceClass } from '../../../src/domain/shared/race-class.enum';
+   import { ResultCategory } from '../../../src/domain/shared/result-category.enum';
 
    export function createRaceResult(overrides: Partial<RaceResult> = {}): RaceResult {
      return {

@@ -62,9 +62,10 @@ trigger to persistence.
    import { Injectable, Inject, Logger } from '@nestjs/common';
    import { RiderRepositoryPort, RIDER_REPOSITORY_PORT } from '../../domain/rider/rider.repository.port';
    import { RaceResultRepositoryPort, RACE_RESULT_REPOSITORY_PORT } from '../../domain/race-result/race-result.repository.port';
-   import { PcsClientAdapter } from '../../infrastructure/scraping/pcs-client.adapter';
-   import { findRaceBySlug } from '../../infrastructure/scraping/race-catalog';
-   import { ScrapeJobService } from './scrape-job.service';
+   import { ScrapeJobRepositoryPort, SCRAPE_JOB_REPOSITORY_PORT } from '../../domain/scrape-job/scrape-job.repository.port';
+   import { ScrapeJob } from '../../domain/scrape-job/scrape-job.entity';
+   import { findRaceBySlug } from '../../domain/race/race-catalog';
+   import { PcsScraperPort, PCS_SCRAPER_PORT } from './ports/pcs-scraper.port';
 
    export interface TriggerScrapeInput {
      readonly raceSlug: string;
@@ -79,17 +80,27 @@ trigger to persistence.
 
    @Injectable()
    export class TriggerScrapeUseCase {
-     // Constructor injects all dependencies
+     constructor(
+       @Inject(PCS_SCRAPER_PORT) private readonly pcsScraperPort: PcsScraperPort,
+       @Inject(RIDER_REPOSITORY_PORT) private readonly riderRepo: RiderRepositoryPort,
+       @Inject(RACE_RESULT_REPOSITORY_PORT) private readonly resultRepo: RaceResultRepositoryPort,
+       @Inject(SCRAPE_JOB_REPOSITORY_PORT) private readonly scrapeJobRepo: ScrapeJobRepositoryPort,
+     ) {}
    }
    ```
+   > **Hexagonal compliance**: The use case depends ONLY on ports and domain imports.
+   > `PcsScraperPort` (defined in `application/scraping/ports/`) abstracts the HTTP client.
+   > `findRaceBySlug` comes from `domain/race/` (domain knowledge). `ScrapeJobRepositoryPort`
+   > comes from `domain/scrape-job/`. No direct infrastructure imports.
 2. Implement the `execute(input: TriggerScrapeInput): Promise<TriggerScrapeOutput>` method
    with the following flow:
    - **Step 1**: Look up the race in the catalog using `findRaceBySlug(input.raceSlug)`.
      If not found, throw a `NotFoundException` with a descriptive message.
-   - **Step 2**: Create a ScrapeJob via `ScrapeJobService.create(input.raceSlug, input.year)`.
-     Capture the returned `jobId`.
-   - **Step 3**: Mark the job as running via `ScrapeJobService.markRunning(jobId)`.
-   - **Step 4**: Fetch pages from PCS based on race type:
+   - **Step 2**: Create a ScrapeJob entity via `ScrapeJob.create(input.raceSlug, input.year)`.
+     Save it via `scrapeJobRepo.save(job)`. Capture the `job.id`.
+   - **Step 3**: Transition the job via `job.markRunning()` and save again via
+     `scrapeJobRepo.save(runningJob)`. The entity enforces valid state transitions.
+   - **Step 4**: Fetch pages from PCS via `pcsScraperPort.fetchPage(path)` based on race type:
      - For **stage races** (GRAND_TOUR, MINI_TOUR):
        - Fetch the race overview page to detect the number of stages
        - For each stage: fetch stage results page, parse with `parseStageResults`
@@ -100,6 +111,8 @@ trigger to persistence.
      - For **classics** (CLASSIC):
        - Fetch the single results page
        - Parse with `parseClassicResults`
+     Note: Parsers are pure functions imported from `infrastructure/scraping/parsers/`.
+     The use case orchestrates them but the parsing logic itself is infrastructure.
    - **Step 5**: Validate all parsed results using the shape validator (T020). If validation
      fails, log the errors and mark the job as failed.
    - **Step 6**: Upsert riders — for each unique rider slug in the results, call
@@ -112,11 +125,15 @@ trigger to persistence.
    try {
      // Steps 3-8
    } catch (error) {
-     await this.scrapeJobService.markFailed(jobId, error instanceof Error ? error.message : 'Unknown error');
+     const failedJob = runningJob.markFailed(
+       error instanceof Error ? error.message : 'Unknown error',
+     );
+     await this.scrapeJobRepo.save(failedJob);
      throw error;
    }
    ```
    This ensures the job is NEVER left in a "running" state if anything goes wrong.
+   The domain entity handles the state transition; the repository persists it.
 4. Stage detection strategy for stage races:
    - Fetch `race/{slug}/{year}` overview page
    - Parse the stage list from the sidebar or stages navigation
@@ -131,57 +148,61 @@ uses a real database. Verify that after execution:
 
 ---
 
-### T019 — ScrapeJob Lifecycle Service
+### T019 — ScrapeJob Domain Entity Tests & Repository Adapter
 
-**Goal**: Manage the lifecycle of scrape job records with atomic status transitions.
+**Goal**: The ScrapeJob lifecycle is now managed by the **domain entity** (defined in
+WP02/T011). The entity's `markRunning()`, `markSuccess()`, and `markFailed()` methods
+enforce valid state transitions. This task covers testing the entity and implementing
+the repository adapter.
+
+> **Hexagonal compliance**: Status transitions live in the domain entity, NOT in an
+> application service with raw SQL. The application layer (use case) calls
+> `job.markRunning()` → `repo.save(job)`. No Drizzle in the application layer.
 
 **Steps**:
 
-1. Create `apps/api/src/application/scraping/scrape-job.service.ts`:
+1. The `ScrapeJob` entity and `ScrapeJobRepositoryPort` are defined in WP02/T011.
+   The use case (T018) already uses them directly:
    ```typescript
-   import { Injectable, Inject } from '@nestjs/common';
+   // In the use case:
+   const job = ScrapeJob.create(input.raceSlug, input.year);
+   await this.scrapeJobRepo.save(job);
 
+   const runningJob = job.markRunning();
+   await this.scrapeJobRepo.save(runningJob);
+
+   // ... after scraping:
+   const completedJob = runningJob.markSuccess(recordCount);
+   await this.scrapeJobRepo.save(completedJob);
+   ```
+2. The repository adapter (`ScrapeJobRepositoryAdapter`) is implemented in WP02/T012.
+   It uses `ScrapeJob.reconstitute()` for hydration and `job.toProps()` for persistence.
+3. Add a convenience query method to the use case for the REST endpoint (T022):
+   Create `apps/api/src/application/scraping/get-scrape-jobs.use-case.ts`:
+   ```typescript
    @Injectable()
-   export class ScrapeJobService {
-     async create(raceSlug: string, year: number): Promise<string> {
-       // INSERT INTO scrape_jobs (race_slug, year, status) VALUES (?, ?, 'pending')
-       // RETURN id
-     }
+   export class GetScrapeJobsUseCase {
+     constructor(
+       @Inject(SCRAPE_JOB_REPOSITORY_PORT)
+       private readonly scrapeJobRepo: ScrapeJobRepositoryPort,
+     ) {}
 
-     async markRunning(jobId: string): Promise<void> {
-       // UPDATE scrape_jobs SET status = 'running', started_at = NOW() WHERE id = ?
-     }
-
-     async markSuccess(jobId: string, recordCount: number): Promise<void> {
-       // UPDATE scrape_jobs SET status = 'success', completed_at = NOW(),
-       //   records_upserted = ? WHERE id = ?
-     }
-
-     async markFailed(jobId: string, error: string): Promise<void> {
-       // UPDATE scrape_jobs SET status = 'failed', completed_at = NOW(),
-       //   error_message = ? WHERE id = ?
-     }
-
-     async findRecent(limit: number, status?: string): Promise<ScrapeJob[]> {
-       // SELECT * FROM scrape_jobs WHERE status = ? ORDER BY started_at DESC LIMIT ?
+     async execute(limit: number, status?: string): Promise<ScrapeJob[]> {
+       return this.scrapeJobRepo.findRecent(limit, status);
      }
    }
    ```
-2. Use Drizzle ORM queries directly in this service (it lives in the application layer but
-   depends on infrastructure for persistence — this is an acceptable pragmatic compromise).
-   Alternatively, create a ScrapeJobRepositoryPort in the domain layer.
-3. Use database transactions for atomic status updates. Ensure that `markRunning` only
-   transitions from "pending" status, and `markSuccess`/`markFailed` only transition from
-   "running" status. If the current status does not match, log a warning and skip.
-4. Add a method `findStale(olderThanMinutes: number): Promise<ScrapeJob[]>` to find jobs
-   stuck in "running" state for too long. This supports future recovery logic.
 
-**Validation**: Unit test all status transitions. Verify that:
-- `create` returns a valid UUID
-- `markRunning` sets started_at
-- `markSuccess` sets completed_at and records_upserted
-- `markFailed` sets error_message
-- Stale job detection finds jobs older than the threshold
+**Validation**: Unit test the ScrapeJob entity transitions:
+- `create()` returns a job in PENDING status with valid UUID
+- `markRunning()` on PENDING job sets startedAt and returns RUNNING job
+- `markRunning()` on RUNNING/SUCCESS/FAILED job throws Error
+- `markSuccess(n)` on RUNNING job sets completedAt, recordsUpserted and returns SUCCESS job
+- `markSuccess()` on PENDING/SUCCESS/FAILED job throws Error
+- `markFailed(msg)` on RUNNING job sets completedAt, errorMessage and returns FAILED job
+- `markFailed()` on PENDING/SUCCESS/FAILED job throws Error
+- `toProps()` returns all properties correctly
+- `reconstitute()` hydrates from props correctly
 
 ---
 
@@ -289,7 +310,7 @@ uses a real database. Verify that after execution:
    import { PcsClientAdapter } from '../pcs-client.adapter';
    import { parseGcResults } from '../parsers/stage-race.parser';
    import { parseClassicResults } from '../parsers/classic.parser';
-   import { HealthStatus } from '@cycling-analyzer/shared-types';
+   import { HealthStatus } from '../../../domain/shared/health-status.enum';
 
    export interface ParserHealth {
      readonly status: HealthStatus;
@@ -400,7 +421,7 @@ uses a real database. Verify that after execution:
      ```typescript
      import { IsOptional, IsInt, Min, Max, IsEnum } from 'class-validator';
      import { Type } from 'class-transformer';
-     import { ScrapeStatus } from '@cycling-analyzer/shared-types';
+     import { ScrapeStatus } from '../../domain/shared/scrape-status.enum';
 
      export class ScrapeJobsQueryDto {
        @IsOptional()
@@ -415,12 +436,31 @@ uses a real database. Verify that after execution:
        status?: ScrapeStatus;
      }
      ```
-4. Create `apps/api/src/presentation/scraping.controller.ts`:
+4. Create `apps/api/src/application/scraping/get-scraper-health.use-case.ts`:
+   ```typescript
+   import { Injectable } from '@nestjs/common';
+   import { ScraperHealthService } from '../../infrastructure/scraping/health/scraper-health.service';
+
+   @Injectable()
+   export class GetScraperHealthUseCase {
+     constructor(private readonly healthService: ScraperHealthService) {}
+
+     execute() {
+       return this.healthService.getHealth();
+     }
+   }
+   ```
+   > **Note**: The health service itself lives in infrastructure (it uses the PCS client
+   > and parsers). The use case wraps it so the controller never imports infrastructure
+   > directly. For stricter hexagonal, define a `ScraperHealthPort` interface in
+   > application and have `ScraperHealthService` implement it.
+
+5. Create `apps/api/src/presentation/scraping.controller.ts`:
    ```typescript
    import { Controller, Post, Get, Body, Query, HttpCode, HttpStatus } from '@nestjs/common';
    import { TriggerScrapeUseCase } from '../application/scraping/trigger-scrape.use-case';
-   import { ScrapeJobService } from '../application/scraping/scrape-job.service';
-   import { ScraperHealthService } from '../infrastructure/scraping/health/scraper-health.service';
+   import { GetScrapeJobsUseCase } from '../application/scraping/get-scrape-jobs.use-case';
+   import { GetScraperHealthUseCase } from '../application/scraping/get-scraper-health.use-case';
    import { TriggerScrapeDto } from './dto/trigger-scrape.dto';
    import { ScrapeJobsQueryDto } from './dto/scrape-jobs-query.dto';
 
@@ -428,8 +468,8 @@ uses a real database. Verify that after execution:
    export class ScrapingController {
      constructor(
        private readonly triggerScrapeUseCase: TriggerScrapeUseCase,
-       private readonly scrapeJobService: ScrapeJobService,
-       private readonly healthService: ScraperHealthService,
+       private readonly getScrapeJobsUseCase: GetScrapeJobsUseCase,
+       private readonly getScraperHealthUseCase: GetScraperHealthUseCase,
      ) {}
 
      @Post('trigger')
@@ -444,7 +484,7 @@ uses a real database. Verify that after execution:
 
      @Get('jobs')
      async getJobs(@Query() query: ScrapeJobsQueryDto) {
-       const jobs = await this.scrapeJobService.findRecent(
+       const jobs = await this.getScrapeJobsUseCase.execute(
          query.limit ?? 20,
          query.status,
        );
@@ -453,10 +493,13 @@ uses a real database. Verify that after execution:
 
      @Get('health')
      getHealth() {
-       return this.healthService.getHealth();
+       return this.getScraperHealthUseCase.execute();
      }
    }
    ```
+   > **Hexagonal compliance**: The controller injects ONLY use cases from the application
+   > layer. It never imports from `infrastructure/`. The presentation layer depends on
+   > the application layer, which depends on domain ports.
 5. Create `apps/api/src/presentation/scraping.module.ts` — a NestJS module that imports
    `DatabaseModule`, provides all services and use cases, and declares the controller.
 6. Import `ScrapingModule` in the root `AppModule`.
@@ -479,7 +522,7 @@ Test DTO validation:
 | Subtask | Test Type       | What to verify                                           | Coverage Target |
 |---------|-----------------|----------------------------------------------------------|-----------------|
 | T018    | Integration     | Full scrape flow with mocked HTTP, real DB               | 85%             |
-| T019    | Unit            | All status transitions, stale job detection              | 95%             |
+| T019    | Unit            | ScrapeJob entity transitions, GetScrapeJobsUseCase       | 95%             |
 | T020    | Unit            | All validation rules, edge cases                         | 100%            |
 | T021    | Unit            | Health check logic with mocked PCS client                | 90%             |
 | T022    | E2E / Unit      | Endpoint responses, DTO validation, error handling       | 85%             |
@@ -525,13 +568,16 @@ When reviewing this work package, verify:
 
 - [ ] POST `/api/scraping/trigger` accepts a race slug and year, returns 202
 - [ ] Scrape trigger use case fetches pages, parses results, and persists to database
-- [ ] ScrapeJob lifecycle tracks all status transitions with timestamps
+- [ ] ScrapeJob lifecycle uses domain entity transitions (not raw SQL in app layer)
 - [ ] Shape validator catches empty results, invalid positions, and duplicates
 - [ ] Health service runs canary checks every 6 hours via cron
 - [ ] GET `/api/scraping/jobs` returns recent jobs with optional status filter
 - [ ] GET `/api/scraping/health` returns parser health status
 - [ ] All DTOs validate input with class-validator
 - [ ] Error handling ensures no job is left in "running" state
+- [ ] Use case imports ONLY domain ports and application-layer code (no infrastructure imports)
+- [ ] Controller imports ONLY use cases from application layer (no infrastructure imports)
+- [ ] PcsScraperPort defined in `application/scraping/ports/` and implemented by PcsClientAdapter
 - [ ] All tests pass with target coverage
 - [ ] No `any` types; `pnpm lint` passes
 

@@ -95,51 +95,69 @@ kitty-specs/001-cycling-fantasy-team-optimizer/
 │   │
 │   └── api/                          # NestJS backend
 │       └── src/
-│           ├── domain/               # Pure domain logic (NO framework deps)
+│           ├── domain/               # Pure domain logic (NO framework deps, NO shared-types)
+│           │   ├── shared/           # Domain enums (canonical definitions)
+│           │   │   ├── race-type.enum.ts
+│           │   │   ├── race-class.enum.ts
+│           │   │   ├── result-category.enum.ts
+│           │   │   ├── scrape-status.enum.ts
+│           │   │   ├── health-status.enum.ts
+│           │   │   └── index.ts
 │           │   ├── rider/
-│           │   │   ├── rider.entity.ts
+│           │   │   ├── rider.entity.ts              # Rich entity (class with behavior)
 │           │   │   └── rider.repository.port.ts
 │           │   ├── race-result/
-│           │   │   ├── race-result.entity.ts
-│           │   │   ├── race-result.repository.port.ts
-│           │   │   └── race-type.enum.ts
+│           │   │   ├── race-result.entity.ts         # Rich entity (class with behavior)
+│           │   │   └── race-result.repository.port.ts
+│           │   ├── race/
+│           │   │   └── race-catalog.ts               # Domain knowledge (race definitions)
+│           │   ├── scrape-job/
+│           │   │   ├── scrape-job.entity.ts           # Rich entity (status transitions)
+│           │   │   └── scrape-job.repository.port.ts
 │           │   ├── scoring/
-│           │   │   ├── scoring.service.ts          # Temporal decay + category scoring
+│           │   │   ├── scoring.service.ts             # Domain service (pure functions + DI wrapper)
+│           │   │   ├── temporal-decay.ts              # Temporal weight calculation
 │           │   │   ├── rider-score.value-object.ts
 │           │   │   └── scoring-weights.config.ts
 │           │   ├── matching/
-│           │   │   ├── rider-matcher.port.ts
+│           │   │   ├── rider-matcher.port.ts          # Driven port (interface only)
 │           │   │   └── price-list-entry.value-object.ts
 │           │   └── optimizer/
-│           │       ├── knapsack.service.ts          # DP algorithm (pure function)
+│           │       ├── knapsack.service.ts            # DP algorithm (pure function)
+│           │       ├── constraints.service.ts
+│           │       ├── alternative-teams.service.ts
 │           │       └── team-selection.value-object.ts
 │           │
 │           ├── application/          # Use cases (orchestration only)
 │           │   ├── analyze/
-│           │   │   └── analyze-price-list.use-case.ts
+│           │   │   ├── analyze-price-list.use-case.ts
+│           │   │   └── price-list-parser.ts           # Input adaptation (not domain logic)
 │           │   ├── optimize/
 │           │   │   └── optimize-team.use-case.ts
 │           │   └── scraping/
 │           │       ├── trigger-scrape.use-case.ts
-│           │       └── scrape-health-check.use-case.ts
+│           │       ├── get-scrape-jobs.use-case.ts
+│           │       ├── get-scraper-health.use-case.ts
+│           │       └── ports/
+│           │           └── pcs-scraper.port.ts        # Driven port for HTTP scraping
 │           │
 │           ├── infrastructure/       # Adapters (framework + external deps)
 │           │   ├── database/
 │           │   │   ├── schema/       # Drizzle table definitions
 │           │   │   ├── migrations/   # Drizzle Kit generated migrations
 │           │   │   ├── rider.repository.adapter.ts
-│           │   │   └── race-result.repository.adapter.ts
+│           │   │   ├── race-result.repository.adapter.ts
+│           │   │   └── scrape-job.repository.adapter.ts
 │           │   ├── scraping/
-│           │   │   ├── pcs-client.adapter.ts        # Axios + Cheerio HTTP
+│           │   │   ├── pcs-client.adapter.ts          # Implements PcsScraperPort
 │           │   │   ├── parsers/
-│           │   │   │   ├── stage-race.parser.ts     # GT + mini-tour pages
-│           │   │   │   └── classic.parser.ts        # One-day race page
-│           │   │   ├── race-catalog.ts              # Men's UWT/Pro/.1 race list
+│           │   │   │   ├── stage-race.parser.ts       # GT + mini-tour pages
+│           │   │   │   └── classic.parser.ts          # One-day race page
 │           │   │   └── health/
-│           │   │       ├── scraper-health.service.ts # Auto-health monitoring
-│           │   │       └── html-shape-validator.ts   # Output shape checks
+│           │   │       ├── scraper-health.service.ts   # Auto-health monitoring
+│           │   │       └── html-shape-validator.ts     # Output shape checks
 │           │   └── matching/
-│           │       └── fuzzysort-matcher.adapter.ts  # fuzzysort implementation
+│           │       └── fuzzysort-matcher.adapter.ts    # Implements RiderMatcherPort
 │           │
 │           └── presentation/         # REST controllers (NestJS)
 │               ├── analyze.controller.ts
@@ -159,11 +177,8 @@ kitty-specs/001-cycling-fantasy-team-optimizer/
 │   └── eslint-config/               # Shared ESLint configuration
 │       └── package.json
 │
-├── docker/
-│   ├── docker-compose.yml            # PostgreSQL + API + Web
-│   ├── docker-compose.dev.yml        # Dev overrides (hot reload, volumes)
-│   ├── Dockerfile.api
-│   └── Dockerfile.web
+├── docker-compose.yml                  # PostgreSQL + API + Web (at repo root)
+├── docker-compose.override.yml         # Dev overrides (hot reload, volumes)
 │
 ├── docs/
 │   └── adr/                          # Architectural Decision Records

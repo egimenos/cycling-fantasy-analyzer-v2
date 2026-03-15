@@ -67,7 +67,12 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
 
 ### T028: Price List Parser
 
-**File:** `apps/api/src/domain/matching/price-list-parser.ts`
+**File:** `apps/api/src/application/analyze/price-list-parser.ts`
+
+> **DDD note**: Parsing raw text from an external source (pasted from a fantasy cycling
+> website) is **input adaptation**, not domain logic. This function lives in the
+> application layer, close to the use case that consumes it. The domain layer only
+> receives already-structured `PriceListEntry` value objects.
 
 **Purpose:** Parse raw text pasted from Grandes miniVueltas race pages into structured `PriceListEntry[]` objects.
 
@@ -141,22 +146,24 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
 1. First, define the port interface in the domain layer:
    ```typescript
    // rider-matcher.port.ts
-   interface RiderMatchResult {
+   export interface RiderMatchResult {
      matchedRiderId: string | null;
      confidence: number;
      unmatched: boolean;
    }
 
-   interface RiderMatcherPort {
+   export interface RiderMatcherPort {
      matchRider(rawName: string, rawTeam: string): Promise<RiderMatchResult>;
      loadRiders(riders: RiderTarget[]): void;
    }
 
-   interface RiderTarget {
+   export interface RiderTarget {
      id: string;
      normalizedName: string;
      currentTeam: string;
    }
+
+   export const RIDER_MATCHER_PORT = Symbol('RiderMatcherPort');
    ```
 
 2. Install `fuzzysort` package:
@@ -195,8 +202,10 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
 5. Register in NestJS module:
    ```typescript
    // matching.module.ts
+   import { RIDER_MATCHER_PORT } from '../../domain/matching/rider-matcher.port';
+
    providers: [
-     { provide: 'RiderMatcherPort', useClass: FuzzysortMatcherAdapter }
+     { provide: RIDER_MATCHER_PORT, useClass: FuzzysortMatcherAdapter }
    ]
    ```
 
@@ -224,16 +233,27 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
 
 1. Define the use case class with injected dependencies:
    ```typescript
+   import { Injectable, Inject } from '@nestjs/common';
+   import { RiderMatcherPort, RIDER_MATCHER_PORT } from '../../domain/matching/rider-matcher.port';
+   import { RiderRepositoryPort, RIDER_REPOSITORY_PORT } from '../../domain/rider/rider.repository.port';
+   import { RaceResultRepositoryPort, RACE_RESULT_REPOSITORY_PORT } from '../../domain/race-result/race-result.repository.port';
+   import { ScoringService } from '../../domain/scoring/scoring.service';
+   import { parsePriceList } from './price-list-parser';
+
    @Injectable()
    class AnalyzePriceListUseCase {
      constructor(
-       @Inject('RiderMatcherPort') private matcher: RiderMatcherPort,
-       @Inject('RiderRepositoryPort') private riderRepo: RiderRepositoryPort,
-       @Inject('RaceResultRepositoryPort') private resultRepo: RaceResultRepositoryPort,
+       @Inject(RIDER_MATCHER_PORT) private matcher: RiderMatcherPort,
+       @Inject(RIDER_REPOSITORY_PORT) private riderRepo: RiderRepositoryPort,
+       @Inject(RACE_RESULT_REPOSITORY_PORT) private resultRepo: RaceResultRepositoryPort,
        private scoringService: ScoringService,
      ) {}
    }
    ```
+   > **Hexagonal compliance**: The use case imports `parsePriceList` from its own
+   > application layer (co-located). It depends on domain ports (`RiderMatcherPort`,
+   > `RiderRepositoryPort`, `RaceResultRepositoryPort`) and the domain scoring service.
+   > No infrastructure imports.
 
 2. Implement `execute(input: AnalyzeInput): Promise<AnalyzeResponse>`:
    - Step 1: Parse raw text using `parsePriceList(input.rawText)`
@@ -337,44 +357,84 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
 
 ### T032: Shared Types Package
 
-**File:** `packages/shared-types/src/api.ts`, `packages/shared-types/src/rider.ts`, `packages/shared-types/src/scoring.ts`, `packages/shared-types/src/index.ts`
+**File:** `packages/shared-types/src/enums.ts`, `packages/shared-types/src/api.ts`, `packages/shared-types/src/scoring.ts`, `packages/shared-types/src/index.ts`
+
+> **DDD note**: The canonical enum and entity definitions live in `apps/api/src/domain/`.
+> `shared-types` is a **DTO/contract package** for the API boundary — it defines the
+> shapes that flow between frontend and backend over HTTP. It must NOT be imported by the
+> domain layer. The presentation/adapter layer maps domain entities → shared-types DTOs.
 
 **Step-by-step instructions:**
 
-1. In `packages/shared-types/src/api.ts`, define:
+1. In `packages/shared-types/src/enums.ts`, **duplicate** the domain enums as string
+   literal types (these are the API contract types, independent of the domain enums):
+   ```typescript
+   export type RaceType = 'grand_tour' | 'classic' | 'mini_tour';
+   export type RaceClass = 'UWT' | 'Pro' | '1';
+   export type ResultCategory = 'gc' | 'stage' | 'mountain' | 'sprint' | 'final';
+   export type ScrapeStatus = 'pending' | 'running' | 'success' | 'failed';
+   export type HealthStatus = 'healthy' | 'degraded' | 'failing';
+   ```
+   Why duplicate instead of import? Because `shared-types` is consumed by the frontend
+   (which cannot import from `apps/api/src/domain/`). The values are identical; the
+   presentation layer ensures they stay in sync.
+
+2. In `packages/shared-types/src/api.ts`, define API contract types aligned with domain:
    - `AnalyzeRequest`: `{ rawText: string; raceType: RaceType; budget: number }`
    - `AnalyzeResponse`: `{ riders: AnalyzedRider[]; totalParsed: number; totalMatched: number; unmatchedCount: number; parseErrors: ParseError[] }`
-   - `AnalyzedRider`: `{ id: string | null; name: string; team: string; priceHillios: number; totalProjectedPts: number | null; compositeScore: number | null; pointsPerHillio: number | null; scoreBreakdown: RiderScore | null; matchConfidence: number; unmatched: boolean }`
-     - NOTE: `compositeScore` is the PRIMARY ranking field (price-aware value score from WP05). `totalProjectedPts` is the raw historical projection (available for transparency). Riders are sorted by `compositeScore` descending.
-   - `MatchedRider`: `{ riderId: string; name: string; team: string; priceHillios: number }`
+   - `AnalyzedRider`:
+     ```typescript
+     {
+       id: string | null;
+       rawName: string;
+       rawTeam: string;
+       priceHillios: number;
+       matchedRider: { id: string; pcsSlug: string; fullName: string; currentTeam: string } | null;
+       matchConfidence: number;
+       unmatched: boolean;
+       compositeScore: number | null;
+       pointsPerHillio: number | null;
+       totalProjectedPts: number | null;
+       categoryScores: {
+         gc: number; stage: number; mountain: number; sprint: number; final: number;
+       } | null;
+       seasonsUsed: number | null;
+     }
+     ```
+     NOTE: `compositeScore` is the PRIMARY ranking field (price-aware value score from
+     WP05). `categoryScores` mirrors the domain `RiderScore.categoryScores` structure.
+     `totalProjectedPts` is the raw historical projection (for transparency).
+     **No `dailyProjectedPts`** — this field does not exist in the scoring engine.
    - `OptimizeRequest`: `{ riders: AnalyzedRider[]; budget: number; mustInclude: string[]; mustExclude: string[] }`
    - `OptimizeResponse`: `{ optimalTeam: TeamSelection; alternativeTeams: TeamSelection[] }`
-   - `TeamSelection`: `{ riders: AnalyzedRider[]; totalCostHillios: number; totalProjectedPts: number; budgetRemaining: number; scoreBreakdown: Record<string, number> }`
-
-2. In `packages/shared-types/src/rider.ts`, define:
-   - `RaceType`: `'grand_tour' | 'classic' | 'mini_tour'`
-   - `Rider`: `{ id: string; firstName: string; lastName: string; currentTeam: string; nationality: string; pcsUrl: string }`
-   - `RiderSummary`: `{ id: string; name: string; team: string }`
+   - `TeamSelection`: `{ riders: AnalyzedRider[]; totalCostHillios: number; totalProjectedPts: number; budgetRemaining: number }`
 
 3. In `packages/shared-types/src/scoring.ts`, define:
-   - `RiderScore`: `{ gcPts: number; stagePts: number; mountainPts: number; sprintPts: number; dailyProjectedPts: number; totalProjectedPts: number }`
-   - `ScoreCategory`: `'gc' | 'stage' | 'mountain' | 'sprint' | 'daily'`
    - `ParseError`: `{ line: number; rawText: string; reason: string }`
+   - Remove `RiderScore` from here — the score breakdown is inlined in `AnalyzedRider.categoryScores`
+   - Remove `ScoreCategory` — use `ResultCategory` from enums instead
+   - **Do NOT define `dailyProjectedPts`** — it does not exist in the domain scoring engine
 
 4. In `packages/shared-types/src/index.ts`, re-export everything:
    ```typescript
+   export * from './enums';
    export * from './api';
-   export * from './rider';
    export * from './scoring';
    ```
 
-5. Ensure `packages/shared-types/package.json` has proper `main`, `types`, and `exports` fields pointing to the built output. Verify the package name is `@cycling-analyzer/shared-types`.
+5. Ensure `packages/shared-types/package.json` has proper `main`, `types`, and `exports`
+   fields pointing to the built output. Verify the package name is
+   `@cycling-analyzer/shared-types`.
 
 **Validation criteria:**
 - Types compile without errors under `strict: true`
 - No `any` types anywhere
 - All types are exported and importable from `@cycling-analyzer/shared-types`
-- Types match contracts/api.md definitions exactly
+- Types match `contracts/api.md` definitions exactly
+- Field names in `AnalyzedRider` match the domain `RiderScore` structure (e.g.,
+  `categoryScores.gc`, NOT `gcPts`)
+- No phantom fields (`dailyProjectedPts` must NOT exist)
+- `shared-types` has ZERO imports from `apps/api/` (it's a standalone package)
 
 ---
 
@@ -382,7 +442,7 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
 
 **Unit tests (target 90%+ coverage):**
 
-- `apps/api/test/domain/matching/price-list-parser.spec.ts`:
+- `apps/api/test/application/analyze/price-list-parser.spec.ts`:
   - Test well-formatted input (tab-separated, space-separated, pipe-separated)
   - Test malformed lines are captured in errors array
   - Test header line detection and skipping
