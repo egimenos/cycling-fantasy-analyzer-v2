@@ -56,12 +56,12 @@
 **Requirements Refs**: FR-000, FR-003
 
 ### Included Subtasks
-- [ ] T007 Set up Docker Compose — PostgreSQL 16 + API + Web services with dev overrides (hot reload, volumes)
-- [ ] T008 Configure Drizzle ORM — connection pool via `drizzle-orm/node-postgres`, drizzle.config.ts, migration tooling scripts
-- [ ] T009 Create Drizzle schema definitions — `riders`, `race_results`, `scrape_jobs` tables matching data-model.md
-- [ ] T010 Generate and run initial database migration via Drizzle Kit
-- [ ] T011 Implement domain entities — Rider, RaceResult, ScrapeJob as plain TS objects + repository port interfaces in `domain/`
-- [ ] T012 Implement Drizzle repository adapters in `infrastructure/database/` — CRUD + upsert for RaceResult
+- [x] T007 Set up Docker Compose — PostgreSQL 16 + API + Web services with dev overrides (hot reload, volumes)
+- [x] T008 Configure Drizzle ORM — connection pool via `drizzle-orm/node-postgres`, drizzle.config.ts, migration tooling scripts
+- [x] T009 Create Drizzle schema definitions — `riders`, `race_results`, `scrape_jobs` tables matching data-model.md
+- [x] T010 Generate and run initial database migration via Drizzle Kit
+- [x] T011 Implement domain entities — Rider, RaceResult, ScrapeJob as plain TS objects + repository port interfaces in `domain/`
+- [x] T012 Implement Drizzle repository adapters in `infrastructure/database/` — CRUD + upsert for RaceResult
 
 ### Implementation Notes
 - PostgreSQL in both local and production (full parity per constitution)
