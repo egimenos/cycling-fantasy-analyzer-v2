@@ -4,6 +4,7 @@ title: Optimizer & Team Builder UI
 lane: planned
 dependencies:
 - WP07
+- WP08
 subtasks:
 - T043
 - T044

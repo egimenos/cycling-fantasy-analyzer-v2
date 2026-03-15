@@ -243,12 +243,13 @@ Main endpoint: parses price list, matches riders, computes scores.
         "currentTeam": "UAE Team Emirates-XRG"
       },
       "matchConfidence": 0.95,
+      "compositeScore": 78.3,
+      "pointsPerHillio": 0.354,
       "score": {
         "projectedGcPts": 180.5,
         "projectedStagePts": 45.0,
         "projectedMountainPts": 10.2,
         "projectedSprintPts": 0.0,
-        "projectedDailyPts": 12.0,
         "totalProjectedPts": 247.7,
         "seasonsUsed": 2
       }

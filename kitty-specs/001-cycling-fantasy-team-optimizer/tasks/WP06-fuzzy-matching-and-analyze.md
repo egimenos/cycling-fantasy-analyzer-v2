@@ -4,6 +4,7 @@ title: Fuzzy Matching & Analyze Endpoint
 lane: planned
 dependencies:
 - WP02
+- WP05
 subtasks:
 - T028
 - T029

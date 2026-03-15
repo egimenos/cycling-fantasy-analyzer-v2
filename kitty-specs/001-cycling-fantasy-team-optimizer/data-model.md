@@ -115,7 +115,8 @@ Computed score for a rider in the context of a specific upcoming race type.
 | `projected_stage_pts` | float | Weighted avg stage win points projection |
 | `projected_mountain_pts` | float | Weighted avg mountain classification projection |
 | `projected_sprint_pts` | float | Weighted avg sprint classification projection |
-| `projected_daily_pts` | float | Weighted avg daily stage points projection |
+| `composite_score` | float | Price-aware value score = f(projected_pts, price, pool) |
+| `points_per_hillio` | float | totalProjectedPts / priceHillios |
 | `total_projected_pts` | float | Sum of all category projections |
 | `seasons_used` | integer | Number of seasons with data (1–3) |
 

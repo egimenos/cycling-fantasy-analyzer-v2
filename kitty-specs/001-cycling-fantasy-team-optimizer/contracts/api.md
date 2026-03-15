@@ -23,7 +23,7 @@ interface AnalyzeRequest {
 **Response Body (200):**
 ```typescript
 interface AnalyzeResponse {
-  riders: AnalyzedRider[];   // Sorted by totalProjectedPts descending
+  riders: AnalyzedRider[];   // Sorted by compositeScore descending
   unmatchedCount: number;    // Riders with no PCS match
   parseErrors: string[];     // Lines that could not be parsed
 }
@@ -35,6 +35,8 @@ interface AnalyzedRider {
   matchedRider: MatchedRider | null;
   matchConfidence: number;   // 0–1 from fuzzysort
   score: RiderScore | null;  // null if unmatched
+  compositeScore: number | null;    // Price-aware value score (primary ranking metric)
+  pointsPerHillio: number | null;   // totalProjectedPts / priceHillios
 }
 
 interface MatchedRider {
@@ -49,7 +51,6 @@ interface RiderScore {
   projectedStagePts: number;
   projectedMountainPts: number;
   projectedSprintPts: number;
-  projectedDailyPts: number;
   totalProjectedPts: number;
   seasonsUsed: number;       // 1–3
 }

@@ -52,7 +52,7 @@ A user navigates to the app for a specific race (e.g., Tour de France 2025). The
 
 ### User Story 2 - View Rider Historical Stats (Priority: P2)
 
-After loading a rider list, a user wants to see each rider's historical performance to make informed selection decisions. The system fetches relevant stats from procyclingstats.com and displays them alongside each rider's price.
+After loading a rider list, a user wants to see each rider's historical performance to make informed selection decisions. The system queries persisted historical stats from the backend data store and displays them alongside each rider's price.
 
 **Why this priority**: The core value proposition of the app — without stats, the tool is no better than the raw price list itself.
 
@@ -93,7 +93,7 @@ The user wants to manually assemble their team, selecting and deselecting riders
 **Acceptance Scenarios**:
 
 1. **Given** a rider list is loaded, **When** a user selects a rider, **Then** the rider is added to the team panel and the remaining budget decreases by the rider's price.
-2. **Given** a user has selected 8 riders and tries to add a 10th, **When** they select another rider, **Then** the system prevents the selection and prompts them to remove a rider first.
+2. **Given** a user has selected 9 riders and tries to add a 10th, **When** they select another rider, **Then** the system prevents the selection and prompts them to remove a rider first.
 3. **Given** a team is fully assembled, **When** the user views the summary, **Then** they see total cost, remaining budget, and projected points broken down by scoring category.
 
 ---

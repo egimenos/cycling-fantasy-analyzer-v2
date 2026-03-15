@@ -2,7 +2,9 @@
 work_package_id: WP10
 title: Integration, E2E & Documentation
 lane: planned
-dependencies: []
+dependencies:
+- WP04
+- WP09
 subtasks:
 - T047
 - T048
