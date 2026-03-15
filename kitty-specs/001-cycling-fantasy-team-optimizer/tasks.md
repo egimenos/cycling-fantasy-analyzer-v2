@@ -95,7 +95,7 @@
 - [x] T013 Implement PCS HTTP client adapter (`infrastructure/scraping/pcs-client.adapter.ts`) — Axios with configurable rate limiting (1-2s delays), polite User-Agent header, retry on 429/5xx
 - [x] T014 [P] Implement stage race parser (`infrastructure/scraping/parsers/stage-race.parser.ts`) — scrape `/gc`, `/stage-{n}`, mountain + sprint classification sub-tables; extract raw positions per rider
 - [x] T015 [P] Implement classic race parser (`infrastructure/scraping/parsers/classic.parser.ts`) — scrape single results page; extract finishing positions
-- [ ] T016 Create men's professional race catalog (`infrastructure/scraping/race-catalog.ts`) — list of UWT/Pro/.1 races with slug, type mapping (grand_tour/classic/mini_tour), and race class
+- [x] T016 Create men's professional race catalog (`infrastructure/scraping/race-catalog.ts`) — list of UWT/Pro/.1 races with slug, type mapping (grand_tour/classic/mini_tour), and race class
 - [ ] T017 Write unit tests for parsers using captured HTML fixtures — at least TdF 2024 GC page + Milan-San Remo 2024 results page
 
 ### Implementation Notes
