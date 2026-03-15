@@ -1,7 +1,7 @@
 ---
 work_package_id: WP02
 title: Docker, Database & Hexagonal Layers
-lane: "doing"
+lane: "for_review"
 dependencies: [WP01]
 base_branch: 001-cycling-fantasy-team-optimizer-WP01
 base_commit: e2fd54a34106a5cffaaf529da2e09fd651770e18
@@ -715,3 +715,4 @@ spec-kitty implement WP02 --base WP01
 |-----------|-------|--------|
 | 2026-03-14T23:51:57Z | system | Prompt generated via /spec-kitty.tasks |
 - 2026-03-15T12:00:28Z – claude-opus – shell_pid=46060 – lane=doing – Assigned agent via workflow command
+- 2026-03-15T12:17:02Z – claude-opus – shell_pid=46060 – lane=for_review – Ready for review: Docker Compose, Drizzle schema + migration, domain entities with state guards, repository ports/adapters, DatabaseModule, 18 unit tests passing, lint clean, domain purity verified
