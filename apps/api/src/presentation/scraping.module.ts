@@ -6,12 +6,10 @@ import { ScraperHealthService } from '../infrastructure/scraping/health/scraper-
 import { PCS_SCRAPER_PORT } from '../application/scraping/ports/pcs-scraper.port';
 import { TriggerScrapeUseCase } from '../application/scraping/trigger-scrape.use-case';
 import { GetScrapeJobsUseCase } from '../application/scraping/get-scrape-jobs.use-case';
-import { GetScraperHealthUseCase } from '../application/scraping/get-scraper-health.use-case';
-import { ScrapingController } from './scraping.controller';
+import { TriggerScrapeCommand } from './cli/trigger-scrape.command';
 
 @Module({
   imports: [DatabaseModule, ScheduleModule.forRoot()],
-  controllers: [ScrapingController],
   providers: [
     {
       provide: PCS_SCRAPER_PORT,
@@ -24,7 +22,7 @@ import { ScrapingController } from './scraping.controller';
     },
     TriggerScrapeUseCase,
     GetScrapeJobsUseCase,
-    GetScraperHealthUseCase,
+    TriggerScrapeCommand,
   ],
 })
 export class ScrapingModule {}
