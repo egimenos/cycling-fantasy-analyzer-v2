@@ -16,7 +16,7 @@ subtasks:
 - T051
 phase: Phase 6 - Polish
 assignee: ''
-agent: ''
+agent: "claude-opus"
 shell_pid: "39435"
 review_status: ''
 reviewed_by: ''
@@ -721,3 +721,4 @@ When reviewing this WP, verify the following:
 | Timestamp | Action | Agent | Details |
 |-----------|--------|-------|---------|
 | 2026-03-14T23:51:57Z | Created | system | Prompt generated via /spec-kitty.tasks |
+- 2026-03-16T22:27:38Z – claude-opus – shell_pid=39435 – lane=doing – Assigned agent via workflow command
