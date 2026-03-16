@@ -1,7 +1,7 @@
 ---
 work_package_id: WP09
 title: Optimizer & Team Builder UI
-lane: "doing"
+lane: "for_review"
 dependencies:
 - WP07
 - WP08
@@ -443,3 +443,4 @@ When reviewing this WP, verify the following:
 |-----------|--------|-------|---------|
 | 2026-03-14T23:51:57Z | Created | system | Prompt generated via /spec-kitty.tasks |
 - 2026-03-16T22:04:27Z – claude-opus – shell_pid=22543 – lane=doing – Assigned agent via workflow command
+- 2026-03-16T22:18:12Z – claude-opus – shell_pid=22543 – lane=for_review – Ready for review: optimizer panel with score breakdown and alternative teams, team builder with 9-rider selection and budget enforcement, lock/exclude with mutual exclusivity, AsyncState refactor. 100 tests passing, TypeScript clean.
