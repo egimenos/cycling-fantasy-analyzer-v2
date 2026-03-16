@@ -1,7 +1,7 @@
 ---
 work_package_id: WP10
 title: Integration, E2E & Documentation
-lane: "doing"
+lane: "for_review"
 dependencies:
 - WP04
 - WP09
@@ -722,3 +722,4 @@ When reviewing this WP, verify the following:
 |-----------|--------|-------|---------|
 | 2026-03-14T23:51:57Z | Created | system | Prompt generated via /spec-kitty.tasks |
 - 2026-03-16T22:27:38Z – claude-opus – shell_pid=39435 – lane=doing – Assigned agent via workflow command
+- 2026-03-16T22:37:07Z – claude-opus – shell_pid=39435 – lane=for_review – Ready for review: Playwright E2E tests (5 scenarios), Dockerfiles (API + web, multi-stage, non-root), README, 5 ADRs, smoke test script. Docker-compose scoped to dev only per user preference. All existing unit tests still pass (100/100).
