@@ -300,10 +300,10 @@
 **Requirements Refs**: FR-005, FR-007, FR-008, FR-009, FR-010, FR-012
 
 ### Included Subtasks
-- [ ] T043 Build optimizer feature (`features/optimizer/`) — "Get Optimal Team" button, optimal team card showing 9 riders with individual score + price, total cost, projected score, per-category breakdown; alternative teams collapsible list
-- [ ] T044 Build team-builder feature (`features/team-builder/`) — rider selection checkboxes in rider table, live budget counter (remaining hillios), live projected score total, enforce 9-rider maximum, team summary panel
-- [ ] T045 Implement must-include/must-exclude UI controls — toggle buttons on each rider row for "lock" (must include) and "exclude" (must exclude), reflected in optimizer request
-- [ ] T046 Add error states, loading states, and empty states for all async operations (analyze, optimize) — use AsyncState discriminated union pattern from constitution
+- [x] T043 Build optimizer feature (`features/optimizer/`) — "Get Optimal Team" button, optimal team card showing 9 riders with individual score + price, total cost, projected score, per-category breakdown; alternative teams collapsible list
+- [x] T044 Build team-builder feature (`features/team-builder/`) — rider selection checkboxes in rider table, live budget counter (remaining hillios), live projected score total, enforce 9-rider maximum, team summary panel
+- [x] T045 Implement must-include/must-exclude UI controls — toggle buttons on each rider row for "lock" (must include) and "exclude" (must exclude), reflected in optimizer request
+- [x] T046 Add error states, loading states, and empty states for all async operations (analyze, optimize) — use AsyncState discriminated union pattern from constitution
 
 ### Implementation Notes
 - Optimizer feature calls POST /api/optimize with current analyzed riders + budget + lock/exclude flags
