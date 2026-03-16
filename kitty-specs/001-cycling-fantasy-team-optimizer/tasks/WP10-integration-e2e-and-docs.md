@@ -1,7 +1,7 @@
 ---
 work_package_id: WP10
 title: Integration, E2E & Documentation
-lane: "doing"
+lane: "done"
 dependencies:
 - WP04
 - WP09
@@ -18,8 +18,8 @@ phase: Phase 6 - Polish
 assignee: ''
 agent: "claude-opus"
 shell_pid: "48400"
-review_status: ''
-reviewed_by: ''
+review_status: "approved"
+reviewed_by: "egimenos"
 history:
 - timestamp: '2026-03-14T23:51:57Z'
   lane: planned
@@ -724,3 +724,4 @@ When reviewing this WP, verify the following:
 - 2026-03-16T22:27:38Z – claude-opus – shell_pid=39435 – lane=doing – Assigned agent via workflow command
 - 2026-03-16T22:37:07Z – claude-opus – shell_pid=39435 – lane=for_review – Ready for review: Playwright E2E tests (5 scenarios), Dockerfiles (API + web, multi-stage, non-root), README, 5 ADRs, smoke test script. Docker-compose scoped to dev only per user preference. All existing unit tests still pass (100/100).
 - 2026-03-16T22:37:33Z – claude-opus – shell_pid=48400 – lane=doing – Started review via workflow command
+- 2026-03-16T22:38:39Z – claude-opus – shell_pid=48400 – lane=done – Review passed: all 5 subtasks delivered correctly. E2E tests cover key workflows with proper selectors. Dockerfiles use multi-stage builds with non-root user. README is concise and accurate with Kamal reference for prod. ADRs are honest and well-structured. Smoke test has proper error handling and cleanup. 100 unit tests still pass.
