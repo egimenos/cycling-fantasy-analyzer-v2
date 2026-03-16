@@ -265,11 +265,11 @@
 **Requirements Refs**: FR-001, FR-002, FR-004, FR-004b, FR-012
 
 ### Included Subtasks
-- [ ] T038 Set up TanStack Start routing, app layout shell (header, main content area), and page structure (`routes/`)
-- [ ] T039 Create typed API client (`shared/lib/api-client.ts`) — functions for POST /api/analyze, POST /api/optimize with proper error handling and typed responses from `packages/shared-types`
-- [ ] T040 [P] Create shared UI components with shadcn/ui — DataTable (sortable), BudgetIndicator, ScoreBadge, LoadingSpinner, ErrorAlert, EmptyState
-- [ ] T041 Build rider-list feature (`features/rider-list/`) — paste textarea, race type dropdown (grand_tour/classic/mini_tour), budget number input, "Analyze" submit button
-- [ ] T042 Build rider table component — sortable columns (composite score, price, name, team), expand row to show per-category score breakdown (GC/stage/mountain/sprint/daily), highlight unmatched riders with warning badge
+- [x] T038 Set up TanStack Start routing, app layout shell (header, main content area), and page structure (`routes/`)
+- [x] T039 Create typed API client (`shared/lib/api-client.ts`) — functions for POST /api/analyze, POST /api/optimize with proper error handling and typed responses from `packages/shared-types`
+- [x] T040 [P] Create shared UI components with shadcn/ui — DataTable (sortable), BudgetIndicator, ScoreBadge, LoadingSpinner, ErrorAlert, EmptyState
+- [x] T041 Build rider-list feature (`features/rider-list/`) — paste textarea, race type dropdown (grand_tour/classic/mini_tour), budget number input, "Analyze" submit button
+- [x] T042 Build rider table component — sortable columns (composite score, price, name, team), expand row to show per-category score breakdown (GC/stage/mountain/sprint/daily), highlight unmatched riders with warning badge
 
 ### Implementation Notes
 - Use TanStack Start's file-based routing: `routes/index.tsx` as the main page
