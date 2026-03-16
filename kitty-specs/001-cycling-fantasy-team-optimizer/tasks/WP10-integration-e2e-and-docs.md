@@ -1,10 +1,13 @@
 ---
 work_package_id: WP10
 title: Integration, E2E & Documentation
-lane: planned
+lane: "doing"
 dependencies:
 - WP04
 - WP09
+base_branch: 001-cycling-fantasy-team-optimizer-WP09
+base_commit: 2e77f0800d17a381df5311ebfc9f9f82ee035ad8
+created_at: '2026-03-16T22:27:38.393782+00:00'
 subtasks:
 - T047
 - T048
@@ -14,7 +17,7 @@ subtasks:
 phase: Phase 6 - Polish
 assignee: ''
 agent: ''
-shell_pid: ''
+shell_pid: "39435"
 review_status: ''
 reviewed_by: ''
 history:
