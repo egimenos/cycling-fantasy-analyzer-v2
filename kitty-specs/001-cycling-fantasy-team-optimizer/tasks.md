@@ -333,11 +333,11 @@
 **Requirements Refs**: FR-000, FR-001, FR-005, FR-009, FR-010
 
 ### Included Subtasks
-- [ ] T047 Write Playwright E2E tests — full workflow: paste price list → view scored riders → get optimal team → manual team build; verify budget validation, sorting, score display
-- [ ] T048 Create production Docker configuration — optimized multi-stage Dockerfiles for API and Web, production `docker-compose.prod.yml` with environment variables
-- [ ] T049 Write comprehensive README — project overview, prerequisites, setup instructions, development workflow, architecture overview, common commands
-- [ ] T050 Commit ADRs to `docs/adr/` — ADR-001 (Drizzle behind ports), ADR-002 (scoring as pure domain), ADR-003 (two scraper strategies), ADR-004 (auto-health), ADR-005 (PostgreSQL everywhere)
-- [ ] T051 Final integration smoke test — Docker Compose up from scratch, trigger scrape for TdF 2024, analyze a price list fixture, verify optimization returns valid team
+- [x] T047 Write Playwright E2E tests — full workflow: paste price list → view scored riders → get optimal team → manual team build; verify budget validation, sorting, score display
+- [x] T048 Create production Docker configuration — optimized multi-stage Dockerfiles for API and Web, production `docker-compose.prod.yml` with environment variables
+- [x] T049 Write comprehensive README — project overview, prerequisites, setup instructions, development workflow, architecture overview, common commands
+- [x] T050 Commit ADRs to `docs/adr/` — ADR-001 (Drizzle behind ports), ADR-002 (scoring as pure domain), ADR-003 (two scraper strategies), ADR-004 (auto-health), ADR-005 (PostgreSQL everywhere)
+- [x] T051 Final integration smoke test — Docker Compose up from scratch, trigger scrape for TdF 2024, analyze a price list fixture, verify optimization returns valid team
 
 ### Implementation Notes
 - Playwright tests run against Docker Compose (API + Web + PostgreSQL) for realism
