@@ -7,7 +7,8 @@
     "build": "vite build",
     "dev": "vite dev --port 3000",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@cycling-analyzer/shared-types": "workspace:*",
@@ -25,6 +26,7 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.1.7",
     "@tanstack/router-plugin": "^1.120.20",
     "@testing-library/jest-dom": "^6.9.1",
