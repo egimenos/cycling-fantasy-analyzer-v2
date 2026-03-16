@@ -7,11 +7,14 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "prepare": "husky"
+    "prepare": "husky",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.4.4",
     "@commitlint/config-conventional": "^20.4.4",
+    "@types/node": "^22.10.7",
     "@typescript-eslint/eslint-plugin": "^8.57.0",
     "@typescript-eslint/parser": "^8.57.0",
     "eslint": "^8",
