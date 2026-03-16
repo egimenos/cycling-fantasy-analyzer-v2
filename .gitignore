@@ -42,3 +42,5 @@ Thumbs.db
 .github/copilot/
 .kittify/.dashboard
 .kittify/missions/__pycache__/
+.kittify/workspaces/
+skills-lock.json
