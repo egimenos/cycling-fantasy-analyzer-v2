@@ -1,10 +1,13 @@
 ---
 work_package_id: WP09
 title: Optimizer & Team Builder UI
-lane: planned
+lane: "doing"
 dependencies:
 - WP07
 - WP08
+base_branch: 001-cycling-fantasy-team-optimizer-WP08
+base_commit: ab7fa4120ed314bdeb36421a91a088f11a9be758
+created_at: '2026-03-16T22:04:26.979159+00:00'
 subtasks:
 - T043
 - T044
@@ -13,7 +16,7 @@ subtasks:
 phase: Phase 5 - Frontend
 assignee: ''
 agent: ''
-shell_pid: ''
+shell_pid: "22543"
 review_status: ''
 reviewed_by: ''
 history:
