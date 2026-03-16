@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RiderTable } from '../components/rider-table';
@@ -36,27 +36,37 @@ function makeResponse(riders: AnalyzedRider[]): AnalyzeResponse {
   };
 }
 
+const defaultProps = {
+  lockedIds: new Set<string>(),
+  excludedIds: new Set<string>(),
+  selectedNames: new Set<string>(),
+  onToggleLock: vi.fn(),
+  onToggleExclude: vi.fn(),
+  onToggleSelect: vi.fn(),
+  canSelect: () => true,
+};
+
 describe('RiderTable', () => {
   it('renders rider rows', () => {
     const data = makeResponse([
       makeRider(),
       makeRider({ rawName: 'Jonas Vingegaard', rawTeam: 'Visma' }),
     ]);
-    render(<RiderTable data={data} />);
+    render(<RiderTable data={data} {...defaultProps} />);
     expect(screen.getByText('Tadej Pogačar')).toBeInTheDocument();
     expect(screen.getByText('Jonas Vingegaard')).toBeInTheDocument();
   });
 
   it('shows metadata summary', () => {
     const data = makeResponse([makeRider(), makeRider({ unmatched: true, rawName: 'Unknown' })]);
-    render(<RiderTable data={data} />);
+    render(<RiderTable data={data} {...defaultProps} />);
     expect(screen.getByText(/Showing 2 riders/)).toBeInTheDocument();
     expect(screen.getByText(/1 matched, 1 unmatched/)).toBeInTheDocument();
   });
 
   it('shows empty state for zero riders', () => {
     const data = makeResponse([]);
-    render(<RiderTable data={data} />);
+    render(<RiderTable data={data} {...defaultProps} />);
     expect(screen.getByText('No riders')).toBeInTheDocument();
   });
 
@@ -71,20 +81,20 @@ describe('RiderTable', () => {
         categoryScores: null,
       }),
     ]);
-    render(<RiderTable data={data} />);
+    render(<RiderTable data={data} {...defaultProps} />);
     expect(screen.getByText('Unmatched')).toBeInTheDocument();
   });
 
   it('shows Matched badge for matched riders', () => {
     const data = makeResponse([makeRider()]);
-    render(<RiderTable data={data} />);
+    render(<RiderTable data={data} {...defaultProps} />);
     expect(screen.getByText('Matched')).toBeInTheDocument();
   });
 
   it('expands row on click to show breakdown', async () => {
     const user = userEvent.setup();
     const data = makeResponse([makeRider()]);
-    render(<RiderTable data={data} />);
+    render(<RiderTable data={data} {...defaultProps} />);
 
     await user.click(screen.getByText('Tadej Pogačar'));
 
@@ -105,10 +115,37 @@ describe('RiderTable', () => {
         categoryScores: null,
       }),
     ]);
-    render(<RiderTable data={data} />);
+    render(<RiderTable data={data} {...defaultProps} />);
 
     await user.click(screen.getByText('Ghost Rider'));
 
     expect(screen.getByText(/No match found in database/)).toBeInTheDocument();
+  });
+
+  it('renders checkbox for each rider', () => {
+    const data = makeResponse([makeRider()]);
+    render(<RiderTable data={data} {...defaultProps} />);
+    expect(screen.getByLabelText('Select Tadej Pogačar')).toBeInTheDocument();
+  });
+
+  it('renders lock and exclude buttons', () => {
+    const data = makeResponse([makeRider()]);
+    render(<RiderTable data={data} {...defaultProps} />);
+    expect(screen.getByLabelText('Lock Tadej Pogačar')).toBeInTheDocument();
+    expect(screen.getByLabelText('Exclude Tadej Pogačar')).toBeInTheDocument();
+  });
+
+  it('applies locked row styling', () => {
+    const data = makeResponse([makeRider()]);
+    render(<RiderTable data={data} {...defaultProps} lockedIds={new Set(['Tadej Pogačar'])} />);
+    expect(screen.getByLabelText('Unlock Tadej Pogačar')).toBeInTheDocument();
+  });
+
+  it('applies excluded row styling with line-through', () => {
+    const data = makeResponse([makeRider()]);
+    render(<RiderTable data={data} {...defaultProps} excludedIds={new Set(['Tadej Pogačar'])} />);
+    expect(screen.getByLabelText('Include Tadej Pogačar')).toBeInTheDocument();
+    const nameEl = screen.getByText('Tadej Pogačar');
+    expect(nameEl.className).toContain('line-through');
   });
 });

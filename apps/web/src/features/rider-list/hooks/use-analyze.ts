@@ -1,28 +1,33 @@
 import { useState, useCallback } from 'react';
 import type { AnalyzeRequest, AnalyzeResponse } from '@cycling-analyzer/shared-types';
+import type { AsyncState } from '@/shared/lib/async-state';
 import { analyzeRiders } from '@/shared/lib/api-client';
 
 export function useAnalyze() {
-  const [result, setResult] = useState<AnalyzeResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<AsyncState<AnalyzeResponse>>({ status: 'idle' });
+  const [lastRequest, setLastRequest] = useState<AnalyzeRequest | null>(null);
 
   const analyze = useCallback(async (request: AnalyzeRequest) => {
-    setIsLoading(true);
-    setError(null);
+    setState({ status: 'loading' });
+    setLastRequest(request);
     const response = await analyzeRiders(request);
-    setIsLoading(false);
     if (response.status === 'success') {
-      setResult(response.data);
+      setState({ status: 'success', data: response.data });
     } else {
-      setError(response.error);
+      setState({ status: 'error', error: response.error });
     }
   }, []);
 
+  const retry = useCallback(() => {
+    if (lastRequest) {
+      void analyze(lastRequest);
+    }
+  }, [lastRequest, analyze]);
+
   const reset = useCallback(() => {
-    setResult(null);
-    setError(null);
+    setState({ status: 'idle' });
+    setLastRequest(null);
   }, []);
 
-  return { analyze, result, isLoading, error, reset };
+  return { state, analyze, retry, reset };
 }

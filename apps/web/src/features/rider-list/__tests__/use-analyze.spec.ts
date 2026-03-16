@@ -22,11 +22,9 @@ const sampleResponse: AnalyzeResponse = {
 };
 
 describe('useAnalyze', () => {
-  it('starts with initial state', () => {
+  it('starts with idle state', () => {
     const { result } = renderHook(() => useAnalyze());
-    expect(result.current.result).toBeNull();
-    expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toBeNull();
+    expect(result.current.state.status).toBe('idle');
   });
 
   it('sets loading during request', async () => {
@@ -47,7 +45,7 @@ describe('useAnalyze', () => {
       });
     });
 
-    expect(result.current.isLoading).toBe(true);
+    expect(result.current.state.status).toBe('loading');
 
     await act(async () => {
       resolvePromise!({
@@ -56,10 +54,10 @@ describe('useAnalyze', () => {
       });
     });
 
-    expect(result.current.isLoading).toBe(false);
+    expect(result.current.state.status).toBe('success');
   });
 
-  it('sets result on success', async () => {
+  it('sets data on success', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(sampleResponse),
@@ -75,12 +73,17 @@ describe('useAnalyze', () => {
       });
     });
 
-    expect(result.current.result).toEqual(sampleResponse);
-    expect(result.current.error).toBeNull();
+    expect(result.current.state.status).toBe('success');
+    if (result.current.state.status === 'success') {
+      expect(result.current.state.data).toEqual(sampleResponse);
+    }
   });
 
   it('sets error on failure', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      statusText: 'Internal Server Error',
+    });
 
     const { result } = renderHook(() => useAnalyze());
 
@@ -92,8 +95,10 @@ describe('useAnalyze', () => {
       });
     });
 
-    expect(result.current.error).toBe('Network error');
-    expect(result.current.result).toBeNull();
+    expect(result.current.state.status).toBe('error');
+    if (result.current.state.status === 'error') {
+      expect(result.current.state.error).toBeTruthy();
+    }
   });
 
   it('resets state', async () => {
@@ -112,13 +117,40 @@ describe('useAnalyze', () => {
       });
     });
 
-    expect(result.current.result).not.toBeNull();
+    expect(result.current.state.status).toBe('success');
 
     act(() => {
       result.current.reset();
     });
 
-    expect(result.current.result).toBeNull();
-    expect(result.current.error).toBeNull();
+    expect(result.current.state.status).toBe('idle');
+  });
+
+  it('retries last request', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(sampleResponse),
+    });
+
+    const { result } = renderHook(() => useAnalyze());
+
+    await act(async () => {
+      await result.current.analyze({
+        riders: [{ name: 'Test', team: 'Team', price: 100 }],
+        raceType: RaceType.GRAND_TOUR,
+        budget: 2000,
+      });
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ ...sampleResponse, totalSubmitted: 2 }),
+    });
+
+    await act(async () => {
+      result.current.retry();
+    });
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });
