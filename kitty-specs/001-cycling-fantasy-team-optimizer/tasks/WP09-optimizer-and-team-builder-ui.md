@@ -1,7 +1,7 @@
 ---
 work_package_id: WP09
 title: Optimizer & Team Builder UI
-lane: "doing"
+lane: "done"
 dependencies:
 - WP07
 - WP08
@@ -17,8 +17,8 @@ phase: Phase 5 - Frontend
 assignee: ''
 agent: "claude-opus"
 shell_pid: "34456"
-review_status: ''
-reviewed_by: ''
+review_status: "approved"
+reviewed_by: "egimenos"
 history:
 - timestamp: '2026-03-14T23:51:57Z'
   lane: planned
@@ -445,3 +445,4 @@ When reviewing this WP, verify the following:
 - 2026-03-16T22:04:27Z – claude-opus – shell_pid=22543 – lane=doing – Assigned agent via workflow command
 - 2026-03-16T22:18:12Z – claude-opus – shell_pid=22543 – lane=for_review – Ready for review: optimizer panel with score breakdown and alternative teams, team builder with 9-rider selection and budget enforcement, lock/exclude with mutual exclusivity, AsyncState refactor. 100 tests passing, TypeScript clean.
 - 2026-03-16T22:19:15Z – claude-opus – shell_pid=34456 – lane=doing – Started review via workflow command
+- 2026-03-16T22:25:42Z – claude-opus – shell_pid=34456 – lane=done – Review passed: all 4 subtasks (T043-T046) correctly implemented. Feature independence clean, AsyncState compliant, budget enforcement correct, 100 tests passing. Minor notes: useEffect teamBuilder dependency could be optimized to avoid unnecessary re-evaluations, team-summary.spec.tsx missing but covered by panel test.
