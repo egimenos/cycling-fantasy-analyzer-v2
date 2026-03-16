@@ -1,8 +1,11 @@
 ---
 work_package_id: WP08
 title: Frontend Foundation & Rider List
-lane: planned
+lane: "doing"
 dependencies: [WP01]
+base_branch: 001-cycling-fantasy-team-optimizer-WP01
+base_commit: e2fd54a34106a5cffaaf529da2e09fd651770e18
+created_at: '2026-03-16T21:41:14.609325+00:00'
 subtasks:
 - T038
 - T039
@@ -12,7 +15,7 @@ subtasks:
 phase: Phase 5 - Frontend
 assignee: ''
 agent: ''
-shell_pid: ''
+shell_pid: "3066"
 review_status: ''
 reviewed_by: ''
 history:
