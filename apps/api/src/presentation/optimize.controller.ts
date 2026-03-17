@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Post,
-  Body,
-  UsePipes,
-  ValidationPipe,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Post, Body, HttpException, HttpStatus } from '@nestjs/common';
 import {
   IsArray,
   IsNumber,
@@ -88,7 +80,6 @@ export class OptimizeController {
   constructor(private readonly optimizeUseCase: OptimizeTeamUseCase) {}
 
   @Post('optimize')
-  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   optimize(@Body() dto: OptimizeRequestDto): OptimizeResponse {
     try {
       return this.optimizeUseCase.execute({

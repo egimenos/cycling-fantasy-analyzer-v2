@@ -6,8 +6,10 @@ import { ResultCategory } from '../../domain/shared/result-category.enum';
 const mockPcsClient = { fetchPage: jest.fn() };
 const mockRiderRepo = {
   findByPcsSlug: jest.fn(),
+  findByPcsSlugs: jest.fn(),
   findAll: jest.fn(),
   save: jest.fn(),
+  saveMany: jest.fn(),
 };
 const mockResultRepo = {
   findByRider: jest.fn(),
@@ -87,7 +89,8 @@ describe('TriggerScrapeUseCase', () => {
     jest.clearAllMocks();
     useCase = createUseCase();
     mockResultRepo.saveMany.mockResolvedValue(0);
-    mockRiderRepo.findByPcsSlug.mockResolvedValue(null);
+    mockRiderRepo.findByPcsSlugs.mockResolvedValue([]);
+    mockRiderRepo.saveMany.mockResolvedValue(undefined);
   });
 
   it('should throw Error for unknown race slug without metadata', async () => {
@@ -138,15 +141,19 @@ describe('TriggerScrapeUseCase', () => {
     expect(savedJobs[2].errorMessage).toBe('Network error');
   });
 
-  it('should upsert riders from parsed results', async () => {
+  it('should batch-upsert riders from parsed results', async () => {
     const classicHtml = makeResultHtml(3);
     mockPcsClient.fetchPage.mockResolvedValue(classicHtml);
     mockResultRepo.saveMany.mockResolvedValue(3);
 
     await useCase.execute({ raceSlug: 'milano-sanremo', year: 2024 });
 
-    expect(mockRiderRepo.save).toHaveBeenCalledTimes(3);
-    expect(mockRiderRepo.findByPcsSlug).toHaveBeenCalledTimes(3);
+    expect(mockRiderRepo.findByPcsSlugs).toHaveBeenCalledTimes(1);
+    expect(mockRiderRepo.findByPcsSlugs).toHaveBeenCalledWith(
+      expect.arrayContaining(['rider/rider-1', 'rider/rider-2', 'rider/rider-3']),
+    );
+    expect(mockRiderRepo.saveMany).toHaveBeenCalledTimes(1);
+    expect(mockRiderRepo.saveMany.mock.calls[0][0]).toHaveLength(3);
   });
 
   it('should scrape a stage race with classification URL extraction', async () => {

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Controller, Post, Body } from '@nestjs/common';
 import {
   IsString,
   IsNotEmpty,
@@ -49,7 +49,6 @@ export class AnalyzeController {
   constructor(private readonly analyzeUseCase: AnalyzePriceListUseCase) {}
 
   @Post('analyze')
-  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async analyze(@Body() dto: AnalyzeRequestDto): Promise<AnalyzeResponse> {
     return this.analyzeUseCase.execute({
       riders: dto.riders,

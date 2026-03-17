@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { RiderRepositoryPort } from '../../domain/rider/rider.repository.port';
 import { Rider, RiderProps } from '../../domain/rider/rider.entity';
 import { riders } from './schema/riders';
@@ -18,6 +18,14 @@ export class RiderRepositoryAdapter implements RiderRepositoryPort {
 
   async findAll(): Promise<Rider[]> {
     const rows = await this.db.select().from(riders).orderBy(riders.fullName);
+
+    return rows.map((row) => this.toDomain(row));
+  }
+
+  async findByPcsSlugs(pcsSlugs: string[]): Promise<Rider[]> {
+    if (pcsSlugs.length === 0) return [];
+
+    const rows = await this.db.select().from(riders).where(inArray(riders.pcsSlug, pcsSlugs));
 
     return rows.map((row) => this.toDomain(row));
   }
@@ -45,6 +53,37 @@ export class RiderRepositoryAdapter implements RiderRepositoryPort {
           lastScrapedAt: props.lastScrapedAt,
         },
       });
+  }
+
+  async saveMany(riderEntities: Rider[]): Promise<void> {
+    if (riderEntities.length === 0) return;
+
+    await this.db.transaction(async (tx) => {
+      for (const rider of riderEntities) {
+        const props = rider.toProps();
+        await tx
+          .insert(riders)
+          .values({
+            id: props.id,
+            pcsSlug: props.pcsSlug,
+            fullName: props.fullName,
+            normalizedName: props.normalizedName,
+            currentTeam: props.currentTeam,
+            nationality: props.nationality,
+            lastScrapedAt: props.lastScrapedAt,
+          })
+          .onConflictDoUpdate({
+            target: riders.pcsSlug,
+            set: {
+              fullName: props.fullName,
+              normalizedName: props.normalizedName,
+              currentTeam: props.currentTeam,
+              nationality: props.nationality,
+              lastScrapedAt: props.lastScrapedAt,
+            },
+          });
+      }
+    });
   }
 
   private toDomain(row: typeof riders.$inferSelect): Rider {

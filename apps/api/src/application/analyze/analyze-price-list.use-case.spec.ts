@@ -80,7 +80,9 @@ describe('AnalyzePriceListUseCase', () => {
     mockRiderRepo = {
       findAll: jest.fn(),
       findByPcsSlug: jest.fn(),
+      findByPcsSlugs: jest.fn(),
       save: jest.fn(),
+      saveMany: jest.fn(),
     };
 
     mockResultRepo = {

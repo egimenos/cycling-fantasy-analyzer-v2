@@ -270,7 +270,7 @@ export class TriggerScrapeUseCase {
     catalogEntry: RaceCatalogEntry,
     year: number,
   ): Promise<number> {
-    // Upsert unique riders
+    // Collect unique riders from parsed results
     const uniqueRiders = new Map<string, ParsedResult>();
     for (const r of parsedResults) {
       if (r.riderSlug && !uniqueRiders.has(r.riderSlug)) {
@@ -282,18 +282,23 @@ export class TriggerScrapeUseCase {
       `Upserting ${uniqueRiders.size} unique riders for ${catalogEntry.slug} ${year}`,
     );
 
+    // Batch-fetch existing riders in one query
+    const slugs = [...uniqueRiders.keys()];
+    const existingRiders = await this.riderRepo.findByPcsSlugs(slugs);
+    const existingBySlug = new Map(existingRiders.map((r) => [r.pcsSlug, r]));
+
+    const ridersToSave: Rider[] = [];
     const riderIdMap = new Map<string, string>();
     let newRiders = 0;
     let updatedRiders = 0;
 
     for (const [slug, parsed] of uniqueRiders) {
-      let rider = await this.riderRepo.findByPcsSlug(slug);
+      let rider = existingBySlug.get(slug);
       if (rider) {
         if (parsed.teamName && parsed.teamName !== rider.currentTeam) {
           rider = rider.updateTeam(parsed.teamName);
         }
         rider = rider.markScraped();
-        await this.riderRepo.save(rider);
         updatedRiders++;
       } else {
         rider = Rider.create({
@@ -303,11 +308,14 @@ export class TriggerScrapeUseCase {
           nationality: null,
           lastScrapedAt: new Date(),
         });
-        await this.riderRepo.save(rider);
         newRiders++;
       }
+      ridersToSave.push(rider);
       riderIdMap.set(slug, rider.id);
     }
+
+    // Batch upsert all riders in a single transaction
+    await this.riderRepo.saveMany(ridersToSave);
 
     this.logger.debug(
       `Riders: ${newRiders} created, ${updatedRiders} updated for ${catalogEntry.slug} ${year}`,
