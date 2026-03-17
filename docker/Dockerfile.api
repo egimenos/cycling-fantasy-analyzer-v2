@@ -1,0 +1,29 @@
+# Stage 1: Install dependencies
+FROM node:20-alpine AS deps
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@8.15.5 --activate
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/api/package.json apps/api/
+COPY packages/shared-types/package.json packages/shared-types/
+RUN pnpm install --frozen-lockfile --filter @cycling-analyzer/api...
+
+# Stage 2: Build
+FROM deps AS builder
+COPY apps/api/ apps/api/
+COPY packages/shared-types/ packages/shared-types/
+COPY tsconfig.base.json ./
+RUN pnpm --filter @cycling-analyzer/shared-types build 2>/dev/null || true
+RUN pnpm --filter @cycling-analyzer/api build
+
+# Stage 3: Production
+FROM node:20-alpine AS runner
+WORKDIR /app
+RUN addgroup -g 1001 -S appgroup && adduser -S appuser -u 1001 -G appgroup
+COPY --from=builder /app/apps/api/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/node_modules ./apps_node_modules
+COPY --from=builder /app/apps/api/package.json ./
+USER appuser
+EXPOSE 3001
+ENV NODE_ENV=production
+CMD ["node", "dist/main.js"]
