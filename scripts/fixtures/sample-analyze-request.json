@@ -1,0 +1,26 @@
+{
+  "riders": [
+    { "name": "POGACAR Tadej", "team": "UAE Team Emirates", "price": 350 },
+    { "name": "VINGEGAARD Jonas", "team": "Visma-Lease a Bike", "price": 340 },
+    { "name": "EVENEPOEL Remco", "team": "Soudal Quick-Step", "price": 320 },
+    { "name": "ROGLIC Primoz", "team": "Red Bull-BORA-hansgrohe", "price": 290 },
+    { "name": "AYUSO Juan", "team": "UAE Team Emirates", "price": 210 },
+    { "name": "ALMEIDA Joao", "team": "UAE Team Emirates", "price": 200 },
+    { "name": "LANDA Mikel", "team": "Soudal Quick-Step", "price": 190 },
+    { "name": "YATES Adam", "team": "UAE Team Emirates", "price": 185 },
+    { "name": "MAS Enric", "team": "Movistar", "price": 175 },
+    { "name": "CICCONE Giulio", "team": "Lidl-Trek", "price": 140 },
+    { "name": "BARDET Romain", "team": "dsm-firmenich PostNL", "price": 160 },
+    { "name": "HINDLEY Jai", "team": "Red Bull-BORA-hansgrohe", "price": 155 },
+    { "name": "KUSS Sepp", "team": "Visma-Lease a Bike", "price": 150 },
+    { "name": "LOPEZ Miguel Angel", "team": "Astana Qazaqstan", "price": 130 },
+    { "name": "TIBERI Antonio", "team": "Bahrain Victorious", "price": 125 },
+    { "name": "CARAPAZ Richard", "team": "EF Education-EasyPost", "price": 170 },
+    { "name": "THOMAS Geraint", "team": "INEOS Grenadiers", "price": 165 },
+    { "name": "VLASOV Aleksandr", "team": "Red Bull-BORA-hansgrohe", "price": 145 },
+    { "name": "PIDCOCK Tom", "team": "INEOS Grenadiers", "price": 135 },
+    { "name": "O'CONNOR Ben", "team": "Decathlon AG2R La Mondiale", "price": 120 }
+  ],
+  "raceType": "grand_tour",
+  "budget": 2000
+}

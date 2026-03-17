@@ -1,0 +1,29 @@
+# Stage 1: Install dependencies
+FROM node:20-alpine AS deps
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@8.15.5 --activate
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY apps/web/package.json apps/web/
+COPY packages/shared-types/package.json packages/shared-types/
+RUN pnpm install --frozen-lockfile --filter @cycling-analyzer/web...
+
+# Stage 2: Build
+FROM deps AS builder
+COPY apps/web/ apps/web/
+COPY packages/shared-types/ packages/shared-types/
+COPY tsconfig.base.json ./
+ARG VITE_API_URL=http://localhost:3001
+ENV VITE_API_URL=$VITE_API_URL
+RUN pnpm --filter @cycling-analyzer/shared-types build 2>/dev/null || true
+RUN pnpm --filter @cycling-analyzer/web build
+
+# Stage 3: Serve static files with lightweight server
+FROM node:20-alpine AS runner
+WORKDIR /app
+RUN npm install -g serve@14
+RUN addgroup -g 1001 -S appgroup && adduser -S appuser -u 1001 -G appgroup
+COPY --from=builder /app/apps/web/dist ./dist
+USER appuser
+EXPOSE 3000
+ENV NODE_ENV=production
+CMD ["serve", "-s", "dist", "-l", "3000"]
