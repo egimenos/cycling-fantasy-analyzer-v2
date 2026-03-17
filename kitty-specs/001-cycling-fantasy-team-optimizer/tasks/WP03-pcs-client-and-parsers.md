@@ -2,7 +2,7 @@
 work_package_id: WP03
 title: PCS HTTP Client & Parsers
 lane: "done"
-dependencies: [WP02]
+dependencies: "[]"
 base_branch: 001-cycling-fantasy-team-optimizer-WP02
 base_commit: 09cedac4ebbc7faeb1aa8a6d1a48f96e77e97a5f
 created_at: '2026-03-15T18:38:47.965815+00:00'
@@ -180,7 +180,7 @@ stage, classic, and classification pages — they all use the same table structu
      readonly riderSlug: string;    // "rider/tadej-pogacar" (from href)
      readonly teamName: string;     // "UAE Team Emirates"
      readonly position: number | null;  // 1, 2, 3... or null for DNF/DNS
-     readonly category: ResultCategory; // GC, STAGE, MOUNTAIN, SPRINT, FINAL
+     readonly category: ResultCategory; // GC, STAGE, MOUNTAIN, SPRINT
      readonly stageNumber: number | null; // stage number or null
      readonly dnf: boolean;         // true if DNF, DNS, OTL, DSQ
    }
@@ -306,11 +306,11 @@ stage races.
    import { ParsedResult } from './parsed-result.type';
 
    export function parseClassicResults(html: string): ParsedResult[] {
-     return parseResultsTable(html, ResultCategory.FINAL);
+     return parseResultsTable(html, ResultCategory.GC);
    }
    ```
    Classics use the exact same table structure — they're just a one-table page with
-   category `FINAL` and no `stageNumber`.
+   category `GC` (classic finish = GC equivalent) and no `stageNumber`.
 
    > **POC finding**: Classic URLs **require** the `/result` suffix. The base URL
    > `/race/{slug}/{year}` returns an overview page WITHOUT a results table.
@@ -770,7 +770,7 @@ with **known-result assertions** that verify parsed data matches actual race out
    describe('ClassicParser', () => {
      describe('parseClassicResults (Milano-Sanremo 2024)', () => {
        it('should identify Jasper Philipsen as winner', () => { });
-       it('should set category to FINAL for all results', () => { });
+       it('should set category to GC for all results', () => { });
        it('should have stageNumber = null for all results', () => { });
        it('should have sequential positions', () => { });
        it('should extract >= 100 riders', () => { });

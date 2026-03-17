@@ -53,7 +53,6 @@ interface AnalyzedRider {
     stage: number;
     mountain: number;
     sprint: number;
-    final: number;
   } | null;
   seasonsUsed: number | null;
 }
@@ -103,7 +102,6 @@ interface TeamSelection {
     stage: number;
     mountain: number;
     sprint: number;
-    daily: number;
   };
 }
 ```
@@ -114,78 +112,15 @@ interface TeamSelection {
 
 ---
 
-### GET /api/scraping/jobs
+### Scraping Operations (CLI only — no REST endpoints)
 
-List recent scraping jobs.
+Scraping is an administrative operation. For security reasons (prevent abuse, IP bans, DB saturation), scraping is triggered only via NestJS CLI commands and internal cron jobs.
 
-**Query Parameters:**
-- `limit` (optional, default: 20)
-- `status` (optional): `pending` | `running` | `success` | `failed`
+- `pnpm --filter api scrape --race <slug> --year <year>` — trigger a specific race scrape
+- `pnpm --filter api scrape --all --year <year>` — scrape all catalog races
+- `pnpm --filter api scrape:health` — check parser integrity
 
-**Response Body (200):**
-```typescript
-interface ScrapingJobsResponse {
-  jobs: ScrapeJob[];
-}
-
-interface ScrapeJob {
-  id: string;
-  raceSlug: string;
-  year: number;
-  status: "pending" | "running" | "success" | "failed";
-  startedAt: string;         // ISO 8601
-  completedAt: string | null;
-  errorMessage: string | null;
-  recordsUpserted: number;
-}
-```
-
----
-
-### POST /api/scraping/trigger
-
-Trigger a scraping pipeline run for a specific race or all races.
-
-**Request Body:**
-```typescript
-interface TriggerScrapeRequest {
-  raceSlug: string;
-  year: number;
-}
-```
-
-**Response Body (202):**
-```typescript
-interface TriggerScrapeResponse {
-  jobId: string;
-  status: "pending";
-}
-```
-
----
-
-### GET /api/scraping/health
-
-Check auto-health status of scraping infrastructure.
-
-**Response Body (200):**
-```typescript
-interface ScrapingHealthResponse {
-  lastCheckAt: string | null;     // ISO 8601
-  overallStatus: "healthy" | "degraded" | "failing";
-  parsers: {
-    stageRace: ParserHealth;
-    classic: ParserHealth;
-  };
-}
-
-interface ParserHealth {
-  status: "healthy" | "failing";
-  lastSuccessAt: string | null;
-  lastFailureAt: string | null;
-  failureReason: string | null;
-}
-```
+Health checks run internally via `@nestjs/schedule` (no endpoint).
 
 ---
 
@@ -198,7 +133,7 @@ All request/response types are defined in `packages/shared-types/src/api.ts` and
 ```typescript
 type RaceType = "grand_tour" | "classic" | "mini_tour";
 type RaceClass = "UWT" | "Pro" | "1";
-type ResultCategory = "gc" | "stage" | "mountain" | "sprint" | "final";
+type ResultCategory = "gc" | "stage" | "mountain" | "sprint";
 type ScrapeStatus = "pending" | "running" | "success" | "failed";
 type HealthStatus = "healthy" | "degraded" | "failing";
 ```

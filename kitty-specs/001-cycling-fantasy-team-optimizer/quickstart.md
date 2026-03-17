@@ -32,11 +32,9 @@ pnpm dev
 
 ## First Use
 
-1. Trigger an initial data scrape:
+1. Trigger an initial data scrape (CLI only — no REST endpoint):
    ```bash
-   curl -X POST http://localhost:3001/api/scraping/trigger \
-     -H "Content-Type: application/json" \
-     -d '{"raceSlug": "tour-de-france", "year": 2025}'
+   pnpm --filter api scrape --race tour-de-france --year 2025
    ```
 
 2. Open http://localhost:3000 and paste a rider price list from Grandes miniVueltas

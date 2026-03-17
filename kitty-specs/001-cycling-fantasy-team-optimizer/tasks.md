@@ -131,13 +131,14 @@
 - [x] T019 Implement ScrapeJob lifecycle management — status transitions (pending → running → success/failed), error capture, records_upserted count
 - [x] T020 [P] Implement HTML shape validator (`infrastructure/scraping/health/html-shape-validator.ts`) — validate parsed output matches expected schema before persisting; reject and log corrupted data
 - [x] T021 [P] Implement scraper health service (`infrastructure/scraping/health/scraper-health.service.ts`) — @nestjs/schedule periodic checks against known PCS pages, detect structural changes, log alerts
-- [x] T022 Create scraping REST endpoints (`presentation/scraping.controller.ts`) — POST /api/scraping/trigger, GET /api/scraping/jobs, GET /api/scraping/health with DTOs
+- [x] T022 Create scraping CLI command (`cli/scrape.command.ts`) — NestJS CLI command to trigger scraping by race slug + year, list recent jobs, and check health. No REST endpoints (security: CLI/cron only)
 
 ### Implementation Notes
-- Use case orchestrates: never puts business logic in controller
+- Use case orchestrates: never puts business logic in CLI command handler
 - ScrapeJob status updates must be atomic — use transactions
 - Shape validator checks: result array not empty, positions are integers, rider names are non-empty strings
-- Health service: run every 6 hours, scrape a known "canary" race page (e.g., latest TdF GC), compare against expected structure
+- Health service: run every 6 hours via `@nestjs/schedule` (internal cron, no REST endpoint), scrape a known "canary" race page (e.g., latest TdF GC), compare against expected structure
+- **No REST endpoints for scraping** — CLI commands and cron only (security first)
 
 ### Parallel Opportunities
 - T020 and T021 can proceed in parallel (independent validation concerns)
@@ -161,7 +162,7 @@
 **Requirements Refs**: FR-004, FR-004b, FR-006
 
 ### Included Subtasks
-- [x] T023 Implement scoring weights configuration (`domain/scoring/scoring-weights.config.ts`) — Grandes miniVueltas point values per position for each category (GC: 200pts for 1st..., mountain HC: 12pts..., sprint: 6pts..., daily stage: 15pts...)
+- [x] T023 Implement scoring weights configuration (`domain/scoring/scoring-weights.config.ts`) — Grandes miniVueltas point values per position for each category (GC: 200pts for 1st..., stage: 15pts for 1st..., mountain HC: 12pts..., sprint: 6pts...)
 - [x] T024 Implement temporal decay logic in scoring service — weight multipliers: current season ×1.0, previous ×0.6, two seasons ago ×0.3
 - [x] T025 Implement per-category projected score computation (`domain/scoring/scoring.service.ts`) — for each category, compute weighted average of historical positions mapped to points
 - [x] T026 Implement composite rider score aggregation — sum all category projections into `totalProjectedPts` (pure performance), AND implement `computeCompositeScore` that produces a price-aware value score relative to the rider pool (FR-004b: score = f(price, historical performance))
@@ -196,17 +197,18 @@
 **Requirements Refs**: FR-001, FR-002, FR-003, FR-004, FR-004b, FR-011, FR-011b
 
 ### Included Subtasks
-- [x] T028 Implement price list parser (`domain/matching/price-list-parser.ts`) — parse Grandes miniVueltas paste format: extract rider name, team name, price in hillios from raw text
+- [x] T028 Implement structured input validator (`application/analyze/price-list-validator.ts`) — validate incoming JSON payload: check required fields (name, team, price), coerce types, reject invalid entries. No raw text parsing in v1
 - [x] T029 Implement fuzzysort matcher adapter (`infrastructure/matching/fuzzysort-matcher.adapter.ts`) — NFD normalization preprocessing + fuzzysort multi-field weighted matching (name ×2, team ×1), configurable confidence threshold
-- [x] T030 Implement analyze price list use case (`application/analyze/analyze-price-list.use-case.ts`) — parse raw text → fuzzy match each rider → fetch RaceResults → compute RiderScore → compute pool stats → compute compositeScore per rider → sort by compositeScore descending
+- [x] T030 Implement analyze price list use case (`application/analyze/analyze-price-list.use-case.ts`) — validate structured input → fuzzy match each rider → fetch RaceResults → compute RiderScore → compute pool stats → compute compositeScore per rider → sort by compositeScore descending
 - [x] T031 Create POST /api/analyze endpoint (`presentation/analyze.controller.ts`) with request/response DTOs matching contracts/api.md
 - [x] T032 Add shared API types to `packages/shared-types` — AnalyzeRequest, AnalyzeResponse, AnalyzedRider, MatchedRider, RiderScore types
 
 ### Implementation Notes
-- Price list format: lines like "CODE FIRSTNAME LASTNAME TEAM PRICE" — parser must handle variations (tabs vs spaces, extra whitespace)
+- V1 receives structured JSON: `{ riders: [{name, team, price}], raceType, budget }` — no raw text parsing
+- Input validator checks required fields, coerces types, rejects malformed entries
 - Fuzzy matcher implements the `RiderMatcherPort` interface defined in domain
-- Use case: the main orchestration point — calls parser, matcher, scorer in sequence
-- Response must include `unmatchedCount` and `parseErrors` for transparency
+- Use case: the main orchestration point — calls validator, matcher, scorer in sequence
+- Response must include `unmatchedCount` for transparency
 - Confidence threshold should be injectable (environment variable or config)
 
 ### Parallel Opportunities
@@ -241,7 +243,7 @@
 - Knapsack is a pure domain function: `(riders: ScoredRider[], budget: number, teamSize: number, mustInclude: string[], mustExclude: string[]) => TeamSelection[]`
 - DP table dimensions: riders × budget × team_size — O(200 × 2000 × 9) ≈ 3.6M cells — fast enough
 - Alternative teams: after finding optimal, mask one rider at a time from optimal set, re-run DP, collect unique teams, sort by score, take top 5
-- Response includes `scoreBreakdown` per team (gc, stage, mountain, sprint, daily)
+- Response includes `scoreBreakdown` per team (gc, stage, mountain, sprint)
 
 ### Parallel Opportunities
 - T033 and T034 can be developed together (constraint handling feeds into DP initialization)
@@ -269,7 +271,7 @@
 - [x] T039 Create typed API client (`shared/lib/api-client.ts`) — functions for POST /api/analyze, POST /api/optimize with proper error handling and typed responses from `packages/shared-types`
 - [x] T040 [P] Create shared UI components with shadcn/ui — DataTable (sortable), BudgetIndicator, ScoreBadge, LoadingSpinner, ErrorAlert, EmptyState
 - [x] T041 Build rider-list feature (`features/rider-list/`) — paste textarea, race type dropdown (grand_tour/classic/mini_tour), budget number input, "Analyze" submit button
-- [x] T042 Build rider table component — sortable columns (composite score, price, name, team), expand row to show per-category score breakdown (GC/stage/mountain/sprint/daily), highlight unmatched riders with warning badge
+- [x] T042 Build rider table component — sortable columns (composite score, price, name, team), expand row to show per-category score breakdown (GC/stage/mountain/sprint), highlight unmatched riders with warning badge
 
 ### Implementation Notes
 - Use TanStack Start's file-based routing: `routes/index.tsx` as the main page
@@ -357,6 +359,34 @@
 
 ---
 
+## Work Package WP11: Refactor — Remove FINAL Category (Priority: P0)
+
+**Goal**: Remove `ResultCategory.FINAL` entirely. Classic race results use `ResultCategory.GC` (a classic finish IS a GC). Simplifies the scoring engine — no more branching for classics.
+**Independent Test**: `pnpm build && pnpm test` pass. `grep -r "FINAL\|'final'" apps/ packages/ --include="*.ts"` returns zero hits.
+**Prompt**: `tasks/WP11-refactor-remove-final-category.md`
+**Estimated Prompt Size**: ~300 lines
+
+**Requirements Refs**: FR-004b, FR-006
+
+### Included Subtasks
+- [ ] T052 Remove `FINAL` from `ResultCategory` enum + DB schema + create migration
+- [ ] T053 Classic parser: `ResultCategory.FINAL` → `ResultCategory.GC`
+- [ ] T054 Scoring engine: remove `final` from weights, categoryScores, and branching logic
+- [ ] T055 Optimizer types: remove `final` from `ScoreBreakdown` and `ScoredRider`
+- [ ] T056 Shared types + frontend: remove `'final'` from `ResultCategory`, update test fixtures
+- [ ] T057 Verify build, lint, all tests pass, 100% scoring coverage maintained
+
+### Implementation Notes
+- **This is a mechanical refactor** — no new features, no behavior changes
+- Classic results now use `GC` because winning a classic = winning the general classification
+- The scoring engine simplifies: always `totalProjectedPts = gc + stage + mountain + sprint` (no branching)
+- For classics, only `gc` has data → stage/mountain/sprint are naturally 0
+
+### Dependencies
+- Depends on WP10 (applies on top of the fully integrated codebase)
+
+---
+
 ## Dependency & Execution Summary
 
 ```
@@ -364,12 +394,13 @@ WP01 (Monorepo) ─────┬──→ WP02 (Docker/DB) ──┬──→ 
                       │                        │
                       │                        ├──→ WP05 (Scoring) ──→ WP06 (Matching) ──→ WP07 (Optimizer)
                       │                        │
-                      └──→ WP08 (Frontend) ────┴──→ WP09 (Optimizer UI) ──→ WP10 (E2E/Docs)
+                      └──→ WP08 (Frontend) ────┴──→ WP09 (Optimizer UI) ──→ WP10 (E2E/Docs) ──→ WP11 (Refactor)
 ```
 
-- **Sequence**: WP01 → WP02 → (WP03 ∥ WP05 ∥ WP08) → (WP04, WP06) → WP07 → WP09 → WP10
+- **Sequence**: WP01 → WP02 → (WP03 ∥ WP05 ∥ WP08) → (WP04, WP06) → WP07 → WP09 → WP10 → WP11
 - **Parallelization**: After WP02, three streams can proceed in parallel: scraping (WP03→WP04), scoring (WP05→WP06→WP07), and frontend (WP08)
 - **MVP Scope**: WP01 + WP02 + WP03 + WP04 + WP05 + WP06 + WP08 = paste price list → see scored riders (no optimization yet). Add WP07 + WP09 for full team optimization.
+- **Pre-merge refactor**: WP11 must be applied before merging to main
 
 ---
 
@@ -398,15 +429,15 @@ WP01 (Monorepo) ─────┬──→ WP02 (Docker/DB) ──┬──→ 
 | T019 | ScrapeJob lifecycle management | WP04 | P0 | No |
 | T020 | HTML shape validator | WP04 | P0 | Yes |
 | T021 | Scraper health service | WP04 | P0 | Yes |
-| T022 | Scraping REST endpoints | WP04 | P0 | No |
+| T022 | Scraping CLI command (no REST) | WP04 | P0 | No |
 | T023 | Scoring weights config | WP05 | P1 | Yes |
 | T024 | Temporal decay logic | WP05 | P1 | Yes |
 | T025 | Per-category projected scoring | WP05 | P1 | No |
 | T026 | Composite rider score aggregation | WP05 | P1 | No |
 | T027 | Scoring engine 100% coverage tests | WP05 | P1 | No |
-| T028 | Price list parser | WP06 | P1 | Yes |
+| T028 | Structured input validator | WP06 | P1 | Yes |
 | T029 | Fuzzysort matcher adapter | WP06 | P1 | Yes |
-| T030 | Analyze price list use case | WP06 | P1 | No |
+| T030 | Analyze price list use case (structured input) | WP06 | P1 | No |
 | T031 | POST /api/analyze endpoint | WP06 | P1 | No |
 | T032 | Shared API types (packages/shared-types) | WP06 | P1 | No |
 | T033 | Knapsack DP algorithm | WP07 | P2 | No |
@@ -428,3 +459,9 @@ WP01 (Monorepo) ─────┬──→ WP02 (Docker/DB) ──┬──→ 
 | T049 | README documentation | WP10 | P3 | Yes |
 | T050 | ADRs for architecture decisions | WP10 | P3 | Yes |
 | T051 | Final integration smoke test | WP10 | P3 | No |
+| T052 | Remove FINAL from enum + DB migration | WP11 | P0 | No |
+| T053 | Classic parser: FINAL → GC | WP11 | P0 | Yes |
+| T054 | Scoring: remove final from weights + branching | WP11 | P0 | Yes |
+| T055 | Optimizer types: remove final from ScoreBreakdown | WP11 | P0 | Yes |
+| T056 | Shared types + frontend test fixtures | WP11 | P0 | Yes |
+| T057 | Build, lint, test verification | WP11 | P0 | No |

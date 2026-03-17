@@ -2,7 +2,7 @@
 work_package_id: WP08
 title: Frontend Foundation & Rider List
 lane: "done"
-dependencies: [WP01]
+dependencies: "[]"
 base_branch: 001-cycling-fantasy-team-optimizer-WP01
 base_commit: e2fd54a34106a5cffaaf529da2e09fd651770e18
 created_at: '2026-03-16T21:41:14.609325+00:00'

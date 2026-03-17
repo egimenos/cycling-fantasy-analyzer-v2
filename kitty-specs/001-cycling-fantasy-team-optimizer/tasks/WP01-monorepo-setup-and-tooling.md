@@ -2,7 +2,7 @@
 work_package_id: WP01
 title: Monorepo Setup & Tooling
 lane: "done"
-dependencies: []
+dependencies: "[]"
 base_branch: main
 base_commit: e3d975e7a71c964bfcadbd2c63a93978c2188eb1
 created_at: '2026-03-15T11:18:20.201207+00:00'
@@ -304,7 +304,7 @@ If this happens, configure `vite.config.ts` with explicit alias paths or use
      STAGE = 'stage',
      MOUNTAIN = 'mountain',
      SPRINT = 'sprint',
-     FINAL = 'final',
+     // No DAILY/FINAL — classic results use GC (same concept)
    }
 
    export enum ScrapeStatus {

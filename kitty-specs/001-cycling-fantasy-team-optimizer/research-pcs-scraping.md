@@ -285,14 +285,14 @@ URL: /race/{slug}/{year}/result/result  ← also works, same as /result
 Same `div.resTab:not(.hide) table.results` structure as stage races.
 - Single results table with finishing positions
 - No `div.selectNav` with stage navigation
-- Category is always `FINAL`
+- Category is `GC` (classic finish position = GC equivalent)
 - No `stageNumber`
 
 #### 2.2.3 What to Scrape per Classic
 
 | Classification | URL Pattern | Category | Stage # | What we capture |
 |---------------|-------------|----------|---------|-----------------|
-| **Final Result** | `/race/{slug}/{year}/result` | `FINAL` | null | Finishing position of every rider |
+| **Final Result** | `/race/{slug}/{year}/result` | `GC` | null | Finishing position of every rider (classic finish = GC equivalent) |
 
 #### 2.2.4 Classic Race Guardrails
 
@@ -301,7 +301,7 @@ Same `div.resTab:not(.hide) table.results` structure as stage races.
 | **Rider count** | Classics: 100-250 starters, finisher count varies | WARN if < 50 or > 300 |
 | **Position sequence** | Positions must be sequential starting from 1 | FAIL — parsing error |
 | **No duplicate positions** | No two riders share the same position | FAIL — parsing error |
-| **Single classification** | Only one FINAL classification should exist | FAIL if multiple found |
+| **Single classification** | Only one GC classification should exist for classics | FAIL if multiple found |
 | **Winner validation** | For fixture tests: winner must match known result | FAIL — wrong data parsed |
 | **DNF handling** | DNF riders should have position = null, dnf = true | FAIL if DNF has numeric position |
 
@@ -345,7 +345,7 @@ SCRAPE YEAR (year: number)
 │   │   ├─ Fetch /race/{slug}/{year}/result
 │   │   ├─ Parse results table → positions
 │   │   ├─ VALIDATE: sequential positions, rider count in range
-│   │   └─ Save: race + FINAL classification
+│   │   └─ Save: race + GC classification (classic finish = GC)
 │   │
 │   └─ 2b. IF STAGE_RACE:
 │       ├─ Fetch /race/{slug}/{year}/gc
@@ -594,7 +594,7 @@ any parser or use case code.
 - `riderSlug`: string (from href: "rider/tadej-pogacar")
 - `teamName`: string
 - `dnf`: boolean
-- `category`: GC | STAGE | SPRINT | MOUNTAIN | FINAL
+- `category`: GC | STAGE | SPRINT | MOUNTAIN (classic results use GC)
 - `stageNumber`: integer | null
 
 ### We Skip

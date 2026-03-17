@@ -58,7 +58,7 @@ A single raw position entry for a rider in a specific race and scoring category.
 | Race Type | Categories |
 |-----------|-----------|
 | Stage race (GT, mini-tour) | `gc`, `stage`, `mountain`, `sprint` |
-| Classic (one-day) | `final` |
+| Classic (one-day) | `gc` (the classic finish position is equivalent to a GC result) |
 
 **Unique constraint**: `(rider_id, race_slug, year, category, stage_number)`
 

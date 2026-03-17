@@ -3,7 +3,7 @@ work_package_id: WP10
 title: Integration, E2E & Documentation
 lane: "done"
 dependencies:
-- WP04
+"[]"
 - WP09
 base_branch: 001-cycling-fantasy-team-optimizer-WP09
 base_commit: 2e77f0800d17a381df5311ebfc9f9f82ee035ad8
@@ -643,7 +643,11 @@ Create 5 ADR files, each following this template:
 2. Create `scripts/fixtures/sample-price-list.json`:
    ```json
    {
-     "rawText": "POGACAR Tadej\tUAE Team Emirates\t350\nVINGEGAARD Jonas\tVisma-Lease a Bike\t340\nEVENEPOEL Remco\tSoudal Quick-Step\t320\n...",
+     "riders": [
+       { "name": "POGACAR Tadej", "team": "UAE Team Emirates", "price": 350 },
+       { "name": "VINGEGAARD Jonas", "team": "Visma-Lease a Bike", "price": 340 },
+       { "name": "EVENEPOEL Remco", "team": "Soudal Quick-Step", "price": 320 }
+     ],
      "raceType": "grand_tour",
      "budget": 2000
    }
@@ -672,7 +676,7 @@ Create 5 ADR files, each following this template:
 
 **Smoke test:**
 - Shell script for manual or CI execution
-- Tests API endpoints directly with curl
+- Tests analyze + optimize API endpoints directly with curl (scraping is CLI-only)
 - Validates system integration from database to frontend
 - Run after every deployment
 

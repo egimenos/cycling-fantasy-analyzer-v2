@@ -3,7 +3,7 @@ work_package_id: WP09
 title: Optimizer & Team Builder UI
 lane: "done"
 dependencies:
-- WP07
+"[]"
 - WP08
 base_branch: 001-cycling-fantasy-team-optimizer-WP08
 base_commit: ab7fa4120ed314bdeb36421a91a088f11a9be758

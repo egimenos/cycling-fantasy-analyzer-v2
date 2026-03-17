@@ -2,7 +2,7 @@
 work_package_id: WP07
 title: Team Optimizer
 lane: "done"
-dependencies: [WP06]
+dependencies: "[]"
 base_branch: 001-cycling-fantasy-team-optimizer-WP06
 base_commit: eaafe057ccfc2a14bc494b3c478856334f84f8b6
 created_at: '2026-03-15T23:27:54.207288+00:00'
@@ -357,7 +357,7 @@ The optimizer is the core value proposition of this application. After the analy
        name: 'Test Rider',
        priceHillios: 100,
        totalProjectedPts: 50,
-       scoreBreakdown: { gcPts: 10, stagePts: 10, mountainPts: 10, sprintPts: 10, dailyProjectedPts: 10, totalProjectedPts: 50 },
+       scoreBreakdown: { gc: 12.5, stage: 12.5, mountain: 12.5, sprint: 12.5 },
        ...overrides,
      };
    }

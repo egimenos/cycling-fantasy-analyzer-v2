@@ -3,7 +3,7 @@ work_package_id: WP06
 title: Fuzzy Matching & Analyze Endpoint
 lane: "done"
 dependencies:
-- WP02
+"[]"
 - WP05
 base_branch: 001-cycling-fantasy-team-optimizer-WP06-merge-base
 base_commit: 43451bedd9fd18c5ac8d2caa1afc91a0d42e6971
@@ -365,7 +365,7 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
    ```typescript
    export type RaceType = 'grand_tour' | 'classic' | 'mini_tour';
    export type RaceClass = 'UWT' | 'Pro' | '1';
-   export type ResultCategory = 'gc' | 'stage' | 'mountain' | 'sprint' | 'final';
+   export type ResultCategory = 'gc' | 'stage' | 'mountain' | 'sprint';
    export type ScrapeStatus = 'pending' | 'running' | 'success' | 'failed';
    export type HealthStatus = 'healthy' | 'degraded' | 'failing';
    ```
@@ -391,7 +391,7 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
        pointsPerHillio: number | null;
        totalProjectedPts: number | null;
        categoryScores: {
-         gc: number; stage: number; mountain: number; sprint: number; final: number;
+         gc: number; stage: number; mountain: number; sprint: number;
        } | null;
        seasonsUsed: number | null;
      }
@@ -399,7 +399,7 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
      NOTE: `compositeScore` is the PRIMARY ranking field (price-aware value score from
      WP05). `categoryScores` mirrors the domain `RiderScore.categoryScores` structure.
      `totalProjectedPts` is the raw historical projection (for transparency).
-     **No `dailyProjectedPts`** — this field does not exist in the scoring engine.
+     No `daily`/`final` category — classic results use `gc` (same concept).
    - `OptimizeRequest`: `{ riders: AnalyzedRider[]; budget: number; mustInclude: string[]; mustExclude: string[] }`
    - `OptimizeResponse`: `{ optimalTeam: TeamSelection; alternativeTeams: TeamSelection[] }`
    - `TeamSelection`: `{ riders: AnalyzedRider[]; totalCostHillios: number; totalProjectedPts: number; budgetRemaining: number }`
@@ -408,7 +408,7 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
    - `ParseError`: `{ line: number; rawText: string; reason: string }`
    - Remove `RiderScore` from here — the score breakdown is inlined in `AnalyzedRider.categoryScores`
    - Remove `ScoreCategory` — use `ResultCategory` from enums instead
-   - **Do NOT define `dailyProjectedPts`** — it does not exist in the domain scoring engine
+   - **Do NOT define `daily` or `final` categories** — classic results use `gc`
 
 4. In `packages/shared-types/src/index.ts`, re-export everything:
    ```typescript
@@ -428,7 +428,7 @@ This work package bridges the data layer (riders + race results from WP02/WP05) 
 - Types match `contracts/api.md` definitions exactly
 - Field names in `AnalyzedRider` match the domain `RiderScore` structure (e.g.,
   `categoryScores.gc`, NOT `gcPts`)
-- No phantom fields (`dailyProjectedPts` must NOT exist)
+- No phantom fields (`daily`, `final`, `dailyProjectedPts` must NOT exist)
 - `shared-types` has ZERO imports from `apps/api/` (it's a standalone package)
 
 ---

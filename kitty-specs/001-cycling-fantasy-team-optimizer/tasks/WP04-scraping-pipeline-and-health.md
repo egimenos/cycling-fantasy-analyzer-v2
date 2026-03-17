@@ -2,7 +2,7 @@
 work_package_id: WP04
 title: Scraping Pipeline Orchestration & Health
 lane: "done"
-dependencies: [WP02, WP03]
+dependencies: "[]"
 base_branch: 001-cycling-fantasy-team-optimizer-WP04-merge-base
 base_commit: 893be44358c59467de51aa5f24597df2f7721088
 created_at: '2026-03-15T18:58:38.763153+00:00'
@@ -35,10 +35,10 @@ Wire together the PCS HTTP client, parsers, validation guardrails, database repo
 and job tracking into a complete scraping pipeline. This work package delivers the use case
 that orchestrates an end-to-end scrape: triggering a scrape job, fetching pages from PCS,
 parsing results, running validation guardrails (from WP03), and persisting data. It also
-provides health monitoring to detect when PCS changes their HTML structure, and REST
-endpoints for triggering and monitoring scrapes. By completion, a POST to
-`/api/scraping/trigger` must successfully scrape a race from PCS and persist the results
-in PostgreSQL.
+provides health monitoring to detect when PCS changes their HTML structure, and a CLI
+command for triggering scrapes. No REST endpoints for scraping (security: CLI/cron only).
+By completion, running `pnpm --filter api scrape --race tour-de-france --year 2024` must
+successfully scrape a race from PCS and persist the results in PostgreSQL.
 
 > **Note on validation**: WP03 delivers the complete validation guardrails module (T017).
 > This WP **uses** that module — it does NOT re-implement validation. The trigger use case
@@ -49,7 +49,7 @@ in PostgreSQL.
 
 - **Stack**: NestJS, Drizzle ORM, PostgreSQL, Axios, Cheerio, @nestjs/schedule for cron.
 - **Architecture**: Application layer orchestrates use cases. Infrastructure layer provides
-  adapters. Presentation layer exposes REST endpoints with DTOs.
+  adapters. Scraping is exposed via CLI commands only (no REST endpoints — security first).
 - **Constitution**: TypeScript strict, no `any`, class-validator for DTO validation,
   Conventional Commits, 90% unit coverage.
 - **Depends on**: WP02 (database, repositories), WP03 (PCS client, parsers, validation
@@ -193,7 +193,7 @@ the repository adapter.
    ```
 2. The repository adapter (`ScrapeJobRepositoryAdapter`) is implemented in WP02/T012.
    It uses `ScrapeJob.reconstitute()` for hydration and `job.toProps()` for persistence.
-3. Add a convenience query method to the use case for the REST endpoint (T022):
+3. Add a convenience query method to the use case for the CLI command (T022):
    Create `apps/api/src/application/scraping/get-scrape-jobs.use-case.ts`:
    ```typescript
    @Injectable()
@@ -320,55 +320,60 @@ the repository adapter.
 
 ---
 
-### T022 — REST Endpoints
+### T022 — Scraping CLI Command
 
-**Goal**: Expose the scraping pipeline and health monitoring via REST endpoints.
+**Goal**: Expose the scraping pipeline via NestJS CLI commands. No REST endpoints (security: CLI/cron only — prevents abuse, IP bans, DB saturation).
 
 **Steps**:
 
-1. Install class-validator and class-transformer:
+1. Install `nest-commander` for CLI support:
    ```bash
-   pnpm --filter api add class-validator class-transformer
+   pnpm --filter api add nest-commander
    ```
-2. Enable global validation pipe in `main.ts`:
+2. Create `apps/api/src/cli/scrape.command.ts`:
    ```typescript
-   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+   import { Command, CommandRunner, Option } from 'nest-commander';
+   import { TriggerScrapeUseCase } from '../application/scraping/trigger-scrape.use-case';
+   import { GetScrapeJobsUseCase } from '../application/scraping/get-scrape-jobs.use-case';
+   import { RaceCatalog } from '../domain/race/race-catalog';
+
+   @Command({ name: 'scrape', description: 'Trigger scraping pipeline' })
+   export class ScrapeCommand extends CommandRunner {
+     constructor(
+       private readonly triggerScrapeUseCase: TriggerScrapeUseCase,
+       private readonly getScrapeJobsUseCase: GetScrapeJobsUseCase,
+     ) {
+       super();
+     }
+
+     async run(inputs: string[], options: ScrapeOptions): Promise<void> {
+       if (options.all) {
+         const races = RaceCatalog.getAllRaces();
+         for (const race of races) {
+           await this.triggerScrapeUseCase.execute({
+             raceSlug: race.slug,
+             year: options.year,
+           });
+         }
+       } else if (options.race) {
+         await this.triggerScrapeUseCase.execute({
+           raceSlug: options.race,
+           year: options.year,
+         });
+       }
+     }
+
+     @Option({ flags: '--race <slug>', description: 'Race slug to scrape' })
+     parseRace(val: string): string { return val; }
+
+     @Option({ flags: '--year <year>', description: 'Season year' })
+     parseYear(val: string): number { return parseInt(val, 10); }
+
+     @Option({ flags: '--all', description: 'Scrape all catalog races' })
+     parseAll(): boolean { return true; }
+   }
    ```
-3. Create DTOs in `apps/api/src/presentation/dto/`:
-   - `trigger-scrape.dto.ts`:
-     ```typescript
-     import { IsString, IsInt, Min, Max } from 'class-validator';
-
-     export class TriggerScrapeDto {
-       @IsString()
-       raceSlug!: string;
-
-       @IsInt()
-       @Min(2020)
-       @Max(2030)
-       year!: number;
-     }
-     ```
-   - `scrape-jobs-query.dto.ts`:
-     ```typescript
-     import { IsOptional, IsInt, Min, Max, IsEnum } from 'class-validator';
-     import { Type } from 'class-transformer';
-     import { ScrapeStatus } from '../../domain/shared/scrape-status.enum';
-
-     export class ScrapeJobsQueryDto {
-       @IsOptional()
-       @Type(() => Number)
-       @IsInt()
-       @Min(1)
-       @Max(100)
-       limit?: number = 20;
-
-       @IsOptional()
-       @IsEnum(ScrapeStatus)
-       status?: ScrapeStatus;
-     }
-     ```
-4. Create `apps/api/src/application/scraping/get-scraper-health.use-case.ts`:
+3. Create `apps/api/src/application/scraping/get-scraper-health.use-case.ts`:
    ```typescript
    import { Injectable } from '@nestjs/common';
    import { ScraperHealthService } from '../../infrastructure/scraping/health/scraper-health.service';
@@ -382,70 +387,27 @@ the repository adapter.
      }
    }
    ```
-   > **Note**: The health service itself lives in infrastructure (it uses the PCS client
-   > and parsers). The use case wraps it so the controller never imports infrastructure
-   > directly. For stricter hexagonal, define a `ScraperHealthPort` interface in
-   > application and have `ScraperHealthService` implement it.
-
-5. Create `apps/api/src/presentation/scraping.controller.ts`:
-   ```typescript
-   import { Controller, Post, Get, Body, Query, HttpCode, HttpStatus } from '@nestjs/common';
-   import { TriggerScrapeUseCase } from '../application/scraping/trigger-scrape.use-case';
-   import { GetScrapeJobsUseCase } from '../application/scraping/get-scrape-jobs.use-case';
-   import { GetScraperHealthUseCase } from '../application/scraping/get-scraper-health.use-case';
-   import { TriggerScrapeDto } from './dto/trigger-scrape.dto';
-   import { ScrapeJobsQueryDto } from './dto/scrape-jobs-query.dto';
-
-   @Controller('api/scraping')
-   export class ScrapingController {
-     constructor(
-       private readonly triggerScrapeUseCase: TriggerScrapeUseCase,
-       private readonly getScrapeJobsUseCase: GetScrapeJobsUseCase,
-       private readonly getScraperHealthUseCase: GetScraperHealthUseCase,
-     ) {}
-
-     @Post('trigger')
-     @HttpCode(HttpStatus.ACCEPTED)
-     async triggerScrape(@Body() dto: TriggerScrapeDto) {
-       const result = await this.triggerScrapeUseCase.execute({
-         raceSlug: dto.raceSlug,
-         year: dto.year,
-       });
-       return { jobId: result.jobId, status: 'pending' };
-     }
-
-     @Get('jobs')
-     async getJobs(@Query() query: ScrapeJobsQueryDto) {
-       const jobs = await this.getScrapeJobsUseCase.execute(
-         query.limit ?? 20,
-         query.status,
-       );
-       return { jobs };
-     }
-
-     @Get('health')
-     getHealth() {
-       return this.getScraperHealthUseCase.execute();
+4. Create a CLI entry point `apps/api/src/cli.ts` that bootstraps the NestJS app with
+   `nest-commander` instead of the HTTP server.
+5. Add npm scripts in `apps/api/package.json`:
+   ```json
+   {
+     "scripts": {
+       "scrape": "ts-node src/cli.ts scrape",
+       "scrape:health": "ts-node src/cli.ts scrape-health"
      }
    }
    ```
-   > **Hexagonal compliance**: The controller injects ONLY use cases from the application
-   > layer. It never imports from `infrastructure/`. The presentation layer depends on
-   > the application layer, which depends on domain ports.
-5. Create `apps/api/src/presentation/scraping.module.ts` — a NestJS module that imports
-   `DatabaseModule`, provides all services and use cases, and declares the controller.
-6. Import `ScrapingModule` in the root `AppModule`.
+6. Create `apps/api/src/scraping.module.ts` — a NestJS module that imports
+   `DatabaseModule`, provides all services, use cases, and CLI commands.
+7. Import `ScrapingModule` in the root `AppModule`.
 
-**Validation**: End-to-end test:
-- Start the API server
-- POST `/api/scraping/trigger` with `{ "raceSlug": "tour-de-france", "year": 2024 }`
-- Verify 202 response with `{ jobId, status: "pending" }`
-- GET `/api/scraping/jobs` — verify the job appears
-- GET `/api/scraping/health` — verify health report structure
-
-Test DTO validation:
-- POST with missing `raceSlug` — verify 400 error
-- POST with `year: 1999` — verify 400 error (below minimum)
+**Validation**: Integration test:
+- Run `pnpm --filter api scrape --race tour-de-france --year 2024`
+- Verify job completes and results are in PostgreSQL
+- Run `pnpm --filter api scrape --all --year 2024` — verify all catalog races are processed
+- Run with invalid race slug — verify meaningful error output
+- Run with invalid year — verify validation error
 
 ---
 
@@ -456,7 +418,7 @@ Test DTO validation:
 | T018    | Integration     | Full scrape flow with mocked HTTP, real DB, validation   | 85%             |
 | T019    | Unit            | ScrapeJob entity transitions, GetScrapeJobsUseCase       | 95%             |
 | T021    | Unit            | Health check logic with mocked PCS client + validation   | 90%             |
-| T022    | E2E / Unit      | Endpoint responses, DTO validation, error handling       | 85%             |
+| T022    | Integration     | CLI command execution, argument validation, error handling | 85%             |
 
 **Integration test setup for T018**: Use a test database (either testcontainers or a
 dedicated test PostgreSQL instance). Mock the PCS client to return fixture HTML instead of
@@ -467,7 +429,7 @@ making real HTTP requests. Verify database state after execution.
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
 | Classification URL extraction fails for new races | Low | Medium | `extractClassificationUrls()` (WP03) reads the `<select>` nav which PCS uses consistently; `validateStageRaceCompleteness()` catches missing classifications |
-| Long-running scrape jobs block the API thread | Medium | High | Run scrape execution asynchronously; return 202 immediately; use a job queue in future iterations |
+| Long-running scrape jobs | Medium | Low | CLI runs synchronously — acceptable for admin use; cron jobs can use shell backgrounding |
 | Health check fetches from PCS too frequently | Low | Medium | Cron runs only every 6 hours; add circuit breaker if PCS is consistently down |
 | Stale jobs accumulate in "running" state after crashes | Medium | Medium | Implement stale job recovery in a future WP; `findStale` method is already provided |
 | class-validator decorators not working without transform | Medium | Low | Ensure `ValidationPipe` uses `transform: true` and `class-transformer` is installed |
@@ -487,29 +449,26 @@ When reviewing this work package, verify:
    (`validateClassificationResults`, `validateStageRaceCompleteness`) before being written
    to the database. Invalid data must not be persisted. WP04 does NOT re-implement
    validation — it uses WP03's module.
-4. **DTO validation**: Send malformed requests to each endpoint and verify they return
-   appropriate 400 errors with descriptive messages.
-5. **Health report structure**: Verify the health endpoint returns the correct JSON shape
-   matching `contracts/api.md`.
+4. **CLI argument validation**: Run CLI commands with malformed arguments and verify they
+   output descriptive error messages.
+5. **Health check structure**: Verify the health service returns the correct shape internally.
 6. **Dependency injection**: Verify all services are properly provided and injectable.
    The NestJS DI container must resolve all dependencies without circular references.
-7. **Async safety**: The trigger endpoint should ideally return 202 immediately and run the
-   scrape in the background. If it runs synchronously, document this as a known limitation
-   for future improvement.
+7. **CLI execution**: The CLI command runs synchronously (blocks until done). This is
+   expected for CLI usage. For cron, use shell background execution (`&`) if needed.
 
 ## Definition of Done
 
-- [ ] POST `/api/scraping/trigger` accepts a race slug and year, returns 202
+- [ ] CLI command `pnpm --filter api scrape --race <slug> --year <year>` triggers scraping
+- [ ] CLI command `pnpm --filter api scrape --all --year <year>` scrapes all catalog races
+- [ ] **No REST endpoints for scraping** (security: CLI/cron only)
 - [ ] Scrape trigger use case fetches pages, parses results, and persists to database
 - [ ] ScrapeJob lifecycle uses domain entity transitions (not raw SQL in app layer)
 - [ ] WP03's validation guardrails are called after parsing (not re-implemented locally)
-- [ ] Health service runs canary checks every 6 hours via cron
-- [ ] GET `/api/scraping/jobs` returns recent jobs with optional status filter
-- [ ] GET `/api/scraping/health` returns parser health status
-- [ ] All DTOs validate input with class-validator
+- [ ] Health service runs canary checks every 6 hours via `@nestjs/schedule` cron (internal, no endpoint)
+- [ ] CLI validates arguments (race slug exists in catalog, year in valid range)
 - [ ] Error handling ensures no job is left in "running" state
 - [ ] Use case imports ONLY domain ports and application-layer code (no infrastructure imports)
-- [ ] Controller imports ONLY use cases from application layer (no infrastructure imports)
 - [ ] Uses `extractClassificationUrls()` from WP03 for stage race URL discovery
 - [ ] Uses `validateClassificationResults()` and `validateStageRaceCompleteness()` from WP03
 - [ ] PcsScraperPort (from WP03) implemented by PcsClientAdapter

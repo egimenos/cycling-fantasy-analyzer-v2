@@ -131,7 +131,7 @@ kitty-specs/001-cycling-fantasy-team-optimizer/
 │           ├── application/          # Use cases (orchestration only)
 │           │   ├── analyze/
 │           │   │   ├── analyze-price-list.use-case.ts
-│           │   │   └── price-list-parser.ts           # Input adaptation (not domain logic)
+│           │   │   └── price-list-validator.ts         # Structured input validation (not domain logic)
 │           │   ├── optimize/
 │           │   │   └── optimize-team.use-case.ts
 │           │   └── scraping/
@@ -159,11 +159,13 @@ kitty-specs/001-cycling-fantasy-team-optimizer/
 │           │   └── matching/
 │           │       └── fuzzysort-matcher.adapter.ts    # Implements RiderMatcherPort
 │           │
-│           └── presentation/         # REST controllers (NestJS)
-│               ├── analyze.controller.ts
-│               ├── optimize.controller.ts
-│               ├── scraping.controller.ts
-│               └── dto/              # Request/response DTOs
+│           ├── presentation/         # REST controllers (NestJS)
+│           │   ├── analyze.controller.ts
+│           │   ├── optimize.controller.ts
+│           │   └── dto/              # Request/response DTOs
+│           │
+│           └── cli/                  # NestJS CLI commands (no REST)
+│               └── scrape.command.ts # Trigger scraping via CLI / cron
 │
 ├── packages/
 │   ├── shared-types/                 # Shared TS types (API contracts)
@@ -232,16 +234,21 @@ Same database engine in development (Docker Compose) and production (VPS). Elimi
 
 ### `POST /api/analyze`
 
-Main endpoint: parses price list, matches riders, computes scores.
+Main endpoint: receives structured rider list, matches riders against PCS database, computes scores.
 
 **Request:**
 ```json
 {
-  "rawText": "string (pasted price list)",
+  "riders": [
+    { "name": "Tadej Pogacar", "team": "UAE Team Emirates", "price": 700 }
+  ],
   "raceType": "grand_tour" | "classic" | "mini_tour",
   "budget": 2000
 }
 ```
+
+> **V2 enhancement**: A future iteration may add a `rawText` field as an alternative input,
+> using an LLM to extract the structured rider list from pasted plain text.
 
 **Response:**
 ```json
@@ -260,18 +267,19 @@ Main endpoint: parses price list, matches riders, computes scores.
       "matchConfidence": 0.95,
       "compositeScore": 78.3,
       "pointsPerHillio": 0.354,
-      "score": {
-        "projectedGcPts": 180.5,
-        "projectedStagePts": 45.0,
-        "projectedMountainPts": 10.2,
-        "projectedSprintPts": 0.0,
-        "totalProjectedPts": 247.7,
-        "seasonsUsed": 2
-      }
+      "totalProjectedPts": 247.7,
+      "categoryScores": {
+        "gc": 180.5,
+        "stage": 45.0,
+        "mountain": 10.2,
+        "sprint": 0.0
+      },
+      "seasonsUsed": 2
     }
   ],
-  "unmatchedCount": 3,
-  "parseErrors": []
+  "totalSubmitted": 150,
+  "totalMatched": 147,
+  "unmatchedCount": 3
 }
 ```
 
@@ -302,25 +310,14 @@ Computes optimal team via knapsack DP.
 }
 ```
 
-### `GET /api/scraping/jobs`
+### Scraping Operations (CLI only — no REST endpoints)
 
-Returns recent scraping job statuses.
+Scraping is an administrative operation exposed only via NestJS CLI commands and internal cron jobs. No REST endpoints for security reasons (prevents abuse, IP bans, DB saturation).
 
-### `POST /api/scraping/trigger`
-
-Triggers a scraping run.
-
-**Request:**
-```json
-{
-  "raceSlug": "tour-de-france",
-  "year": 2025
-}
-```
-
-### `GET /api/scraping/health`
-
-Returns auto-health status: last check timestamp, any structural changes detected, failing parsers.
+- **`pnpm --filter api scrape --race tour-de-france --year 2025`**: Trigger a scraping run for a specific race
+- **`pnpm --filter api scrape --all --year 2025`**: Scrape all races in the catalog for a given year
+- **`pnpm --filter api scrape:health`**: Check scraper health status (parser integrity)
+- **Cron**: `@nestjs/schedule` runs periodic health checks internally (no endpoint needed)
 
 ---
 
@@ -347,7 +344,7 @@ Implement the PCS scraping infrastructure: HTTP client, parsers (stage race + cl
 - `pcs-client.adapter.ts` with Axios + Cheerio
 - `stage-race.parser.ts` and `classic.parser.ts`
 - `race-catalog.ts` with men's UWT/Pro/.1 race list
-- Scrape trigger use case + REST endpoint
+- Scrape trigger use case + CLI command (no REST endpoint)
 - ScrapeJob status tracking
 - Auto-health validator + scheduled checks
 - Integration tests against live PCS pages
@@ -362,7 +359,7 @@ Implement the domain-pure scoring engine (temporal decay, per-category projectio
 - `fuzzysort-matcher.adapter.ts` with NFD normalization
 - `analyze-price-list.use-case.ts`
 - `POST /api/analyze` endpoint
-- Price list parser (Grandes miniVueltas format)
+- Structured input validation (v1 receives JSON, not raw text)
 - Unit tests: scoring model edge cases, fuzzy matching accuracy
 
 ### Phase 4: Optimizer & Team Selection

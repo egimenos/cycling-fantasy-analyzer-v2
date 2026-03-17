@@ -2,7 +2,7 @@
 work_package_id: WP05
 title: Scoring Engine
 lane: "done"
-dependencies: [WP02]
+dependencies: "[]"
 base_branch: 001-cycling-fantasy-team-optimizer-WP02
 base_commit: 09cedac4ebbc7faeb1aa8a6d1a48f96e77e97a5f
 created_at: '2026-03-15T19:34:14.717554+00:00'
@@ -75,7 +75,7 @@ readonly constant.
     * Value: fantasy points awarded
     *
     * These weights are used for Grand Tours and Mini Tours (stage races).
-    * Classic races use the GC weights applied to the FINAL category.
+    * Classic race results are stored as GC — same concept, no separate category needed.
     */
    export interface PositionPointsMap {
      readonly [position: number]: number;
@@ -86,7 +86,6 @@ readonly constant.
      readonly stage: PositionPointsMap;
      readonly mountain: PositionPointsMap;
      readonly sprint: PositionPointsMap;
-     readonly final: PositionPointsMap;
    }
    ```
 2. Define the actual scoring tables:
@@ -109,12 +108,7 @@ readonly constant.
      sprint: {
        1: 6, 2: 4, 3: 2, 4: 1,
      },
-     final: {
-       1: 200, 2: 150, 3: 120, 4: 100, 5: 90,
-       6: 80,  7: 70,  8: 60,  9: 50,  10: 45,
-       11: 40, 12: 36, 13: 32, 14: 28, 15: 24,
-       16: 20, 17: 16, 18: 12, 19: 8,  20: 5,
-     },
+     // No daily/final category — classic results use GC (same weights)
    } as const;
    ```
 3. Add a helper function to retrieve points for a given position and category:
@@ -232,7 +226,7 @@ across matching race results.
     * 4. If no qualifying results: return 0
     *
     * @param results - All race results for the rider (unfiltered)
-    * @param category - The result category to score (gc, stage, mountain, sprint, final)
+    * @param category - The result category to score (gc, stage, mountain, sprint)
     * @param targetRaceType - The race type to filter for (grand_tour, classic, mini_tour)
     * @param currentYear - The current season year for temporal weighting
     * @returns Weighted average score for this category
@@ -322,7 +316,7 @@ and leaves budget room for other strong riders.
        readonly stage: number;
        readonly mountain: number;
        readonly sprint: number;
-       readonly final: number;
+       // No daily/final — classic results are stored as GC
      };
      readonly totalProjectedPts: number;
      readonly seasonsUsed: number;
@@ -347,11 +341,11 @@ and leaves budget room for other strong riders.
     * Computes the full projected score for a rider against a target race type.
     * This is the PURE historical performance projection — no price context.
     *
-    * For stage races (GRAND_TOUR, MINI_TOUR):
-    *   totalProjectedPts = gc + stage + mountain + sprint
+    * totalProjectedPts = gc + stage + mountain + sprint
     *
-    * For classics (CLASSIC):
-    *   totalProjectedPts = final (only the FINAL category matters)
+    * For classics, only GC has data (classic finish = GC equivalent),
+    * so totalProjectedPts naturally equals just gcScore.
+    * No special branching needed.
     */
    export function computeRiderScore(
      riderId: string,
@@ -363,14 +357,8 @@ and leaves budget room for other strong riders.
      const stageScore = computeCategoryScore(results, ResultCategory.STAGE, targetRaceType, currentYear);
      const mountainScore = computeCategoryScore(results, ResultCategory.MOUNTAIN, targetRaceType, currentYear);
      const sprintScore = computeCategoryScore(results, ResultCategory.SPRINT, targetRaceType, currentYear);
-     const finalScore = computeCategoryScore(results, ResultCategory.FINAL, targetRaceType, currentYear);
 
-     let totalProjectedPts: number;
-     if (targetRaceType === RaceType.CLASSIC) {
-       totalProjectedPts = finalScore;
-     } else {
-       totalProjectedPts = gcScore + stageScore + mountainScore + sprintScore;
-     }
+     const totalProjectedPts = gcScore + stageScore + mountainScore + sprintScore;
 
      const seasonsUsed = new Set(
        results
@@ -384,7 +372,7 @@ and leaves budget room for other strong riders.
 
      return {
        riderId, targetRaceType, currentYear,
-       categoryScores: { gc: gcScore, stage: stageScore, mountain: mountainScore, sprint: sprintScore, final: finalScore },
+       categoryScores: { gc: gcScore, stage: stageScore, mountain: mountainScore, sprint: sprintScore },
        totalProjectedPts, seasonsUsed, qualifyingResultsCount,
      };
    }
@@ -494,7 +482,7 @@ and leaves budget room for other strong riders.
    - `seasonsUsed` helps consumers understand data density. A score based on 3 seasons is
      more reliable than one based on 1 season.
    - `qualifyingResultsCount` provides additional context for confidence assessment.
-   - For classics, only the `final` category contributes.
+   - For classics, only `gc` has data (classic finish = GC). The formula doesn't branch — stage/mountain/sprint are simply 0.
    - The 0.6/0.4 weight split ensures top riders still rank high (you want Pogačar) but
      mid-tier riders with great value can surface above expensive riders with only slightly
      better stats.
@@ -638,7 +626,7 @@ This is a constitution mandate — not optional.
 
      it('should filter out results from wrong race type', () => {
        const results = [
-         createRaceResult({ raceType: RaceType.CLASSIC, category: ResultCategory.FINAL }),
+         createRaceResult({ raceType: RaceType.CLASSIC, category: ResultCategory.GC }),
        ];
        expect(computeCategoryScore(results, ResultCategory.GC, RaceType.GRAND_TOUR, 2024))
          .toBe(0);
@@ -675,7 +663,7 @@ This is a constitution mandate — not optional.
    ```typescript
    describe('computeRiderScore', () => {
      it('should sum all category scores for Grand Tour', () => { /* ... */ });
-     it('should use only final score for Classic', () => { /* ... */ });
+     it('should only have gc score for Classic (classic finish = GC)', () => { /* ... */ });
      it('should return all zeros for rider with no data', () => {
        const score = computeRiderScore('rider-1', [], RaceType.GRAND_TOUR, 2024);
        expect(score.totalProjectedPts).toBe(0);
@@ -687,10 +675,10 @@ This is a constitution mandate — not optional.
      it('should handle rider with mixed race type results', () => {
        const results = [
          createRaceResult({ raceType: RaceType.GRAND_TOUR, category: ResultCategory.GC, position: 5 }),
-         createRaceResult({ raceType: RaceType.CLASSIC, category: ResultCategory.FINAL, position: 1 }),
+         createRaceResult({ raceType: RaceType.CLASSIC, category: ResultCategory.GC, position: 1 }),
        ];
        const score = computeRiderScore('rider-1', results, RaceType.GRAND_TOUR, 2024);
-       expect(score.categoryScores.final).toBe(0);
+       // Classic GC result filtered out (wrong race type) — only GT GC counts
        expect(score.categoryScores.gc).toBe(90);
      });
    });
@@ -808,7 +796,7 @@ When reviewing this work package, verify:
 
 ## Definition of Done
 
-- [ ] `SCORING_WEIGHTS` config defines points for all categories (gc, stage, mountain, sprint, final)
+- [ ] `SCORING_WEIGHTS` config defines points for all categories (gc, stage, mountain, sprint)
 - [ ] `getPointsForPosition` maps position to points, returns 0 for out-of-range
 - [ ] `getTemporalWeight` returns correct decay factors for 0, 1, 2, and 3+ seasons ago
 - [ ] `computeCategoryScore` computes weighted average with race type and category filtering
@@ -817,8 +805,8 @@ When reviewing this work package, verify:
 - [ ] `computeCompositeScore` produces a price-aware value score using pool normalization
 - [ ] `COMPOSITE_SCORE_WEIGHTS` defines configurable α (rawPerformance) and β (priceEfficiency) weights
 - [ ] Composite score correctly balances raw performance and price efficiency
-- [ ] Classic scoring uses only the `final` category
-- [ ] Stage race scoring sums gc + stage + mountain + sprint categories
+- [ ] Scoring always sums gc + stage + mountain + sprint (no branching)
+- [ ] Classic scoring naturally uses only gc (classic finish = GC, other categories are 0)
 - [ ] DNF results (position null) contribute 0 points
 - [ ] Results older than 2 seasons are excluded (weight = 0)
 - [ ] All functions are pure — no side effects, no framework imports

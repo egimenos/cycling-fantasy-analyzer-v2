@@ -2,7 +2,7 @@
 work_package_id: WP02
 title: Docker, Database & Hexagonal Layers
 lane: "done"
-dependencies: [WP01]
+dependencies: "[]"
 base_branch: 001-cycling-fantasy-team-optimizer-WP01
 base_commit: e2fd54a34106a5cffaaf529da2e09fd651770e18
 created_at: '2026-03-15T12:00:28.787445+00:00'
@@ -199,7 +199,7 @@ Drizzle ORM's schema DSL.
 
    export const raceTypeEnum = pgEnum('race_type', ['grand_tour', 'classic', 'mini_tour']);
    export const raceClassEnum = pgEnum('race_class', ['UWT', 'Pro', '1']);
-   export const resultCategoryEnum = pgEnum('result_category', ['gc', 'stage', 'mountain', 'sprint', 'final']);
+   export const resultCategoryEnum = pgEnum('result_category', ['gc', 'stage', 'mountain', 'sprint']);
    export const scrapeStatusEnum = pgEnum('scrape_status', ['pending', 'running', 'success', 'failed']);
    ```
 3. Create `apps/api/src/infrastructure/database/schema/race-results.ts`:
@@ -302,7 +302,7 @@ ring of the hexagonal architecture.
        STAGE = 'stage',
        MOUNTAIN = 'mountain',
        SPRINT = 'sprint',
-       FINAL = 'final',
+       // No DAILY/FINAL — classic results use GC (same concept)
      }
      ```
    - `scrape-status.enum.ts`:

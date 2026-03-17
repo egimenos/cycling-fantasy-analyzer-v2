@@ -12,7 +12,7 @@ A web application with two distinct layers:
 1. **Data layer**: A scraping and persistence pipeline that continuously collects and stores cyclist results from procyclingstats.com. This historical dataset is the foundation that makes meaningful scoring possible.
 2. **UI layer**: A stateless interface where the user pastes a rider price list for a specific race. The system queries the persisted results, computes a score per rider (function of price and historical performance), displays the ranked list, and computes the optimal 9-rider team within the hillios budget. No session state is required in the UI.
 
-**Target game**: [Grandes miniVueltas](https://grandesminivueltas.com) — 9 riders per team, budget in hillios (1,500H–2,000H depending on race type), points awarded for GC results, mountain passes, sprint intermediates, and daily stage rankings.
+**Target game**: [Grandes miniVueltas](https://grandesminivueltas.com) — 9 riders per team, budget in hillios (1,500H–2,000H depending on race type), points awarded for GC results (and classic finishes, which are equivalent to GC), stage results, mountain passes, and sprint intermediates.
 
 ---
 
@@ -64,7 +64,7 @@ After loading a rider list, a user wants to see each rider's historical performa
 
 1. **Given** a rider list has been loaded, **When** the system fetches stats, **Then** each rider shows their recent GC results (top-10 finishes), stage wins, mountain points, and sprint points from the last 2 seasons.
 2. **Given** a rider has no profile on procyclingstats.com, **When** the system attempts to fetch data, **Then** the rider row is flagged as "no data available" and still appears in the list.
-3. **Given** the procyclingstats.com service is temporarily unavailable, **When** the system tries to fetch data, **Then** it shows a warning and allows the user to proceed with manual assessment.
+3. **Given** a rider has no historical results in the persisted data store (e.g., newly turned pro), **When** the system computes scores, **Then** the rider gets `compositeScore = null`, is flagged as "no data available", and is ranked last in the sorted list.
 
 ---
 
@@ -103,10 +103,10 @@ The user wants to manually assemble their team, selecting and deselecting riders
 ### Edge Cases
 
 - When a rider name does not exactly match PCS, the system uses fuzzy matching on both name and team name simultaneously to automatically resolve the most probable profile match.
-- How does the system handle riders who have just turned pro and have no historical data?
-- What if the budget for a race is non-standard (e.g., 1,750H)?
-- How does the system behave when procyclingstats.com blocks or rate-limits scraping requests?
-- What if the same rider appears twice in the pasted list (duplicate entry)?
+- **Newly turned pro riders**: Riders with no historical data in the persisted store get `compositeScore = null`, are flagged as "no data available", and ranked last. They can still be manually selected in the team builder.
+- What if the budget for a race is non-standard (e.g., 1,750H)? → Covered by FR-012 (configurable budget).
+- How does the system behave when procyclingstats.com blocks or rate-limits scraping requests? → Covered by US0 Acceptance Scenario 3 (scraping pipeline handles rate limits).
+- **Duplicate rider entries**: If the same rider (same name + team) appears more than once in the submitted list, the system keeps only the first occurrence and silently deduplicates. The response includes the deduplicated count.
 
 ---
 
@@ -121,7 +121,7 @@ The user wants to manually assemble their team, selecting and deselecting riders
 - **FR-004**: System MUST display per-rider statistics including: recent GC results (last 2 seasons), stage wins, mountain classification finishes, and sprint classification finishes.
 - **FR-004b**: System MUST compute and display a composite score per rider — a function of price (hillios) and projected historical performance — and sort the rider list by this score descending.
 - **FR-005**: System MUST compute the optimal 9-rider team (knapsack optimization) within a configurable hillios budget, maximizing total projected score.
-- **FR-006**: System MUST rank recommended teams by projected points using a weighted model: historical results filtered by race type (Grand Tour / classic / mini-tour), with temporal decay weights (current season ×1.0, previous ×0.6, two seasons ago ×0.3), computing per-category projections (GC, stage wins, mountain, sprint, daily ranking) and applying the Grandes miniVueltas scoring rules (GC: up to 200pts, mountain HC: 12pts, sprint intermediates: up to 6pts, daily stage: 15pts for 1st).
+- **FR-006**: System MUST rank recommended teams by projected points using a weighted model: historical results filtered by race type (Grand Tour / classic / mini-tour), with temporal decay weights (current season ×1.0, previous ×0.6, two seasons ago ×0.3), computing per-category projections (GC, stage wins, mountain, sprint) and applying the Grandes miniVueltas scoring rules (GC: up to 200pts, stage: 15pts for 1st, mountain HC: 12pts, sprint intermediates: up to 6pts). Classic race results are treated as GC — winning a classic is the equivalent of winning the general classification.
 - **FR-007**: System MUST display at least the top 5 recommended teams with itemized cost and projected score breakdown.
 - **FR-008**: Users MUST be able to lock specific riders as "must include" and exclude others from recommendations.
 - **FR-009**: System MUST provide a manual team builder where users select riders and see live budget and projected score updates.
@@ -133,7 +133,7 @@ The user wants to manually assemble their team, selecting and deselecting riders
 ### Key Entities
 
 - **Rider**: A professional cyclist tracked in the system. Has a canonical identity (name + team) linked to a procyclingstats.com profile. Identified via fuzzy matching on name + team.
-- **RaceResult**: A persisted historical result for a rider in a specific race. Includes: race name, race type (Grand Tour / classic / mini-tour), season, GC position, stage wins, mountain classification finish, sprint classification finish, and daily stage results. Scraped from procyclingstats.com and stored persistently.
+- **RaceResult**: A persisted historical result for a rider in a specific race. Includes: race name, race type (Grand Tour / classic / mini-tour), season, GC position (or classic finish position, which is equivalent to GC), stage wins, mountain classification finish, and sprint classification finish. Scraped from procyclingstats.com and stored persistently.
 - **RiderScore**: A computed score for a rider in the context of a specific upcoming race type. Derived from RaceResults using the temporal decay model (×1.0 / ×0.6 / ×0.3) and Grandes miniVueltas scoring weights. Computed on-demand, not stored.
 - **PriceListEntry**: A rider entry from the user's pasted price list for a specific race. Contains name, team, and price in hillios. Ephemeral — exists only for the current session.
 - **TeamSelection**: A set of exactly 9 PriceListEntries assembled for a race. Has a total cost and projected score. Ephemeral — not persisted.
