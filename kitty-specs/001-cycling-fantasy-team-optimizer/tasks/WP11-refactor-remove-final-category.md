@@ -1,7 +1,7 @@
 ---
 work_package_id: WP11
 title: 'Refactor: Remove FINAL ResultCategory — Classic Results Use GC'
-lane: "doing"
+lane: "for_review"
 dependencies: '[]'
 base_branch: main
 base_commit: 75c783c381d07ec0e9c2cba3cf69c530b43997ea
@@ -280,3 +280,4 @@ After all changes:
 ## Activity Log
 
 - 2026-03-17T21:19:15Z – claude-opus – shell_pid=3829 – lane=doing – Assigned agent via workflow command
+- 2026-03-17T21:36:09Z – claude-opus – shell_pid=3829 – lane=for_review – Ready for review: removed ResultCategory.FINAL across 36 files. Classic results now use GC. Build/lint/tests all pass (251 API + 100 web). DB migration included.
