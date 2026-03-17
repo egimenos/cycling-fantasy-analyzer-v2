@@ -369,12 +369,12 @@
 **Requirements Refs**: FR-004b, FR-006
 
 ### Included Subtasks
-- [ ] T052 Remove `FINAL` from `ResultCategory` enum + DB schema + create migration
-- [ ] T053 Classic parser: `ResultCategory.FINAL` → `ResultCategory.GC`
-- [ ] T054 Scoring engine: remove `final` from weights, categoryScores, and branching logic
-- [ ] T055 Optimizer types: remove `final` from `ScoreBreakdown` and `ScoredRider`
-- [ ] T056 Shared types + frontend: remove `'final'` from `ResultCategory`, update test fixtures
-- [ ] T057 Verify build, lint, all tests pass, 100% scoring coverage maintained
+- [x] T052 Remove `FINAL` from `ResultCategory` enum + DB schema + create migration
+- [x] T053 Classic parser: `ResultCategory.FINAL` → `ResultCategory.GC`
+- [x] T054 Scoring engine: remove `final` from weights, categoryScores, and branching logic
+- [x] T055 Optimizer types: remove `final` from `ScoreBreakdown` and `ScoredRider`
+- [x] T056 Shared types + frontend: remove `'final'` from `ResultCategory`, update test fixtures
+- [x] T057 Verify build, lint, all tests pass, 100% scoring coverage maintained
 
 ### Implementation Notes
 - **This is a mechanical refactor** — no new features, no behavior changes
