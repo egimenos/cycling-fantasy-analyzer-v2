@@ -1,12 +1,16 @@
 ---
 work_package_id: WP11
-title: "Refactor: Remove FINAL ResultCategory — Classic Results Use GC"
-lane: "planned"
-priority: P0
-type: refactor
+title: 'Refactor: Remove FINAL ResultCategory — Classic Results Use GC'
+lane: "doing"
+dependencies: '[]'
+base_branch: main
+base_commit: 75c783c381d07ec0e9c2cba3cf69c530b43997ea
+created_at: '2026-03-17T21:19:15.276992+00:00'
 depends_on: [WP10]
 estimated_prompt_size: ~300 lines
-dependencies: "[]"
+priority: P0
+type: refactor
+shell_pid: "3829"
 ---
 
 # WP11 — Refactor: Remove FINAL ResultCategory
