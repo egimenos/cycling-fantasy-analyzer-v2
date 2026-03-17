@@ -19,7 +19,7 @@ function makeRider(overrides: Partial<AnalyzedRider> = {}): AnalyzedRider {
     compositeScore: 85,
     pointsPerHillio: 0.12,
     totalProjectedPts: 85,
-    categoryScores: { gc: 40, stage: 20, mountain: 10, sprint: 5, final: 10 },
+    categoryScores: { gc: 40, stage: 20, mountain: 10, sprint: 5 },
     seasonsUsed: 3,
     unmatched: false,
     ...overrides,

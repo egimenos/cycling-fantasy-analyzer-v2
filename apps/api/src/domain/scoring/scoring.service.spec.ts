@@ -66,7 +66,7 @@ describe('computeCategoryScore', () => {
 
   it('should filter out results from wrong race type', () => {
     const results = [
-      createRaceResult({ raceType: RaceType.CLASSIC, category: ResultCategory.FINAL, position: 1 }),
+      createRaceResult({ raceType: RaceType.CLASSIC, category: ResultCategory.GC, position: 1 }),
     ];
     expect(computeCategoryScore(results, ResultCategory.GC, RaceType.GRAND_TOUR, 2024)).toBe(0);
   });
@@ -152,22 +152,23 @@ describe('computeRiderScore', () => {
     expect(score.categoryScores.stage).toBe(15);
     expect(score.categoryScores.mountain).toBe(12);
     expect(score.categoryScores.sprint).toBe(6);
-    expect(score.categoryScores.final).toBe(0);
   });
 
-  it('should use only final score for Classic', () => {
+  it('should produce only gc score for Classic (stage/mountain/sprint are 0)', () => {
     const results = [
       createRaceResult({
         raceType: RaceType.CLASSIC,
-        category: ResultCategory.FINAL,
+        category: ResultCategory.GC,
         position: 1,
         year: 2024,
       }),
     ];
     const score = computeRiderScore('rider-1', results, RaceType.CLASSIC, 2024);
     expect(score.totalProjectedPts).toBe(200);
-    expect(score.categoryScores.final).toBe(200);
-    expect(score.categoryScores.gc).toBe(0);
+    expect(score.categoryScores.gc).toBe(200);
+    expect(score.categoryScores.stage).toBe(0);
+    expect(score.categoryScores.mountain).toBe(0);
+    expect(score.categoryScores.sprint).toBe(0);
   });
 
   it('should return all zeros for rider with no data', () => {
@@ -179,7 +180,6 @@ describe('computeRiderScore', () => {
     expect(score.categoryScores.stage).toBe(0);
     expect(score.categoryScores.mountain).toBe(0);
     expect(score.categoryScores.sprint).toBe(0);
-    expect(score.categoryScores.final).toBe(0);
   });
 
   it('should count correct number of seasons used', () => {
@@ -212,15 +212,14 @@ describe('computeRiderScore', () => {
       }),
       createRaceResult({
         raceType: RaceType.CLASSIC,
-        category: ResultCategory.FINAL,
+        category: ResultCategory.GC,
         position: 1,
         year: 2024,
       }),
     ];
     const score = computeRiderScore('rider-1', results, RaceType.GRAND_TOUR, 2024);
-    // Classic result should NOT contribute to Grand Tour score
-    expect(score.categoryScores.final).toBe(0);
-    expect(score.categoryScores.gc).toBe(90); // GC position 5
+    // Classic result should NOT contribute to Grand Tour score (different raceType)
+    expect(score.categoryScores.gc).toBe(90); // GC position 5 from GRAND_TOUR only
     expect(score.qualifyingResultsCount).toBe(1);
   });
 
@@ -299,7 +298,7 @@ describe('computeCompositeScore', () => {
       riderId: 'rider-1',
       targetRaceType: RaceType.GRAND_TOUR,
       currentYear: 2024,
-      categoryScores: { gc: totalProjectedPts, stage: 0, mountain: 0, sprint: 0, final: 0 },
+      categoryScores: { gc: totalProjectedPts, stage: 0, mountain: 0, sprint: 0 },
       totalProjectedPts,
       seasonsUsed: 1,
       qualifyingResultsCount: 1,
@@ -405,7 +404,7 @@ describe('ScoringService', () => {
       riderId: 'rider-1',
       targetRaceType: RaceType.GRAND_TOUR,
       currentYear: 2024,
-      categoryScores: { gc: 100, stage: 0, mountain: 0, sprint: 0, final: 0 },
+      categoryScores: { gc: 100, stage: 0, mountain: 0, sprint: 0 },
       totalProjectedPts: 100,
       seasonsUsed: 1,
       qualifyingResultsCount: 1,

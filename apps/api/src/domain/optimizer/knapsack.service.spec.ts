@@ -7,7 +7,7 @@ function createRider(overrides: Partial<ScoredRider> & { id: string }): ScoredRi
     name: 'Test Rider',
     priceHillios: 100,
     totalProjectedPts: 50,
-    categoryScores: { gc: 10, stage: 10, mountain: 10, sprint: 10, final: 10 },
+    categoryScores: { gc: 10, stage: 10, mountain: 10, sprint: 10 },
     ...overrides,
   };
 }
@@ -185,13 +185,13 @@ describe('buildTeamSelection', () => {
         id: 'r0',
         priceHillios: 100,
         totalProjectedPts: 50,
-        categoryScores: { gc: 20, stage: 10, mountain: 5, sprint: 5, final: 10 },
+        categoryScores: { gc: 20, stage: 10, mountain: 5, sprint: 5 },
       }),
       createRider({
         id: 'r1',
         priceHillios: 150,
         totalProjectedPts: 70,
-        categoryScores: { gc: 30, stage: 15, mountain: 10, sprint: 5, final: 10 },
+        categoryScores: { gc: 30, stage: 15, mountain: 10, sprint: 5 },
       }),
     ];
 
@@ -205,7 +205,6 @@ describe('buildTeamSelection', () => {
       stage: 25,
       mountain: 15,
       sprint: 10,
-      final: 20,
     });
   });
 });

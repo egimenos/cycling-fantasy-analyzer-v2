@@ -28,9 +28,9 @@ describe('parseClassicResults', () => {
       expect(results.length).toBeGreaterThanOrEqual(100);
     });
 
-    it('should set category to FINAL for all results', () => {
+    it('should set category to GC for all results', () => {
       for (const r of results) {
-        expect(r.category).toBe(ResultCategory.FINAL);
+        expect(r.category).toBe(ResultCategory.GC);
       }
     });
 

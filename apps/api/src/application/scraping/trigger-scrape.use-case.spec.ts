@@ -193,7 +193,7 @@ describe('TriggerScrapeUseCase', () => {
     const savedResults = mockResultRepo.saveMany.mock.calls[0][0];
     expect(savedResults.length).toBe(100);
     for (const r of savedResults) {
-      expect(r.toProps().category).toBe(ResultCategory.FINAL);
+      expect(r.toProps().category).toBe(ResultCategory.GC);
       expect(r.toProps().raceSlug).toBe('milano-sanremo');
       expect(r.toProps().year).toBe(2024);
     }

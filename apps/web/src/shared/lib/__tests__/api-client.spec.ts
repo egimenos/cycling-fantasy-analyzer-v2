@@ -94,7 +94,7 @@ describe('optimizeTeam', () => {
         totalCostHillios: 0,
         totalProjectedPts: 0,
         budgetRemaining: 2000,
-        scoreBreakdown: { gc: 0, stage: 0, mountain: 0, sprint: 0, final: 0 },
+        scoreBreakdown: { gc: 0, stage: 0, mountain: 0, sprint: 0 },
       },
       alternativeTeams: [],
     };

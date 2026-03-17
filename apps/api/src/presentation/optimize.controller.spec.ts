@@ -19,7 +19,7 @@ describe('OptimizeController', () => {
       totalCostHillios: 900,
       totalProjectedPts: 500,
       budgetRemaining: 100,
-      scoreBreakdown: { gc: 200, stage: 100, mountain: 50, sprint: 50, final: 100 },
+      scoreBreakdown: { gc: 200, stage: 100, mountain: 50, sprint: 50 },
     },
     alternativeTeams: [],
   };
@@ -49,7 +49,7 @@ describe('OptimizeController', () => {
           name: 'Rider 1',
           priceHillios: 100,
           totalProjectedPts: 50,
-          categoryScores: { gc: 10, stage: 10, mountain: 10, sprint: 10, final: 10 },
+          categoryScores: { gc: 10, stage: 10, mountain: 10, sprint: 10 },
         },
       ],
       budget: 1000,
@@ -74,8 +74,8 @@ describe('OptimizeController', () => {
       throw new InsufficientRidersError(5, 9);
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test DTO
     expect(() =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test DTO
       controller.optimize({ riders: [], budget: 1000, mustInclude: [], mustExclude: [] } as any),
     ).toThrow(HttpException);
 
@@ -131,8 +131,8 @@ describe('OptimizeController', () => {
       throw new Error('unexpected');
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test DTO
     expect(() =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test DTO
       controller.optimize({ riders: [], budget: 1000, mustInclude: [], mustExclude: [] } as any),
     ).toThrow('unexpected');
   });

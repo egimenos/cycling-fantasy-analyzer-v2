@@ -17,7 +17,6 @@ export interface RiderScore {
     readonly stage: number;
     readonly mountain: number;
     readonly sprint: number;
-    readonly final: number;
   };
   readonly totalProjectedPts: number;
   readonly seasonsUsed: number;
@@ -109,11 +108,8 @@ export function computeCategoryScore(
  * Computes the full projected score for a rider against a target race type.
  * This is the PURE historical performance projection — no price context.
  *
- * For stage races (GRAND_TOUR, MINI_TOUR):
- *   totalProjectedPts = gc + stage + mountain + sprint
- *
- * For classics (CLASSIC):
- *   totalProjectedPts = final (only the FINAL category matters)
+ * totalProjectedPts = gc + stage + mountain + sprint
+ * For classics, only gc has data (stage/mountain/sprint are 0).
  *
  * @param riderId - The rider's unique identifier
  * @param results - All race results for the rider (unfiltered)
@@ -146,19 +142,8 @@ export function computeRiderScore(
     targetRaceType,
     currentYear,
   );
-  const finalScore = computeCategoryScore(
-    results,
-    ResultCategory.FINAL,
-    targetRaceType,
-    currentYear,
-  );
 
-  let totalProjectedPts: number;
-  if (targetRaceType === RaceType.CLASSIC) {
-    totalProjectedPts = finalScore;
-  } else {
-    totalProjectedPts = gcScore + stageScore + mountainScore + sprintScore;
-  }
+  const totalProjectedPts = gcScore + stageScore + mountainScore + sprintScore;
 
   const seasonsUsed = new Set(
     results
@@ -179,7 +164,6 @@ export function computeRiderScore(
       stage: stageScore,
       mountain: mountainScore,
       sprint: sprintScore,
-      final: finalScore,
     },
     totalProjectedPts,
     seasonsUsed,

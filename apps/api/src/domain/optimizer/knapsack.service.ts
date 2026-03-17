@@ -8,7 +8,6 @@ function buildTeamSelection(riders: ScoredRider[], budget: number): TeamSelectio
   let stage = 0;
   let mountain = 0;
   let sprint = 0;
-  let final_ = 0;
 
   for (const r of riders) {
     totalCost += r.priceHillios;
@@ -17,7 +16,6 @@ function buildTeamSelection(riders: ScoredRider[], budget: number): TeamSelectio
     stage += r.categoryScores.stage;
     mountain += r.categoryScores.mountain;
     sprint += r.categoryScores.sprint;
-    final_ += r.categoryScores.final;
   }
 
   return {
@@ -25,7 +23,7 @@ function buildTeamSelection(riders: ScoredRider[], budget: number): TeamSelectio
     totalCostHillios: totalCost,
     totalProjectedPts: totalPts,
     budgetRemaining: budget - totalCost,
-    scoreBreakdown: { gc, stage, mountain, sprint, final: final_ },
+    scoreBreakdown: { gc, stage, mountain, sprint },
   };
 }
 

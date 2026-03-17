@@ -8,7 +8,6 @@ export interface ScoredRider {
     readonly stage: number;
     readonly mountain: number;
     readonly sprint: number;
-    readonly final: number;
   };
 }
 
@@ -17,7 +16,6 @@ export interface ScoreBreakdown {
   readonly stage: number;
   readonly mountain: number;
   readonly sprint: number;
-  readonly final: number;
 }
 
 export interface TeamSelection {

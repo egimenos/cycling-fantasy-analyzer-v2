@@ -5,13 +5,12 @@ import type { CategoryScores } from '@cycling-analyzer/shared-types';
 
 describe('ScoreBreakdown', () => {
   it('renders all category labels', () => {
-    const breakdown: CategoryScores = { gc: 20, stage: 10, mountain: 10, sprint: 5, final: 5 };
+    const breakdown: CategoryScores = { gc: 20, stage: 10, mountain: 10, sprint: 5 };
     render(<ScoreBreakdown breakdown={breakdown} />);
     expect(screen.getByText('GC')).toBeInTheDocument();
     expect(screen.getByText('Stage')).toBeInTheDocument();
     expect(screen.getByText('Mountain')).toBeInTheDocument();
     expect(screen.getByText('Sprint')).toBeInTheDocument();
-    expect(screen.getByText('Final')).toBeInTheDocument();
   });
 
   it('renders formatted values', () => {
@@ -20,7 +19,6 @@ describe('ScoreBreakdown', () => {
       stage: 12.7,
       mountain: 8.1,
       sprint: 3.9,
-      final: 6.0,
     };
     render(<ScoreBreakdown breakdown={breakdown} />);
     expect(screen.getByText('25.3')).toBeInTheDocument();
@@ -28,7 +26,7 @@ describe('ScoreBreakdown', () => {
   });
 
   it('handles all-zero breakdown without crashing', () => {
-    const breakdown: CategoryScores = { gc: 0, stage: 0, mountain: 0, sprint: 0, final: 0 };
+    const breakdown: CategoryScores = { gc: 0, stage: 0, mountain: 0, sprint: 0 };
     render(<ScoreBreakdown breakdown={breakdown} />);
     expect(screen.getByText('GC')).toBeInTheDocument();
   });

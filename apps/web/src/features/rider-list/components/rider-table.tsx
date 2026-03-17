@@ -185,7 +185,6 @@ function ExpandedRowContent({ rider }: { rider: AnalyzedRider }) {
           <ScoreDetail label="Stage" value={rider.categoryScores.stage} />
           <ScoreDetail label="Mountain" value={rider.categoryScores.mountain} />
           <ScoreDetail label="Sprint" value={rider.categoryScores.sprint} />
-          <ScoreDetail label="Final" value={rider.categoryScores.final} />
         </>
       )}
       {rider.compositeScore !== null && (

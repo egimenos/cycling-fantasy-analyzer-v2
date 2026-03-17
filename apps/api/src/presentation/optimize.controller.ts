@@ -40,9 +40,6 @@ class CategoryScoresDto {
 
   @IsNumber()
   sprint!: number;
-
-  @IsNumber()
-  final!: number;
 }
 
 class ScoredRiderDto {

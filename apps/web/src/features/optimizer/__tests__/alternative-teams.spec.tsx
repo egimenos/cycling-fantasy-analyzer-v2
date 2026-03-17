@@ -14,7 +14,7 @@ function makeRider(name: string): AnalyzedRider {
     compositeScore: 50,
     pointsPerHillio: 0.5,
     totalProjectedPts: 50,
-    categoryScores: { gc: 20, stage: 10, mountain: 10, sprint: 5, final: 5 },
+    categoryScores: { gc: 20, stage: 10, mountain: 10, sprint: 5 },
     seasonsUsed: 2,
   };
 }
@@ -25,7 +25,7 @@ function makeTeam(pts: number): TeamSelection {
     totalCostHillios: 100,
     totalProjectedPts: pts,
     budgetRemaining: 1900,
-    scoreBreakdown: { gc: 20, stage: 10, mountain: 10, sprint: 5, final: 5 },
+    scoreBreakdown: { gc: 20, stage: 10, mountain: 10, sprint: 5 },
   };
 }
 

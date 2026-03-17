@@ -3,5 +3,5 @@ import { ParsedResult } from './parsed-result.type';
 import { parseResultsTable } from './results-table.parser';
 
 export function parseClassicResults(html: string): ParsedResult[] {
-  return parseResultsTable(html, ResultCategory.FINAL);
+  return parseResultsTable(html, ResultCategory.GC);
 }

@@ -26,7 +26,7 @@ describe('AnalyzeController', () => {
         compositeScore: 85.5,
         pointsPerHillio: 0.67,
         totalProjectedPts: 200,
-        categoryScores: { gc: 150, stage: 30, mountain: 10, sprint: 10, final: 0 },
+        categoryScores: { gc: 150, stage: 30, mountain: 10, sprint: 10 },
         seasonsUsed: 2,
       },
     ],

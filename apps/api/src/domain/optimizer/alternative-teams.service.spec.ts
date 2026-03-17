@@ -7,7 +7,7 @@ function createRider(overrides: Partial<ScoredRider> & { id: string }): ScoredRi
     name: 'Test Rider',
     priceHillios: 100,
     totalProjectedPts: 50,
-    categoryScores: { gc: 10, stage: 10, mountain: 10, sprint: 10, final: 10 },
+    categoryScores: { gc: 10, stage: 10, mountain: 10, sprint: 10 },
     ...overrides,
   };
 }

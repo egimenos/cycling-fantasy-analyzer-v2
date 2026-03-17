@@ -3,5 +3,4 @@ export enum ResultCategory {
   STAGE = 'stage',
   MOUNTAIN = 'mountain',
   SPRINT = 'sprint',
-  FINAL = 'final',
 }

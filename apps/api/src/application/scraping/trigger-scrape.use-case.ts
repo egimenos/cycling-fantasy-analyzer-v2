@@ -106,7 +106,7 @@ export class TriggerScrapeUseCase {
 
     const validation = validateClassificationResults(results, {
       raceSlug: slug,
-      classificationType: 'FINAL',
+      classificationType: 'GC',
       expectedMinRiders: 80,
       expectedMaxRiders: 250,
     });

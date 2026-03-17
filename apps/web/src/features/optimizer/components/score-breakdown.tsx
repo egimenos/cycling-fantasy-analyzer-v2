@@ -10,7 +10,6 @@ const CATEGORY_CONFIG: { key: keyof CategoryScores; label: string; color: string
   { key: ResultCategory.STAGE, label: 'Stage', color: 'bg-green-500' },
   { key: ResultCategory.MOUNTAIN, label: 'Mountain', color: 'bg-orange-500' },
   { key: ResultCategory.SPRINT, label: 'Sprint', color: 'bg-red-500' },
-  { key: ResultCategory.FINAL, label: 'Final', color: 'bg-purple-500' },
 ];
 
 export function ScoreBreakdown({ breakdown }: ScoreBreakdownProps) {

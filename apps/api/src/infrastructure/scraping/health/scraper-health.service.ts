@@ -129,7 +129,7 @@ export class ScraperHealthService {
 
       const validation = validateClassificationResults(results, {
         raceSlug: 'milano-sanremo',
-        classificationType: 'FINAL',
+        classificationType: 'GC',
         expectedMinRiders: 80,
         expectedMaxRiders: 250,
       });

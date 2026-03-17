@@ -45,7 +45,6 @@ export interface AnalyzedRider {
     stage: number;
     mountain: number;
     sprint: number;
-    final: number;
   } | null;
   seasonsUsed: number | null;
 }

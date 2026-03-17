@@ -25,7 +25,7 @@ function makeRider(name: string, price = 100): AnalyzedRider {
     compositeScore: 50,
     pointsPerHillio: 0.5,
     totalProjectedPts: 50,
-    categoryScores: { gc: 20, stage: 10, mountain: 10, sprint: 5, final: 5 },
+    categoryScores: { gc: 20, stage: 10, mountain: 10, sprint: 5 },
     seasonsUsed: 2,
   };
 }
@@ -75,7 +75,7 @@ describe('OptimizerPanel', () => {
             totalCostHillios: 0,
             totalProjectedPts: 0,
             budgetRemaining: 2000,
-            scoreBreakdown: { gc: 0, stage: 0, mountain: 0, sprint: 0, final: 0 },
+            scoreBreakdown: { gc: 0, stage: 0, mountain: 0, sprint: 0 },
           },
           alternativeTeams: [],
         } satisfies OptimizeResponse),

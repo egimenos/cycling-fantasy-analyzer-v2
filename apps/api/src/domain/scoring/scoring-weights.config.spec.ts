@@ -7,12 +7,11 @@ import {
 
 describe('ScoringWeightsConfig', () => {
   describe('SCORING_WEIGHTS', () => {
-    it('should have all five categories defined', () => {
+    it('should have all four categories defined', () => {
       expect(SCORING_WEIGHTS.gc).toBeDefined();
       expect(SCORING_WEIGHTS.stage).toBeDefined();
       expect(SCORING_WEIGHTS.mountain).toBeDefined();
       expect(SCORING_WEIGHTS.sprint).toBeDefined();
-      expect(SCORING_WEIGHTS.final).toBeDefined();
     });
 
     it('should have position 1 defined for every category', () => {
@@ -20,7 +19,6 @@ describe('ScoringWeightsConfig', () => {
       expect(SCORING_WEIGHTS.stage[1]).toBeDefined();
       expect(SCORING_WEIGHTS.mountain[1]).toBeDefined();
       expect(SCORING_WEIGHTS.sprint[1]).toBeDefined();
-      expect(SCORING_WEIGHTS.final[1]).toBeDefined();
     });
 
     it('should have all positive integer values', () => {
@@ -51,11 +49,8 @@ describe('ScoringWeightsConfig', () => {
       expect(SCORING_WEIGHTS.stage[1]).toBe(15);
     });
 
-    it('should have final equal to GC weights', () => {
-      const gcPositions = Object.keys(SCORING_WEIGHTS.gc).map(Number);
-      for (const pos of gcPositions) {
-        expect(SCORING_WEIGHTS.final[pos]).toBe(SCORING_WEIGHTS.gc[pos]);
-      }
+    it('should have exactly 4 categories', () => {
+      expect(Object.keys(SCORING_WEIGHTS)).toHaveLength(4);
     });
   });
 
@@ -94,10 +89,6 @@ describe('ScoringWeightsConfig', () => {
 
     it('should return correct points for sprint position 2', () => {
       expect(getPointsForPosition(ResultCategory.SPRINT, 2)).toBe(4);
-    });
-
-    it('should return correct points for final position 3', () => {
-      expect(getPointsForPosition(ResultCategory.FINAL, 3)).toBe(120);
     });
 
     it('should return 0 for position beyond scoring threshold', () => {

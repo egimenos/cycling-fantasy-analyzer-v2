@@ -14,18 +14,15 @@ export interface ScoringWeightsConfig {
   readonly stage: PositionPointsMap;
   readonly mountain: PositionPointsMap;
   readonly sprint: PositionPointsMap;
-  readonly final: PositionPointsMap;
 }
 
 /**
  * Scoring tables for each result category.
  *
- * - GC (General Classification): Highest points — primary competition in stage races. Top-20 score.
+ * - GC (General Classification): Highest points — primary competition in stage races and classics. Top-20 score.
  * - Stage: Daily stage wins. Lower per-event but accumulated over many stages. Top-10 score.
  * - Mountain: KOM classification. Moderate points, top-10 score.
  * - Sprint: Sprint/points classification. Lowest per-position points, top-4 score.
- * - Final: Used for classic races. Same weight structure as GC because a classic is a
- *   single decisive result.
  */
 export const SCORING_WEIGHTS: Readonly<ScoringWeightsConfig> = {
   gc: {
@@ -80,28 +77,6 @@ export const SCORING_WEIGHTS: Readonly<ScoringWeightsConfig> = {
     3: 2,
     4: 1,
   },
-  final: {
-    1: 200,
-    2: 150,
-    3: 120,
-    4: 100,
-    5: 90,
-    6: 80,
-    7: 70,
-    8: 60,
-    9: 50,
-    10: 45,
-    11: 40,
-    12: 36,
-    13: 32,
-    14: 28,
-    15: 24,
-    16: 20,
-    17: 16,
-    18: 12,
-    19: 8,
-    20: 5,
-  },
 } as const;
 
 /**
@@ -118,7 +93,7 @@ export const COMPOSITE_SCORE_WEIGHTS = {
 /**
  * Returns the fantasy points awarded for a given position in a specific category.
  *
- * @param category - The result category (gc, stage, mountain, sprint, final)
+ * @param category - The result category (gc, stage, mountain, sprint)
  * @param position - The finishing position (1-indexed), or null for DNF
  * @returns Points for that position, or 0 if position is null, out of range, or below 1
  */
