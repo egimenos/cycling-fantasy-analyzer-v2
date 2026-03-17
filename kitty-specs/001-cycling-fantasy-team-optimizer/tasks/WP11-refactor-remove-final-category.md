@@ -11,6 +11,7 @@ estimated_prompt_size: ~300 lines
 priority: P0
 type: refactor
 shell_pid: "3829"
+agent: "claude-opus"
 ---
 
 # WP11 — Refactor: Remove FINAL ResultCategory
@@ -275,3 +276,7 @@ After all changes:
 - [ ] `pnpm lint` passes
 - [ ] All tests pass with required coverage thresholds
 - [ ] Zero grep hits for `FINAL` or `'final'` in `.ts` files
+
+## Activity Log
+
+- 2026-03-17T21:19:15Z – claude-opus – shell_pid=3829 – lane=doing – Assigned agent via workflow command
