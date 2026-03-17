@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   RiderRepositoryPort,
   RIDER_REPOSITORY_PORT,
@@ -16,6 +16,7 @@ import { Rider } from '../../domain/rider/rider.entity';
 import { RaceResult } from '../../domain/race-result/race-result.entity';
 import { findRaceBySlug, RaceCatalogEntry } from '../../domain/race/race-catalog';
 import { RaceType } from '../../domain/shared/race-type.enum';
+import { RaceClass } from '../../domain/shared/race-class.enum';
 import { PcsScraperPort, PCS_SCRAPER_PORT } from './ports/pcs-scraper.port';
 import { extractClassificationUrls } from '../../infrastructure/scraping/parsers/classification-extractor';
 import {
@@ -34,6 +35,13 @@ import {
 export interface TriggerScrapeInput {
   readonly raceSlug: string;
   readonly year: number;
+  /** Override race metadata for races not in the static catalog */
+  readonly raceMetadata?: {
+    readonly name: string;
+    readonly raceType: RaceType;
+    readonly raceClass: RaceClass;
+    readonly expectedStages?: number;
+  };
 }
 
 export interface TriggerScrapeOutput {
@@ -58,10 +66,8 @@ export class TriggerScrapeUseCase {
   ) {}
 
   async execute(input: TriggerScrapeInput): Promise<TriggerScrapeOutput> {
-    const catalogEntry = findRaceBySlug(input.raceSlug);
-    if (!catalogEntry) {
-      throw new NotFoundException(`Race "${input.raceSlug}" not found in catalog`);
-    }
+    const catalogEntry: RaceCatalogEntry =
+      findRaceBySlug(input.raceSlug) ?? this.buildCatalogEntry(input);
 
     const job = ScrapeJob.create(input.raceSlug, input.year);
     await this.scrapeJobRepo.save(job);
@@ -69,9 +75,23 @@ export class TriggerScrapeUseCase {
     const runningJob = job.markRunning();
     await this.scrapeJobRepo.save(runningJob);
 
+    const startTime = Date.now();
+    this.logger.log(
+      `Starting scrape for ${input.raceSlug} ${input.year} (${catalogEntry.raceType})`,
+    );
+
     try {
       const allResults = await this.scrapeRace(catalogEntry, input.year);
+      this.logger.log(
+        `Parsed ${allResults.length} results for ${input.raceSlug} ${input.year}, persisting...`,
+      );
+
       const recordsUpserted = await this.persistResults(allResults, catalogEntry, input.year);
+
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      this.logger.log(
+        `Completed ${input.raceSlug} ${input.year}: ${recordsUpserted} records upserted in ${elapsed}s`,
+      );
 
       const completedJob = runningJob.markSuccess(recordsUpserted);
       await this.scrapeJobRepo.save(completedJob);
@@ -82,9 +102,11 @@ export class TriggerScrapeUseCase {
         recordsUpserted,
       };
     } catch (error) {
-      const failedJob = runningJob.markFailed(
-        error instanceof Error ? error.message : 'Unknown error',
-      );
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed ${input.raceSlug} ${input.year} after ${elapsed}s: ${msg}`);
+
+      const failedJob = runningJob.markFailed(msg);
       await this.scrapeJobRepo.save(failedJob);
       throw error;
     }
@@ -135,9 +157,19 @@ export class TriggerScrapeUseCase {
     const allResults: ParsedResult[] = [];
     const classifications: { type: string; stageNumber?: number }[] = [];
 
-    for (const classUrl of classificationUrls) {
+    this.logger.log(
+      `Found ${classificationUrls.length} classifications for ${catalogEntry.slug} ${year}`,
+    );
+
+    for (let i = 0; i < classificationUrls.length; i++) {
+      const classUrl = classificationUrls[i];
+      const classLabel =
+        classUrl.stageNumber != null
+          ? `${classUrl.classificationType} stage ${classUrl.stageNumber}`
+          : classUrl.classificationType;
+
       this.logger.debug(
-        `Fetching classification: ${classUrl.classificationType} ${classUrl.urlPath}`,
+        `[${i + 1}/${classificationUrls.length}] Fetching ${classLabel}: ${classUrl.urlPath}`,
       );
 
       const html = await this.pcsClient.fetchPage(classUrl.urlPath);
@@ -145,6 +177,10 @@ export class TriggerScrapeUseCase {
         html,
         classUrl.classificationType,
         classUrl.stageNumber,
+      );
+
+      this.logger.debug(
+        `[${i + 1}/${classificationUrls.length}] ${classLabel}: ${results.length} riders parsed`,
       );
 
       const validation = validateClassificationResults(results, {
@@ -155,16 +191,16 @@ export class TriggerScrapeUseCase {
 
       if (!validation.valid) {
         this.logger.error(
-          `Validation failed for ${catalogEntry.slug} ${classUrl.classificationType}: ${validation.errors.join('; ')}`,
+          `Validation failed for ${catalogEntry.slug} ${classLabel}: ${validation.errors.join('; ')}`,
         );
         throw new Error(
-          `Validation failed for ${catalogEntry.slug} ${classUrl.classificationType}: ${validation.errors.join('; ')}`,
+          `Validation failed for ${catalogEntry.slug} ${classLabel}: ${validation.errors.join('; ')}`,
         );
       }
 
       if (validation.warnings.length > 0) {
         this.logger.warn(
-          `Validation warnings for ${catalogEntry.slug} ${classUrl.classificationType}: ${validation.warnings.join('; ')}`,
+          `Validation warnings for ${catalogEntry.slug} ${classLabel}: ${validation.warnings.join('; ')}`,
         );
       }
 
@@ -216,6 +252,19 @@ export class TriggerScrapeUseCase {
     }
   }
 
+  private buildCatalogEntry(input: TriggerScrapeInput): RaceCatalogEntry {
+    if (!input.raceMetadata) {
+      throw new Error(`Race "${input.raceSlug}" not in catalog and no metadata provided`);
+    }
+    return {
+      slug: input.raceSlug,
+      name: input.raceMetadata.name,
+      raceType: input.raceMetadata.raceType,
+      raceClass: input.raceMetadata.raceClass,
+      expectedStages: input.raceMetadata.expectedStages,
+    };
+  }
+
   private async persistResults(
     parsedResults: ParsedResult[],
     catalogEntry: RaceCatalogEntry,
@@ -229,7 +278,13 @@ export class TriggerScrapeUseCase {
       }
     }
 
+    this.logger.debug(
+      `Upserting ${uniqueRiders.size} unique riders for ${catalogEntry.slug} ${year}`,
+    );
+
     const riderIdMap = new Map<string, string>();
+    let newRiders = 0;
+    let updatedRiders = 0;
 
     for (const [slug, parsed] of uniqueRiders) {
       let rider = await this.riderRepo.findByPcsSlug(slug);
@@ -239,6 +294,7 @@ export class TriggerScrapeUseCase {
         }
         rider = rider.markScraped();
         await this.riderRepo.save(rider);
+        updatedRiders++;
       } else {
         rider = Rider.create({
           pcsSlug: slug,
@@ -248,9 +304,14 @@ export class TriggerScrapeUseCase {
           lastScrapedAt: new Date(),
         });
         await this.riderRepo.save(rider);
+        newRiders++;
       }
       riderIdMap.set(slug, rider.id);
     }
+
+    this.logger.debug(
+      `Riders: ${newRiders} created, ${updatedRiders} updated for ${catalogEntry.slug} ${year}`,
+    );
 
     // Map to domain RaceResult entities
     const raceResults: RaceResult[] = parsedResults
@@ -270,6 +331,8 @@ export class TriggerScrapeUseCase {
           scrapedAt: new Date(),
         }),
       );
+
+    this.logger.debug(`Saving ${raceResults.length} race results for ${catalogEntry.slug} ${year}`);
 
     return this.resultRepo.saveMany(raceResults);
   }

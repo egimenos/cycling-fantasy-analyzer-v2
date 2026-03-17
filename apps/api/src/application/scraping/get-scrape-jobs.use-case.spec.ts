@@ -4,6 +4,7 @@ import { ScrapeJob } from '../../domain/scrape-job/scrape-job.entity';
 const mockRepo = {
   save: jest.fn(),
   findById: jest.fn(),
+  findByRaceAndYear: jest.fn(),
   findRecent: jest.fn(),
   findStale: jest.fn(),
 };

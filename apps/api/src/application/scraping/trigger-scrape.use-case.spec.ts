@@ -1,4 +1,3 @@
-import { NotFoundException } from '@nestjs/common';
 import { TriggerScrapeUseCase } from './trigger-scrape.use-case';
 import { ScrapeJob } from '../../domain/scrape-job/scrape-job.entity';
 import { ScrapeStatus } from '../../domain/shared/scrape-status.enum';
@@ -19,6 +18,7 @@ const mockResultRepo = {
 const mockJobRepo = {
   save: jest.fn(),
   findById: jest.fn(),
+  findByRaceAndYear: jest.fn(),
   findRecent: jest.fn(),
   findStale: jest.fn(),
 };
@@ -90,9 +90,9 @@ describe('TriggerScrapeUseCase', () => {
     mockRiderRepo.findByPcsSlug.mockResolvedValue(null);
   });
 
-  it('should throw NotFoundException for unknown race slug', async () => {
+  it('should throw Error for unknown race slug without metadata', async () => {
     await expect(useCase.execute({ raceSlug: 'nonexistent-race', year: 2024 })).rejects.toThrow(
-      NotFoundException,
+      'not in catalog and no metadata provided',
     );
   });
 

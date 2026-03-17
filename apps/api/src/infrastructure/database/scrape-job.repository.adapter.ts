@@ -43,6 +43,26 @@ export class ScrapeJobRepositoryAdapter implements ScrapeJobRepositoryPort {
     return this.toDomain(rows[0]);
   }
 
+  async findByRaceAndYear(
+    raceSlug: string,
+    year: number,
+    status?: string,
+  ): Promise<ScrapeJob | null> {
+    const conditions = [eq(scrapeJobs.raceSlug, raceSlug), eq(scrapeJobs.year, year)];
+    if (status) {
+      conditions.push(eq(scrapeJobs.status, status as ScrapeStatus));
+    }
+
+    const rows = await this.db
+      .select()
+      .from(scrapeJobs)
+      .where(and(...conditions))
+      .orderBy(sql`${scrapeJobs.startedAt} DESC NULLS LAST`)
+      .limit(1);
+
+    return rows.length > 0 ? this.toDomain(rows[0]) : null;
+  }
+
   async findRecent(limit: number, status?: string): Promise<ScrapeJob[]> {
     const query = this.db.select().from(scrapeJobs);
 

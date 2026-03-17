@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { PcsScraperPort } from '../../application/scraping/ports/pcs-scraper.port';
 
 export interface HttpResponse {
@@ -8,8 +8,12 @@ export interface HttpResponse {
 
 export type HttpFetchFn = (url: string) => Promise<HttpResponse>;
 
+// Use Function constructor to preserve dynamic import() from TypeScript transpilation.
+// got-scraping v4 is ESM-only; TypeScript compiles `import()` → `require()` which breaks ESM packages.
+const dynamicImport = new Function('specifier', 'return import(specifier)');
+
 async function defaultFetch(url: string): Promise<HttpResponse> {
-  const { gotScraping } = await import('got-scraping');
+  const { gotScraping } = await dynamicImport('got-scraping');
   const response = await gotScraping({
     url,
     headerGeneratorOptions: {
@@ -31,7 +35,7 @@ export class PcsClientAdapter implements PcsScraperPort {
   private readonly httpFetch: HttpFetchFn;
   private lastRequestAt = 0;
 
-  constructor(httpFetch?: HttpFetchFn) {
+  constructor(@Optional() httpFetch?: HttpFetchFn) {
     this.requestDelayMs = parseInt(process.env.PCS_REQUEST_DELAY_MS ?? '1500', 10);
     this.maxRetries = parseInt(process.env.PCS_MAX_RETRIES ?? '3', 10);
     this.httpFetch = httpFetch ?? defaultFetch;
@@ -47,10 +51,15 @@ export class PcsClientAdapter implements PcsScraperPort {
       const url = `${this.baseUrl}${path}`;
       this.logger.debug(`Fetching ${url} (attempt ${attempt + 1})`);
 
+      const fetchStart = Date.now();
       const response = await this.httpFetch(url);
       const statusCode = response.statusCode;
+      const fetchMs = Date.now() - fetchStart;
 
       if (statusCode === 200) {
+        this.logger.debug(
+          `OK ${path} — ${(response.body.length / 1024).toFixed(0)}KB in ${fetchMs}ms`,
+        );
         return response.body;
       }
 

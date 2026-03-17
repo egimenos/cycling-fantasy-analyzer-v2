@@ -33,7 +33,7 @@ export function validateClassificationResults(
     return { valid: false, warnings, errors };
   }
 
-  // Check 2: Position sequence — sequential with no gaps
+  // Check 2: Position sequence — sequential with no gaps (warn, don't fail — PCS has ties)
   const positions = results
     .filter((r) => r.position !== null)
     .map((r) => r.position as number)
@@ -41,15 +41,15 @@ export function validateClassificationResults(
 
   for (let i = 0; i < positions.length; i++) {
     if (positions[i] !== i + 1) {
-      errors.push(`Position gap in ${label}: expected ${i + 1}, got ${positions[i]}`);
+      warnings.push(`Position gap in ${label}: expected ${i + 1}, got ${positions[i]}`);
       break;
     }
   }
 
-  // Check 3: No duplicate positions
+  // Check 3: No duplicate positions (warn — PCS reports ties in sprint finishes)
   const positionSet = new Set(positions);
   if (positionSet.size !== positions.length) {
-    errors.push(`Duplicate positions found in ${label}`);
+    warnings.push(`Duplicate positions found in ${label}`);
   }
 
   // Check 4: Rider count in expected range

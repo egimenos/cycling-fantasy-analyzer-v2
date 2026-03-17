@@ -55,25 +55,25 @@ describe('validateClassificationResults', () => {
     expect(validation.errors[0]).toContain('No results parsed');
   });
 
-  it('should fail for duplicate positions', () => {
+  it('should warn for duplicate positions (ties are legitimate in PCS)', () => {
     const results = [
       makeParsedResult({ position: 1 }),
       makeParsedResult({ position: 1, riderName: 'Rider 2', riderSlug: 'rider/rider-2' }),
       makeParsedResult({ position: 2, riderName: 'Rider 3', riderSlug: 'rider/rider-3' }),
     ];
     const validation = validateClassificationResults(results, baseContext);
-    expect(validation.valid).toBe(false);
-    expect(validation.errors.some((e) => e.includes('Duplicate'))).toBe(true);
+    expect(validation.valid).toBe(true);
+    expect(validation.warnings.some((w) => w.includes('Duplicate'))).toBe(true);
   });
 
-  it('should fail for position gaps', () => {
+  it('should warn for position gaps (ties cause gaps in PCS)', () => {
     const results = [
       makeParsedResult({ position: 1 }),
       makeParsedResult({ position: 3, riderName: 'Rider 2', riderSlug: 'rider/rider-2' }),
     ];
     const validation = validateClassificationResults(results, baseContext);
-    expect(validation.valid).toBe(false);
-    expect(validation.errors.some((e) => e.includes('Position gap'))).toBe(true);
+    expect(validation.valid).toBe(true);
+    expect(validation.warnings.some((w) => w.includes('Position gap'))).toBe(true);
   });
 
   it('should fail for DNF with numeric position', () => {
