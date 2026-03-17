@@ -12,7 +12,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
-    "scrape": "ts-node -r tsconfig-paths/register src/cli.ts trigger-scrape"
+    "scrape": "ts-node -r tsconfig-paths/register src/cli.ts trigger-scrape",
+    "seed": "node dist/cli.js seed-database"
   },
   "dependencies": {
     "@cycling-analyzer/shared-types": "workspace:*",

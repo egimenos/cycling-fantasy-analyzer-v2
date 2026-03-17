@@ -7,6 +7,7 @@ import { PCS_SCRAPER_PORT } from '../application/scraping/ports/pcs-scraper.port
 import { TriggerScrapeUseCase } from '../application/scraping/trigger-scrape.use-case';
 import { GetScrapeJobsUseCase } from '../application/scraping/get-scrape-jobs.use-case';
 import { TriggerScrapeCommand } from './cli/trigger-scrape.command';
+import { SeedDatabaseCommand } from './cli/seed-database.command';
 
 @Module({
   imports: [DatabaseModule, ScheduleModule.forRoot()],
@@ -23,6 +24,7 @@ import { TriggerScrapeCommand } from './cli/trigger-scrape.command';
     TriggerScrapeUseCase,
     GetScrapeJobsUseCase,
     TriggerScrapeCommand,
+    SeedDatabaseCommand,
   ],
 })
 export class ScrapingModule {}
