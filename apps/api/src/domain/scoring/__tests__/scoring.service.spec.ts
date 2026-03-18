@@ -67,16 +67,14 @@ describe('Temporal Decay', () => {
 });
 
 describe('computeCategoryScore', () => {
-  it('should return weighted average for multi-season GC results', () => {
+  it('should return weighted sum for multi-season GC results', () => {
     const results = [
       createRaceResult({ year: 2024, position: 1, category: ResultCategory.GC }),
       createRaceResult({ year: 2023, position: 3, category: ResultCategory.GC }),
     ];
     // Grand Tour GC: pos1=150, pos3=100
-    // (150 * 1.0 + 100 * 0.6) / (1.0 + 0.6) = (150 + 60) / 1.6 = 131.25
-    expect(computeCategoryScore(results, ResultCategory.GC, RaceType.GRAND_TOUR, 2024)).toBeCloseTo(
-      131.25,
-    );
+    // 150 * 1.0 + 100 * 0.6 = 210
+    expect(computeCategoryScore(results, ResultCategory.GC, RaceType.GRAND_TOUR, 2024)).toBe(210);
   });
 
   it('should use race-type specific GC points for classics', () => {
@@ -127,11 +125,8 @@ describe('computeCategoryScore', () => {
       }),
     ];
     // GT GC 1st=150 (crossWeight=1.0), Classic GC 1st=200 (crossWeight=0.3)
-    // (150*1.0 + 200*0.3) / (1.0 + 0.3) = 210/1.3 ≈ 161.54
-    expect(computeCategoryScore(results, ResultCategory.GC, RaceType.GRAND_TOUR, 2024)).toBeCloseTo(
-      161.54,
-      1,
-    );
+    // 150*1.0 + 200*0.3 = 210
+    expect(computeCategoryScore(results, ResultCategory.GC, RaceType.GRAND_TOUR, 2024)).toBe(210);
   });
 
   it('should include GT mountain results when targeting mini tour', () => {
@@ -144,9 +139,9 @@ describe('computeCategoryScore', () => {
       }),
     ];
     // GT mountain 1st=50, crossWeight to mini tour=0.7
-    // Single result: 50*0.7/0.7 = 50
+    // 50 * 0.7 = 35
     expect(computeCategoryScore(results, ResultCategory.MOUNTAIN, RaceType.MINI_TOUR, 2024)).toBe(
-      50,
+      35,
     );
   });
 
@@ -193,8 +188,8 @@ describe('computeCategoryScore', () => {
       createRaceResult({ year: 2024, position: 1, category: ResultCategory.GC }),
       createRaceResult({ year: 2024, position: null, dnf: true, category: ResultCategory.GC }),
     ];
-    // Grand Tour GC pos1=150: (150 * 1.0 + 0 * 1.0) / (1.0 + 1.0) = 75
-    expect(computeCategoryScore(results, ResultCategory.GC, RaceType.GRAND_TOUR, 2024)).toBe(75);
+    // Grand Tour GC pos1=150, DNF=0 → 150 + 0 = 150
+    expect(computeCategoryScore(results, ResultCategory.GC, RaceType.GRAND_TOUR, 2024)).toBe(150);
   });
 
   it('should use mini tour mountain classification points', () => {
@@ -229,7 +224,7 @@ describe('computeCategoryScore', () => {
 });
 
 describe('computeStageScore', () => {
-  it('should sum stage points within a race then weighted-average across races', () => {
+  it('should sum stage points within a race then weight by temporal and cross-type', () => {
     const results = [
       // 2024 race: 3 stages — positions 1, 5, 20
       createRaceResult({
@@ -259,7 +254,7 @@ describe('computeStageScore', () => {
     expect(computeStageScore(results, RaceType.GRAND_TOUR, 2024)).toBe(58);
   });
 
-  it('should weighted-average across multiple seasons', () => {
+  it('should sum weighted scores across multiple seasons', () => {
     const results = [
       // 2024: win a stage (40 pts)
       createRaceResult({
@@ -279,8 +274,8 @@ describe('computeStageScore', () => {
       }),
     ];
     // 2024: 40 pts × 1.0 = 40; 2023: 40 pts × 0.6 = 24
-    // Total: (40 + 24) / (1.0 + 0.6) = 64 / 1.6 = 40
-    expect(computeStageScore(results, RaceType.GRAND_TOUR, 2024)).toBe(40);
+    // Total: 40 + 24 = 64
+    expect(computeStageScore(results, RaceType.GRAND_TOUR, 2024)).toBe(64);
   });
 
   it('should return 0 when no stage results exist', () => {
@@ -308,10 +303,10 @@ describe('computeStageScore', () => {
         stageNumber: 1,
       }),
     ];
-    // GT stage: 40 pts, effectiveWeight = 1.0 × 1.0 = 1.0
-    // Mini tour stage: 40 pts, effectiveWeight = 1.0 × 0.7 = 0.7
-    // (40*1.0 + 40*0.7) / (1.0 + 0.7) = 68/1.7 = 40
-    expect(computeStageScore(results, RaceType.GRAND_TOUR, 2024)).toBe(40);
+    // GT stage: 40 pts × 1.0 (temporal) × 1.0 (cross) = 40
+    // Mini tour stage: 40 pts × 1.0 (temporal) × 0.7 (cross) = 28
+    // Total: 40 + 28 = 68
+    expect(computeStageScore(results, RaceType.GRAND_TOUR, 2024)).toBe(68);
   });
 
   it('should handle sprinter winning multiple stages in one race', () => {
@@ -458,9 +453,9 @@ describe('computeRiderScore', () => {
       }),
     ];
     const score = computeRiderScore('rider-1', results, RaceType.GRAND_TOUR, 2024);
-    // GT GC 5th=60 (crossWeight=1.0), Classic GC 1st=200 (crossWeight=0.3)
-    // GC = (60*1.0 + 200*0.3) / (1.0 + 0.3) = 120/1.3 ≈ 92.31
-    expect(score.categoryScores.gc).toBeCloseTo(92.31, 1);
+    // GT GC 5th=60 × 1.0, Classic GC 1st=200 × 0.3
+    // GC = 60 + 60 = 120
+    expect(score.categoryScores.gc).toBe(120);
     expect(score.qualifyingResultsCount).toBe(2); // both count now
   });
 
@@ -477,19 +472,21 @@ describe('computeRiderScore', () => {
       createRaceResult({ year: 2023, position: 1, category: ResultCategory.GC }),
       createRaceResult({ year: 2022, position: 1, category: ResultCategory.GC }),
     ];
-    // maxSeasons=1: only 2024 → GC=150, seasonsUsed=1
+    // maxSeasons=1: only 2024 → GC=150×1.0 = 150
     const score1 = computeRiderScore('rider-1', results, RaceType.GRAND_TOUR, 2024, 1);
     expect(score1.categoryScores.gc).toBe(150);
     expect(score1.seasonsUsed).toBe(1);
     expect(score1.qualifyingResultsCount).toBe(1);
 
-    // maxSeasons=2: 2024+2023 → (150*1.0 + 150*0.6)/(1.0+0.6) = 150, seasonsUsed=2
+    // maxSeasons=2: 150×1.0 + 150×0.6 = 240
     const score2 = computeRiderScore('rider-1', results, RaceType.GRAND_TOUR, 2024, 2);
+    expect(score2.categoryScores.gc).toBe(240);
     expect(score2.seasonsUsed).toBe(2);
     expect(score2.qualifyingResultsCount).toBe(2);
 
-    // maxSeasons=3: all three → seasonsUsed=3
+    // maxSeasons=3: 150×1.0 + 150×0.6 + 150×0.3 = 285
     const score3 = computeRiderScore('rider-1', results, RaceType.GRAND_TOUR, 2024, 3);
+    expect(score3.categoryScores.gc).toBe(285);
     expect(score3.seasonsUsed).toBe(3);
     expect(score3.qualifyingResultsCount).toBe(3);
   });

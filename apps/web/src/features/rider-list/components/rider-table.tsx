@@ -237,7 +237,7 @@ function ExpandedRowContent({ rider }: { rider: AnalyzedRider }) {
             {(rider.matchConfidence * 100).toFixed(0)}%
           </span>
           <a
-            href={`https://www.procyclingstats.com/rider/${rider.matchedRider.pcsSlug}`}
+            href={`https://www.procyclingstats.com/${rider.matchedRider.pcsSlug}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400"

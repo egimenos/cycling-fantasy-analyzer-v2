@@ -28,6 +28,7 @@ describe('AnalyzeController', () => {
         totalProjectedPts: 200,
         categoryScores: { gc: 150, stage: 30, mountain: 10, sprint: 10 },
         seasonsUsed: 2,
+        seasonBreakdown: null,
       },
     ],
     totalSubmitted: 1,

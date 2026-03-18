@@ -51,14 +51,15 @@ export interface PoolStats {
 }
 
 /**
- * Computes the weighted average score for a rider in GC, Mountain, or Sprint category.
- * These categories have ONE result per race, so simple weighted average applies.
+ * Computes the cumulative weighted score for a rider in GC, Mountain, or Sprint category.
+ *
+ * Uses weighted sums (not averages): each result contributes
+ *   points × temporalWeight × crossTypeWeight
+ * and all contributions are summed. This means riders who race more AND perform well
+ * accumulate more projected points — matching fantasy game incentives.
  *
  * Cross-type scoring: results from other race types contribute with a reduced weight.
  * Points use the SOURCE race type's table (what the rider actually scored).
- * effectiveWeight = temporalWeight × crossTypeWeight
- *
- * DNF handling: position=null → 0 points, still counts in denominator.
  */
 export function computeCategoryScore(
   results: readonly RaceResult[],
@@ -67,47 +68,34 @@ export function computeCategoryScore(
   currentYear: number,
   maxSeasons = 3,
 ): number {
-  const qualifying = results.filter((r) => r.category === category);
-
-  if (qualifying.length === 0) {
-    return 0;
-  }
-
   let weightedSum = 0;
-  let totalWeight = 0;
 
-  for (const result of qualifying) {
+  for (const result of results) {
+    if (result.category !== category) continue;
+
     const temporalWeight = getTemporalWeight(result.year, currentYear, maxSeasons);
     if (temporalWeight === 0) continue;
 
     const crossWeight = getCrossTypeWeight(targetRaceType, result.raceType);
     if (crossWeight === 0) continue;
 
-    const effectiveWeight = temporalWeight * crossWeight;
     const points = getPointsForPosition(category, result.position, result.raceType);
-    weightedSum += points * effectiveWeight;
-    totalWeight += effectiveWeight;
+    weightedSum += points * temporalWeight * crossWeight;
   }
 
-  if (totalWeight === 0) {
-    return 0;
-  }
-
-  return weightedSum / totalWeight;
+  return weightedSum;
 }
 
 /**
- * Computes the stage score for a rider using CUMULATIVE scoring.
+ * Computes the cumulative weighted stage score for a rider.
  *
  * Algorithm:
  * 1. Group stage results by race (raceSlug + year)
- * 2. For each race: SUM all stage points (this is what the rider earns in that race)
- * 3. Apply effectiveWeight = temporalWeight × crossTypeWeight per race
- * 4. Weighted average = sum(raceSum × effectiveWeight) / sum(effectiveWeights)
+ * 2. For each race: SUM all stage points within that race
+ * 3. Multiply by effectiveWeight = temporalWeight × crossTypeWeight
+ * 4. Sum across all races (cumulative, not averaged)
  *
- * Cross-type scoring: stage results from other race types contribute with reduced weight.
- * Points use the SOURCE race type's table (stage points are the same across types, but
- * the cross-type weight discounts results from non-target race types).
+ * This rewards riders who race frequently and score stage points consistently.
  */
 export function computeStageScore(
   results: readonly RaceResult[],
@@ -115,15 +103,10 @@ export function computeStageScore(
   currentYear: number,
   maxSeasons = 3,
 ): number {
-  const qualifying = results.filter((r) => r.category === ResultCategory.STAGE);
-
-  if (qualifying.length === 0) {
-    return 0;
-  }
-
   // Group by race (raceSlug + year)
   const raceGroups = new Map<string, RaceResult[]>();
-  for (const result of qualifying) {
+  for (const result of results) {
+    if (result.category !== ResultCategory.STAGE) continue;
     const key = `${result.raceSlug}:${result.year}`;
     const group = raceGroups.get(key);
     if (group) {
@@ -134,7 +117,6 @@ export function computeStageScore(
   }
 
   let weightedSum = 0;
-  let totalWeight = 0;
 
   for (const [, stageResults] of raceGroups) {
     const firstResult = stageResults[0];
@@ -144,9 +126,6 @@ export function computeStageScore(
     const crossWeight = getCrossTypeWeight(targetRaceType, firstResult.raceType);
     if (crossWeight === 0) continue;
 
-    const effectiveWeight = temporalWeight * crossWeight;
-
-    // SUM all stage points within this race (using source race type table)
     let raceStageTotal = 0;
     for (const result of stageResults) {
       raceStageTotal += getPointsForPosition(
@@ -156,15 +135,10 @@ export function computeStageScore(
       );
     }
 
-    weightedSum += raceStageTotal * effectiveWeight;
-    totalWeight += effectiveWeight;
+    weightedSum += raceStageTotal * temporalWeight * crossWeight;
   }
 
-  if (totalWeight === 0) {
-    return 0;
-  }
-
-  return weightedSum / totalWeight;
+  return weightedSum;
 }
 
 /**
@@ -173,8 +147,8 @@ export function computeStageScore(
  *
  * totalProjectedPts = gc + stage + mountain + sprint
  *
- * Stage uses cumulative scoring (sum per race, then weighted avg across races).
- * GC/Mountain/Sprint use simple weighted average.
+ * All categories use cumulative weighted sums (not averages).
+ * Riders who race more and perform well accumulate more projected points.
  */
 export function computeRiderScore(
   riderId: string,

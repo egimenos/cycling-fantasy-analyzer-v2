@@ -76,6 +76,13 @@ export function RiderListPage() {
       {analyzeState.status === 'success' && (
         <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
           <div className="space-y-6">
+            <OptimizerPanel
+              riders={riders}
+              budget={budget}
+              mustInclude={mustInclude}
+              mustExclude={mustExclude}
+              lockedIds={lockedIds}
+            />
             <RiderTable
               data={analyzeState.data}
               lockedIds={lockedIds}
@@ -85,13 +92,6 @@ export function RiderListPage() {
               onToggleExclude={toggleExclude}
               onToggleSelect={handleToggleSelect}
               canSelect={teamBuilder.canSelect}
-            />
-            <OptimizerPanel
-              riders={riders}
-              budget={budget}
-              mustInclude={mustInclude}
-              mustExclude={mustExclude}
-              lockedIds={lockedIds}
             />
           </div>
           <aside>
