@@ -52,10 +52,10 @@ export function RiderListPage() {
   );
 
   const handleAnalyze = useCallback(
-    (parsedRiders: PriceListEntryDto[], raceType: RaceType, newBudget: number) => {
+    (parsedRiders: PriceListEntryDto[], raceType: RaceType, newBudget: number, seasons: number) => {
       setBudget(newBudget);
       teamBuilder.clearAll();
-      void analyze({ riders: parsedRiders, raceType, budget: newBudget });
+      void analyze({ riders: parsedRiders, raceType, budget: newBudget, seasons });
     },
     [analyze, teamBuilder],
   );

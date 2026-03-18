@@ -47,33 +47,17 @@ export interface PoolStats {
 }
 
 /**
- * Computes the weighted average score for a rider in a specific category.
+ * Computes the weighted average score for a rider in GC, Mountain, or Sprint category.
+ * These categories have ONE result per race, so simple weighted average applies.
  *
- * Algorithm:
- * 1. Filter results to only those matching targetRaceType AND category
- * 2. For each matching result:
- *    a. Look up points based on position
- *    b. Look up temporal weight based on year
- *    c. Weighted contribution = points × temporalWeight
- * 3. Average = sum(weighted contributions) / sum(temporal weights used)
- *    This produces a weighted average, not a simple average.
- * 4. If no qualifying results: return 0
- *
- * DNF handling: A DNF result has position=null → 0 points via getPointsForPosition.
- * It still counts toward the denominator because the rider was present but did not score.
- * This correctly penalizes riders who frequently abandon races.
- *
- * @param results - All race results for the rider (unfiltered)
- * @param category - The result category to score
- * @param targetRaceType - The race type to filter for
- * @param currentYear - The current season year for temporal weighting
- * @returns Weighted average score for this category
+ * DNF handling: position=null → 0 points, still counts in denominator.
  */
 export function computeCategoryScore(
   results: readonly RaceResult[],
   category: ResultCategory,
   targetRaceType: RaceType,
   currentYear: number,
+  maxSeasons = 3,
 ): number {
   const qualifying = results.filter(
     (r) => r.raceType === targetRaceType && r.category === category,
@@ -87,13 +71,78 @@ export function computeCategoryScore(
   let totalWeight = 0;
 
   for (const result of qualifying) {
-    const temporalWeight = getTemporalWeight(result.year, currentYear);
+    const temporalWeight = getTemporalWeight(result.year, currentYear, maxSeasons);
     if (temporalWeight === 0) {
       continue;
     }
 
-    const points = getPointsForPosition(category, result.position);
+    const points = getPointsForPosition(category, result.position, targetRaceType);
     weightedSum += points * temporalWeight;
+    totalWeight += temporalWeight;
+  }
+
+  if (totalWeight === 0) {
+    return 0;
+  }
+
+  return weightedSum / totalWeight;
+}
+
+/**
+ * Computes the stage score for a rider using CUMULATIVE scoring.
+ *
+ * Algorithm:
+ * 1. Group stage results by race (raceSlug + year)
+ * 2. For each race: SUM all stage points (this is what the rider earns in that race)
+ * 3. Apply temporal weight per race
+ * 4. Weighted average = sum(raceSum × temporalWeight) / sum(temporalWeights)
+ *
+ * This projects "in a typical race, how many total stage points does this rider earn?"
+ * A sprinter who wins 3 of 7 stages gets 120 pts from that race, not 17.1 avg.
+ */
+export function computeStageScore(
+  results: readonly RaceResult[],
+  targetRaceType: RaceType,
+  currentYear: number,
+  maxSeasons = 3,
+): number {
+  const qualifying = results.filter(
+    (r) => r.raceType === targetRaceType && r.category === ResultCategory.STAGE,
+  );
+
+  if (qualifying.length === 0) {
+    return 0;
+  }
+
+  // Group by race (raceSlug + year)
+  const raceGroups = new Map<string, RaceResult[]>();
+  for (const result of qualifying) {
+    const key = `${result.raceSlug}:${result.year}`;
+    const group = raceGroups.get(key);
+    if (group) {
+      group.push(result);
+    } else {
+      raceGroups.set(key, [result]);
+    }
+  }
+
+  let weightedSum = 0;
+  let totalWeight = 0;
+
+  for (const [, stageResults] of raceGroups) {
+    const year = stageResults[0].year;
+    const temporalWeight = getTemporalWeight(year, currentYear, maxSeasons);
+    if (temporalWeight === 0) {
+      continue;
+    }
+
+    // SUM all stage points within this race
+    let raceStageTotal = 0;
+    for (const result of stageResults) {
+      raceStageTotal += getPointsForPosition(ResultCategory.STAGE, result.position, targetRaceType);
+    }
+
+    weightedSum += raceStageTotal * temporalWeight;
     totalWeight += temporalWeight;
   }
 
@@ -109,50 +158,53 @@ export function computeCategoryScore(
  * This is the PURE historical performance projection — no price context.
  *
  * totalProjectedPts = gc + stage + mountain + sprint
- * For classics, only gc has data (stage/mountain/sprint are 0).
  *
- * @param riderId - The rider's unique identifier
- * @param results - All race results for the rider (unfiltered)
- * @param targetRaceType - The race type to project for
- * @param currentYear - The current season year for temporal weighting
- * @returns Full RiderScore value object
+ * Stage uses cumulative scoring (sum per race, then weighted avg across races).
+ * GC/Mountain/Sprint use simple weighted average.
  */
 export function computeRiderScore(
   riderId: string,
   results: readonly RaceResult[],
   targetRaceType: RaceType,
   currentYear: number,
+  maxSeasons = 3,
 ): RiderScore {
-  const gcScore = computeCategoryScore(results, ResultCategory.GC, targetRaceType, currentYear);
-  const stageScore = computeCategoryScore(
+  const gcScore = computeCategoryScore(
     results,
-    ResultCategory.STAGE,
+    ResultCategory.GC,
     targetRaceType,
     currentYear,
+    maxSeasons,
   );
+  const stageScore = computeStageScore(results, targetRaceType, currentYear, maxSeasons);
   const mountainScore = computeCategoryScore(
     results,
     ResultCategory.MOUNTAIN,
     targetRaceType,
     currentYear,
+    maxSeasons,
   );
   const sprintScore = computeCategoryScore(
     results,
     ResultCategory.SPRINT,
     targetRaceType,
     currentYear,
+    maxSeasons,
   );
 
   const totalProjectedPts = gcScore + stageScore + mountainScore + sprintScore;
 
   const seasonsUsed = new Set(
     results
-      .filter((r) => r.raceType === targetRaceType && getTemporalWeight(r.year, currentYear) > 0)
+      .filter(
+        (r) =>
+          r.raceType === targetRaceType && getTemporalWeight(r.year, currentYear, maxSeasons) > 0,
+      )
       .map((r) => r.year),
   ).size;
 
   const qualifyingResultsCount = results.filter(
-    (r) => r.raceType === targetRaceType && getTemporalWeight(r.year, currentYear) > 0,
+    (r) => r.raceType === targetRaceType && getTemporalWeight(r.year, currentYear, maxSeasons) > 0,
   ).length;
 
   return {
@@ -177,9 +229,6 @@ export function computeRiderScore(
  *
  * Riders with 0 projected points or 0 price are excluded from stats
  * because they would distort the normalization range.
- *
- * @param entries - Array of { totalProjectedPts, priceHillios } for each rider
- * @returns PoolStats with min/max values for normalization
  */
 export function computePoolStats(
   entries: ReadonlyArray<{ totalProjectedPts: number; priceHillios: number }>,
@@ -204,20 +253,8 @@ export function computePoolStats(
 /**
  * Computes the composite value score for a rider within the context of a rider pool.
  *
- * Algorithm:
- * 1. pointsPerHillio = totalProjectedPts / priceHillios
- * 2. Normalize pointsPerHillio to a 0–100 scale using the pool's min/max range
- * 3. Similarly normalize totalProjectedPts to 0–100
- * 4. compositeScore = α × normalizedPts + β × normalizedValueScore
- *    where α=0.6 (raw performance) and β=0.4 (price efficiency)
- *
- * Why not just pointsPerHillio? Because a cheap rider with 5 projected points
- * and excellent pts/H would rank above Pogačar. The composite balances both dimensions.
- *
- * @param riderScore - Pure projected score (from computeRiderScore)
- * @param priceHillios - Rider's price in hillios
- * @param poolStats - Min/max across the entire rider pool (for normalization)
- * @returns CompositeRiderScore with all value metrics
+ * compositeScore = α × normalizedPts + β × normalizedValueScore
+ * where α=0.6 (raw performance) and β=0.4 (price efficiency)
  */
 export function computeCompositeScore(
   riderScore: RiderScore,
@@ -260,8 +297,9 @@ export class ScoringService {
     results: readonly RaceResult[],
     targetRaceType: RaceType,
     currentYear: number,
+    maxSeasons = 3,
   ): RiderScore {
-    return computeRiderScore(riderId, results, targetRaceType, currentYear);
+    return computeRiderScore(riderId, results, targetRaceType, currentYear, maxSeasons);
   }
 
   computeCompositeScore(

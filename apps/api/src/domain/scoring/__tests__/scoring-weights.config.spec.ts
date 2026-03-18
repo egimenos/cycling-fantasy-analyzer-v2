@@ -1,59 +1,8 @@
 import { ResultCategory } from '../../shared/result-category.enum';
-import {
-  SCORING_WEIGHTS,
-  COMPOSITE_SCORE_WEIGHTS,
-  getPointsForPosition,
-} from '../scoring-weights.config';
+import { RaceType } from '../../shared/race-type.enum';
+import { COMPOSITE_SCORE_WEIGHTS, getPointsForPosition } from '../scoring-weights.config';
 
 describe('ScoringWeightsConfig', () => {
-  describe('SCORING_WEIGHTS', () => {
-    it('should have all four categories defined', () => {
-      expect(SCORING_WEIGHTS.gc).toBeDefined();
-      expect(SCORING_WEIGHTS.stage).toBeDefined();
-      expect(SCORING_WEIGHTS.mountain).toBeDefined();
-      expect(SCORING_WEIGHTS.sprint).toBeDefined();
-    });
-
-    it('should have position 1 defined for every category', () => {
-      expect(SCORING_WEIGHTS.gc[1]).toBeDefined();
-      expect(SCORING_WEIGHTS.stage[1]).toBeDefined();
-      expect(SCORING_WEIGHTS.mountain[1]).toBeDefined();
-      expect(SCORING_WEIGHTS.sprint[1]).toBeDefined();
-    });
-
-    it('should have all positive integer values', () => {
-      for (const category of Object.values(SCORING_WEIGHTS)) {
-        for (const [, points] of Object.entries(category)) {
-          expect(Number(points)).toBeGreaterThan(0);
-          expect(Number.isInteger(Number(points))).toBe(true);
-        }
-      }
-    });
-
-    it('should have descending points for ascending positions in GC', () => {
-      const positions = Object.keys(SCORING_WEIGHTS.gc)
-        .map(Number)
-        .sort((a, b) => a - b);
-      for (let i = 0; i < positions.length - 1; i++) {
-        expect(SCORING_WEIGHTS.gc[positions[i]]).toBeGreaterThanOrEqual(
-          SCORING_WEIGHTS.gc[positions[i + 1]],
-        );
-      }
-    });
-
-    it('should have GC 1st place at 200 points', () => {
-      expect(SCORING_WEIGHTS.gc[1]).toBe(200);
-    });
-
-    it('should have stage 1st place at 15 points', () => {
-      expect(SCORING_WEIGHTS.stage[1]).toBe(15);
-    });
-
-    it('should have exactly 4 categories', () => {
-      expect(Object.keys(SCORING_WEIGHTS)).toHaveLength(4);
-    });
-  });
-
   describe('COMPOSITE_SCORE_WEIGHTS', () => {
     it('should have rawPerformance and priceEfficiency summing to 1.0', () => {
       expect(
@@ -71,42 +20,97 @@ describe('ScoringWeightsConfig', () => {
   });
 
   describe('getPointsForPosition', () => {
-    it('should return correct points for GC position 1', () => {
-      expect(getPointsForPosition(ResultCategory.GC, 1)).toBe(200);
+    describe('stage classification (same for all race types)', () => {
+      it('should return 40 for stage position 1', () => {
+        expect(getPointsForPosition(ResultCategory.STAGE, 1, RaceType.GRAND_TOUR)).toBe(40);
+        expect(getPointsForPosition(ResultCategory.STAGE, 1, RaceType.MINI_TOUR)).toBe(40);
+      });
+
+      it('should return 17 for stage position 5', () => {
+        expect(getPointsForPosition(ResultCategory.STAGE, 5, RaceType.GRAND_TOUR)).toBe(17);
+      });
+
+      it('should return 1 for stage position 20', () => {
+        expect(getPointsForPosition(ResultCategory.STAGE, 20, RaceType.GRAND_TOUR)).toBe(1);
+      });
+
+      it('should return 0 for stage position 21', () => {
+        expect(getPointsForPosition(ResultCategory.STAGE, 21, RaceType.GRAND_TOUR)).toBe(0);
+      });
     });
 
-    it('should return correct points for GC position 10', () => {
-      expect(getPointsForPosition(ResultCategory.GC, 10)).toBe(45);
+    describe('GC — race-type specific', () => {
+      it('should return 200 for classic GC 1st', () => {
+        expect(getPointsForPosition(ResultCategory.GC, 1, RaceType.CLASSIC)).toBe(200);
+      });
+
+      it('should return 100 for mini tour GC 1st', () => {
+        expect(getPointsForPosition(ResultCategory.GC, 1, RaceType.MINI_TOUR)).toBe(100);
+      });
+
+      it('should return 150 for grand tour GC 1st', () => {
+        expect(getPointsForPosition(ResultCategory.GC, 1, RaceType.GRAND_TOUR)).toBe(150);
+      });
+
+      it('should return 30 for classic GC 10th', () => {
+        expect(getPointsForPosition(ResultCategory.GC, 10, RaceType.CLASSIC)).toBe(30);
+      });
+
+      it('should return 0 for classic GC 11th (only top 10)', () => {
+        expect(getPointsForPosition(ResultCategory.GC, 11, RaceType.CLASSIC)).toBe(0);
+      });
+
+      it('should return 10 for mini tour GC 15th', () => {
+        expect(getPointsForPosition(ResultCategory.GC, 15, RaceType.MINI_TOUR)).toBe(10);
+      });
+
+      it('should return 0 for mini tour GC 16th (only top 15)', () => {
+        expect(getPointsForPosition(ResultCategory.GC, 16, RaceType.MINI_TOUR)).toBe(0);
+      });
+
+      it('should return 10 for grand tour GC 20th', () => {
+        expect(getPointsForPosition(ResultCategory.GC, 20, RaceType.GRAND_TOUR)).toBe(10);
+      });
+
+      it('should return 0 for grand tour GC 21st (only top 20)', () => {
+        expect(getPointsForPosition(ResultCategory.GC, 21, RaceType.GRAND_TOUR)).toBe(0);
+      });
     });
 
-    it('should return correct points for stage position 5', () => {
-      expect(getPointsForPosition(ResultCategory.STAGE, 5)).toBe(6);
+    describe('mountain/sprint final classification — race-type specific', () => {
+      it('should return 40 for mini tour mountain 1st', () => {
+        expect(getPointsForPosition(ResultCategory.MOUNTAIN, 1, RaceType.MINI_TOUR)).toBe(40);
+      });
+
+      it('should return 50 for grand tour mountain 1st', () => {
+        expect(getPointsForPosition(ResultCategory.MOUNTAIN, 1, RaceType.GRAND_TOUR)).toBe(50);
+      });
+
+      it('should return 0 for classic mountain (no classification)', () => {
+        expect(getPointsForPosition(ResultCategory.MOUNTAIN, 1, RaceType.CLASSIC)).toBe(0);
+      });
+
+      it('should return 15 for mini tour sprint 3rd', () => {
+        expect(getPointsForPosition(ResultCategory.SPRINT, 3, RaceType.MINI_TOUR)).toBe(15);
+      });
+
+      it('should return 10 for grand tour sprint 5th', () => {
+        expect(getPointsForPosition(ResultCategory.SPRINT, 5, RaceType.GRAND_TOUR)).toBe(10);
+      });
     });
 
-    it('should return correct points for mountain position 1', () => {
-      expect(getPointsForPosition(ResultCategory.MOUNTAIN, 1)).toBe(12);
-    });
+    describe('edge cases', () => {
+      it('should return 0 for null position (DNF)', () => {
+        expect(getPointsForPosition(ResultCategory.GC, null, RaceType.GRAND_TOUR)).toBe(0);
+      });
 
-    it('should return correct points for sprint position 2', () => {
-      expect(getPointsForPosition(ResultCategory.SPRINT, 2)).toBe(4);
-    });
+      it('should return 0 for position 0', () => {
+        expect(getPointsForPosition(ResultCategory.GC, 0, RaceType.GRAND_TOUR)).toBe(0);
+      });
 
-    it('should return 0 for position beyond scoring threshold', () => {
-      expect(getPointsForPosition(ResultCategory.GC, 21)).toBe(0);
-      expect(getPointsForPosition(ResultCategory.STAGE, 11)).toBe(0);
-      expect(getPointsForPosition(ResultCategory.SPRINT, 5)).toBe(0);
-    });
-
-    it('should return 0 for null position (DNF)', () => {
-      expect(getPointsForPosition(ResultCategory.GC, null)).toBe(0);
-    });
-
-    it('should return 0 for position 0', () => {
-      expect(getPointsForPosition(ResultCategory.GC, 0)).toBe(0);
-    });
-
-    it('should return 0 for negative position', () => {
-      expect(getPointsForPosition(ResultCategory.GC, -1)).toBe(0);
+      it('should return 0 for negative position', () => {
+        expect(getPointsForPosition(ResultCategory.GC, -1, RaceType.GRAND_TOUR)).toBe(0);
+      });
     });
   });
 });

@@ -8,7 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2 } from 'lucide-react';
 
 interface RiderInputProps {
-  onAnalyze: (riders: PriceListEntryDto[], raceType: RaceType, budget: number) => void;
+  onAnalyze: (
+    riders: PriceListEntryDto[],
+    raceType: RaceType,
+    budget: number,
+    seasons: number,
+  ) => void;
   isLoading: boolean;
 }
 
@@ -39,6 +44,7 @@ export function RiderInput({ onAnalyze, isLoading }: RiderInputProps) {
   const [text, setText] = useState('');
   const [raceType, setRaceType] = useState<RaceType>(RaceType.GRAND_TOUR);
   const [budget, setBudget] = useState(2000);
+  const [seasons, setSeasons] = useState(3);
 
   const parsedRiders = useMemo(() => parseRiderLines(text), [text]);
   const lineCount = text.split('\n').filter((l) => l.trim().length > 0).length;
@@ -46,7 +52,7 @@ export function RiderInput({ onAnalyze, isLoading }: RiderInputProps) {
 
   const handleSubmit = () => {
     if (parsedRiders.length === 0) return;
-    onAnalyze(parsedRiders, raceType, budget);
+    onAnalyze(parsedRiders, raceType, budget, seasons);
   };
 
   return (
@@ -106,6 +112,22 @@ export function RiderInput({ onAnalyze, isLoading }: RiderInputProps) {
             onChange={(e) => setBudget(Number(e.target.value))}
             placeholder="Budget in Hillios"
           />
+        </div>
+
+        <div className="min-w-[120px]">
+          <label htmlFor="seasons" className="mb-1.5 block text-sm font-medium">
+            Seasons
+          </label>
+          <Select value={String(seasons)} onValueChange={(v) => setSeasons(Number(v))}>
+            <SelectTrigger id="seasons">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">1 (current)</SelectItem>
+              <SelectItem value="2">2</SelectItem>
+              <SelectItem value="3">3</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <Button onClick={handleSubmit} disabled={parsedRiders.length === 0 || isLoading}>

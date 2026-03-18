@@ -21,6 +21,7 @@ export interface AnalyzeInput {
   riders: PriceListEntryDto[];
   raceType: RaceType;
   budget: number;
+  seasons?: number;
 }
 
 interface MatchedRiderInfo {
@@ -111,6 +112,7 @@ export class AnalyzePriceListUseCase {
     }
 
     const currentYear = new Date().getFullYear();
+    const maxSeasons = input.seasons ?? 3;
 
     interface ScoredEntry {
       entry: PriceListEntry;
@@ -151,6 +153,7 @@ export class AnalyzePriceListUseCase {
         results,
         input.raceType,
         currentYear,
+        maxSeasons,
       );
 
       return {

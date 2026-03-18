@@ -35,6 +35,7 @@ export interface AnalyzeRequest {
   riders: PriceListEntryDto[];
   raceType: RaceType;
   budget: number;
+  seasons?: number;
 }
 
 export interface AnalyzeResponse {

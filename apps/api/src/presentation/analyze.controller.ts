@@ -5,7 +5,10 @@ import {
   IsNumber,
   IsArray,
   IsEnum,
+  IsOptional,
+  IsInt,
   Min,
+  Max,
   ArrayMinSize,
   ValidateNested,
 } from 'class-validator';
@@ -42,6 +45,12 @@ class AnalyzeRequestDto {
   @IsNumber()
   @Min(1)
   budget!: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(3)
+  seasons?: number;
 }
 
 @Controller('api')
@@ -54,6 +63,7 @@ export class AnalyzeController {
       riders: dto.riders,
       raceType: dto.raceType,
       budget: dto.budget,
+      seasons: dto.seasons,
     });
   }
 }
