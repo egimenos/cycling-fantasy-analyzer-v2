@@ -1,9 +1,9 @@
-import { OptimizeTeamUseCase } from './optimize-team.use-case';
-import { ScoredRider } from '../../domain/optimizer/types';
+import { OptimizeTeamUseCase } from '../optimize-team.use-case';
+import { ScoredRider } from '../../../domain/optimizer/types';
 import {
   InsufficientRidersError,
   ConflictingConstraintsError,
-} from '../../domain/optimizer/errors';
+} from '../../../domain/optimizer/errors';
 
 function createRider(overrides: Partial<ScoredRider> & { id: string }): ScoredRider {
   return {

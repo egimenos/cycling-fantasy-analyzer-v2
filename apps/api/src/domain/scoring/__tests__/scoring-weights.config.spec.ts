@@ -1,9 +1,9 @@
-import { ResultCategory } from '../shared/result-category.enum';
+import { ResultCategory } from '../../shared/result-category.enum';
 import {
   SCORING_WEIGHTS,
   COMPOSITE_SCORE_WEIGHTS,
   getPointsForPosition,
-} from './scoring-weights.config';
+} from '../scoring-weights.config';
 
 describe('ScoringWeightsConfig', () => {
   describe('SCORING_WEIGHTS', () => {

@@ -1,6 +1,5 @@
 import { ParsedResult } from '../parsers/parsed-result.type';
 import { DiscoveredRace } from '../parsers/race-list.parser';
-import { RaceCatalogEntry } from '../../../domain/race/race-catalog';
 
 export interface ValidationResult {
   readonly valid: boolean;
@@ -141,34 +140,27 @@ export function validateStageRaceCompleteness(
   return { valid: errors.length === 0, warnings, errors };
 }
 
-export function validateRaceDiscovery(
-  discovered: DiscoveredRace[],
-  catalog: RaceCatalogEntry[],
-): ValidationResult {
+const GRAND_TOUR_SLUGS = ['tour-de-france', 'giro-d-italia', 'vuelta-a-espana'];
+
+export function validateRaceDiscovery(discovered: DiscoveredRace[]): ValidationResult {
   const warnings: string[] = [];
   const errors: string[] = [];
 
-  // Check 1: Minimum race count
   if (discovered.length < 25) {
     errors.push(`Only ${discovered.length} races discovered (expected >= 25)`);
   }
 
-  // Check 2: Grand Tours present
-  const grandTourSlugs = ['tour-de-france', 'giro-d-italia', 'vuelta-a-espana'];
   const discoveredSlugs = new Set(discovered.map((r) => r.slug));
-  const catalogGTs = catalog.filter((c) => grandTourSlugs.includes(c.slug));
-  for (const gt of catalogGTs) {
-    if (!discoveredSlugs.has(gt.slug)) {
-      warnings.push(`Grand Tour "${gt.name}" not found in discovered races`);
+  for (const slug of GRAND_TOUR_SLUGS) {
+    if (!discoveredSlugs.has(slug)) {
+      warnings.push(`Grand Tour "${slug}" not found in discovered races`);
     }
   }
 
-  // Check 3: No duplicate slugs
   if (discoveredSlugs.size !== discovered.length) {
     errors.push('Duplicate slugs found in discovered races');
   }
 
-  // Check 4: Valid URL format
   const urlRegex = /^race\/[a-z0-9-]+\/\d{4}/;
   const invalidUrls = discovered.filter((r) => !urlRegex.test(r.urlPath));
   if (invalidUrls.length > 0) {

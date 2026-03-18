@@ -116,10 +116,20 @@ To force-scrape a specific race:
 
 ```bash
 cd apps/api
-node dist/cli.js trigger-scrape -r tour-de-france -y 2026
+# Classic (default type)
 node dist/cli.js trigger-scrape -r milano-sanremo -y 2026
-node dist/cli.js trigger-scrape -r vuelta-a-espana -y 2025
+
+# Grand Tour (specify type)
+node dist/cli.js trigger-scrape -r tour-de-france -y 2026 -t grand_tour
+
+# Mini Tour
+node dist/cli.js trigger-scrape -r volta-a-catalunya -y 2026 -t mini_tour
+
+# With explicit name and class
+node dist/cli.js trigger-scrape -r some-race -y 2026 -t classic -n "Some Race" -c Pro
 ```
+
+Options: `-r` slug (required), `-y` year (required), `-t` type (classic|grand_tour|mini_tour, default: classic), `-n` name (default: slug capitalized), `-c` class (UWT|Pro|1, default: UWT).
 
 The slug must match the PCS URL segment: `procyclingstats.com/race/<slug>`.
 

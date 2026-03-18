@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { OptimizeController } from './optimize.controller';
-import { OptimizeTeamUseCase } from '../application/optimize/optimize-team.use-case';
+import { OptimizeController } from '../optimize.controller';
+import { OptimizeTeamUseCase } from '../../application/optimize/optimize-team.use-case';
 import {
   InsufficientRidersError,
   ConflictingConstraintsError,
   BudgetExceededByLockedRidersError,
   RiderNotFoundError,
-} from '../domain/optimizer/errors';
+} from '../../domain/optimizer/errors';
 
 describe('OptimizeController', () => {
   let controller: OptimizeController;

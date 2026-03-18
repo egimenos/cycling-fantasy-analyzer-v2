@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { extractClassificationUrls } from './classification-extractor';
+import { extractClassificationUrls } from '../classification-extractor';
 
-const FIXTURE_DIR = path.join(__dirname, '../../../../test/fixtures/pcs');
+const FIXTURE_DIR = path.join(__dirname, '../../../../../test/fixtures/pcs');
 
 function readFixture(filename: string): string {
   return fs.readFileSync(path.join(FIXTURE_DIR, filename), 'utf-8');

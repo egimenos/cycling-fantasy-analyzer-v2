@@ -1,11 +1,11 @@
-import { applyConstraints } from './constraints.service';
-import { ScoredRider } from './types';
+import { applyConstraints } from '../constraints.service';
+import { ScoredRider } from '../types';
 import {
   ConflictingConstraintsError,
   RiderNotFoundError,
   BudgetExceededByLockedRidersError,
   InsufficientRidersError,
-} from './errors';
+} from '../errors';
 
 function createRider(overrides: Partial<ScoredRider> & { id: string }): ScoredRider {
   return {

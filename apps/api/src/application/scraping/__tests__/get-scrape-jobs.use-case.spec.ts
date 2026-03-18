@@ -1,5 +1,5 @@
-import { GetScrapeJobsUseCase } from './get-scrape-jobs.use-case';
-import { ScrapeJob } from '../../domain/scrape-job/scrape-job.entity';
+import { GetScrapeJobsUseCase } from '../get-scrape-jobs.use-case';
+import { ScrapeJob } from '../../../domain/scrape-job/scrape-job.entity';
 
 const mockRepo = {
   save: jest.fn(),

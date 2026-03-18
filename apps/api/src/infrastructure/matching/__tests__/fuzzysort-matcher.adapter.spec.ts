@@ -1,5 +1,5 @@
-import { FuzzysortMatcherAdapter } from './fuzzysort-matcher.adapter';
-import { RiderTarget } from '../../domain/matching/rider-matcher.port';
+import { FuzzysortMatcherAdapter } from '../fuzzysort-matcher.adapter';
+import { RiderTarget } from '../../../domain/matching/rider-matcher.port';
 
 describe('FuzzysortMatcherAdapter', () => {
   let adapter: FuzzysortMatcherAdapter;

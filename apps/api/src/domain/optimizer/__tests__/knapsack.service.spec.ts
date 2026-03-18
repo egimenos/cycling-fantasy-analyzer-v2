@@ -1,6 +1,6 @@
-import { findOptimalTeam, buildTeamSelection } from './knapsack.service';
-import { ScoredRider } from './types';
-import { InsufficientRidersError } from './errors';
+import { findOptimalTeam, buildTeamSelection } from '../knapsack.service';
+import { ScoredRider } from '../types';
+import { InsufficientRidersError } from '../errors';
 
 function createRider(overrides: Partial<ScoredRider> & { id: string }): ScoredRider {
   return {

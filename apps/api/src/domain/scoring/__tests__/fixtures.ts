@@ -1,7 +1,7 @@
-import { RaceResult } from '../race-result/race-result.entity';
-import { RaceType } from '../shared/race-type.enum';
-import { RaceClass } from '../shared/race-class.enum';
-import { ResultCategory } from '../shared/result-category.enum';
+import { RaceResult } from '../../race-result/race-result.entity';
+import { RaceType } from '../../shared/race-type.enum';
+import { RaceClass } from '../../shared/race-class.enum';
+import { ResultCategory } from '../../shared/result-category.enum';
 
 interface RaceResultOverrides {
   id?: string;

@@ -15,7 +15,6 @@ import {
 } from '../../infrastructure/scraping/parsers/race-list.parser';
 import { RaceType } from '../../domain/shared/race-type.enum';
 import { RaceClass } from '../../domain/shared/race-class.enum';
-import { findRaceBySlug } from '../../domain/race/race-catalog';
 import { ScrapeStatus } from '../../domain/shared/scrape-status.enum';
 
 interface SeedDatabaseOptions {
@@ -101,14 +100,11 @@ export class SeedDatabaseCommand extends CommandRunner {
           const result = await this.triggerScrape.execute({
             raceSlug: race.slug,
             year,
-            raceMetadata: findRaceBySlug(race.slug)
-              ? undefined
-              : {
-                  name: race.name,
-                  raceType,
-                  raceClass,
-                  expectedStages: undefined,
-                },
+            raceMetadata: {
+              name: race.name,
+              raceType,
+              raceClass,
+            },
           });
 
           this.logger.log(`  ${label} — ${result.status} (${result.recordsUpserted} records)`);

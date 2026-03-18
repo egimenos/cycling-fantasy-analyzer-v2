@@ -3,7 +3,7 @@ import {
   ConflictingConstraintsError,
   RiderNotFoundError,
   BudgetExceededByLockedRidersError,
-} from './errors';
+} from '../errors';
 
 describe('Custom Error Classes', () => {
   it('should create InsufficientRidersError with correct message and name', () => {

@@ -1,6 +1,6 @@
-import { findAlternativeTeams } from './alternative-teams.service';
-import { findOptimalTeam } from './knapsack.service';
-import { ScoredRider } from './types';
+import { findAlternativeTeams } from '../alternative-teams.service';
+import { findOptimalTeam } from '../knapsack.service';
+import { ScoredRider } from '../types';
 
 function createRider(overrides: Partial<ScoredRider> & { id: string }): ScoredRider {
   return {

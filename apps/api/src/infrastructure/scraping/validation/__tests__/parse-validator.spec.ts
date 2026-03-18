@@ -1,11 +1,10 @@
-import { ResultCategory } from '../../../domain/shared/result-category.enum';
-import { ParsedResult } from '../parsers/parsed-result.type';
+import { ResultCategory } from '../../../../domain/shared/result-category.enum';
+import { ParsedResult } from '../../parsers/parsed-result.type';
 import {
   validateClassificationResults,
   validateStageRaceCompleteness,
   validateRaceDiscovery,
-} from './parse-validator';
-import { RACE_CATALOG } from '../../../domain/race/race-catalog';
+} from '../parse-validator';
 
 function makeParsedResult(overrides: Partial<ParsedResult> = {}): ParsedResult {
   return {
@@ -197,27 +196,27 @@ describe('validateRaceDiscovery', () => {
 
   it('should pass when >= 25 races and Grand Tours present', () => {
     const discovered = makeDiscoveredRaces(30);
-    const validation = validateRaceDiscovery(discovered, [...RACE_CATALOG]);
+    const validation = validateRaceDiscovery(discovered);
     expect(validation.valid).toBe(true);
   });
 
   it('should fail when < 25 races', () => {
     const discovered = makeDiscoveredRaces(10);
-    const validation = validateRaceDiscovery(discovered, [...RACE_CATALOG]);
+    const validation = validateRaceDiscovery(discovered);
     expect(validation.valid).toBe(false);
     expect(validation.errors.some((e) => e.includes('expected >= 25'))).toBe(true);
   });
 
   it('should warn when a Grand Tour is missing', () => {
     const discovered = makeDiscoveredRaces(30).filter((r) => r.slug !== 'tour-de-france');
-    const validation = validateRaceDiscovery(discovered, [...RACE_CATALOG]);
-    expect(validation.warnings.some((w) => w.includes('Tour de France'))).toBe(true);
+    const validation = validateRaceDiscovery(discovered);
+    expect(validation.warnings.some((w) => w.includes('tour-de-france'))).toBe(true);
   });
 
   it('should fail when duplicate slugs exist', () => {
     const discovered = makeDiscoveredRaces(25);
     discovered.push({ ...discovered[5] });
-    const validation = validateRaceDiscovery(discovered, [...RACE_CATALOG]);
+    const validation = validateRaceDiscovery(discovered);
     expect(validation.valid).toBe(false);
     expect(validation.errors.some((e) => e.includes('Duplicate slugs'))).toBe(true);
   });

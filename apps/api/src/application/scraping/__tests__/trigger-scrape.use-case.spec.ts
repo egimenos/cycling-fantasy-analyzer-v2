@@ -1,7 +1,9 @@
-import { TriggerScrapeUseCase } from './trigger-scrape.use-case';
-import { ScrapeJob } from '../../domain/scrape-job/scrape-job.entity';
-import { ScrapeStatus } from '../../domain/shared/scrape-status.enum';
-import { ResultCategory } from '../../domain/shared/result-category.enum';
+import { TriggerScrapeUseCase, RaceMetadata } from '../trigger-scrape.use-case';
+import { ScrapeJob } from '../../../domain/scrape-job/scrape-job.entity';
+import { ScrapeStatus } from '../../../domain/shared/scrape-status.enum';
+import { ResultCategory } from '../../../domain/shared/result-category.enum';
+import { RaceType } from '../../../domain/shared/race-type.enum';
+import { RaceClass } from '../../../domain/shared/race-class.enum';
 
 const mockPcsClient = { fetchPage: jest.fn() };
 const mockRiderRepo = {
@@ -33,6 +35,19 @@ function createUseCase(): TriggerScrapeUseCase {
     mockJobRepo as never,
   );
 }
+
+const CLASSIC_METADATA: RaceMetadata = {
+  name: 'Milano-Sanremo',
+  raceType: RaceType.CLASSIC,
+  raceClass: RaceClass.UWT,
+};
+
+const GRAND_TOUR_METADATA: RaceMetadata = {
+  name: 'Tour de France',
+  raceType: RaceType.GRAND_TOUR,
+  raceClass: RaceClass.UWT,
+  expectedStages: 21,
+};
 
 // Minimal valid HTML that parsers can extract results from
 function makeResultHtml(riderCount: number): string {
@@ -93,12 +108,6 @@ describe('TriggerScrapeUseCase', () => {
     mockRiderRepo.saveMany.mockResolvedValue(undefined);
   });
 
-  it('should throw Error for unknown race slug without metadata', async () => {
-    await expect(useCase.execute({ raceSlug: 'nonexistent-race', year: 2024 })).rejects.toThrow(
-      'not in catalog and no metadata provided',
-    );
-  });
-
   it('should scrape a classic race end-to-end', async () => {
     const classicHtml = makeResultHtml(100);
     mockPcsClient.fetchPage.mockResolvedValue(classicHtml);
@@ -107,6 +116,7 @@ describe('TriggerScrapeUseCase', () => {
     const result = await useCase.execute({
       raceSlug: 'milano-sanremo',
       year: 2024,
+      raceMetadata: CLASSIC_METADATA,
     });
 
     expect(result.jobId).toBeDefined();
@@ -121,7 +131,11 @@ describe('TriggerScrapeUseCase', () => {
     mockPcsClient.fetchPage.mockResolvedValue(classicHtml);
     mockResultRepo.saveMany.mockResolvedValue(100);
 
-    await useCase.execute({ raceSlug: 'milano-sanremo', year: 2024 });
+    await useCase.execute({
+      raceSlug: 'milano-sanremo',
+      year: 2024,
+      raceMetadata: CLASSIC_METADATA,
+    });
 
     const savedJobs = mockJobRepo.save.mock.calls.map((c: [ScrapeJob]) => c[0]);
     expect(savedJobs[0].status).toBe(ScrapeStatus.PENDING);
@@ -132,9 +146,9 @@ describe('TriggerScrapeUseCase', () => {
   it('should mark job as failed on error', async () => {
     mockPcsClient.fetchPage.mockRejectedValue(new Error('Network error'));
 
-    await expect(useCase.execute({ raceSlug: 'milano-sanremo', year: 2024 })).rejects.toThrow(
-      'Network error',
-    );
+    await expect(
+      useCase.execute({ raceSlug: 'milano-sanremo', year: 2024, raceMetadata: CLASSIC_METADATA }),
+    ).rejects.toThrow('Network error');
 
     const savedJobs = mockJobRepo.save.mock.calls.map((c: [ScrapeJob]) => c[0]);
     expect(savedJobs[2].status).toBe(ScrapeStatus.FAILED);
@@ -146,7 +160,11 @@ describe('TriggerScrapeUseCase', () => {
     mockPcsClient.fetchPage.mockResolvedValue(classicHtml);
     mockResultRepo.saveMany.mockResolvedValue(3);
 
-    await useCase.execute({ raceSlug: 'milano-sanremo', year: 2024 });
+    await useCase.execute({
+      raceSlug: 'milano-sanremo',
+      year: 2024,
+      raceMetadata: CLASSIC_METADATA,
+    });
 
     expect(mockRiderRepo.findByPcsSlugs).toHaveBeenCalledTimes(1);
     expect(mockRiderRepo.findByPcsSlugs).toHaveBeenCalledWith(
@@ -169,6 +187,7 @@ describe('TriggerScrapeUseCase', () => {
     const result = await useCase.execute({
       raceSlug: 'tour-de-france',
       year: 2024,
+      raceMetadata: GRAND_TOUR_METADATA,
     });
 
     expect(result.status).toBe(ScrapeStatus.SUCCESS);
@@ -181,9 +200,9 @@ describe('TriggerScrapeUseCase', () => {
     // HTML with no results table → empty results → validation fails
     mockPcsClient.fetchPage.mockResolvedValue('<html><body></body></html>');
 
-    await expect(useCase.execute({ raceSlug: 'milano-sanremo', year: 2024 })).rejects.toThrow(
-      'Validation failed',
-    );
+    await expect(
+      useCase.execute({ raceSlug: 'milano-sanremo', year: 2024, raceMetadata: CLASSIC_METADATA }),
+    ).rejects.toThrow('Validation failed');
 
     // Job should be marked as failed
     const lastSave = mockJobRepo.save.mock.calls.at(-1);
@@ -195,7 +214,11 @@ describe('TriggerScrapeUseCase', () => {
     mockPcsClient.fetchPage.mockResolvedValue(classicHtml);
     mockResultRepo.saveMany.mockResolvedValue(100);
 
-    await useCase.execute({ raceSlug: 'milano-sanremo', year: 2024 });
+    await useCase.execute({
+      raceSlug: 'milano-sanremo',
+      year: 2024,
+      raceMetadata: CLASSIC_METADATA,
+    });
 
     const savedResults = mockResultRepo.saveMany.mock.calls[0][0];
     expect(savedResults.length).toBe(100);

@@ -1,4 +1,4 @@
-import { mapPriceListEntries, PriceListEntryDto } from './price-list-entry';
+import { mapPriceListEntries, PriceListEntryDto } from '../price-list-entry';
 
 describe('mapPriceListEntries', () => {
   it('should map valid DTOs to PriceListEntry array', () => {

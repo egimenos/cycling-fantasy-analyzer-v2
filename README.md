@@ -79,8 +79,9 @@ node dist/cli.js seed-database              # last 3 years (default)
 node dist/cli.js seed-database --years 5    # last 5 years
 node dist/cli.js seed-database --dry-run    # preview races without scraping
 
-# Scrape a single race
-node dist/cli.js trigger-scrape -r tour-de-france -y 2024
+# Scrape a single race (specify type for non-classics)
+node dist/cli.js trigger-scrape -r milano-sanremo -y 2024
+node dist/cli.js trigger-scrape -r tour-de-france -y 2024 -t grand_tour
 ```
 
 The seed command discovers races dynamically from PCS calendar pages (WorldTour + ProSeries + Europe Tour .1), filters by allowed class, deduplicates, and skips races that have already been scraped successfully. Safe to re-run.

@@ -1,4 +1,4 @@
-import { Rider } from './rider.entity';
+import { Rider } from '../rider.entity';
 
 describe('Rider', () => {
   describe('create', () => {

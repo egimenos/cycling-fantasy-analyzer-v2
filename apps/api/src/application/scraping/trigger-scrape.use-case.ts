@@ -14,7 +14,6 @@ import {
 import { ScrapeJob } from '../../domain/scrape-job/scrape-job.entity';
 import { Rider } from '../../domain/rider/rider.entity';
 import { RaceResult } from '../../domain/race-result/race-result.entity';
-import { findRaceBySlug, RaceCatalogEntry } from '../../domain/race/race-catalog';
 import { RaceType } from '../../domain/shared/race-type.enum';
 import { RaceClass } from '../../domain/shared/race-class.enum';
 import { PcsScraperPort, PCS_SCRAPER_PORT } from './ports/pcs-scraper.port';
@@ -32,16 +31,17 @@ import {
   validateStageRaceCompleteness,
 } from '../../infrastructure/scraping/validation/parse-validator';
 
+export interface RaceMetadata {
+  readonly name: string;
+  readonly raceType: RaceType;
+  readonly raceClass: RaceClass;
+  readonly expectedStages?: number;
+}
+
 export interface TriggerScrapeInput {
   readonly raceSlug: string;
   readonly year: number;
-  /** Override race metadata for races not in the static catalog */
-  readonly raceMetadata?: {
-    readonly name: string;
-    readonly raceType: RaceType;
-    readonly raceClass: RaceClass;
-    readonly expectedStages?: number;
-  };
+  readonly raceMetadata: RaceMetadata;
 }
 
 export interface TriggerScrapeOutput {
@@ -66,31 +66,26 @@ export class TriggerScrapeUseCase {
   ) {}
 
   async execute(input: TriggerScrapeInput): Promise<TriggerScrapeOutput> {
-    const catalogEntry: RaceCatalogEntry =
-      findRaceBySlug(input.raceSlug) ?? this.buildCatalogEntry(input);
+    const { raceSlug, year, raceMetadata } = input;
 
-    const job = ScrapeJob.create(input.raceSlug, input.year);
+    const job = ScrapeJob.create(raceSlug, year);
     await this.scrapeJobRepo.save(job);
 
     const runningJob = job.markRunning();
     await this.scrapeJobRepo.save(runningJob);
 
     const startTime = Date.now();
-    this.logger.log(
-      `Starting scrape for ${input.raceSlug} ${input.year} (${catalogEntry.raceType})`,
-    );
+    this.logger.log(`Starting scrape for ${raceSlug} ${year} (${raceMetadata.raceType})`);
 
     try {
-      const allResults = await this.scrapeRace(catalogEntry, input.year);
-      this.logger.log(
-        `Parsed ${allResults.length} results for ${input.raceSlug} ${input.year}, persisting...`,
-      );
+      const allResults = await this.scrapeRace(raceSlug, raceMetadata, year);
+      this.logger.log(`Parsed ${allResults.length} results for ${raceSlug} ${year}, persisting...`);
 
-      const recordsUpserted = await this.persistResults(allResults, catalogEntry, input.year);
+      const recordsUpserted = await this.persistResults(allResults, raceSlug, raceMetadata, year);
 
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       this.logger.log(
-        `Completed ${input.raceSlug} ${input.year}: ${recordsUpserted} records upserted in ${elapsed}s`,
+        `Completed ${raceSlug} ${year}: ${recordsUpserted} records upserted in ${elapsed}s`,
       );
 
       const completedJob = runningJob.markSuccess(recordsUpserted);
@@ -104,7 +99,7 @@ export class TriggerScrapeUseCase {
     } catch (error) {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       const msg = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`Failed ${input.raceSlug} ${input.year} after ${elapsed}s: ${msg}`);
+      this.logger.error(`Failed ${raceSlug} ${year} after ${elapsed}s: ${msg}`);
 
       const failedJob = runningJob.markFailed(msg);
       await this.scrapeJobRepo.save(failedJob);
@@ -112,11 +107,15 @@ export class TriggerScrapeUseCase {
     }
   }
 
-  private async scrapeRace(catalogEntry: RaceCatalogEntry, year: number): Promise<ParsedResult[]> {
-    if (catalogEntry.raceType === RaceType.CLASSIC) {
-      return this.scrapeClassic(catalogEntry.slug, year);
+  private async scrapeRace(
+    raceSlug: string,
+    metadata: RaceMetadata,
+    year: number,
+  ): Promise<ParsedResult[]> {
+    if (metadata.raceType === RaceType.CLASSIC) {
+      return this.scrapeClassic(raceSlug, year);
     }
-    return this.scrapeStageRace(catalogEntry, year);
+    return this.scrapeStageRace(raceSlug, metadata, year);
   }
 
   private async scrapeClassic(slug: string, year: number): Promise<ParsedResult[]> {
@@ -145,10 +144,11 @@ export class TriggerScrapeUseCase {
   }
 
   private async scrapeStageRace(
-    catalogEntry: RaceCatalogEntry,
+    raceSlug: string,
+    metadata: RaceMetadata,
     year: number,
   ): Promise<ParsedResult[]> {
-    const gcPath = `race/${catalogEntry.slug}/${year}/gc`;
+    const gcPath = `race/${raceSlug}/${year}/gc`;
     this.logger.log(`Scraping stage race GC: ${gcPath}`);
 
     const gcHtml = await this.pcsClient.fetchPage(gcPath);
@@ -157,9 +157,7 @@ export class TriggerScrapeUseCase {
     const allResults: ParsedResult[] = [];
     const classifications: { type: string; stageNumber?: number }[] = [];
 
-    this.logger.log(
-      `Found ${classificationUrls.length} classifications for ${catalogEntry.slug} ${year}`,
-    );
+    this.logger.log(`Found ${classificationUrls.length} classifications for ${raceSlug} ${year}`);
 
     for (let i = 0; i < classificationUrls.length; i++) {
       const classUrl = classificationUrls[i];
@@ -184,23 +182,23 @@ export class TriggerScrapeUseCase {
       );
 
       const validation = validateClassificationResults(results, {
-        raceSlug: catalogEntry.slug,
+        raceSlug,
         classificationType: classUrl.classificationType,
         stageNumber: classUrl.stageNumber ?? undefined,
       });
 
       if (!validation.valid) {
         this.logger.error(
-          `Validation failed for ${catalogEntry.slug} ${classLabel}: ${validation.errors.join('; ')}`,
+          `Validation failed for ${raceSlug} ${classLabel}: ${validation.errors.join('; ')}`,
         );
         throw new Error(
-          `Validation failed for ${catalogEntry.slug} ${classLabel}: ${validation.errors.join('; ')}`,
+          `Validation failed for ${raceSlug} ${classLabel}: ${validation.errors.join('; ')}`,
         );
       }
 
       if (validation.warnings.length > 0) {
         this.logger.warn(
-          `Validation warnings for ${catalogEntry.slug} ${classLabel}: ${validation.warnings.join('; ')}`,
+          `Validation warnings for ${raceSlug} ${classLabel}: ${validation.warnings.join('; ')}`,
         );
       }
 
@@ -213,19 +211,19 @@ export class TriggerScrapeUseCase {
 
     const completeness = validateStageRaceCompleteness(
       classifications,
-      catalogEntry.slug,
-      catalogEntry.expectedStages,
+      raceSlug,
+      metadata.expectedStages,
     );
 
     if (!completeness.valid) {
       throw new Error(
-        `Stage race completeness failed for ${catalogEntry.slug}: ${completeness.errors.join('; ')}`,
+        `Stage race completeness failed for ${raceSlug}: ${completeness.errors.join('; ')}`,
       );
     }
 
     if (completeness.warnings.length > 0) {
       this.logger.warn(
-        `Completeness warnings for ${catalogEntry.slug}: ${completeness.warnings.join('; ')}`,
+        `Completeness warnings for ${raceSlug}: ${completeness.warnings.join('; ')}`,
       );
     }
 
@@ -252,22 +250,10 @@ export class TriggerScrapeUseCase {
     }
   }
 
-  private buildCatalogEntry(input: TriggerScrapeInput): RaceCatalogEntry {
-    if (!input.raceMetadata) {
-      throw new Error(`Race "${input.raceSlug}" not in catalog and no metadata provided`);
-    }
-    return {
-      slug: input.raceSlug,
-      name: input.raceMetadata.name,
-      raceType: input.raceMetadata.raceType,
-      raceClass: input.raceMetadata.raceClass,
-      expectedStages: input.raceMetadata.expectedStages,
-    };
-  }
-
   private async persistResults(
     parsedResults: ParsedResult[],
-    catalogEntry: RaceCatalogEntry,
+    raceSlug: string,
+    metadata: RaceMetadata,
     year: number,
   ): Promise<number> {
     // Collect unique riders from parsed results
@@ -278,9 +264,7 @@ export class TriggerScrapeUseCase {
       }
     }
 
-    this.logger.debug(
-      `Upserting ${uniqueRiders.size} unique riders for ${catalogEntry.slug} ${year}`,
-    );
+    this.logger.debug(`Upserting ${uniqueRiders.size} unique riders for ${raceSlug} ${year}`);
 
     // Batch-fetch existing riders in one query
     const slugs = [...uniqueRiders.keys()];
@@ -318,7 +302,7 @@ export class TriggerScrapeUseCase {
     await this.riderRepo.saveMany(ridersToSave);
 
     this.logger.debug(
-      `Riders: ${newRiders} created, ${updatedRiders} updated for ${catalogEntry.slug} ${year}`,
+      `Riders: ${newRiders} created, ${updatedRiders} updated for ${raceSlug} ${year}`,
     );
 
     // Map to domain RaceResult entities
@@ -327,10 +311,10 @@ export class TriggerScrapeUseCase {
       .map((r) =>
         RaceResult.create({
           riderId: riderIdMap.get(r.riderSlug)!,
-          raceSlug: catalogEntry.slug,
-          raceName: catalogEntry.name,
-          raceType: catalogEntry.raceType,
-          raceClass: catalogEntry.raceClass,
+          raceSlug: raceSlug,
+          raceName: metadata.name,
+          raceType: metadata.raceType,
+          raceClass: metadata.raceClass,
           year,
           category: r.category,
           position: r.position,
@@ -340,7 +324,7 @@ export class TriggerScrapeUseCase {
         }),
       );
 
-    this.logger.debug(`Saving ${raceResults.length} race results for ${catalogEntry.slug} ${year}`);
+    this.logger.debug(`Saving ${raceResults.length} race results for ${raceSlug} ${year}`);
 
     return this.resultRepo.saveMany(raceResults);
   }

@@ -1,6 +1,6 @@
-import { RaceType } from '../shared/race-type.enum';
-import { ResultCategory } from '../shared/result-category.enum';
-import { getTemporalWeight, TEMPORAL_WEIGHTS } from './temporal-decay';
+import { RaceType } from '../../shared/race-type.enum';
+import { ResultCategory } from '../../shared/result-category.enum';
+import { getTemporalWeight, TEMPORAL_WEIGHTS } from '../temporal-decay';
 import {
   computeCategoryScore,
   computeRiderScore,
@@ -8,7 +8,7 @@ import {
   computeCompositeScore,
   RiderScore,
   ScoringService,
-} from './scoring.service';
+} from '../scoring.service';
 import { createRaceResult } from './fixtures';
 
 describe('Temporal Decay', () => {

@@ -1,5 +1,5 @@
-import { ScrapeJob } from './scrape-job.entity';
-import { ScrapeStatus } from '../shared/scrape-status.enum';
+import { ScrapeJob } from '../scrape-job.entity';
+import { ScrapeStatus } from '../../shared/scrape-status.enum';
 
 describe('ScrapeJob', () => {
   describe('create', () => {

@@ -1,4 +1,4 @@
-import { PcsClientAdapter, HttpResponse } from './pcs-client.adapter';
+import { PcsClientAdapter, HttpResponse } from '../pcs-client.adapter';
 
 describe('PcsClientAdapter', () => {
   let adapter: PcsClientAdapter;

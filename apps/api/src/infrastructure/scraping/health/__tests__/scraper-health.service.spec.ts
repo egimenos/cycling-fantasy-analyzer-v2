@@ -1,5 +1,5 @@
-import { ScraperHealthService } from './scraper-health.service';
-import { HealthStatus } from '../../../domain/shared/health-status.enum';
+import { ScraperHealthService } from '../scraper-health.service';
+import { HealthStatus } from '../../../../domain/shared/health-status.enum';
 
 function makeResultHtml(riderCount: number): string {
   const rows = Array.from(

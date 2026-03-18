@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { parseClassicResults } from './classic.parser';
-import { ResultCategory } from '../../../domain/shared/result-category.enum';
+import { parseClassicResults } from '../classic.parser';
+import { ResultCategory } from '../../../../domain/shared/result-category.enum';
 
-const FIXTURE_DIR = path.join(__dirname, '../../../../test/fixtures/pcs');
+const FIXTURE_DIR = path.join(__dirname, '../../../../../test/fixtures/pcs');
 
 function readFixture(filename: string): string {
   return fs.readFileSync(path.join(FIXTURE_DIR, filename), 'utf-8');

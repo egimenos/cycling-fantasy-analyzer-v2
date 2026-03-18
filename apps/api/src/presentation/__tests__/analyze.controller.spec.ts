@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AnalyzeController } from './analyze.controller';
+import { AnalyzeController } from '../analyze.controller';
 import {
   AnalyzePriceListUseCase,
   AnalyzeResponse,
-} from '../application/analyze/analyze-price-list.use-case';
+} from '../../application/analyze/analyze-price-list.use-case';
 
 describe('AnalyzeController', () => {
   let controller: AnalyzeController;
