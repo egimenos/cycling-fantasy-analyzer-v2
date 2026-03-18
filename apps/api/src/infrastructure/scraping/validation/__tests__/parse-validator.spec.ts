@@ -165,11 +165,32 @@ describe('validateStageRaceCompleteness', () => {
     expect(validation.warnings.some((w) => w.includes('Expected 21 stages'))).toBe(true);
   });
 
-  it('should fail when no stages are found', () => {
+  it('should fail when no stages are found and none skipped', () => {
     const classifications = [{ type: 'GC' }];
     const validation = validateStageRaceCompleteness(classifications, 'tour-de-france');
     expect(validation.valid).toBe(false);
     expect(validation.errors.some((e) => e.includes('No individual stages'))).toBe(true);
+  });
+
+  it('should warn (not fail) when no stages found but some were skipped', () => {
+    const classifications = [{ type: 'GC' }];
+    const validation = validateStageRaceCompleteness(classifications, 'paris-nice', undefined, 3);
+    expect(validation.valid).toBe(true);
+    expect(validation.warnings.some((w) => w.includes('No individual stages'))).toBe(true);
+    expect(validation.warnings.some((w) => w.includes('3 stage(s) skipped'))).toBe(true);
+  });
+
+  it('should include skipped count in stage mismatch warning', () => {
+    const classifications = [
+      { type: 'GC' },
+      { type: 'SPRINT' },
+      { type: 'MOUNTAIN' },
+      { type: 'STAGE', stageNumber: 1 },
+      { type: 'STAGE', stageNumber: 2 },
+    ];
+    const validation = validateStageRaceCompleteness(classifications, 'paris-nice', 8, 2);
+    expect(validation.valid).toBe(true);
+    expect(validation.warnings.some((w) => w.includes('2 skipped'))).toBe(true);
   });
 
   it('should warn on missing sprint classification', () => {
@@ -191,6 +212,7 @@ describe('validateRaceDiscovery', () => {
       name: `Race ${i}`,
       raceType: 'STAGE_RACE' as const,
       classText: '2.UWT',
+      startDate: '2024-03-01',
     }));
   }
 

@@ -48,6 +48,12 @@ export interface TriggerScrapeOutput {
   readonly jobId: string;
   readonly status: string;
   readonly recordsUpserted: number;
+  readonly warnings: string[];
+}
+
+interface ScrapeRaceResult {
+  results: ParsedResult[];
+  warnings: string[];
 }
 
 @Injectable()
@@ -78,10 +84,17 @@ export class TriggerScrapeUseCase {
     this.logger.log(`Starting scrape for ${raceSlug} ${year} (${raceMetadata.raceType})`);
 
     try {
-      const allResults = await this.scrapeRace(raceSlug, raceMetadata, year);
-      this.logger.log(`Parsed ${allResults.length} results for ${raceSlug} ${year}, persisting...`);
+      const scrapeResult = await this.scrapeRace(raceSlug, raceMetadata, year);
+      this.logger.log(
+        `Parsed ${scrapeResult.results.length} results for ${raceSlug} ${year}, persisting...`,
+      );
 
-      const recordsUpserted = await this.persistResults(allResults, raceSlug, raceMetadata, year);
+      const recordsUpserted = await this.persistResults(
+        scrapeResult.results,
+        raceSlug,
+        raceMetadata,
+        year,
+      );
 
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       this.logger.log(
@@ -95,6 +108,7 @@ export class TriggerScrapeUseCase {
         jobId: job.id,
         status: completedJob.status,
         recordsUpserted,
+        warnings: scrapeResult.warnings,
       };
     } catch (error) {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -111,19 +125,25 @@ export class TriggerScrapeUseCase {
     raceSlug: string,
     metadata: RaceMetadata,
     year: number,
-  ): Promise<ParsedResult[]> {
+  ): Promise<ScrapeRaceResult> {
     if (metadata.raceType === RaceType.CLASSIC) {
       return this.scrapeClassic(raceSlug, year);
     }
     return this.scrapeStageRace(raceSlug, metadata, year);
   }
 
-  private async scrapeClassic(slug: string, year: number): Promise<ParsedResult[]> {
+  private async scrapeClassic(slug: string, year: number): Promise<ScrapeRaceResult> {
     const path = `race/${slug}/${year}/result`;
     this.logger.log(`Scraping classic: ${path}`);
 
     const html = await this.pcsClient.fetchPage(path);
     const results = parseClassicResults(html);
+
+    if (results.length === 0) {
+      this.logger.debug(
+        `Empty results for ${slug} classic — URL: ${path}, HTML snippet: ${html.slice(0, 500)}`,
+      );
+    }
 
     const validation = validateClassificationResults(results, {
       raceSlug: slug,
@@ -133,6 +153,7 @@ export class TriggerScrapeUseCase {
     });
 
     if (!validation.valid) {
+      this.logger.error(`Validation failed for ${slug}: URL ${path}`);
       throw new Error(`Validation failed for ${slug}: ${validation.errors.join('; ')}`);
     }
 
@@ -140,14 +161,14 @@ export class TriggerScrapeUseCase {
       this.logger.warn(`Validation warnings for ${slug}: ${validation.warnings.join('; ')}`);
     }
 
-    return results;
+    return { results, warnings: validation.warnings };
   }
 
   private async scrapeStageRace(
     raceSlug: string,
     metadata: RaceMetadata,
     year: number,
-  ): Promise<ParsedResult[]> {
+  ): Promise<ScrapeRaceResult> {
     const gcPath = `race/${raceSlug}/${year}/gc`;
     this.logger.log(`Scraping stage race GC: ${gcPath}`);
 
@@ -156,6 +177,8 @@ export class TriggerScrapeUseCase {
 
     const allResults: ParsedResult[] = [];
     const classifications: { type: string; stageNumber?: number }[] = [];
+    const allWarnings: string[] = [];
+    const skippedClassifications: string[] = [];
 
     this.logger.log(`Found ${classificationUrls.length} classifications for ${raceSlug} ${year}`);
 
@@ -181,6 +204,18 @@ export class TriggerScrapeUseCase {
         `[${i + 1}/${classificationUrls.length}] ${classLabel}: ${results.length} riders parsed`,
       );
 
+      // Handle empty results for non-GC classifications gracefully
+      if (results.length === 0 && classUrl.classificationType !== 'GC') {
+        const warnMsg = `Empty results for ${raceSlug} ${classLabel} — skipping (suspended/cancelled?)`;
+        this.logger.warn(warnMsg);
+        this.logger.debug(
+          `Empty classification HTML snippet for ${classUrl.urlPath}: ${html.slice(0, 500)}`,
+        );
+        allWarnings.push(warnMsg);
+        skippedClassifications.push(classLabel);
+        continue;
+      }
+
       const validation = validateClassificationResults(results, {
         raceSlug,
         classificationType: classUrl.classificationType,
@@ -189,7 +224,7 @@ export class TriggerScrapeUseCase {
 
       if (!validation.valid) {
         this.logger.error(
-          `Validation failed for ${raceSlug} ${classLabel}: ${validation.errors.join('; ')}`,
+          `Validation failed for ${raceSlug} ${classLabel}: URL ${classUrl.urlPath} — ${validation.errors.join('; ')}`,
         );
         throw new Error(
           `Validation failed for ${raceSlug} ${classLabel}: ${validation.errors.join('; ')}`,
@@ -200,6 +235,7 @@ export class TriggerScrapeUseCase {
         this.logger.warn(
           `Validation warnings for ${raceSlug} ${classLabel}: ${validation.warnings.join('; ')}`,
         );
+        allWarnings.push(...validation.warnings);
       }
 
       allResults.push(...results);
@@ -209,10 +245,13 @@ export class TriggerScrapeUseCase {
       });
     }
 
+    const skippedStageCount = skippedClassifications.filter((c) => c.startsWith('STAGE')).length;
+
     const completeness = validateStageRaceCompleteness(
       classifications,
       raceSlug,
       metadata.expectedStages,
+      skippedStageCount,
     );
 
     if (!completeness.valid) {
@@ -225,9 +264,10 @@ export class TriggerScrapeUseCase {
       this.logger.warn(
         `Completeness warnings for ${raceSlug}: ${completeness.warnings.join('; ')}`,
       );
+      allWarnings.push(...completeness.warnings);
     }
 
-    return allResults;
+    return { results: allResults, warnings: allWarnings };
   }
 
   private parseByClassificationType(

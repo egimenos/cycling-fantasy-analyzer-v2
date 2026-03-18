@@ -103,6 +103,7 @@ export function validateStageRaceCompleteness(
   classifications: StageRaceCompletenessInput[],
   raceSlug: string,
   expectedStages?: number,
+  skippedStageCount?: number,
 ): ValidationResult {
   const warnings: string[] = [];
   const errors: string[] = [];
@@ -124,9 +125,19 @@ export function validateStageRaceCompleteness(
     .map((c) => c.stageNumber as number);
 
   if (stages.length === 0) {
-    errors.push(`No individual stages found for ${raceSlug}`);
+    if (skippedStageCount && skippedStageCount > 0) {
+      warnings.push(
+        `No individual stages found for ${raceSlug} (${skippedStageCount} stage(s) skipped — suspended/cancelled?)`,
+      );
+    } else {
+      errors.push(`No individual stages found for ${raceSlug}`);
+    }
   } else if (expectedStages && stages.length !== expectedStages) {
-    warnings.push(`Expected ${expectedStages} stages, found ${stages.length} for ${raceSlug}`);
+    const skippedInfo =
+      skippedStageCount && skippedStageCount > 0 ? ` (${skippedStageCount} skipped)` : '';
+    warnings.push(
+      `Expected ${expectedStages} stages, found ${stages.length}${skippedInfo} for ${raceSlug}`,
+    );
   }
 
   const sorted = [...stages].sort((a, b) => a - b);

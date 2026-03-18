@@ -24,6 +24,21 @@ interface SeedDatabaseOptions {
   dryRun: boolean;
 }
 
+interface SeedFailure {
+  slug: string;
+  year: number;
+  reason: string;
+  type: 'http' | 'no_results' | 'validation' | 'unknown';
+}
+
+function classifyFailure(slug: string, year: number, msg: string): SeedFailure {
+  let type: SeedFailure['type'] = 'unknown';
+  if (msg.includes('HTTP') || msg.includes('Cloudflare')) type = 'http';
+  else if (msg.includes('No results parsed')) type = 'no_results';
+  else if (msg.includes('Validation failed') || msg.includes('completeness')) type = 'validation';
+  return { slug, year, reason: msg, type };
+}
+
 const GRAND_TOUR_SLUGS = new Set(['tour-de-france', 'giro-d-italia', 'vuelta-a-espana']);
 
 @Command({
@@ -55,10 +70,14 @@ export class SeedDatabaseCommand extends CommandRunner {
       `Seed: years ${fromYear}-${currentYear} (${options.years} years), circuits: ${circuits.join(', ')}, classes: ${[...allowedClasses].join(', ')}`,
     );
 
+    const todayStr = new Date().toISOString().slice(0, 10);
+
     let totalRaces = 0;
     let totalRecords = 0;
     let totalSkipped = 0;
-    let totalFailed = 0;
+    let totalFutureSkipped = 0;
+    let totalWarnings = 0;
+    const failures: SeedFailure[] = [];
 
     for (const year of years) {
       const discovered = await this.discoverRacesForYear(year, circuits);
@@ -70,7 +89,10 @@ export class SeedDatabaseCommand extends CommandRunner {
       if (options.dryRun) {
         for (const race of deduplicated) {
           const type = this.mapRaceType(race);
-          this.logger.log(`  [DRY-RUN] ${race.slug} (${type}, ${race.classText}) — ${race.name}`);
+          const future = race.startDate && race.startDate > todayStr ? ' [FUTURE]' : '';
+          this.logger.log(
+            `  [DRY-RUN] ${race.slug} (${type}, ${race.classText})${future} — ${race.name}`,
+          );
         }
         continue;
       }
@@ -78,6 +100,13 @@ export class SeedDatabaseCommand extends CommandRunner {
       for (let i = 0; i < deduplicated.length; i++) {
         const race = deduplicated[i];
         const label = `[${year}] ${i + 1}/${deduplicated.length}: ${race.slug}`;
+
+        // Skip future races
+        if (race.startDate && race.startDate > todayStr) {
+          this.logger.log(`  ${label} — skipping future race (starts ${race.startDate})`);
+          totalFutureSkipped++;
+          continue;
+        }
 
         // Skip already scraped
         const existing = await this.scrapeJobRepo.findByRaceAndYear(
@@ -110,20 +139,70 @@ export class SeedDatabaseCommand extends CommandRunner {
           this.logger.log(`  ${label} — ${result.status} (${result.recordsUpserted} records)`);
           totalRecords += result.recordsUpserted;
           totalRaces++;
+
+          if (result.warnings.length > 0) {
+            totalWarnings += result.warnings.length;
+            for (const w of result.warnings) {
+              this.logger.warn(`  ${label} — ${w}`);
+            }
+          }
         } catch (error) {
           const msg = error instanceof Error ? error.message : String(error);
           this.logger.error(`  ${label} — FAILED: ${msg}`);
-          totalFailed++;
+          failures.push(classifyFailure(race.slug, year, msg));
         }
       }
     }
 
+    this.printSummary(
+      totalRaces,
+      totalRecords,
+      totalSkipped,
+      totalFutureSkipped,
+      totalWarnings,
+      failures,
+    );
+  }
+
+  private printSummary(
+    totalRaces: number,
+    totalRecords: number,
+    totalSkipped: number,
+    totalFutureSkipped: number,
+    totalWarnings: number,
+    failures: SeedFailure[],
+  ): void {
     this.logger.log('');
     this.logger.log('=== SEED SUMMARY ===');
-    this.logger.log(`Races scraped:  ${totalRaces}`);
-    this.logger.log(`Records added:  ${totalRecords}`);
-    this.logger.log(`Skipped:        ${totalSkipped}`);
-    this.logger.log(`Failed:         ${totalFailed}`);
+    this.logger.log(`Races scraped:     ${totalRaces}`);
+    this.logger.log(`Records added:     ${totalRecords}`);
+    this.logger.log(`Skipped (done):    ${totalSkipped}`);
+    this.logger.log(`Skipped (future):  ${totalFutureSkipped}`);
+    this.logger.log(`Warnings:          ${totalWarnings}`);
+    this.logger.log(`Failed:            ${failures.length}`);
+
+    if (failures.length > 0) {
+      const grouped = new Map<SeedFailure['type'], SeedFailure[]>();
+      for (const f of failures) {
+        const list = grouped.get(f.type) ?? [];
+        list.push(f);
+        grouped.set(f.type, list);
+      }
+
+      const labels: Record<SeedFailure['type'], string> = {
+        http: 'HTTP errors',
+        no_results: 'No results',
+        validation: 'Validation errors',
+        unknown: 'Unknown',
+      };
+
+      for (const [type, items] of grouped) {
+        this.logger.log(`  ${labels[type]} (${items.length}):`);
+        for (const f of items) {
+          this.logger.log(`    - ${f.slug} ${f.year}: ${f.reason}`);
+        }
+      }
+    }
   }
 
   private async discoverRacesForYear(year: number, circuits: string[]): Promise<DiscoveredRace[]> {

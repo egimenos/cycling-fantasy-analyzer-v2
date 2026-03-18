@@ -68,6 +68,24 @@ describe('parseRaceList', () => {
         expect(race.urlPath).toMatch(urlRegex);
       }
     });
+
+    it('should parse startDate for Tour Down Under', () => {
+      const tdu = races.find((r) => r.slug === 'tour-down-under');
+      expect(tdu).toBeDefined();
+      expect(tdu!.startDate).toBe('2025-01-21');
+    });
+
+    it('should parse startDate for Milano-Sanremo (single date)', () => {
+      const msr = races.find((r) => r.slug === 'milano-sanremo');
+      expect(msr).toBeDefined();
+      expect(msr!.startDate).toBe('2025-03-22');
+    });
+
+    it('should have startDate for all races', () => {
+      for (const race of races) {
+        expect(race.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      }
+    });
   });
 
   it('should return empty array for HTML without calendar table', () => {

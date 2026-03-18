@@ -40,6 +40,13 @@ export class TriggerScrapeCommand extends CommandRunner {
     this.logger.log(
       `Job ${result.jobId}: ${result.status} (${result.recordsUpserted} records upserted)`,
     );
+
+    if (result.warnings.length > 0) {
+      this.logger.warn(`Warnings (${result.warnings.length}):`);
+      for (const w of result.warnings) {
+        this.logger.warn(`  - ${w}`);
+      }
+    }
   }
 
   private slugToName(slug: string): string {

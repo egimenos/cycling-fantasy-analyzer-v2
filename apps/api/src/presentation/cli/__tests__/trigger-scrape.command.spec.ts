@@ -22,6 +22,7 @@ describe('TriggerScrapeCommand', () => {
       jobId: 'test-uuid',
       status: 'success',
       recordsUpserted: 150,
+      warnings: [],
     });
 
     await command.run([], {
@@ -47,6 +48,7 @@ describe('TriggerScrapeCommand', () => {
       jobId: 'test-uuid',
       status: 'success',
       recordsUpserted: 100,
+      warnings: [],
     });
 
     await command.run([], {

@@ -8,6 +8,7 @@ export interface DiscoveredRace {
   readonly name: string;
   readonly raceType: DiscoveredRaceType;
   readonly classText: string;
+  readonly startDate: string | null;
 }
 
 export function parseRaceList(html: string): DiscoveredRace[] {
@@ -22,6 +23,7 @@ export function parseRaceList(html: string): DiscoveredRace[] {
     headers.push($(th).text().trim());
   });
 
+  const dateCol = headers.indexOf('Date');
   const raceCol = headers.indexOf('Race');
   const classCol = headers.indexOf('Class');
   if (raceCol === -1 || classCol === -1) return [];
@@ -48,7 +50,18 @@ export function parseRaceList(html: string): DiscoveredRace[] {
 
     const name = link.text().trim();
 
-    races.push({ urlPath, slug, name, raceType, classText });
+    let startDate: string | null = null;
+    if (dateCol !== -1) {
+      const dateText = $(cells[dateCol]).text().trim();
+      const datePart = dateText.split(' - ')[0].trim();
+      const dateMatch = datePart.match(/^(\d{2})\.(\d{2})$/);
+      const yearMatch = urlPath.match(/\/(\d{4})/);
+      if (dateMatch && yearMatch) {
+        startDate = `${yearMatch[1]}-${dateMatch[2]}-${dateMatch[1]}`;
+      }
+    }
+
+    races.push({ urlPath, slug, name, raceType, classText, startDate });
   });
 
   return races;

@@ -122,6 +122,7 @@ describe('TriggerScrapeUseCase', () => {
     expect(result.jobId).toBeDefined();
     expect(result.status).toBe(ScrapeStatus.SUCCESS);
     expect(result.recordsUpserted).toBe(100);
+    expect(result.warnings).toEqual([]);
     expect(mockPcsClient.fetchPage).toHaveBeenCalledWith('race/milano-sanremo/2024/result');
     expect(mockJobRepo.save).toHaveBeenCalledTimes(3); // create + running + success
   });
@@ -207,6 +208,32 @@ describe('TriggerScrapeUseCase', () => {
     // Job should be marked as failed
     const lastSave = mockJobRepo.save.mock.calls.at(-1);
     expect(lastSave[0].status).toBe(ScrapeStatus.FAILED);
+  });
+
+  it('should skip empty non-GC classifications with warnings', async () => {
+    const gcHtml = makeGcPageWithSelectNav();
+    const stageHtml = makeResultHtml(150);
+    const emptyHtml = '<html><body></body></html>';
+
+    // GC page first, then alternate: return empty for stage-3
+    mockPcsClient.fetchPage.mockImplementation((path: string) => {
+      if (path.includes('/gc')) return Promise.resolve(gcHtml);
+      if (path.includes('stage-3')) return Promise.resolve(emptyHtml);
+      return Promise.resolve(stageHtml);
+    });
+
+    mockResultRepo.saveMany.mockResolvedValue(3000);
+
+    const result = await useCase.execute({
+      raceSlug: 'tour-de-france',
+      year: 2024,
+      raceMetadata: GRAND_TOUR_METADATA,
+    });
+
+    expect(result.status).toBe(ScrapeStatus.SUCCESS);
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.warnings.some((w) => w.includes('stage 3'))).toBe(true);
+    expect(result.warnings.some((w) => w.includes('suspended/cancelled'))).toBe(true);
   });
 
   it('should map parsed results to RaceResult entities with correct category', async () => {
