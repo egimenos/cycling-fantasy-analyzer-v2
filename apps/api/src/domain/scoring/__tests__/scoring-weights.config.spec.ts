@@ -1,6 +1,11 @@
 import { ResultCategory } from '../../shared/result-category.enum';
 import { RaceType } from '../../shared/race-type.enum';
-import { COMPOSITE_SCORE_WEIGHTS, getPointsForPosition } from '../scoring-weights.config';
+import {
+  COMPOSITE_SCORE_WEIGHTS,
+  CROSS_TYPE_WEIGHTS,
+  getCrossTypeWeight,
+  getPointsForPosition,
+} from '../scoring-weights.config';
 
 describe('ScoringWeightsConfig', () => {
   describe('COMPOSITE_SCORE_WEIGHTS', () => {
@@ -96,6 +101,35 @@ describe('ScoringWeightsConfig', () => {
 
       it('should return 10 for grand tour sprint 5th', () => {
         expect(getPointsForPosition(ResultCategory.SPRINT, 5, RaceType.GRAND_TOUR)).toBe(10);
+      });
+    });
+
+    describe('CROSS_TYPE_WEIGHTS', () => {
+      it('should return 1.0 for same race type', () => {
+        expect(getCrossTypeWeight(RaceType.GRAND_TOUR, RaceType.GRAND_TOUR)).toBe(1.0);
+        expect(getCrossTypeWeight(RaceType.MINI_TOUR, RaceType.MINI_TOUR)).toBe(1.0);
+        expect(getCrossTypeWeight(RaceType.CLASSIC, RaceType.CLASSIC)).toBe(1.0);
+      });
+
+      it('should return 0.7 between Grand Tour and Mini Tour', () => {
+        expect(getCrossTypeWeight(RaceType.GRAND_TOUR, RaceType.MINI_TOUR)).toBe(0.7);
+        expect(getCrossTypeWeight(RaceType.MINI_TOUR, RaceType.GRAND_TOUR)).toBe(0.7);
+      });
+
+      it('should return 0.3 between Classic and stage races', () => {
+        expect(getCrossTypeWeight(RaceType.GRAND_TOUR, RaceType.CLASSIC)).toBe(0.3);
+        expect(getCrossTypeWeight(RaceType.CLASSIC, RaceType.GRAND_TOUR)).toBe(0.3);
+        expect(getCrossTypeWeight(RaceType.MINI_TOUR, RaceType.CLASSIC)).toBe(0.3);
+        expect(getCrossTypeWeight(RaceType.CLASSIC, RaceType.MINI_TOUR)).toBe(0.3);
+      });
+
+      it('should be symmetric', () => {
+        const types = [RaceType.GRAND_TOUR, RaceType.MINI_TOUR, RaceType.CLASSIC];
+        for (const a of types) {
+          for (const b of types) {
+            expect(CROSS_TYPE_WEIGHTS[a][b]).toBe(CROSS_TYPE_WEIGHTS[b][a]);
+          }
+        }
       });
     });
 

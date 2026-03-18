@@ -116,6 +116,39 @@ const FINAL_CLASS_GRAND_TOUR: PositionPointsMap = {
 };
 
 /**
+ * Cross-race-type weight matrix.
+ * When computing scores for a target race type, results from other race types
+ * contribute with a reduced weight (on top of the temporal weight).
+ *
+ * GT ↔ Mini Tour = 0.7 (both stage races, transferable skills)
+ * Classic ↔ Stage races = 0.3 (different style, but quality indicator)
+ */
+export const CROSS_TYPE_WEIGHTS: Readonly<Record<RaceType, Readonly<Record<RaceType, number>>>> = {
+  [RaceType.GRAND_TOUR]: {
+    [RaceType.GRAND_TOUR]: 1.0,
+    [RaceType.MINI_TOUR]: 0.7,
+    [RaceType.CLASSIC]: 0.3,
+  },
+  [RaceType.MINI_TOUR]: {
+    [RaceType.GRAND_TOUR]: 0.7,
+    [RaceType.MINI_TOUR]: 1.0,
+    [RaceType.CLASSIC]: 0.3,
+  },
+  [RaceType.CLASSIC]: {
+    [RaceType.GRAND_TOUR]: 0.3,
+    [RaceType.MINI_TOUR]: 0.3,
+    [RaceType.CLASSIC]: 1.0,
+  },
+} as const;
+
+/**
+ * Returns the cross-type weight for a source race type relative to the target.
+ */
+export function getCrossTypeWeight(targetRaceType: RaceType, sourceRaceType: RaceType): number {
+  return CROSS_TYPE_WEIGHTS[targetRaceType][sourceRaceType] ?? 0;
+}
+
+/**
  * Composite score weights controlling the balance between raw talent and price efficiency.
  *
  * - rawPerformance (α=0.6): Weight for normalized projected points — ensures elite riders rank high.

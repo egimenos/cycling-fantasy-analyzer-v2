@@ -110,11 +110,44 @@ describe('computeCategoryScore', () => {
     expect(computeCategoryScore([], ResultCategory.GC, RaceType.GRAND_TOUR, 2024)).toBe(0);
   });
 
-  it('should filter out results from wrong race type', () => {
+  it('should include cross-type results with reduced weight', () => {
     const results = [
-      createRaceResult({ raceType: RaceType.CLASSIC, category: ResultCategory.GC, position: 1 }),
+      createRaceResult({
+        raceType: RaceType.GRAND_TOUR,
+        category: ResultCategory.GC,
+        position: 1,
+        year: 2024,
+      }),
+      createRaceResult({
+        raceType: RaceType.CLASSIC,
+        raceSlug: 'milano-sanremo',
+        category: ResultCategory.GC,
+        position: 1,
+        year: 2024,
+      }),
     ];
-    expect(computeCategoryScore(results, ResultCategory.GC, RaceType.GRAND_TOUR, 2024)).toBe(0);
+    // GT GC 1st=150 (crossWeight=1.0), Classic GC 1st=200 (crossWeight=0.3)
+    // (150*1.0 + 200*0.3) / (1.0 + 0.3) = 210/1.3 ≈ 161.54
+    expect(computeCategoryScore(results, ResultCategory.GC, RaceType.GRAND_TOUR, 2024)).toBeCloseTo(
+      161.54,
+      1,
+    );
+  });
+
+  it('should include GT mountain results when targeting mini tour', () => {
+    const results = [
+      createRaceResult({
+        raceType: RaceType.GRAND_TOUR,
+        category: ResultCategory.MOUNTAIN,
+        position: 1,
+        year: 2024,
+      }),
+    ];
+    // GT mountain 1st=50, crossWeight to mini tour=0.7
+    // Single result: 50*0.7/0.7 = 50
+    expect(computeCategoryScore(results, ResultCategory.MOUNTAIN, RaceType.MINI_TOUR, 2024)).toBe(
+      50,
+    );
   });
 
   it('should filter out results from wrong category', () => {
@@ -254,16 +287,31 @@ describe('computeStageScore', () => {
     expect(computeStageScore([], RaceType.GRAND_TOUR, 2024)).toBe(0);
   });
 
-  it('should filter by race type', () => {
+  it('should include cross-type stage results with reduced weight', () => {
     const results = [
+      // GT stage win
       createRaceResult({
-        raceType: RaceType.CLASSIC,
+        raceType: RaceType.GRAND_TOUR,
+        raceSlug: 'tour-de-france',
         category: ResultCategory.STAGE,
         position: 1,
         year: 2024,
+        stageNumber: 1,
+      }),
+      // Mini tour stage win (cross-type)
+      createRaceResult({
+        raceType: RaceType.MINI_TOUR,
+        raceSlug: 'tirreno-adriatico',
+        category: ResultCategory.STAGE,
+        position: 1,
+        year: 2024,
+        stageNumber: 1,
       }),
     ];
-    expect(computeStageScore(results, RaceType.GRAND_TOUR, 2024)).toBe(0);
+    // GT stage: 40 pts, effectiveWeight = 1.0 × 1.0 = 1.0
+    // Mini tour stage: 40 pts, effectiveWeight = 1.0 × 0.7 = 0.7
+    // (40*1.0 + 40*0.7) / (1.0 + 0.7) = 68/1.7 = 40
+    expect(computeStageScore(results, RaceType.GRAND_TOUR, 2024)).toBe(40);
   });
 
   it('should handle sprinter winning multiple stages in one race', () => {
@@ -393,7 +441,7 @@ describe('computeRiderScore', () => {
     expect(score.qualifyingResultsCount).toBe(2);
   });
 
-  it('should handle rider with mixed race type results', () => {
+  it('should include cross-type results in scoring', () => {
     const results = [
       createRaceResult({
         raceType: RaceType.GRAND_TOUR,
@@ -403,15 +451,17 @@ describe('computeRiderScore', () => {
       }),
       createRaceResult({
         raceType: RaceType.CLASSIC,
+        raceSlug: 'milano-sanremo',
         category: ResultCategory.GC,
         position: 1,
         year: 2024,
       }),
     ];
     const score = computeRiderScore('rider-1', results, RaceType.GRAND_TOUR, 2024);
-    // Grand Tour GC position 5 = 60
-    expect(score.categoryScores.gc).toBe(60);
-    expect(score.qualifyingResultsCount).toBe(1);
+    // GT GC 5th=60 (crossWeight=1.0), Classic GC 1st=200 (crossWeight=0.3)
+    // GC = (60*1.0 + 200*0.3) / (1.0 + 0.3) = 120/1.3 ≈ 92.31
+    expect(score.categoryScores.gc).toBeCloseTo(92.31, 1);
+    expect(score.qualifyingResultsCount).toBe(2); // both count now
   });
 
   it('should set riderId, targetRaceType, and currentYear correctly', () => {

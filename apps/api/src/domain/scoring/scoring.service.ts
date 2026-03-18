@@ -1,7 +1,11 @@
 import { RaceResult } from '../race-result/race-result.entity';
 import { RaceType } from '../shared/race-type.enum';
 import { ResultCategory } from '../shared/result-category.enum';
-import { getPointsForPosition, COMPOSITE_SCORE_WEIGHTS } from './scoring-weights.config';
+import {
+  getPointsForPosition,
+  getCrossTypeWeight,
+  COMPOSITE_SCORE_WEIGHTS,
+} from './scoring-weights.config';
 import { getTemporalWeight } from './temporal-decay';
 
 /**
@@ -50,6 +54,10 @@ export interface PoolStats {
  * Computes the weighted average score for a rider in GC, Mountain, or Sprint category.
  * These categories have ONE result per race, so simple weighted average applies.
  *
+ * Cross-type scoring: results from other race types contribute with a reduced weight.
+ * Points use the SOURCE race type's table (what the rider actually scored).
+ * effectiveWeight = temporalWeight × crossTypeWeight
+ *
  * DNF handling: position=null → 0 points, still counts in denominator.
  */
 export function computeCategoryScore(
@@ -59,9 +67,7 @@ export function computeCategoryScore(
   currentYear: number,
   maxSeasons = 3,
 ): number {
-  const qualifying = results.filter(
-    (r) => r.raceType === targetRaceType && r.category === category,
-  );
+  const qualifying = results.filter((r) => r.category === category);
 
   if (qualifying.length === 0) {
     return 0;
@@ -72,13 +78,15 @@ export function computeCategoryScore(
 
   for (const result of qualifying) {
     const temporalWeight = getTemporalWeight(result.year, currentYear, maxSeasons);
-    if (temporalWeight === 0) {
-      continue;
-    }
+    if (temporalWeight === 0) continue;
 
-    const points = getPointsForPosition(category, result.position, targetRaceType);
-    weightedSum += points * temporalWeight;
-    totalWeight += temporalWeight;
+    const crossWeight = getCrossTypeWeight(targetRaceType, result.raceType);
+    if (crossWeight === 0) continue;
+
+    const effectiveWeight = temporalWeight * crossWeight;
+    const points = getPointsForPosition(category, result.position, result.raceType);
+    weightedSum += points * effectiveWeight;
+    totalWeight += effectiveWeight;
   }
 
   if (totalWeight === 0) {
@@ -94,11 +102,12 @@ export function computeCategoryScore(
  * Algorithm:
  * 1. Group stage results by race (raceSlug + year)
  * 2. For each race: SUM all stage points (this is what the rider earns in that race)
- * 3. Apply temporal weight per race
- * 4. Weighted average = sum(raceSum × temporalWeight) / sum(temporalWeights)
+ * 3. Apply effectiveWeight = temporalWeight × crossTypeWeight per race
+ * 4. Weighted average = sum(raceSum × effectiveWeight) / sum(effectiveWeights)
  *
- * This projects "in a typical race, how many total stage points does this rider earn?"
- * A sprinter who wins 3 of 7 stages gets 120 pts from that race, not 17.1 avg.
+ * Cross-type scoring: stage results from other race types contribute with reduced weight.
+ * Points use the SOURCE race type's table (stage points are the same across types, but
+ * the cross-type weight discounts results from non-target race types).
  */
 export function computeStageScore(
   results: readonly RaceResult[],
@@ -106,9 +115,7 @@ export function computeStageScore(
   currentYear: number,
   maxSeasons = 3,
 ): number {
-  const qualifying = results.filter(
-    (r) => r.raceType === targetRaceType && r.category === ResultCategory.STAGE,
-  );
+  const qualifying = results.filter((r) => r.category === ResultCategory.STAGE);
 
   if (qualifying.length === 0) {
     return 0;
@@ -130,20 +137,27 @@ export function computeStageScore(
   let totalWeight = 0;
 
   for (const [, stageResults] of raceGroups) {
-    const year = stageResults[0].year;
-    const temporalWeight = getTemporalWeight(year, currentYear, maxSeasons);
-    if (temporalWeight === 0) {
-      continue;
-    }
+    const firstResult = stageResults[0];
+    const temporalWeight = getTemporalWeight(firstResult.year, currentYear, maxSeasons);
+    if (temporalWeight === 0) continue;
 
-    // SUM all stage points within this race
+    const crossWeight = getCrossTypeWeight(targetRaceType, firstResult.raceType);
+    if (crossWeight === 0) continue;
+
+    const effectiveWeight = temporalWeight * crossWeight;
+
+    // SUM all stage points within this race (using source race type table)
     let raceStageTotal = 0;
     for (const result of stageResults) {
-      raceStageTotal += getPointsForPosition(ResultCategory.STAGE, result.position, targetRaceType);
+      raceStageTotal += getPointsForPosition(
+        ResultCategory.STAGE,
+        result.position,
+        result.raceType,
+      );
     }
 
-    weightedSum += raceStageTotal * temporalWeight;
-    totalWeight += temporalWeight;
+    weightedSum += raceStageTotal * effectiveWeight;
+    totalWeight += effectiveWeight;
   }
 
   if (totalWeight === 0) {
@@ -198,13 +212,16 @@ export function computeRiderScore(
     results
       .filter(
         (r) =>
-          r.raceType === targetRaceType && getTemporalWeight(r.year, currentYear, maxSeasons) > 0,
+          getCrossTypeWeight(targetRaceType, r.raceType) > 0 &&
+          getTemporalWeight(r.year, currentYear, maxSeasons) > 0,
       )
       .map((r) => r.year),
   ).size;
 
   const qualifyingResultsCount = results.filter(
-    (r) => r.raceType === targetRaceType && getTemporalWeight(r.year, currentYear, maxSeasons) > 0,
+    (r) =>
+      getCrossTypeWeight(targetRaceType, r.raceType) > 0 &&
+      getTemporalWeight(r.year, currentYear, maxSeasons) > 0,
   ).length;
 
   return {
@@ -240,6 +257,7 @@ export interface SeasonBreakdown {
 /**
  * Computes per-season raw scores for a rider.
  * Uses maxSeasons=1 with currentYear=year to get unweighted scores per year.
+ * Includes cross-type results (any race type with non-zero cross weight).
  */
 export function computeSeasonBreakdown(
   results: readonly RaceResult[],
@@ -254,10 +272,13 @@ export function computeSeasonBreakdown(
     const weight = getTemporalWeight(year, currentYear, maxSeasons);
     if (weight === 0) continue;
 
-    const yearResults = results.filter((r) => r.year === year && r.raceType === targetRaceType);
+    const yearResults = results.filter(
+      (r) => r.year === year && getCrossTypeWeight(targetRaceType, r.raceType) > 0,
+    );
     if (yearResults.length === 0) continue;
 
     // Compute raw (unweighted) scores for this year using maxSeasons=1
+    // Cross-type weights are applied inside computeCategoryScore/computeStageScore
     const gc = computeCategoryScore(results, ResultCategory.GC, targetRaceType, year, 1);
     const stage = computeStageScore(results, targetRaceType, year, 1);
     const mountain = computeCategoryScore(
