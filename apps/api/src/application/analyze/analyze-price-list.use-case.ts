@@ -12,7 +12,11 @@ import {
   RaceResultRepositoryPort,
   RACE_RESULT_REPOSITORY_PORT,
 } from '../../domain/race-result/race-result.repository.port';
-import { ScoringService, CompositeRiderScore } from '../../domain/scoring/scoring.service';
+import {
+  ScoringService,
+  CompositeRiderScore,
+  SeasonBreakdown,
+} from '../../domain/scoring/scoring.service';
 import { RaceType } from '../../domain/shared/race-type.enum';
 import { Rider } from '../../domain/rider/rider.entity';
 import { mapPriceListEntries, PriceListEntry, PriceListEntryDto } from './price-list-entry';
@@ -48,6 +52,7 @@ export interface AnalyzedRider {
     sprint: number;
   } | null;
   seasonsUsed: number | null;
+  seasonBreakdown: SeasonBreakdown[] | null;
 }
 
 export interface AnalyzeResponse {
@@ -121,6 +126,7 @@ export class AnalyzePriceListUseCase {
       unmatched: boolean;
       composite: CompositeRiderScore | null;
       riderScore: ReturnType<ScoringService['computeRiderScore']> | null;
+      seasonBreakdown: SeasonBreakdown[] | null;
     }
 
     const scoredEntries: ScoredEntry[] = matchResults.map(({ entry, match }) => {
@@ -132,6 +138,7 @@ export class AnalyzePriceListUseCase {
           unmatched: true,
           composite: null,
           riderScore: null,
+          seasonBreakdown: null,
         };
       }
 
@@ -144,12 +151,19 @@ export class AnalyzePriceListUseCase {
           unmatched: true,
           composite: null,
           riderScore: null,
+          seasonBreakdown: null,
         };
       }
 
       const results = resultsByRider.get(rider.id) ?? [];
       const riderScore = this.scoringService.computeRiderScore(
         rider.id,
+        results,
+        input.raceType,
+        currentYear,
+        maxSeasons,
+      );
+      const seasonBreakdown = this.scoringService.computeSeasonBreakdown(
         results,
         input.raceType,
         currentYear,
@@ -168,6 +182,7 @@ export class AnalyzePriceListUseCase {
         unmatched: false,
         composite: null,
         riderScore,
+        seasonBreakdown,
       };
     });
 
@@ -194,6 +209,7 @@ export class AnalyzePriceListUseCase {
           totalProjectedPts: null,
           categoryScores: null,
           seasonsUsed: null,
+          seasonBreakdown: null,
         };
       }
 
@@ -215,6 +231,7 @@ export class AnalyzePriceListUseCase {
         totalProjectedPts: s.riderScore.totalProjectedPts,
         categoryScores: { ...s.riderScore.categoryScores },
         seasonsUsed: s.riderScore.seasonsUsed,
+        seasonBreakdown: s.seasonBreakdown,
       };
     });
 

@@ -224,6 +224,66 @@ export function computeRiderScore(
 }
 
 /**
+ * Per-season raw scores for transparency.
+ * Shows what the rider scored each year (unweighted) plus the applied weight.
+ */
+export interface SeasonBreakdown {
+  readonly year: number;
+  readonly gc: number;
+  readonly stage: number;
+  readonly mountain: number;
+  readonly sprint: number;
+  readonly total: number;
+  readonly weight: number;
+}
+
+/**
+ * Computes per-season raw scores for a rider.
+ * Uses maxSeasons=1 with currentYear=year to get unweighted scores per year.
+ */
+export function computeSeasonBreakdown(
+  results: readonly RaceResult[],
+  targetRaceType: RaceType,
+  currentYear: number,
+  maxSeasons = 3,
+): SeasonBreakdown[] {
+  const breakdown: SeasonBreakdown[] = [];
+
+  for (let offset = 0; offset < maxSeasons; offset++) {
+    const year = currentYear - offset;
+    const weight = getTemporalWeight(year, currentYear, maxSeasons);
+    if (weight === 0) continue;
+
+    const yearResults = results.filter((r) => r.year === year && r.raceType === targetRaceType);
+    if (yearResults.length === 0) continue;
+
+    // Compute raw (unweighted) scores for this year using maxSeasons=1
+    const gc = computeCategoryScore(results, ResultCategory.GC, targetRaceType, year, 1);
+    const stage = computeStageScore(results, targetRaceType, year, 1);
+    const mountain = computeCategoryScore(
+      results,
+      ResultCategory.MOUNTAIN,
+      targetRaceType,
+      year,
+      1,
+    );
+    const sprint = computeCategoryScore(results, ResultCategory.SPRINT, targetRaceType, year, 1);
+
+    breakdown.push({
+      year,
+      gc,
+      stage,
+      mountain,
+      sprint,
+      total: gc + stage + mountain + sprint,
+      weight,
+    });
+  }
+
+  return breakdown;
+}
+
+/**
  * Computes pool statistics from a set of rider scores + prices.
  * Used to normalize individual scores relative to the pool.
  *
@@ -300,6 +360,15 @@ export class ScoringService {
     maxSeasons = 3,
   ): RiderScore {
     return computeRiderScore(riderId, results, targetRaceType, currentYear, maxSeasons);
+  }
+
+  computeSeasonBreakdown(
+    results: readonly RaceResult[],
+    targetRaceType: RaceType,
+    currentYear: number,
+    maxSeasons = 3,
+  ): SeasonBreakdown[] {
+    return computeSeasonBreakdown(results, targetRaceType, currentYear, maxSeasons);
   }
 
   computeCompositeScore(

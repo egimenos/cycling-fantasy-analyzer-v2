@@ -17,6 +17,16 @@ export type CategoryScores = {
   [K in ResultCategory]: number;
 };
 
+export interface SeasonBreakdown {
+  year: number;
+  gc: number;
+  stage: number;
+  mountain: number;
+  sprint: number;
+  total: number;
+  weight: number;
+}
+
 export interface AnalyzedRider {
   rawName: string;
   rawTeam: string;
@@ -29,6 +39,7 @@ export interface AnalyzedRider {
   totalProjectedPts: number | null;
   categoryScores: CategoryScores | null;
   seasonsUsed: number | null;
+  seasonBreakdown: SeasonBreakdown[] | null;
 }
 
 export interface AnalyzeRequest {

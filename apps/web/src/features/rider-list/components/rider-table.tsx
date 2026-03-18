@@ -5,7 +5,7 @@ import { ScoreBadge } from '@/shared/ui/score-badge';
 import { Badge } from '@/shared/ui/badge';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { formatNumber, cn } from '@/shared/lib/utils';
-import { Lock, Unlock, XCircle } from 'lucide-react';
+import { Lock, Unlock, XCircle, ExternalLink } from 'lucide-react';
 
 interface RiderTableProps {
   data: AnalyzeResponse;
@@ -178,23 +178,72 @@ function ExpandedRowContent({ rider }: { rider: AnalyzedRider }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-3 lg:grid-cols-5">
-      {rider.categoryScores && (
-        <>
-          <ScoreDetail label="GC" value={rider.categoryScores.gc} />
-          <ScoreDetail label="Stage" value={rider.categoryScores.stage} />
-          <ScoreDetail label="Mountain" value={rider.categoryScores.mountain} />
-          <ScoreDetail label="Sprint" value={rider.categoryScores.sprint} />
-        </>
+    <div className="space-y-3">
+      {/* Weighted totals */}
+      <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-3 lg:grid-cols-6">
+        {rider.categoryScores && (
+          <>
+            <ScoreDetail label="GC" value={rider.categoryScores.gc} />
+            <ScoreDetail label="Stage" value={rider.categoryScores.stage} />
+            <ScoreDetail label="Mountain" value={rider.categoryScores.mountain} />
+            <ScoreDetail label="Sprint" value={rider.categoryScores.sprint} />
+          </>
+        )}
+        {rider.totalProjectedPts !== null && (
+          <ScoreDetail label="Total Projected" value={rider.totalProjectedPts} />
+        )}
+        {rider.compositeScore !== null && (
+          <ScoreDetail label="Composite" value={rider.compositeScore} />
+        )}
+      </div>
+
+      {/* Season breakdown table */}
+      {rider.seasonBreakdown && rider.seasonBreakdown.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="pb-1 pr-4 font-medium">Season</th>
+                <th className="pb-1 pr-4 text-right font-medium">GC</th>
+                <th className="pb-1 pr-4 text-right font-medium">Stage</th>
+                <th className="pb-1 pr-4 text-right font-medium">Mtn</th>
+                <th className="pb-1 pr-4 text-right font-medium">Sprint</th>
+                <th className="pb-1 pr-4 text-right font-medium">Total</th>
+                <th className="pb-1 text-right font-medium">Weight</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rider.seasonBreakdown.map((s) => (
+                <tr key={s.year} className="border-b border-dashed last:border-0">
+                  <td className="py-1 pr-4 font-medium">{s.year}</td>
+                  <td className="py-1 pr-4 text-right">{s.gc.toFixed(1)}</td>
+                  <td className="py-1 pr-4 text-right">{s.stage.toFixed(1)}</td>
+                  <td className="py-1 pr-4 text-right">{s.mountain.toFixed(1)}</td>
+                  <td className="py-1 pr-4 text-right">{s.sprint.toFixed(1)}</td>
+                  <td className="py-1 pr-4 text-right font-medium">{s.total.toFixed(1)}</td>
+                  <td className="py-1 text-right text-muted-foreground">&times;{s.weight}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-      {rider.compositeScore !== null && (
-        <ScoreDetail label="Composite" value={rider.compositeScore} />
-      )}
-      {rider.seasonsUsed !== null && <ScoreDetail label="Seasons Used" value={rider.seasonsUsed} />}
+
+      {/* Match info + PCS link */}
       {rider.matchedRider && (
-        <div className="col-span-full mt-1 text-xs text-muted-foreground">
-          Matched: {rider.matchedRider.fullName} ({rider.matchedRider.currentTeam}) — confidence:{' '}
-          {(rider.matchConfidence * 100).toFixed(0)}%
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span>
+            Matched: {rider.matchedRider.fullName} ({rider.matchedRider.currentTeam}) — confidence:{' '}
+            {(rider.matchConfidence * 100).toFixed(0)}%
+          </span>
+          <a
+            href={`https://www.procyclingstats.com/rider/${rider.matchedRider.pcsSlug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400"
+          >
+            PCS Profile <ExternalLink className="h-3 w-3" />
+          </a>
         </div>
       )}
     </div>
