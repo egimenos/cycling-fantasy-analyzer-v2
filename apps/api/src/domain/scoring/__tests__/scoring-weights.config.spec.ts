@@ -1,9 +1,12 @@
 import { ResultCategory } from '../../shared/result-category.enum';
 import { RaceType } from '../../shared/race-type.enum';
+import { RaceClass } from '../../shared/race-class.enum';
 import {
   COMPOSITE_SCORE_WEIGHTS,
   CROSS_TYPE_WEIGHTS,
+  RACE_CLASS_WEIGHTS,
   getCrossTypeWeight,
+  getRaceClassWeight,
   getPointsForPosition,
 } from '../scoring-weights.config';
 
@@ -129,6 +132,27 @@ describe('ScoringWeightsConfig', () => {
           for (const b of types) {
             expect(CROSS_TYPE_WEIGHTS[a][b]).toBe(CROSS_TYPE_WEIGHTS[b][a]);
           }
+        }
+      });
+    });
+
+    describe('RACE_CLASS_WEIGHTS', () => {
+      it('should return 1.0 for UWT', () => {
+        expect(getRaceClassWeight(RaceClass.UWT)).toBe(1.0);
+      });
+
+      it('should return 0.5 for Pro', () => {
+        expect(getRaceClassWeight(RaceClass.PRO)).toBe(0.5);
+      });
+
+      it('should return 0.3 for .1', () => {
+        expect(getRaceClassWeight(RaceClass.ONE)).toBe(0.3);
+      });
+
+      it('should cover all RaceClass values', () => {
+        for (const cls of Object.values(RaceClass)) {
+          expect(RACE_CLASS_WEIGHTS[cls]).toBeDefined();
+          expect(RACE_CLASS_WEIGHTS[cls]).toBeGreaterThan(0);
         }
       });
     });

@@ -1,4 +1,5 @@
 import { RaceType } from '../../shared/race-type.enum';
+import { RaceClass } from '../../shared/race-class.enum';
 import { ResultCategory } from '../../shared/result-category.enum';
 import { getTemporalWeight, TEMPORAL_WEIGHTS } from '../temporal-decay';
 import {
@@ -221,6 +222,57 @@ describe('computeCategoryScore', () => {
       35,
     );
   });
+
+  it('should apply race class weight for Pro races', () => {
+    const results = [
+      createRaceResult({
+        raceType: RaceType.MINI_TOUR,
+        raceClass: RaceClass.PRO,
+        category: ResultCategory.GC,
+        position: 1,
+        year: 2024,
+      }),
+    ];
+    // Mini Tour GC 1st = 100, classWeight = 0.5 → 50
+    expect(computeCategoryScore(results, ResultCategory.GC, RaceType.MINI_TOUR, 2024)).toBe(50);
+  });
+
+  it('should apply race class weight for .1 races', () => {
+    const results = [
+      createRaceResult({
+        raceType: RaceType.CLASSIC,
+        raceClass: RaceClass.ONE,
+        category: ResultCategory.GC,
+        position: 1,
+        year: 2024,
+      }),
+    ];
+    // Classic GC 1st = 200, classWeight = 0.3 → 60
+    expect(computeCategoryScore(results, ResultCategory.GC, RaceType.CLASSIC, 2024)).toBe(60);
+  });
+
+  it('should differentiate UWT vs Pro results for same race type', () => {
+    const results = [
+      createRaceResult({
+        raceType: RaceType.MINI_TOUR,
+        raceClass: RaceClass.UWT,
+        raceSlug: 'tirreno-adriatico',
+        category: ResultCategory.GC,
+        position: 1,
+        year: 2024,
+      }),
+      createRaceResult({
+        raceType: RaceType.MINI_TOUR,
+        raceClass: RaceClass.PRO,
+        raceSlug: 'tour-of-turkey',
+        category: ResultCategory.GC,
+        position: 1,
+        year: 2024,
+      }),
+    ];
+    // Tirreno GC 1st = 100 × 1.0 = 100; Turkey GC 1st = 100 × 0.5 = 50
+    expect(computeCategoryScore(results, ResultCategory.GC, RaceType.MINI_TOUR, 2024)).toBe(150);
+  });
 });
 
 describe('computeStageScore', () => {
@@ -350,6 +402,31 @@ describe('computeStageScore', () => {
     ];
     // 3 × 40 + 0 + 0 = 120 total stage points for that race
     expect(computeStageScore(results, RaceType.GRAND_TOUR, 2024)).toBe(120);
+  });
+
+  it('should apply race class weight to stage scores', () => {
+    const results = [
+      createRaceResult({
+        raceType: RaceType.MINI_TOUR,
+        raceClass: RaceClass.PRO,
+        raceSlug: 'tour-of-turkey',
+        year: 2024,
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+      }),
+      createRaceResult({
+        raceType: RaceType.MINI_TOUR,
+        raceClass: RaceClass.PRO,
+        raceSlug: 'tour-of-turkey',
+        year: 2024,
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 2,
+      }),
+    ];
+    // 2 stage wins = 80 pts, classWeight = 0.5 → 40
+    expect(computeStageScore(results, RaceType.MINI_TOUR, 2024)).toBe(40);
   });
 
   it('should exclude stages from old seasons', () => {

@@ -1,5 +1,6 @@
 import { ResultCategory } from '../shared/result-category.enum';
 import { RaceType } from '../shared/race-type.enum';
+import { RaceClass } from '../shared/race-class.enum';
 
 /**
  * Position-to-points mapping for each result category.
@@ -146,6 +147,27 @@ export const CROSS_TYPE_WEIGHTS: Readonly<Record<RaceType, Readonly<Record<RaceT
  */
 export function getCrossTypeWeight(targetRaceType: RaceType, sourceRaceType: RaceType): number {
   return CROSS_TYPE_WEIGHTS[targetRaceType][sourceRaceType] ?? 0;
+}
+
+/**
+ * Race class prestige multiplier.
+ * Differentiates the level of competition within the same race type.
+ *
+ * UWT (WorldTour): top-tier — Grand Tours, Monuments, WT stage races → full weight
+ * Pro (ProSeries): mid-tier — Tour of Turkey, Arctic Race, etc. → half weight
+ * 1 (.1 races): lower-tier — continental-level races → reduced weight
+ */
+export const RACE_CLASS_WEIGHTS: Readonly<Record<RaceClass, number>> = {
+  [RaceClass.UWT]: 1.0,
+  [RaceClass.PRO]: 0.5,
+  [RaceClass.ONE]: 0.3,
+} as const;
+
+/**
+ * Returns the prestige multiplier for a given race class.
+ */
+export function getRaceClassWeight(raceClass: RaceClass): number {
+  return RACE_CLASS_WEIGHTS[raceClass] ?? 0.3;
 }
 
 /**

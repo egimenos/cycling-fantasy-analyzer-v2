@@ -4,6 +4,7 @@ import { ResultCategory } from '../shared/result-category.enum';
 import {
   getPointsForPosition,
   getCrossTypeWeight,
+  getRaceClassWeight,
   COMPOSITE_SCORE_WEIGHTS,
 } from './scoring-weights.config';
 import { getTemporalWeight } from './temporal-decay';
@@ -79,8 +80,9 @@ export function computeCategoryScore(
     const crossWeight = getCrossTypeWeight(targetRaceType, result.raceType);
     if (crossWeight === 0) continue;
 
+    const classWeight = getRaceClassWeight(result.raceClass);
     const points = getPointsForPosition(category, result.position, result.raceType);
-    weightedSum += points * temporalWeight * crossWeight;
+    weightedSum += points * temporalWeight * crossWeight * classWeight;
   }
 
   return weightedSum;
@@ -126,6 +128,8 @@ export function computeStageScore(
     const crossWeight = getCrossTypeWeight(targetRaceType, firstResult.raceType);
     if (crossWeight === 0) continue;
 
+    const classWeight = getRaceClassWeight(firstResult.raceClass);
+
     let raceStageTotal = 0;
     for (const result of stageResults) {
       raceStageTotal += getPointsForPosition(
@@ -135,7 +139,7 @@ export function computeStageScore(
       );
     }
 
-    weightedSum += raceStageTotal * temporalWeight * crossWeight;
+    weightedSum += raceStageTotal * temporalWeight * crossWeight * classWeight;
   }
 
   return weightedSum;
