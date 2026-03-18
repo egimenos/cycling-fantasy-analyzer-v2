@@ -74,7 +74,7 @@ Both are optional. If neither exists, built-in defaults apply.
 The API includes CLI commands for scraping operations. These require a **build** first (`pnpm --filter @cycling-analyzer/api build`), then run from `apps/api/`:
 
 ```bash
-# Seed database — discover and scrape all WT + ProSeries races
+# Seed database — discover and scrape WT + ProSeries + Europe Tour .1 races
 node dist/cli.js seed-database              # last 3 years (default)
 node dist/cli.js seed-database --years 5    # last 5 years
 node dist/cli.js seed-database --dry-run    # preview races without scraping
@@ -83,7 +83,7 @@ node dist/cli.js seed-database --dry-run    # preview races without scraping
 node dist/cli.js trigger-scrape -r tour-de-france -y 2024
 ```
 
-The seed command discovers races dynamically from PCS calendar pages (WorldTour circuit 1 + ProSeries circuit 26), deduplicates, and skips races that have already been scraped successfully. Safe to re-run.
+The seed command discovers races dynamically from PCS calendar pages (WorldTour + ProSeries + Europe Tour .1), filters by allowed class, deduplicates, and skips races that have already been scraped successfully. Safe to re-run.
 
 ## Project Structure
 

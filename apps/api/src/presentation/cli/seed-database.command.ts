@@ -1,12 +1,18 @@
 import { Inject, Logger } from '@nestjs/common';
 import { Command, CommandRunner, Option } from 'nest-commander';
 import { TriggerScrapeUseCase } from '../../application/scraping/trigger-scrape.use-case';
-import { PcsScraperPort, PCS_SCRAPER_PORT } from '../../application/scraping/ports/pcs-scraper.port';
+import {
+  PcsScraperPort,
+  PCS_SCRAPER_PORT,
+} from '../../application/scraping/ports/pcs-scraper.port';
 import {
   ScrapeJobRepositoryPort,
   SCRAPE_JOB_REPOSITORY_PORT,
 } from '../../domain/scrape-job/scrape-job.repository.port';
-import { parseRaceList, DiscoveredRace } from '../../infrastructure/scraping/parsers/race-list.parser';
+import {
+  parseRaceList,
+  DiscoveredRace,
+} from '../../infrastructure/scraping/parsers/race-list.parser';
 import { RaceType } from '../../domain/shared/race-type.enum';
 import { RaceClass } from '../../domain/shared/race-class.enum';
 import { findRaceBySlug } from '../../domain/race/race-catalog';
@@ -15,6 +21,7 @@ import { ScrapeStatus } from '../../domain/shared/scrape-status.enum';
 interface SeedDatabaseOptions {
   years: number;
   circuit: string;
+  class: string;
   dryRun: boolean;
 }
 
@@ -22,7 +29,8 @@ const GRAND_TOUR_SLUGS = new Set(['tour-de-france', 'giro-d-italia', 'vuelta-a-e
 
 @Command({
   name: 'seed-database',
-  description: 'Seed DB with WT + ProSeries races from the last N years (default: 3)',
+  description:
+    'Seed DB with WT + ProSeries + Europe Tour .1 races from the last N years (default: 3)',
 })
 export class SeedDatabaseCommand extends CommandRunner {
   private readonly logger = new Logger(SeedDatabaseCommand.name);
@@ -39,12 +47,13 @@ export class SeedDatabaseCommand extends CommandRunner {
 
   async run(_passedParams: string[], options: SeedDatabaseOptions): Promise<void> {
     const circuits = options.circuit.split(',').map((c) => c.trim());
+    const allowedClasses = new Set(options.class.split(',').map((c) => c.trim()));
     const currentYear = new Date().getFullYear();
     const fromYear = currentYear - options.years + 1;
     const years = this.buildYearRange(fromYear, currentYear);
 
     this.logger.log(
-      `Seed: years ${fromYear}-${currentYear} (${options.years} years), circuits: ${circuits.join(', ')}`,
+      `Seed: years ${fromYear}-${currentYear} (${options.years} years), circuits: ${circuits.join(', ')}, classes: ${[...allowedClasses].join(', ')}`,
     );
 
     let totalRaces = 0;
@@ -54,7 +63,8 @@ export class SeedDatabaseCommand extends CommandRunner {
 
     for (const year of years) {
       const discovered = await this.discoverRacesForYear(year, circuits);
-      const deduplicated = this.deduplicateBySlug(discovered);
+      const filtered = discovered.filter((r) => allowedClasses.has(r.classText));
+      const deduplicated = this.deduplicateBySlug(filtered);
 
       this.logger.log(`${year}: discovered ${deduplicated.length} races`);
 
@@ -177,10 +187,20 @@ export class SeedDatabaseCommand extends CommandRunner {
 
   @Option({
     flags: '--circuit <ids>',
-    description: 'Comma-separated PCS circuit IDs (default: 1,26 = WT + ProSeries)',
-    defaultValue: '1,26',
+    description:
+      'Comma-separated PCS circuit IDs (default: 1,26,14 = WT + ProSeries + Europe Tour)',
+    defaultValue: '1,26,14',
   })
   parseCircuit(val: string): string {
+    return val;
+  }
+
+  @Option({
+    flags: '--class <classes>',
+    description: 'Comma-separated allowed race classes (default: 1.UWT,2.UWT,1.Pro,2.Pro,1.1,2.1)',
+    defaultValue: '1.UWT,2.UWT,1.Pro,2.Pro,1.1,2.1',
+  })
+  parseClass(val: string): string {
     return val;
   }
 

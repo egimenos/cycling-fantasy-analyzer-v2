@@ -60,11 +60,11 @@ The `seed-database` command auto-discovers races from the PCS (ProCyclingStats) 
 ```bash
 cd apps/api
 
-# Default seed: last 3 years, WorldTour + ProSeries (~90 races/year)
+# Default seed: last 3 years, WT + ProSeries + Europe Tour .1
 node dist/cli.js seed-database
 
 # WorldTour only (faster, ~40 races/year)
-node dist/cli.js seed-database --circuit 1
+node dist/cli.js seed-database --circuit 1 --class 1.UWT,2.UWT
 
 # More history: last 5 years
 node dist/cli.js seed-database --years 5
