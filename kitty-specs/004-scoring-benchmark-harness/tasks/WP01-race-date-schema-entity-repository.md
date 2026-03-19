@@ -8,6 +8,7 @@ subtasks:
   - T002
   - T003
   - T004
+  - T004b
   - T005
 phase: Phase 0 - Foundation
 assignee: ''
@@ -205,6 +206,39 @@ No dependencies — this is a foundation work package.
 
 - Results with `raceDate IS NULL` will NOT be included (PostgreSQL `NULL < date` evaluates to NULL/false). This is correct — we only want results with known dates.
 - The `lt` operator uses strict less-than. A race on `2025-07-01` with cutoff `2025-07-01` will NOT be included (results must be from BEFORE the target race).
+
+---
+
+### Subtask T004b – Add `findByIds` to `RiderRepositoryPort` and adapter
+
+**Purpose**: The benchmark use case (WP06) needs to look up rider names by ID. The existing `RiderRepositoryPort` only has `findByPcsSlugs`, not `findByIds`. Add it now alongside the other repository changes.
+
+**Steps**:
+
+1. Open `apps/api/src/domain/rider/rider.repository.port.ts`
+2. Add method:
+   ```typescript
+   findByIds(ids: string[]): Promise<Rider[]>;
+   ```
+3. Open the rider repository adapter (find it via the port's injection token pattern)
+4. Implement:
+   ```typescript
+   async findByIds(ids: string[]): Promise<Rider[]> {
+     if (ids.length === 0) return [];
+     const rows = await this.db
+       .select()
+       .from(riders)
+       .where(inArray(riders.id, ids));
+     return rows.map((row) => this.toDomain(row));
+   }
+   ```
+
+**Files**:
+
+- `apps/api/src/domain/rider/rider.repository.port.ts`
+- Rider repository adapter in `apps/api/src/infrastructure/database/`
+
+**Notes**: Simple addition — follows the exact same pattern as `findByPcsSlugs` but filters on `id` instead of `pcs_slug`.
 
 ---
 

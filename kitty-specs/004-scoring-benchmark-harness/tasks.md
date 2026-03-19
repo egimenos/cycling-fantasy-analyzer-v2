@@ -26,6 +26,7 @@
 - [ ] T002 Add `raceDate` to `RaceResultProps` and `RaceResult` entity in `apps/api/src/domain/race-result/race-result.entity.ts`
 - [ ] T003 Update `RaceResultRepositoryAdapter` — `toDomain()` and `saveMany()` to handle `raceDate`
 - [ ] T004 Add `findByRiderIdsBeforeDate()` to `RaceResultRepositoryPort` and implement in adapter
+- [ ] T004b Add `findByIds()` to `RiderRepositoryPort` and implement in adapter (needed by WP06 for rider name lookup)
 - [ ] T005 Generate Drizzle migration for the new `raceDate` column
 
 ### Implementation Notes
@@ -203,7 +204,7 @@
 ### Risks & Mitigations
 
 - Constitution requires 100% coverage on scoring logic. Spearman is scoring-adjacent — treat it the same.
-- Edge case: all riders with same score → all tied → ρ undefined. Return 0 with a warning.
+- Edge case: all riders with same score → all tied → ρ undefined. Return null (callers distinguish "no data" from "zero correlation").
 
 ---
 
@@ -268,6 +269,7 @@
 ### Included Subtasks
 
 - [ ] T029 Install `@inquirer/prompts` dependency in `apps/api`
+- [ ] T029b Add `findDistinctRacesWithDate()` to `RaceResultRepositoryPort` and adapter (needed by CLI for race selection)
 - [ ] T030 Create `BenchmarkCommand` — interactive CLI with nest-commander + inquirer prompts
 - [ ] T031 Create `BenchmarkModule` — NestJS module with all DI providers for benchmark feature
 - [ ] T032 Register `BenchmarkModule` in `AppModule` and verify CLI entry point picks it up
@@ -329,6 +331,7 @@ Phase 2 (presentation):
 | T002       | Add `raceDate` to RaceResult entity              | WP01         | P0       | No        |
 | T003       | Update RaceResultRepositoryAdapter for raceDate  | WP01         | P0       | No        |
 | T004       | Add `findByRiderIdsBeforeDate` to port + adapter | WP01         | P0       | No        |
+| T004b      | Add `findByIds` to `RiderRepositoryPort`         | WP01         | P0       | No        |
 | T005       | Generate Drizzle migration for raceDate          | WP01         | P0       | No        |
 | T006       | Create `startlist-entries.ts` Drizzle schema     | WP02         | P0       | No        |
 | T007       | Export schema + generate migration               | WP02         | P0       | No        |
@@ -354,6 +357,7 @@ Phase 2 (presentation):
 | T027       | Tests for FetchStartlistUseCase                  | WP06         | P1       | No        |
 | T028       | Tests for RunBenchmarkUseCase                    | WP06         | P1       | No        |
 | T029       | Install `@inquirer/prompts`                      | WP07         | P1       | No        |
+| T029b      | Add `findDistinctRacesWithDate` to repo          | WP07         | P1       | No        |
 | T030       | Create `BenchmarkCommand` CLI                    | WP07         | P1       | No        |
 | T031       | Create `BenchmarkModule` NestJS module           | WP07         | P1       | No        |
 | T032       | Register module in AppModule                     | WP07         | P1       | No        |

@@ -2,7 +2,11 @@
 work_package_id: WP06
 title: Benchmark Application Layer — Use Cases
 lane: planned
-dependencies: []
+dependencies:
+  - WP01
+  - WP02
+  - WP03
+  - WP05
 subtasks:
   - T024
   - T025

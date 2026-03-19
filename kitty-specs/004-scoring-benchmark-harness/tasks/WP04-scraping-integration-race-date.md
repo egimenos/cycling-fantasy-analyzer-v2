@@ -2,7 +2,9 @@
 work_package_id: WP04
 title: Scraping Integration — Wire Race Date into Scraper
 lane: planned
-dependencies: []
+dependencies:
+  - WP01
+  - WP03
 subtasks:
   - T015
   - T016

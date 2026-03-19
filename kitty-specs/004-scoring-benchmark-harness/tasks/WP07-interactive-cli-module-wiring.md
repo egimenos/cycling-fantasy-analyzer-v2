@@ -7,6 +7,7 @@ dependencies:
   - WP06
 subtasks:
   - T029
+  - T029b
   - T030
   - T031
   - T032
@@ -99,6 +100,57 @@ Depends on WP06 (benchmark use cases).
 **Files**: `apps/api/package.json`
 
 **Notes**: `@inquirer/prompts` v7+ is ESM-first but also ships CJS builds. Since the project uses `ts-node` with `tsconfig-paths`, CJS resolution should work. If not, try `@inquirer/prompts@6` which has better CJS support.
+
+---
+
+### Subtask T029b – Add `findDistinctRacesWithDate` to `RaceResultRepositoryPort`
+
+**Purpose**: The CLI needs to present a list of races that have `raceDate` populated (eligible for benchmarking). No existing repo method provides this.
+
+**Steps**:
+
+1. Define a lightweight return type:
+   ```typescript
+   export interface RaceSummary {
+     readonly raceSlug: string;
+     readonly raceName: string;
+     readonly year: number;
+     readonly raceType: RaceType;
+   }
+   ```
+2. Add to `RaceResultRepositoryPort`:
+   ```typescript
+   findDistinctRacesWithDate(): Promise<RaceSummary[]>;
+   ```
+3. Implement in `RaceResultRepositoryAdapter` using Drizzle:
+   ```typescript
+   async findDistinctRacesWithDate(): Promise<RaceSummary[]> {
+     const rows = await this.db
+       .selectDistinct({
+         raceSlug: raceResults.raceSlug,
+         raceName: raceResults.raceName,
+         year: raceResults.year,
+         raceType: raceResults.raceType,
+       })
+       .from(raceResults)
+       .where(isNotNull(raceResults.raceDate))
+       .orderBy(desc(raceResults.year), raceResults.raceName);
+     return rows.map((r) => ({
+       raceSlug: r.raceSlug,
+       raceName: r.raceName,
+       year: r.year,
+       raceType: r.raceType as RaceType,
+     }));
+   }
+   ```
+4. Import `isNotNull`, `desc` from `drizzle-orm`.
+
+**Files**:
+
+- `apps/api/src/domain/race-result/race-result.repository.port.ts`
+- `apps/api/src/infrastructure/database/race-result.repository.adapter.ts`
+
+**Notes**: This is a presentation-layer need, but adding it to the port keeps the architecture clean. The `RaceSummary` interface can live alongside the port or in a shared types file.
 
 ---
 
