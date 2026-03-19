@@ -1,8 +1,11 @@
 ---
 work_package_id: WP03
 title: PCS Parsers — Race Date & Startlist
-lane: planned
+lane: 'doing'
 dependencies: []
+base_branch: main
+base_commit: cd5029b8dd56635f2a094bdaf09587d69b0c1b63
+created_at: '2026-03-19T18:45:06.537055+00:00'
 subtasks:
   - T011
   - T012
@@ -10,8 +13,8 @@ subtasks:
   - T014
 phase: Phase 0 - Foundation
 assignee: ''
-agent: ''
-shell_pid: ''
+agent: 'claude-opus'
+shell_pid: '14839'
 review_status: ''
 reviewed_by: ''
 history:
@@ -244,3 +247,4 @@ No dependencies — this is a foundation work package.
 ## Activity Log
 
 - 2026-03-19T18:18:14Z – system – lane=planned – Prompt created.
+- 2026-03-19T18:45:07Z – claude-opus – shell_pid=14839 – lane=doing – Assigned agent via workflow command
