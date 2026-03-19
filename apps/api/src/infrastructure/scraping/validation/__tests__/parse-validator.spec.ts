@@ -19,6 +19,7 @@ function makeParsedResult(overrides: Partial<ParsedResult> = {}): ParsedResult {
     isItt: false,
     isTtt: false,
     profileScore: null,
+    raceDate: null,
     ...overrides,
   };
 }

@@ -12,4 +12,5 @@ export interface ParsedResult {
   readonly isItt: boolean;
   readonly isTtt: boolean;
   readonly profileScore: number | null;
+  readonly raceDate: Date | null;
 }
