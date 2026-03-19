@@ -1,8 +1,11 @@
 ---
 work_package_id: WP02
 title: Startlist — Schema, Entity & Repository
-lane: planned
+lane: 'doing'
 dependencies: []
+base_branch: main
+base_commit: f682dc17406682d6ca2ce9d0078a7b74ef6d1a81
+created_at: '2026-03-19T18:45:22.664692+00:00'
 subtasks:
   - T006
   - T007
@@ -11,8 +14,8 @@ subtasks:
   - T010
 phase: Phase 0 - Foundation
 assignee: ''
-agent: ''
-shell_pid: ''
+agent: 'claude-opus'
+shell_pid: '15468'
 review_status: ''
 reviewed_by: ''
 history:
@@ -349,3 +352,4 @@ No dependencies — this is a foundation work package.
 ## Activity Log
 
 - 2026-03-19T18:18:14Z – system – lane=planned – Prompt created.
+- 2026-03-19T18:45:23Z – claude-opus – shell_pid=15468 – lane=doing – Assigned agent via workflow command
