@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: PCS Parsers — Race Date & Startlist
-lane: 'doing'
+lane: 'for_review'
 dependencies: []
 base_branch: main
 base_commit: cd5029b8dd56635f2a094bdaf09587d69b0c1b63
@@ -248,3 +248,4 @@ No dependencies — this is a foundation work package.
 
 - 2026-03-19T18:18:14Z – system – lane=planned – Prompt created.
 - 2026-03-19T18:45:07Z – claude-opus – shell_pid=14839 – lane=doing – Assigned agent via workflow command
+- 2026-03-19T18:52:50Z – claude-opus – shell_pid=14839 – lane=for_review – Ready for review: race-date.parser.ts, startlist.parser.ts, tests with HTML fixtures

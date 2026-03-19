@@ -22,12 +22,12 @@
 
 ### Included Subtasks
 
-- [ ] T001 Add `raceDate` column to `apps/api/src/infrastructure/database/schema/race-results.ts`
-- [ ] T002 Add `raceDate` to `RaceResultProps` and `RaceResult` entity in `apps/api/src/domain/race-result/race-result.entity.ts`
-- [ ] T003 Update `RaceResultRepositoryAdapter` — `toDomain()` and `saveMany()` to handle `raceDate`
-- [ ] T004 Add `findByRiderIdsBeforeDate()` to `RaceResultRepositoryPort` and implement in adapter
-- [ ] T004b Add `findByIds()` to `RiderRepositoryPort` and implement in adapter (needed by WP06 for rider name lookup)
-- [ ] T005 Generate Drizzle migration for the new `raceDate` column
+- [x] T001 Add `raceDate` column to `apps/api/src/infrastructure/database/schema/race-results.ts`
+- [x] T002 Add `raceDate` to `RaceResultProps` and `RaceResult` entity in `apps/api/src/domain/race-result/race-result.entity.ts`
+- [x] T003 Update `RaceResultRepositoryAdapter` — `toDomain()` and `saveMany()` to handle `raceDate`
+- [x] T004 Add `findByRiderIdsBeforeDate()` to `RaceResultRepositoryPort` and implement in adapter
+- [x] T004b Add `findByIds()` to `RiderRepositoryPort` and implement in adapter (needed by WP06 for rider name lookup)
+- [x] T005 Generate Drizzle migration for the new `raceDate` column
 
 ### Implementation Notes
 
@@ -99,10 +99,10 @@
 
 ### Included Subtasks
 
-- [ ] T011 Create `race-date.parser.ts` — extract dates from PCS race/stage HTML
-- [ ] T012 Create `startlist.parser.ts` — parse PCS startlist page (rider slugs, teams, bibs)
-- [ ] T013 [P] Tests for race-date parser with fixture HTML (classic + stage race)
-- [ ] T014 [P] Tests for startlist parser with fixture HTML
+- [x] T011 Create `race-date.parser.ts` — extract dates from PCS race/stage HTML
+- [x] T012 Create `startlist.parser.ts` — parse PCS startlist page (rider slugs, teams, bibs)
+- [x] T013 [P] Tests for race-date parser with fixture HTML (classic + stage race)
+- [x] T014 [P] Tests for startlist parser with fixture HTML
 
 ### Implementation Notes
 

@@ -1,7 +1,7 @@
 ---
 work_package_id: WP01
 title: Race Date — Schema, Entity & Repository
-lane: 'doing'
+lane: 'for_review'
 dependencies: []
 base_branch: main
 base_commit: ece0b7c2ba315face43d075a8d63d6169e260e61
@@ -290,3 +290,4 @@ No dependencies — this is a foundation work package.
 
 - 2026-03-19T18:18:14Z – system – lane=planned – Prompt created.
 - 2026-03-19T18:44:43Z – claude-opus – shell_pid=14098 – lane=doing – Assigned agent via workflow command
+- 2026-03-19T18:49:46Z – claude-opus – shell_pid=14098 – lane=for_review – Ready for review: raceDate schema, entity, repo adapter with findByRiderIdsBeforeDate, findByIds on RiderRepo, migration generated
