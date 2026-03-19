@@ -26,5 +26,6 @@ import { SeedDatabaseCommand } from './cli/seed-database.command';
     TriggerScrapeCommand,
     SeedDatabaseCommand,
   ],
+  exports: [PCS_SCRAPER_PORT],
 })
 export class ScrapingModule {}

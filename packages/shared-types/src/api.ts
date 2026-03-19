@@ -1,4 +1,4 @@
-import type { RaceType, ResultCategory } from './enums';
+import type { ParcoursType, RaceType, ResultCategory } from './enums';
 
 export interface PriceListEntryDto {
   name: string;
@@ -74,4 +74,35 @@ export interface OptimizeRequest {
 export interface OptimizeResponse {
   optimalTeam: TeamSelection;
   alternativeTeams: TeamSelection[];
+}
+
+export interface StageInfo {
+  stageNumber: number;
+  parcoursType: ParcoursType | null;
+  isItt: boolean;
+  isTtt: boolean;
+  distanceKm: number | null;
+  departure: string | null;
+  arrival: string | null;
+}
+
+export interface ProfileSummary {
+  p1Count: number;
+  p2Count: number;
+  p3Count: number;
+  p4Count: number;
+  p5Count: number;
+  ittCount: number;
+  tttCount: number;
+  unknownCount: number;
+}
+
+export interface RaceProfileResponse {
+  raceSlug: string;
+  raceName: string;
+  raceType: RaceType;
+  year: number;
+  totalStages: number;
+  stages: StageInfo[];
+  profileSummary: ProfileSummary;
 }
