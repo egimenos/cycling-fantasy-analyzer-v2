@@ -87,6 +87,7 @@ describe('RunBenchmarkUseCase', () => {
       findByRiderIds: jest.fn(),
       findByRace: jest.fn(),
       findByRiderIdsBeforeDate: jest.fn(),
+      findDistinctRacesWithDate: jest.fn(),
       saveMany: jest.fn(),
     };
     riderRepo = {

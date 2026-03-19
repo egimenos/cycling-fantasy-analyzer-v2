@@ -23,6 +23,11 @@ import { ScrapeJobRepositoryAdapter } from './scrape-job.repository.adapter';
       useClass: ScrapeJobRepositoryAdapter,
     },
   ],
-  exports: [RIDER_REPOSITORY_PORT, RACE_RESULT_REPOSITORY_PORT, SCRAPE_JOB_REPOSITORY_PORT],
+  exports: [
+    RIDER_REPOSITORY_PORT,
+    RACE_RESULT_REPOSITORY_PORT,
+    SCRAPE_JOB_REPOSITORY_PORT,
+    drizzleProvider,
+  ],
 })
 export class DatabaseModule {}

@@ -1,6 +1,9 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { eq, inArray, and, lt } from 'drizzle-orm';
-import { RaceResultRepositoryPort } from '../../domain/race-result/race-result.repository.port';
+import { eq, inArray, and, lt, isNotNull, desc } from 'drizzle-orm';
+import {
+  RaceResultRepositoryPort,
+  RaceSummary,
+} from '../../domain/race-result/race-result.repository.port';
 import { RaceResult, RaceResultProps } from '../../domain/race-result/race-result.entity';
 import { RaceType } from '../../domain/shared/race-type.enum';
 import { RaceClass } from '../../domain/shared/race-class.enum';
@@ -52,6 +55,26 @@ export class RaceResultRepositoryAdapter implements RaceResultRepositoryPort {
       .where(and(inArray(raceResults.riderId, riderIds), lt(raceResults.raceDate, cutoffDate)));
 
     return rows.map((row) => this.toDomain(row));
+  }
+
+  async findDistinctRacesWithDate(): Promise<RaceSummary[]> {
+    const rows = await this.db
+      .selectDistinct({
+        raceSlug: raceResults.raceSlug,
+        raceName: raceResults.raceName,
+        year: raceResults.year,
+        raceType: raceResults.raceType,
+      })
+      .from(raceResults)
+      .where(isNotNull(raceResults.raceDate))
+      .orderBy(desc(raceResults.year));
+
+    return rows.map((row) => ({
+      raceSlug: row.raceSlug,
+      raceName: row.raceName,
+      year: row.year,
+      raceType: row.raceType as RaceType,
+    }));
   }
 
   async saveMany(results: RaceResult[]): Promise<number> {
