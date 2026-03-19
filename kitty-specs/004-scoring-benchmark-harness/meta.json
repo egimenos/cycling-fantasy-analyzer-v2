@@ -1,0 +1,11 @@
+{
+  "feature_number": "004",
+  "slug": "004-scoring-benchmark-harness",
+  "feature_slug": "004-scoring-benchmark-harness",
+  "created_at": "2026-03-19T19:06:00Z",
+  "target_branch": "main",
+  "friendly_name": "Scoring Benchmark Harness",
+  "mission": "software-dev",
+  "source_description": "Benchmarking harness that measures scoring algorithm prediction quality against real race outcomes using Spearman rank correlation",
+  "vcs": "git"
+}
