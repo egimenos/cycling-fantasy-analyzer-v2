@@ -1,0 +1,3 @@
+source_id,title,url,type,accessed_date,reliability,notes
+S1,ProCyclingStats Website,https://www.procyclingstats.com,website,2026-03-19,HIGH,Primary data source — verified HTML structure for profiles
+S2,Domain Knowledge,N/A,internal,2026-03-19,MEDIUM,Cycling domain knowledge about classic race profile stability

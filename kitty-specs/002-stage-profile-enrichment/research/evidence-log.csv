@@ -1,0 +1,9 @@
+date,question_id,finding,source_id,confidence,notes
+2026-03-19,RQ1,PCS uses 5 parcours type icons: p1 (flat) through p5 (mountain summit finish),S1,HIGH,Confirmed from PCS profile-score-explained page and live race pages
+2026-03-19,RQ1,CSS class pattern: span.icon.profile.p{N}.mg_rp4,S1,HIGH,Consistent across TdF 2024 and Paris-Nice 2024
+2026-03-19,RQ1,Overview page has stage list table under h4 Stages heading,S1,HIGH,Verified on TdF 2024 and Paris-Nice 2024 overview pages
+2026-03-19,RQ2,ITT/TTT detected via stage name text containing (ITT) or (TTT),S1,HIGH,Regex: /\(ITT\)/i and /\(TTT\)/i on stage link text
+2026-03-19,RQ2,ITT parcours type is independent — ITTs can be p1 through p5,S1,HIGH,TdF 2024 Stage 7 ITT=p1 and Stage 21 ITT=p4
+2026-03-19,RQ3,ProfileScore is an integer in sidebar under title ProfileScore,S1,HIGH,Found on both stage result and classic result pages
+2026-03-19,RQ4,Classics have no stage list on overview page — profile on result page only,S1,HIGH,Verified on Milano-Sanremo 2024 overview vs result page
+2026-03-19,RQ5,Classics maintain parcours profile year over year,S2,MEDIUM,Domain knowledge — MSR always p2 and Lombardia always p4/p5
