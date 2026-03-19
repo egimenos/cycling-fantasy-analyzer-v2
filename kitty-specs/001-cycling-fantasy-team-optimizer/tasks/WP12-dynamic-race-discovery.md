@@ -1,7 +1,7 @@
 ---
 work_package_id: WP12
 title: 'Dynamic Race Discovery from PCS Calendar'
-lane: 'planned'
+lane: 'done'
 dependencies: '[]'
 base_branch: main
 depends_on: []
