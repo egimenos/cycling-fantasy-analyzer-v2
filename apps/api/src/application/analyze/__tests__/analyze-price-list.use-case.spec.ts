@@ -61,6 +61,10 @@ function createMockRaceResult(
     stageNumber: overrides.stageNumber ?? null,
     dnf: overrides.dnf ?? false,
     scrapedAt: overrides.scrapedAt ?? new Date(),
+    parcoursType: null,
+    isItt: false,
+    isTtt: false,
+    profileScore: null,
   });
 }
 

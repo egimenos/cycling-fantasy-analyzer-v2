@@ -15,6 +15,10 @@ function makeParsedResult(overrides: Partial<ParsedResult> = {}): ParsedResult {
     category: ResultCategory.GC,
     stageNumber: null,
     dnf: false,
+    parcoursType: null,
+    isItt: false,
+    isTtt: false,
+    profileScore: null,
     ...overrides,
   };
 }

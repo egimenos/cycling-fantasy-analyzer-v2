@@ -1,6 +1,6 @@
 import { pgTable, uuid, varchar, integer, boolean, timestamp, unique } from 'drizzle-orm/pg-core';
 import { riders } from './riders';
-import { raceTypeEnum, raceClassEnum, resultCategoryEnum } from './enums';
+import { raceTypeEnum, raceClassEnum, resultCategoryEnum, parcoursTypeEnum } from './enums';
 
 export const raceResults = pgTable(
   'race_results',
@@ -19,6 +19,10 @@ export const raceResults = pgTable(
     stageNumber: integer('stage_number'),
     dnf: boolean('dnf').notNull().default(false),
     scrapedAt: timestamp('scraped_at', { withTimezone: true }).notNull().defaultNow(),
+    parcoursType: parcoursTypeEnum('parcours_type'),
+    isItt: boolean('is_itt').notNull().default(false),
+    isTtt: boolean('is_ttt').notNull().default(false),
+    profileScore: integer('profile_score'),
   },
   (table) => [
     unique('race_results_unique').on(

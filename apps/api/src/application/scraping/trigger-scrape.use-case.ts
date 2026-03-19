@@ -16,6 +16,7 @@ import { Rider } from '../../domain/rider/rider.entity';
 import { RaceResult } from '../../domain/race-result/race-result.entity';
 import { RaceType } from '../../domain/shared/race-type.enum';
 import { RaceClass } from '../../domain/shared/race-class.enum';
+import { ParcoursType } from '../../domain/shared/parcours-type.enum';
 import { PcsScraperPort, PCS_SCRAPER_PORT } from './ports/pcs-scraper.port';
 import { extractClassificationUrls } from '../../infrastructure/scraping/parsers/classification-extractor';
 import {
@@ -361,6 +362,10 @@ export class TriggerScrapeUseCase {
           stageNumber: r.stageNumber,
           dnf: r.dnf,
           scrapedAt: new Date(),
+          parcoursType: (r.parcoursType as ParcoursType) ?? null,
+          isItt: r.isItt,
+          isTtt: r.isTtt,
+          profileScore: r.profileScore,
         }),
       );
 
