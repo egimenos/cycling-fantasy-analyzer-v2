@@ -1,10 +1,13 @@
 ---
 work_package_id: WP04
 title: Scraping Integration — Wire Race Date into Scraper
-lane: planned
+lane: 'doing'
 dependencies:
   - WP01
   - WP03
+base_branch: 004-scoring-benchmark-harness-WP04-merge-base
+base_commit: 80ac4edcd5e2ba0d89eae42b3359bb947a5e5712
+created_at: '2026-03-19T18:56:42.252298+00:00'
 subtasks:
   - T015
   - T016
@@ -12,8 +15,8 @@ subtasks:
   - T018
 phase: Phase 1 - Integration
 assignee: ''
-agent: ''
-shell_pid: ''
+agent: 'claude-opus'
+shell_pid: '29049'
 review_status: ''
 reviewed_by: ''
 history:
@@ -189,3 +192,4 @@ Depends on WP01 (raceDate in schema/entity) and WP03 (race-date parser).
 ## Activity Log
 
 - 2026-03-19T18:18:14Z – system – lane=planned – Prompt created.
+- 2026-03-19T18:56:43Z – claude-opus – shell_pid=29049 – lane=doing – Assigned agent via workflow command
