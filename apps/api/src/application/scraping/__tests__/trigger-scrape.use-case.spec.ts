@@ -9,6 +9,7 @@ const mockPcsClient = { fetchPage: jest.fn() };
 const mockRiderRepo = {
   findByPcsSlug: jest.fn(),
   findByPcsSlugs: jest.fn(),
+  findByIds: jest.fn(),
   findAll: jest.fn(),
   save: jest.fn(),
   saveMany: jest.fn(),
@@ -16,6 +17,7 @@ const mockRiderRepo = {
 const mockResultRepo = {
   findByRider: jest.fn(),
   findByRiderIds: jest.fn(),
+  findByRiderIdsBeforeDate: jest.fn(),
   findByRace: jest.fn(),
   saveMany: jest.fn(),
 };

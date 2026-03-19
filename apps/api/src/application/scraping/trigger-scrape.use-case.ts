@@ -26,6 +26,7 @@ import {
   parseSprintClassification,
 } from '../../infrastructure/scraping/parsers/stage-race.parser';
 import { parseClassicResults } from '../../infrastructure/scraping/parsers/classic.parser';
+import { parseRaceDate } from '../../infrastructure/scraping/parsers/race-date.parser';
 import { ParsedResult } from '../../infrastructure/scraping/parsers/parsed-result.type';
 import {
   validateClassificationResults,
@@ -140,13 +141,22 @@ export class TriggerScrapeUseCase {
     const html = await this.pcsClient.fetchPage(path);
     const results = parseClassicResults(html);
 
-    if (results.length === 0) {
+    // Extract race date from the result page
+    const raceDate = parseRaceDate(html);
+    if (!raceDate) {
+      this.logger.warn(`Could not extract race date for classic ${slug} ${year}`);
+    }
+
+    // Stamp raceDate on all parsed results
+    const resultsWithDate = results.map((r) => ({ ...r, raceDate }));
+
+    if (resultsWithDate.length === 0) {
       this.logger.debug(
         `Empty results for ${slug} classic — URL: ${path}, HTML snippet: ${html.slice(0, 500)}`,
       );
     }
 
-    const validation = validateClassificationResults(results, {
+    const validation = validateClassificationResults(resultsWithDate, {
       raceSlug: slug,
       classificationType: 'GC',
       expectedMinRiders: 80,
@@ -162,7 +172,7 @@ export class TriggerScrapeUseCase {
       this.logger.warn(`Validation warnings for ${slug}: ${validation.warnings.join('; ')}`);
     }
 
-    return { results, warnings: validation.warnings };
+    return { results: resultsWithDate, warnings: validation.warnings };
   }
 
   private async scrapeStageRace(
@@ -180,6 +190,7 @@ export class TriggerScrapeUseCase {
     const classifications: { type: string; stageNumber?: number }[] = [];
     const allWarnings: string[] = [];
     const skippedClassifications: string[] = [];
+    let lastStageDate: Date | null = null;
 
     this.logger.log(`Found ${classificationUrls.length} classifications for ${raceSlug} ${year}`);
 
@@ -206,8 +217,29 @@ export class TriggerScrapeUseCase {
         `[${i + 1}/${classificationUrls.length}] ${classLabel}: ${results.length} riders parsed`,
       );
 
+      // Extract race date from each page
+      const pageDate = parseRaceDate(html);
+
+      // Track the latest stage date for use on GC/classification results
+      if (classUrl.classificationType === 'STAGE' && pageDate) {
+        if (!lastStageDate || pageDate.getTime() > lastStageDate.getTime()) {
+          lastStageDate = pageDate;
+        }
+      }
+
+      // Determine the date for these results:
+      // - Stage results get their own stage date
+      // - GC/classification results get the last stage date (final race day)
+      const resultDate = classUrl.classificationType === 'STAGE' ? pageDate : null;
+
+      // Stamp raceDate on all parsed results
+      const resultsWithDate = results.map((r) => ({
+        ...r,
+        raceDate: resultDate,
+      }));
+
       // Handle empty results for non-GC classifications gracefully
-      if (results.length === 0 && classUrl.classificationType !== 'GC') {
+      if (resultsWithDate.length === 0 && classUrl.classificationType !== 'GC') {
         const warnMsg = `Empty results for ${raceSlug} ${classLabel} — skipping (suspended/cancelled?)`;
         this.logger.warn(warnMsg);
         this.logger.debug(
@@ -218,7 +250,7 @@ export class TriggerScrapeUseCase {
         continue;
       }
 
-      const validation = validateClassificationResults(results, {
+      const validation = validateClassificationResults(resultsWithDate, {
         raceSlug,
         classificationType: classUrl.classificationType,
         stageNumber: classUrl.stageNumber ?? undefined,
@@ -240,11 +272,20 @@ export class TriggerScrapeUseCase {
         allWarnings.push(...validation.warnings);
       }
 
-      allResults.push(...results);
+      allResults.push(...resultsWithDate);
       classifications.push({
         type: classUrl.classificationType,
         stageNumber: classUrl.stageNumber ?? undefined,
       });
+    }
+
+    // Backfill GC/classification results with the last stage date (final race day)
+    if (lastStageDate) {
+      for (let i = 0; i < allResults.length; i++) {
+        if (allResults[i].raceDate === null) {
+          allResults[i] = { ...allResults[i], raceDate: lastStageDate };
+        }
+      }
     }
 
     const skippedStageCount = skippedClassifications.filter((c) => c.startsWith('STAGE')).length;
@@ -368,7 +409,7 @@ export class TriggerScrapeUseCase {
           isItt: r.isItt,
           isTtt: r.isTtt,
           profileScore: r.profileScore,
-          raceDate: null,
+          raceDate: r.raceDate ?? null,
         }),
       );
 

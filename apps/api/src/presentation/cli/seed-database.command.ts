@@ -154,6 +154,10 @@ export class SeedDatabaseCommand extends CommandRunner {
       }
     }
 
+    this.logger.log(
+      `Race date backfill: all ${totalRecords} records from ${totalRaces} newly scraped races include raceDate via upsert`,
+    );
+
     this.printSummary(
       totalRaces,
       totalRecords,

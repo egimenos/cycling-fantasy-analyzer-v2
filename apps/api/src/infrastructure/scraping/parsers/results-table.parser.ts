@@ -54,6 +54,7 @@ export function parseResultsTable(
       isItt: false,
       isTtt: false,
       profileScore: null,
+      raceDate: null,
     });
   });
 
