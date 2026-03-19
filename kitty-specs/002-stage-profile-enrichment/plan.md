@@ -79,7 +79,7 @@ apps/web/src/
 
 packages/shared-types/src/
 ├── enums.ts                            # + ParcoursType enum
-└── api.ts                              # + RaceProfileDistribution types, update AnalyzeRequest
+└── api.ts                              # + RaceProfileResponse types, update AnalyzeRequest
 ```
 
 **Structure Decision**: Extends existing monorepo structure. No new apps or packages. All changes within existing `apps/api`, `apps/web`, and `packages/shared-types`.

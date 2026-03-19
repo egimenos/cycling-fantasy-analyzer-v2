@@ -54,7 +54,6 @@ type: feature
 
      ```typescript
      import * as cheerio from 'cheerio';
-     import { detectTimeTrialType } from './profile-extractor';
 
      export interface ParsedStageInfo {
        stageNumber: number;
@@ -110,8 +109,9 @@ type: feature
            parcoursType = match ? `p${match[1]}` : null;
          }
 
-         // Detect ITT/TTT
-         const tt = detectTimeTrialType(stageLinkText);
+         // Detect ITT/TTT (inline — profile-extractor.ts is created in WP02, which runs in parallel)
+         const isItt = /\(ITT\)/i.test(stageLinkText);
+         const isTtt = /\(TTT\)/i.test(stageLinkText);
 
          // Extract distance (last column)
          const distanceText = $(cells[cells.length - 1])
@@ -140,8 +140,8 @@ type: feature
          stages.push({
            stageNumber,
            parcoursType,
-           isItt: tt.isItt,
-           isTtt: tt.isTtt,
+           isItt,
+           isTtt,
            distanceKm: distanceKm && !isNaN(distanceKm) ? distanceKm : null,
            departure,
            arrival,

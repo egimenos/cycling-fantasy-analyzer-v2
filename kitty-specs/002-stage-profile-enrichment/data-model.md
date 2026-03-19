@@ -37,8 +37,8 @@ Values: p1 | p2 | p3 | p4 | p5
 | Column          | Type                 | Nullable | Default | Notes                                                               |
 | --------------- | -------------------- | -------- | ------- | ------------------------------------------------------------------- |
 | `parcours_type` | `parcours_type` enum | YES      | null    | p1-p5; populated on STAGE rows (stage races) and GC rows (classics) |
-| `is_itt`        | boolean              | YES      | false   | Individual Time Trial flag                                          |
-| `is_ttt`        | boolean              | YES      | false   | Team Time Trial flag                                                |
+| `is_itt`        | boolean              | NO       | false   | Individual Time Trial flag                                          |
+| `is_ttt`        | boolean              | NO       | false   | Team Time Trial flag                                                |
 | `profile_score` | integer              | YES      | null    | PCS ProfileScore numeric value; stored for future use               |
 
 **Population rules:**
@@ -57,12 +57,12 @@ Values: p1 | p2 | p3 | p4 | p5
 
 ## Ephemeral Types (not persisted)
 
-### RaceProfileDistribution
+### RaceProfileResponse
 
 Returned by the `GET /api/race-profile` endpoint. Computed on demand from a PCS URL.
 
 ```
-RaceProfileDistribution {
+RaceProfileResponse {
   raceSlug: string
   raceName: string
   raceType: RaceType (auto-detected)

@@ -101,7 +101,7 @@ A user pastes the PCS URL of the race they want to analyze (e.g., `https://www.p
 ### Key Entities
 
 - **StageProfile**: The parcours classification of a stage or one-day race. Comprises a parcours type (p1-p5), ITT flag, TTT flag, and numeric ProfileScore. Attached only to `category=STAGE` result rows in stage races and `category=GC` rows in one-day classics. Not present on race-level classification rows (GC, MOUNTAIN, SPRINT in stage races).
-- **RaceProfileDistribution**: An ephemeral summary of an upcoming race's stage composition. Contains the count of stages per parcours type, ITT/TTT counts, total stages, and per-stage metadata (distance, cities). Computed on demand from a PCS URL, not persisted.
+- **RaceProfileResponse**: An ephemeral summary of an upcoming race's stage composition. Contains the count of stages per parcours type, ITT/TTT counts, total stages, and per-stage metadata (distance, cities). Computed on demand from a PCS URL, not persisted.
 
 ---
 
@@ -109,7 +109,7 @@ A user pastes the PCS URL of the race they want to analyze (e.g., `https://www.p
 
 ### Measurable Outcomes
 
-- **SC-001**: After re-seeding, 100% of stage results for scraped stage races include a non-null parcours type (p1-p5) and ITT/TTT flag.
+- **SC-001**: After re-seeding, ≥95% of stage results for scraped stage races include a non-null parcours type (p1-p5) and ITT/TTT flag. Stages where PCS lacks a profile icon are stored as null per FR-010.
 - **SC-002**: After re-seeding, 100% of scraped one-day classic results include a non-null parcours type.
 - **SC-003**: Given a valid PCS race URL, the system returns the stage profile distribution in under 30 seconds (accounting for polite scraping delays).
 - **SC-004**: The frontend displays the race profile distribution before the user submits the rider list, providing visible context for the analysis.

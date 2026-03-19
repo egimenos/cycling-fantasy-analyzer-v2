@@ -4,6 +4,7 @@ title: Race Profile Use Case & API Endpoint
 lane: planned
 dependencies:
   - WP02
+  - WP03
 base_branch: main
 subtasks:
   - T017
@@ -48,7 +49,7 @@ type: feature
 - **Existing patterns**: See `trigger-scrape.use-case.ts` for PCS client injection pattern. See `analyze.controller.ts` for REST endpoint pattern.
 - **PCS client**: `PcsScraperPort` with `fetchPage(path: string): Promise<string>` — already handles throttling and retries.
 
-**Implementation command**: `spec-kitty implement WP04 --base WP03` (or `--base WP02` if WP03 was merged first)
+**Implementation command**: `spec-kitty implement WP04 --base WP03` (requires both WP02 and WP03 merged to target branch first)
 
 ## Subtasks & Detailed Guidance
 
