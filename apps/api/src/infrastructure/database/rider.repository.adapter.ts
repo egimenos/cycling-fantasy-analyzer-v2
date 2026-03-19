@@ -30,6 +30,14 @@ export class RiderRepositoryAdapter implements RiderRepositoryPort {
     return rows.map((row) => this.toDomain(row));
   }
 
+  async findByIds(ids: string[]): Promise<Rider[]> {
+    if (ids.length === 0) return [];
+
+    const rows = await this.db.select().from(riders).where(inArray(riders.id, ids));
+
+    return rows.map((row) => this.toDomain(row));
+  }
+
   async save(rider: Rider): Promise<void> {
     const props = rider.toProps();
     await this.db

@@ -21,6 +21,7 @@ interface RaceResultOverrides {
   isItt?: boolean;
   isTtt?: boolean;
   profileScore?: number | null;
+  raceDate?: Date | null;
 }
 
 /**
@@ -45,5 +46,6 @@ export function createRaceResult(overrides: RaceResultOverrides = {}): RaceResul
     isItt: overrides.isItt ?? false,
     isTtt: overrides.isTtt ?? false,
     profileScore: overrides.profileScore === undefined ? null : overrides.profileScore,
+    raceDate: overrides.raceDate === undefined ? null : overrides.raceDate,
   });
 }

@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { eq, inArray, and } from 'drizzle-orm';
+import { eq, inArray, and, lt } from 'drizzle-orm';
 import { RaceResultRepositoryPort } from '../../domain/race-result/race-result.repository.port';
 import { RaceResult, RaceResultProps } from '../../domain/race-result/race-result.entity';
 import { RaceType } from '../../domain/shared/race-type.enum';
@@ -43,6 +43,17 @@ export class RaceResultRepositoryAdapter implements RaceResultRepositoryPort {
     return rows.map((row) => this.toDomain(row));
   }
 
+  async findByRiderIdsBeforeDate(riderIds: string[], cutoffDate: Date): Promise<RaceResult[]> {
+    if (riderIds.length === 0) return [];
+
+    const rows = await this.db
+      .select()
+      .from(raceResults)
+      .where(and(inArray(raceResults.riderId, riderIds), lt(raceResults.raceDate, cutoffDate)));
+
+    return rows.map((row) => this.toDomain(row));
+  }
+
   async saveMany(results: RaceResult[]): Promise<number> {
     if (results.length === 0) return 0;
 
@@ -70,6 +81,7 @@ export class RaceResultRepositoryAdapter implements RaceResultRepositoryPort {
             isItt: props.isItt,
             isTtt: props.isTtt,
             profileScore: props.profileScore,
+            raceDate: props.raceDate,
           })
           .onConflictDoUpdate({
             target: [
@@ -87,6 +99,7 @@ export class RaceResultRepositoryAdapter implements RaceResultRepositoryPort {
               isItt: props.isItt,
               isTtt: props.isTtt,
               profileScore: props.profileScore,
+              raceDate: props.raceDate,
             },
           });
         count++;
@@ -114,6 +127,7 @@ export class RaceResultRepositoryAdapter implements RaceResultRepositoryPort {
       isItt: row.isItt,
       isTtt: row.isTtt,
       profileScore: row.profileScore,
+      raceDate: row.raceDate ?? null,
     } satisfies RaceResultProps);
   }
 }
