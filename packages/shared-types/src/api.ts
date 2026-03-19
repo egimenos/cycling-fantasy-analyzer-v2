@@ -47,6 +47,7 @@ export interface AnalyzeRequest {
   raceType: RaceType;
   budget: number;
   seasons?: number;
+  profileSummary?: ProfileSummary;
 }
 
 export interface AnalyzeResponse {

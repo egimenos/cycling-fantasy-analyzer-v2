@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import type { PriceListEntryDto } from '@cycling-analyzer/shared-types';
+import type { PriceListEntryDto, ProfileSummary } from '@cycling-analyzer/shared-types';
 import { RaceType } from '@cycling-analyzer/shared-types';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -16,6 +16,7 @@ interface RiderInputProps {
     raceType: RaceType,
     budget: number,
     seasons: number,
+    profileSummary?: ProfileSummary,
   ) => void;
   isLoading: boolean;
 }
@@ -53,7 +54,9 @@ export function RiderInput({ onAnalyze, isLoading }: RiderInputProps) {
 
   const handleSubmit = () => {
     if (parsedRiders.length === 0) return;
-    onAnalyze(parsedRiders, raceType, budget, seasons);
+    const profileSummary =
+      profileState.status === 'success' ? profileState.data.profileSummary : undefined;
+    onAnalyze(parsedRiders, raceType, budget, seasons, profileSummary);
   };
 
   return (

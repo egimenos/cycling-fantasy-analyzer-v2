@@ -32,6 +32,40 @@ class PriceListEntryDto {
   price!: number;
 }
 
+class ProfileSummaryDto {
+  @IsInt()
+  @Min(0)
+  p1Count!: number;
+
+  @IsInt()
+  @Min(0)
+  p2Count!: number;
+
+  @IsInt()
+  @Min(0)
+  p3Count!: number;
+
+  @IsInt()
+  @Min(0)
+  p4Count!: number;
+
+  @IsInt()
+  @Min(0)
+  p5Count!: number;
+
+  @IsInt()
+  @Min(0)
+  ittCount!: number;
+
+  @IsInt()
+  @Min(0)
+  tttCount!: number;
+
+  @IsInt()
+  @Min(0)
+  unknownCount!: number;
+}
+
 class AnalyzeRequestDto {
   @IsArray()
   @ArrayMinSize(1)
@@ -51,6 +85,11 @@ class AnalyzeRequestDto {
   @Min(1)
   @Max(3)
   seasons?: number;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProfileSummaryDto)
+  profileSummary?: ProfileSummaryDto;
 }
 
 @Controller('api')
@@ -64,6 +103,7 @@ export class AnalyzeController {
       raceType: dto.raceType,
       budget: dto.budget,
       seasons: dto.seasons,
+      profileSummary: dto.profileSummary,
     });
   }
 }

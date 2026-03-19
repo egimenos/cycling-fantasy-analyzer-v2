@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import type { PriceListEntryDto } from '@cycling-analyzer/shared-types';
+import type { PriceListEntryDto, ProfileSummary } from '@cycling-analyzer/shared-types';
 import { type RaceType } from '@cycling-analyzer/shared-types';
 import { useAnalyze } from '../hooks/use-analyze';
 import { useLockExclude } from '../hooks/use-lock-exclude';
@@ -52,10 +52,16 @@ export function RiderListPage() {
   );
 
   const handleAnalyze = useCallback(
-    (parsedRiders: PriceListEntryDto[], raceType: RaceType, newBudget: number, seasons: number) => {
+    (
+      parsedRiders: PriceListEntryDto[],
+      raceType: RaceType,
+      newBudget: number,
+      seasons: number,
+      profileSummary?: ProfileSummary,
+    ) => {
       setBudget(newBudget);
       teamBuilder.clearAll();
-      void analyze({ riders: parsedRiders, raceType, budget: newBudget, seasons });
+      void analyze({ riders: parsedRiders, raceType, budget: newBudget, seasons, profileSummary });
     },
     [analyze, teamBuilder],
   );

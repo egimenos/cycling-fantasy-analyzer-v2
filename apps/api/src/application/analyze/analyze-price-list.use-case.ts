@@ -18,14 +18,17 @@ import {
   SeasonBreakdown,
 } from '../../domain/scoring/scoring.service';
 import { RaceType } from '../../domain/shared/race-type.enum';
+import { ProfileDistribution } from '../../domain/scoring/profile-distribution';
 import { Rider } from '../../domain/rider/rider.entity';
 import { mapPriceListEntries, PriceListEntry, PriceListEntryDto } from './price-list-entry';
+import type { ProfileSummary } from '@cycling-analyzer/shared-types';
 
 export interface AnalyzeInput {
   riders: PriceListEntryDto[];
   raceType: RaceType;
   budget: number;
   seasons?: number;
+  profileSummary?: ProfileSummary;
 }
 
 interface MatchedRiderInfo {
@@ -118,6 +121,9 @@ export class AnalyzePriceListUseCase {
 
     const currentYear = new Date().getFullYear();
     const maxSeasons = input.seasons ?? 3;
+    const profileDistribution = input.profileSummary
+      ? ProfileDistribution.fromProfileSummary(input.profileSummary)
+      : null;
 
     interface ScoredEntry {
       entry: PriceListEntry;
@@ -162,6 +168,7 @@ export class AnalyzePriceListUseCase {
         input.raceType,
         currentYear,
         maxSeasons,
+        profileDistribution ?? undefined,
       );
       const seasonBreakdown = this.scoringService.computeSeasonBreakdown(
         results,
