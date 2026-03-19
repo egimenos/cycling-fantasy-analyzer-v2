@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: API, Frontend & ADR
-lane: planned
+lane: 'done'
 dependencies: [WP02]
 subtasks:
   - T013
@@ -13,8 +13,8 @@ phase: Phase 2 - Integration
 assignee: ''
 agent: ''
 shell_pid: ''
-review_status: ''
-reviewed_by: ''
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-19T17:20:12Z'
     lane: planned
@@ -318,3 +318,4 @@ Depends on WP02 — branches from WP02's completed state.
 ## Activity Log
 
 - 2026-03-19T17:20:12Z – system – lane=planned – Prompt created.
+- 2026-03-19T17:46:26Z – unknown – lane=done – Implementation complete

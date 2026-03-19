@@ -21,12 +21,12 @@
 
 ### Included Subtasks
 
-- [ ] T001 Create `ProfileDistribution` value object with `fromProfileSummary()` factory in `apps/api/src/domain/scoring/profile-distribution.ts`
-- [ ] T002 Add `PROFILE_WEIGHT_FLOOR`, `ITT_BONUS_FACTOR`, `CATEGORY_AFFINITY_MAP` constants and accessor functions to `apps/api/src/domain/scoring/scoring-weights.config.ts`
-- [ ] T003 Create `computeProfileWeight()` pure function in `apps/api/src/domain/scoring/profile-weight.ts` implementing the normalized proportional formula with ITT blend
-- [ ] T004 [P] Unit tests for `ProfileDistribution` in `apps/api/src/domain/scoring/profile-distribution.spec.ts`
-- [ ] T005 [P] Unit tests for `computeProfileWeight()` in `apps/api/src/domain/scoring/profile-weight.spec.ts`
-- [ ] T006 [P] Unit tests for new config constants/accessors in `apps/api/src/domain/scoring/scoring-weights.config.spec.ts`
+- [x] T001 Create `ProfileDistribution` value object with `fromProfileSummary()` factory in `apps/api/src/domain/scoring/profile-distribution.ts`
+- [x] T002 Add `PROFILE_WEIGHT_FLOOR`, `ITT_BONUS_FACTOR`, `CATEGORY_AFFINITY_MAP` constants and accessor functions to `apps/api/src/domain/scoring/scoring-weights.config.ts`
+- [x] T003 Create `computeProfileWeight()` pure function in `apps/api/src/domain/scoring/profile-weight.ts` implementing the normalized proportional formula with ITT blend
+- [x] T004 [P] Unit tests for `ProfileDistribution` in `apps/api/src/domain/scoring/profile-distribution.spec.ts`
+- [x] T005 [P] Unit tests for `computeProfileWeight()` in `apps/api/src/domain/scoring/profile-weight.spec.ts`
+- [x] T006 [P] Unit tests for new config constants/accessors in `apps/api/src/domain/scoring/scoring-weights.config.spec.ts`
 
 ### Implementation Notes
 
@@ -59,12 +59,12 @@
 
 ### Included Subtasks
 
-- [ ] T007 Update `computeStageScore()` in `apps/api/src/domain/scoring/scoring.service.ts` to accept optional `ProfileDistribution` and apply per-result profile weight
-- [ ] T008 Update `computeCategoryScore()` in `apps/api/src/domain/scoring/scoring.service.ts` for Mountain → P4/P5 affinity, Sprint → P1/P2, GC → neutral (1.0)
-- [ ] T009 Update `computeRiderScore()` signature to accept and forward `ProfileDistribution`
-- [ ] T010 Update `ScoringService` class methods to pass `ProfileDistribution` through
-- [ ] T011 Comprehensive unit tests: climber vs sprinter scoring against mountain and flat race profiles in `apps/api/src/domain/scoring/scoring.service.spec.ts`
-- [ ] T012 Backward compatibility regression tests: verify output without profile is identical to pre-change baseline
+- [x] T007 Update `computeStageScore()` in `apps/api/src/domain/scoring/scoring.service.ts` to accept optional `ProfileDistribution` and apply per-result profile weight
+- [x] T008 Update `computeCategoryScore()` in `apps/api/src/domain/scoring/scoring.service.ts` for Mountain → P4/P5 affinity, Sprint → P1/P2, GC → neutral (1.0)
+- [x] T009 Update `computeRiderScore()` signature to accept and forward `ProfileDistribution`
+- [x] T010 Update `ScoringService` class methods to pass `ProfileDistribution` through
+- [x] T011 Comprehensive unit tests: climber vs sprinter scoring against mountain and flat race profiles in `apps/api/src/domain/scoring/scoring.service.spec.ts`
+- [x] T012 Backward compatibility regression tests: verify output without profile is identical to pre-change baseline
 
 ### Implementation Notes
 
@@ -99,11 +99,11 @@
 
 ### Included Subtasks
 
-- [ ] T013 Add `profileSummary?: ProfileSummary` to `AnalyzeRequest` in `packages/shared-types/src/api.ts`
-- [ ] T014 Update `AnalyzeRequestDto` validation in `apps/api/src/presentation/analyze.controller.ts` for optional `profileSummary` with nested count validation
-- [ ] T015 Update `AnalyzePriceListUseCase.execute()` in `apps/api/src/application/analyze/analyze-price-list.use-case.ts` to convert `ProfileSummary` → `ProfileDistribution` and pass to scoring functions
-- [ ] T016 Update `rider-input.tsx` in `apps/web/src/features/rider-list/components/` to include `profileSummary` from `useRaceProfile` hook in the analyze request
-- [ ] T017 Write ADR `docs/adr/2026-03-19-profile-aware-scoring.md` documenting the formula, rationale, and alternatives considered
+- [x] T013 Add `profileSummary?: ProfileSummary` to `AnalyzeRequest` in `packages/shared-types/src/api.ts`
+- [x] T014 Update `AnalyzeRequestDto` validation in `apps/api/src/presentation/analyze.controller.ts` for optional `profileSummary` with nested count validation
+- [x] T015 Update `AnalyzePriceListUseCase.execute()` in `apps/api/src/application/analyze/analyze-price-list.use-case.ts` to convert `ProfileSummary` → `ProfileDistribution` and pass to scoring functions
+- [x] T016 Update `rider-input.tsx` in `apps/web/src/features/rider-list/components/` to include `profileSummary` from `useRaceProfile` hook in the analyze request
+- [x] T017 Write ADR `docs/adr/2026-03-19-profile-aware-scoring.md` documenting the formula, rationale, and alternatives considered
 
 ### Implementation Notes
 

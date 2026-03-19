@@ -1,7 +1,7 @@
 ---
 work_package_id: WP01
 title: Domain Foundation — ProfileDistribution & Weight Config
-lane: planned
+lane: 'done'
 dependencies: []
 subtasks:
   - T001
@@ -14,8 +14,8 @@ phase: Phase 0 - Foundation
 assignee: ''
 agent: ''
 shell_pid: ''
-review_status: ''
-reviewed_by: ''
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-19T17:20:12Z'
     lane: planned
@@ -321,3 +321,4 @@ No dependencies — this is the starting work package.
 ## Activity Log
 
 - 2026-03-19T17:20:12Z – system – lane=planned – Prompt created.
+- 2026-03-19T17:46:23Z – unknown – lane=done – Implementation complete

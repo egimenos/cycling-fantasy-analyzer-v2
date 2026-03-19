@@ -1,7 +1,7 @@
 ---
 work_package_id: WP02
 title: Scoring Algorithm Integration
-lane: planned
+lane: 'done'
 dependencies: [WP01]
 subtasks:
   - T007
@@ -14,8 +14,8 @@ phase: Phase 1 - Core Implementation
 assignee: ''
 agent: ''
 shell_pid: ''
-review_status: ''
-reviewed_by: ''
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-19T17:20:12Z'
     lane: planned
@@ -346,3 +346,4 @@ export function computeRiderScore(
 ## Activity Log
 
 - 2026-03-19T17:20:12Z – system – lane=planned – Prompt created.
+- 2026-03-19T17:46:24Z – unknown – lane=done – Implementation complete
