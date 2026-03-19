@@ -1,7 +1,7 @@
 ---
 work_package_id: WP06
 title: Benchmark Application Layer — Use Cases
-lane: planned
+lane: 'for_review'
 dependencies:
   - WP01
   - WP02
@@ -441,3 +441,4 @@ Depends on WP01 (raceDate + findByRiderIdsBeforeDate), WP02 (StartlistRepository
 ## Activity Log
 
 - 2026-03-19T18:18:14Z – system – lane=planned – Prompt created.
+- 2026-03-19T19:04:35Z – unknown – lane=for_review – Ready for review: FetchStartlistUseCase, RunBenchmarkUseCase, RunBenchmarkSuiteUseCase with tests
