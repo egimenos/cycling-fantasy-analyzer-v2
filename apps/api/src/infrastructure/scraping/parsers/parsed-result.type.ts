@@ -8,4 +8,8 @@ export interface ParsedResult {
   readonly category: ResultCategory;
   readonly stageNumber: number | null;
   readonly dnf: boolean;
+  readonly parcoursType: string | null;
+  readonly isItt: boolean;
+  readonly isTtt: boolean;
+  readonly profileScore: number | null;
 }

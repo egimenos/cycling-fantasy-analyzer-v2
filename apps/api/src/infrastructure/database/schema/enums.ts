@@ -12,3 +12,5 @@ export const scrapeStatusEnum = pgEnum('scrape_status', [
   'success',
   'failed',
 ]);
+
+export const parcoursTypeEnum = pgEnum('parcours_type', ['p1', 'p2', 'p3', 'p4', 'p5']);

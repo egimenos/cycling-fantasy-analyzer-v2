@@ -2,6 +2,7 @@ import { RaceResult } from '../../race-result/race-result.entity';
 import { RaceType } from '../../shared/race-type.enum';
 import { RaceClass } from '../../shared/race-class.enum';
 import { ResultCategory } from '../../shared/result-category.enum';
+import { ParcoursType } from '../../shared/parcours-type.enum';
 
 interface RaceResultOverrides {
   id?: string;
@@ -16,6 +17,10 @@ interface RaceResultOverrides {
   stageNumber?: number | null;
   dnf?: boolean;
   scrapedAt?: Date;
+  parcoursType?: ParcoursType | null;
+  isItt?: boolean;
+  isTtt?: boolean;
+  profileScore?: number | null;
 }
 
 /**
@@ -36,5 +41,9 @@ export function createRaceResult(overrides: RaceResultOverrides = {}): RaceResul
     stageNumber: overrides.stageNumber === undefined ? null : overrides.stageNumber,
     dnf: overrides.dnf ?? false,
     scrapedAt: overrides.scrapedAt ?? new Date('2024-07-21'),
+    parcoursType: overrides.parcoursType === undefined ? null : overrides.parcoursType,
+    isItt: overrides.isItt ?? false,
+    isTtt: overrides.isTtt ?? false,
+    profileScore: overrides.profileScore === undefined ? null : overrides.profileScore,
   });
 }

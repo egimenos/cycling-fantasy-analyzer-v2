@@ -50,6 +50,10 @@ export function parseResultsTable(
       category,
       stageNumber,
       dnf: isNonFinisher,
+      parcoursType: null,
+      isItt: false,
+      isTtt: false,
+      profileScore: null,
     });
   });
 

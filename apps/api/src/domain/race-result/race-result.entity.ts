@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { RaceType } from '../shared/race-type.enum';
 import { RaceClass } from '../shared/race-class.enum';
 import { ResultCategory } from '../shared/result-category.enum';
+import { ParcoursType } from '../shared/parcours-type.enum';
 
 export interface RaceResultProps {
   readonly id: string;
@@ -16,6 +17,10 @@ export interface RaceResultProps {
   readonly stageNumber: number | null;
   readonly dnf: boolean;
   readonly scrapedAt: Date;
+  readonly parcoursType: ParcoursType | null;
+  readonly isItt: boolean;
+  readonly isTtt: boolean;
+  readonly profileScore: number | null;
 }
 
 export class RaceResult {
@@ -75,6 +80,22 @@ export class RaceResult {
 
   get scrapedAt(): Date {
     return this.props.scrapedAt;
+  }
+
+  get parcoursType(): ParcoursType | null {
+    return this.props.parcoursType;
+  }
+
+  get isItt(): boolean {
+    return this.props.isItt;
+  }
+
+  get isTtt(): boolean {
+    return this.props.isTtt;
+  }
+
+  get profileScore(): number | null {
+    return this.props.profileScore;
   }
 
   isScoring(): boolean {

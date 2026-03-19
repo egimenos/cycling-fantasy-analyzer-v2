@@ -5,6 +5,7 @@ import { RaceResult, RaceResultProps } from '../../domain/race-result/race-resul
 import { RaceType } from '../../domain/shared/race-type.enum';
 import { RaceClass } from '../../domain/shared/race-class.enum';
 import { ResultCategory } from '../../domain/shared/result-category.enum';
+import { ParcoursType } from '../../domain/shared/parcours-type.enum';
 import { raceResults } from './schema/race-results';
 import { DRIZZLE, DrizzleDatabase } from './drizzle.provider';
 
@@ -65,6 +66,10 @@ export class RaceResultRepositoryAdapter implements RaceResultRepositoryPort {
             stageNumber: props.stageNumber,
             dnf: props.dnf,
             scrapedAt: props.scrapedAt,
+            parcoursType: props.parcoursType,
+            isItt: props.isItt,
+            isTtt: props.isTtt,
+            profileScore: props.profileScore,
           })
           .onConflictDoUpdate({
             target: [
@@ -78,6 +83,10 @@ export class RaceResultRepositoryAdapter implements RaceResultRepositoryPort {
               position: props.position,
               dnf: props.dnf,
               scrapedAt: props.scrapedAt,
+              parcoursType: props.parcoursType,
+              isItt: props.isItt,
+              isTtt: props.isTtt,
+              profileScore: props.profileScore,
             },
           });
         count++;
@@ -101,6 +110,10 @@ export class RaceResultRepositoryAdapter implements RaceResultRepositoryPort {
       stageNumber: row.stageNumber,
       dnf: row.dnf,
       scrapedAt: row.scrapedAt,
+      parcoursType: (row.parcoursType as ParcoursType) ?? null,
+      isItt: row.isItt,
+      isTtt: row.isTtt,
+      profileScore: row.profileScore,
     } satisfies RaceResultProps);
   }
 }

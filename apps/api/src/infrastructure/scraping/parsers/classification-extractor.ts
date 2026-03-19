@@ -6,6 +6,7 @@ export interface ClassificationUrl {
   readonly urlPath: string;
   readonly classificationType: ClassificationType;
   readonly stageNumber: number | null;
+  readonly label: string;
 }
 
 const PREV_NEXT_REGEX = /PREV|NEXT|«|»/i;
@@ -26,7 +27,8 @@ export function extractClassificationUrls(html: string): ClassificationUrl[] {
       .find('select option')
       .each((__, option) => {
         let urlPath = $(option).attr('value');
-        const optionText = $(option).text().trim().toLowerCase();
+        const rawText = $(option).text().trim();
+        const optionText = rawText.toLowerCase();
         if (!urlPath) return;
 
         // Normalize: strip /result/result or /result suffix
@@ -41,6 +43,7 @@ export function extractClassificationUrls(html: string): ClassificationUrl[] {
             urlPath,
             classificationType: 'STAGE',
             stageNumber: parseInt(stageMatch[1], 10),
+            label: rawText,
           });
           return;
         }
@@ -50,6 +53,7 @@ export function extractClassificationUrls(html: string): ClassificationUrl[] {
             urlPath,
             classificationType: 'SPRINT',
             stageNumber: null,
+            label: rawText,
           });
           return;
         }
@@ -59,6 +63,7 @@ export function extractClassificationUrls(html: string): ClassificationUrl[] {
             urlPath,
             classificationType: 'MOUNTAIN',
             stageNumber: null,
+            label: rawText,
           });
           return;
         }
@@ -68,6 +73,7 @@ export function extractClassificationUrls(html: string): ClassificationUrl[] {
             urlPath,
             classificationType: 'GC',
             stageNumber: null,
+            label: rawText,
           });
           return;
         }

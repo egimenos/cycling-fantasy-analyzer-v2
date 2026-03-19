@@ -16,6 +16,7 @@ import { Rider } from '../../domain/rider/rider.entity';
 import { RaceResult } from '../../domain/race-result/race-result.entity';
 import { RaceType } from '../../domain/shared/race-type.enum';
 import { RaceClass } from '../../domain/shared/race-class.enum';
+import { ParcoursType } from '../../domain/shared/parcours-type.enum';
 import { PcsScraperPort, PCS_SCRAPER_PORT } from './ports/pcs-scraper.port';
 import { extractClassificationUrls } from '../../infrastructure/scraping/parsers/classification-extractor';
 import {
@@ -198,6 +199,7 @@ export class TriggerScrapeUseCase {
         html,
         classUrl.classificationType,
         classUrl.stageNumber,
+        classUrl.label,
       );
 
       this.logger.debug(
@@ -274,12 +276,13 @@ export class TriggerScrapeUseCase {
     html: string,
     classificationType: string,
     stageNumber: number | null,
+    stageNameText?: string,
   ): ParsedResult[] {
     switch (classificationType) {
       case 'GC':
         return parseGcResults(html);
       case 'STAGE':
-        return parseStageResults(html, stageNumber!);
+        return parseStageResults(html, stageNumber!, stageNameText);
       case 'SPRINT':
         return parseSprintClassification(html);
       case 'MOUNTAIN':
@@ -361,6 +364,10 @@ export class TriggerScrapeUseCase {
           stageNumber: r.stageNumber,
           dnf: r.dnf,
           scrapedAt: new Date(),
+          parcoursType: (r.parcoursType as ParcoursType) ?? null,
+          isItt: r.isItt,
+          isTtt: r.isTtt,
+          profileScore: r.profileScore,
         }),
       );
 
