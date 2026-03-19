@@ -139,10 +139,10 @@
 
 ### Included Subtasks
 
-- [ ] T015 Update `TriggerScrapeUseCase` to fetch and extract race dates from PCS during scraping
-- [ ] T016 Update `persistResults()` to pass `raceDate` into `RaceResult.create()`
-- [ ] T017 Update `SeedDatabaseCommand` to extract and backfill race dates during re-seed
-- [ ] T018 Update existing scraping tests to account for `raceDate` field
+- [x] T015 Update `TriggerScrapeUseCase` to fetch and extract race dates from PCS during scraping
+- [x] T016 Update `persistResults()` to pass `raceDate` into `RaceResult.create()`
+- [x] T017 Update `SeedDatabaseCommand` to extract and backfill race dates during re-seed
+- [x] T018 Update existing scraping tests to account for `raceDate` field
 
 ### Implementation Notes
 
@@ -219,11 +219,11 @@
 
 ### Included Subtasks
 
-- [ ] T024 Create `FetchStartlistUseCase` — check DB → scrape PCS if missing → persist → create missing riders
-- [ ] T025 Create `RunBenchmarkUseCase` — single race benchmark orchestration
-- [ ] T026 Create `RunBenchmarkSuiteUseCase` — multi-race iteration with aggregate results
-- [ ] T027 Tests for `FetchStartlistUseCase` (mock startlist repo + PCS client)
-- [ ] T028 Tests for `RunBenchmarkUseCase` (mock repos, verify predicted vs actual computation)
+- [x] T024 Create `FetchStartlistUseCase` — check DB → scrape PCS if missing → persist → create missing riders
+- [x] T025 Create `RunBenchmarkUseCase` — single race benchmark orchestration
+- [x] T026 Create `RunBenchmarkSuiteUseCase` — multi-race iteration with aggregate results
+- [x] T027 Tests for `FetchStartlistUseCase` (mock startlist repo + PCS client)
+- [x] T028 Tests for `RunBenchmarkUseCase` (mock repos, verify predicted vs actual computation)
 
 ### Implementation Notes
 

@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: Scraping Integration — Wire Race Date into Scraper
-lane: 'doing'
+lane: 'for_review'
 dependencies:
   - WP01
   - WP03
@@ -193,3 +193,4 @@ Depends on WP01 (raceDate in schema/entity) and WP03 (race-date parser).
 
 - 2026-03-19T18:18:14Z – system – lane=planned – Prompt created.
 - 2026-03-19T18:56:43Z – claude-opus – shell_pid=29049 – lane=doing – Assigned agent via workflow command
+- 2026-03-19T19:03:40Z – claude-opus – shell_pid=29049 – lane=for_review – Ready for review: race date integrated into TriggerScrapeUseCase, persistResults, SeedDatabaseCommand, tests updated
