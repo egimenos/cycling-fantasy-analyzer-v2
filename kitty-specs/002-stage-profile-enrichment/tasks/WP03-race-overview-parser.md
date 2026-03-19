@@ -1,14 +1,20 @@
 ---
 work_package_id: WP03
 title: Race Overview Parser
-lane: planned
+lane: 'done'
 dependencies: [WP01]
-base_branch: main
+base_branch: 002-stage-profile-enrichment-WP01
+base_commit: 557237f03e0d55a756f23a380363758559f6aee1
+created_at: '2026-03-19T11:53:19.726243+00:00'
 subtasks:
   - T013
   - T014
   - T015
   - T016
+shell_pid: '38052'
+agent: 'claude-opus'
+reviewed_by: 'egimenos'
+review_status: 'approved'
 history:
   - timestamp: '2026-03-19T11:19:08Z'
     lane: planned
@@ -214,3 +220,6 @@ type: feature
 ## Activity Log
 
 - 2026-03-19T11:19:08Z – system – lane=planned – Prompt created.
+- 2026-03-19T11:53:20Z – claude-opus – shell_pid=38052 – lane=doing – Assigned agent via workflow command
+- 2026-03-19T11:56:59Z – claude-opus – shell_pid=38052 – lane=for_review – Race overview parser created with edge cases, fixture, and tests passing
+- 2026-03-19T12:05:26Z – claude-opus – shell_pid=38052 – lane=done – Review passed: all criteria met, no issues

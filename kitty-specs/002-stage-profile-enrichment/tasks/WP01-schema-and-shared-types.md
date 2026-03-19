@@ -1,9 +1,11 @@
 ---
 work_package_id: WP01
 title: Schema, Shared Types & Domain Entity
-lane: planned
+lane: 'done'
 dependencies: []
-base_branch: main
+base_branch: 002-stage-profile-enrichment
+base_commit: 85a34d6a8e1dc610c207b55ebabbe552575e30a6
+created_at: '2026-03-19T11:43:49.025202+00:00'
 subtasks:
   - T001
   - T002
@@ -11,6 +13,10 @@ subtasks:
   - T004
   - T005
   - T006
+shell_pid: '27469'
+agent: 'claude-opus'
+reviewed_by: 'egimenos'
+review_status: 'approved'
 history:
   - timestamp: '2026-03-19T11:19:08Z'
     lane: planned
@@ -153,3 +159,6 @@ type: foundation
 ## Activity Log
 
 - 2026-03-19T11:19:08Z – system – lane=planned – Prompt created.
+- 2026-03-19T11:43:50Z – claude-opus – shell_pid=27469 – lane=doing – Assigned agent via workflow command
+- 2026-03-19T11:49:56Z – claude-opus – shell_pid=27469 – lane=for_review – All 6 subtasks complete: ParcoursType enum, schema columns, migration, domain entity, ParsedResult, defaults in parseResultsTable. Build green, 283 tests passing.
+- 2026-03-19T12:05:23Z – claude-opus – shell_pid=27469 – lane=done – Review passed: all criteria met, no issues

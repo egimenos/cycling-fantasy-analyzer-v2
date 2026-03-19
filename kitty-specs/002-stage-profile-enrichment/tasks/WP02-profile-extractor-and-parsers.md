@@ -1,9 +1,11 @@
 ---
 work_package_id: WP02
 title: Profile Extractor & Parser Updates
-lane: planned
+lane: 'done'
 dependencies: [WP01]
-base_branch: main
+base_branch: 002-stage-profile-enrichment-WP01
+base_commit: 557237f03e0d55a756f23a380363758559f6aee1
+created_at: '2026-03-19T11:52:43.618840+00:00'
 subtasks:
   - T007
   - T008
@@ -11,6 +13,10 @@ subtasks:
   - T010
   - T011
   - T012
+shell_pid: '37592'
+agent: 'claude-opus'
+reviewed_by: 'egimenos'
+review_status: 'approved'
 history:
   - timestamp: '2026-03-19T11:19:08Z'
     lane: planned
@@ -266,3 +272,6 @@ type: feature
 ## Activity Log
 
 - 2026-03-19T11:19:08Z – system – lane=planned – Prompt created.
+- 2026-03-19T11:52:44Z – claude-opus – shell_pid=37592 – lane=doing – Assigned agent via workflow command
+- 2026-03-19T11:58:20Z – claude-opus – shell_pid=37592 – lane=for_review – Profile extractor created, parsers updated, tests passing
+- 2026-03-19T12:05:25Z – claude-opus – shell_pid=37592 – lane=done – Review passed: all criteria met, no issues
