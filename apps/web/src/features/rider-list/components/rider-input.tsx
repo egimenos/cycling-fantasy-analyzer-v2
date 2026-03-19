@@ -5,7 +5,10 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Alert, AlertDescription } from '@/shared/ui/alert';
 import { Loader2 } from 'lucide-react';
+import { useRaceProfile } from '../hooks/use-race-profile';
+import { RaceProfileSummary } from './race-profile-summary';
 
 interface RiderInputProps {
   onAnalyze: (
@@ -34,17 +37,15 @@ function parseRiderLines(text: string): PriceListEntryDto[] {
     .filter((entry): entry is PriceListEntryDto => entry !== null);
 }
 
-const RACE_TYPE_LABELS: Record<RaceType, string> = {
-  [RaceType.GRAND_TOUR]: 'Grand Tour',
-  [RaceType.CLASSIC]: 'Classic',
-  [RaceType.MINI_TOUR]: 'Mini Tour',
-};
-
 export function RiderInput({ onAnalyze, isLoading }: RiderInputProps) {
   const [text, setText] = useState('');
-  const [raceType, setRaceType] = useState<RaceType>(RaceType.GRAND_TOUR);
+  const [raceUrl, setRaceUrl] = useState('');
   const [budget, setBudget] = useState(2000);
   const [seasons, setSeasons] = useState(3);
+
+  const profileState = useRaceProfile(raceUrl);
+  const raceType =
+    profileState.status === 'success' ? profileState.data.raceType : RaceType.GRAND_TOUR;
 
   const parsedRiders = useMemo(() => parseRiderLines(text), [text]);
   const lineCount = text.split('\n').filter((l) => l.trim().length > 0).length;
@@ -57,6 +58,41 @@ export function RiderInput({ onAnalyze, isLoading }: RiderInputProps) {
 
   return (
     <div className="space-y-4">
+      <div>
+        <label htmlFor="race-url" className="mb-1.5 block text-sm font-medium">
+          PCS Race URL
+        </label>
+        <Input
+          id="race-url"
+          value={raceUrl}
+          onChange={(e) => setRaceUrl(e.target.value)}
+          placeholder="https://www.procyclingstats.com/race/tour-de-france/2025"
+        />
+        {profileState.status === 'idle' && raceUrl === '' && (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Enter a PCS race URL to see the race profile and auto-detect the race type.
+          </p>
+        )}
+        {profileState.status === 'loading' && (
+          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Fetching race profile from PCS...
+          </div>
+        )}
+        {profileState.status === 'error' && (
+          <Alert variant="destructive" className="mt-2">
+            <AlertDescription>
+              Could not fetch race profile. Check the URL and try again.
+            </AlertDescription>
+          </Alert>
+        )}
+        {profileState.status === 'success' && (
+          <div className="mt-2">
+            <RaceProfileSummary profile={profileState.data} />
+          </div>
+        )}
+      </div>
+
       <div>
         <label htmlFor="rider-input" className="mb-1.5 block text-sm font-medium">
           Rider List
@@ -82,24 +118,6 @@ export function RiderInput({ onAnalyze, isLoading }: RiderInputProps) {
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-[160px]">
-          <label htmlFor="race-type" className="mb-1.5 block text-sm font-medium">
-            Race Type
-          </label>
-          <Select value={raceType} onValueChange={(v) => setRaceType(v as RaceType)}>
-            <SelectTrigger id="race-type">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.values(RaceType).map((rt) => (
-                <SelectItem key={rt} value={rt}>
-                  {RACE_TYPE_LABELS[rt]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         <div className="min-w-[140px]">
           <label htmlFor="budget" className="mb-1.5 block text-sm font-medium">
             Budget (Hillios)
