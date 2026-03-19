@@ -1,7 +1,7 @@
 ---
 work_package_id: WP06
 title: Database Re-seed & Validation
-lane: planned
+lane: 'done'
 dependencies: [WP02]
 base_branch: main
 subtasks:
@@ -9,12 +9,20 @@ subtasks:
   - T029
   - T030
   - T031
+agent: 'egimenos'
+shell_pid: 'manual'
+reviewed_by: 'egimenos'
+review_status: 'approved'
 history:
   - timestamp: '2026-03-19T11:19:08Z'
     lane: planned
     agent: system
     shell_pid: ''
     action: Prompt generated via /spec-kitty.tasks
+  - timestamp: '2026-03-19T17:00:00Z'
+    lane: done
+    agent: egimenos
+    action: 'Re-seed complete: 206 races, 113888 records. SC-001 pass (0 null parcours stages). TdF 2024 21 stages verified. Milano-Sanremo p2/59 confirmed.'
 depends_on: [WP02]
 estimated_prompt_size: ~300 lines
 priority: P1

@@ -20,12 +20,12 @@
 
 ### Included Subtasks
 
-- [ ] T001 [P] Add `ParcoursType` enum to `packages/shared-types/src/enums.ts`
-- [ ] T002 Add `parcoursTypeEnum` to `apps/api/src/infrastructure/database/schema/enums.ts`
-- [ ] T003 Add 4 columns (`parcours_type`, `is_itt`, `is_ttt`, `profile_score`) to `apps/api/src/infrastructure/database/schema/race-results.ts`
-- [ ] T004 Generate Drizzle migration for the schema changes
-- [ ] T005 Update `RaceResultProps` and `RaceResult` entity in `apps/api/src/domain/race-result/race-result.entity.ts`
-- [ ] T006 [P] Update `ParsedResult` interface in `apps/api/src/infrastructure/scraping/parsers/parsed-result.type.ts`
+- [x] T001 [P] Add `ParcoursType` enum to `packages/shared-types/src/enums.ts`
+- [x] T002 Add `parcoursTypeEnum` to `apps/api/src/infrastructure/database/schema/enums.ts`
+- [x] T003 Add 4 columns (`parcours_type`, `is_itt`, `is_ttt`, `profile_score`) to `apps/api/src/infrastructure/database/schema/race-results.ts`
+- [x] T004 Generate Drizzle migration for the schema changes
+- [x] T005 Update `RaceResultProps` and `RaceResult` entity in `apps/api/src/domain/race-result/race-result.entity.ts`
+- [x] T006 [P] Update `ParsedResult` interface in `apps/api/src/infrastructure/scraping/parsers/parsed-result.type.ts`
 
 ### Implementation Notes
 
@@ -59,12 +59,12 @@
 
 ### Included Subtasks
 
-- [ ] T007 Create `apps/api/src/infrastructure/scraping/parsers/profile-extractor.ts` with `extractParcoursType()`, `extractProfileScore()`, and `detectTimeTrialType()` functions
-- [ ] T008 Modify `apps/api/src/infrastructure/scraping/parsers/stage-race.parser.ts` — `parseStageResults()` must accept stage HTML and extract profile via profile-extractor
-- [ ] T009 Modify `apps/api/src/infrastructure/scraping/parsers/classic.parser.ts` — `parseClassicResults()` must extract profile from sidebar
-- [ ] T010 Update `apps/api/src/application/scraping/trigger-scrape.use-case.ts` to pass profile data through from parsers to `RaceResult.create()`
-- [ ] T011 Create HTML fixture files for profile extraction tests (stage result sidebar, classic result sidebar)
-- [ ] T012 Write unit tests for profile-extractor and updated parsers
+- [x] T007 Create `apps/api/src/infrastructure/scraping/parsers/profile-extractor.ts` with `extractParcoursType()`, `extractProfileScore()`, and `detectTimeTrialType()` functions
+- [x] T008 Modify `apps/api/src/infrastructure/scraping/parsers/stage-race.parser.ts` — `parseStageResults()` must accept stage HTML and extract profile via profile-extractor
+- [x] T009 Modify `apps/api/src/infrastructure/scraping/parsers/classic.parser.ts` — `parseClassicResults()` must extract profile from sidebar
+- [x] T010 Update `apps/api/src/application/scraping/trigger-scrape.use-case.ts` to pass profile data through from parsers to `RaceResult.create()`
+- [x] T011 Create HTML fixture files for profile extraction tests (stage result sidebar, classic result sidebar)
+- [x] T012 Write unit tests for profile-extractor and updated parsers
 
 ### Implementation Notes
 
@@ -101,10 +101,10 @@
 
 ### Included Subtasks
 
-- [ ] T013 Create `apps/api/src/infrastructure/scraping/parsers/race-overview.parser.ts` with `parseRaceOverview()` function
-- [ ] T014 Handle edge cases: rest days (skip), TBD stages (null parcours), prologues, ITT/TTT detection from stage name
-- [ ] T015 Create HTML fixture for a stage race overview page (based on TdF 2024)
-- [ ] T016 Write unit tests for `parseRaceOverview()`
+- [x] T013 Create `apps/api/src/infrastructure/scraping/parsers/race-overview.parser.ts` with `parseRaceOverview()` function
+- [x] T014 Handle edge cases: rest days (skip), TBD stages (null parcours), prologues, ITT/TTT detection from stage name
+- [x] T015 Create HTML fixture for a stage race overview page (based on TdF 2024)
+- [x] T016 Write unit tests for `parseRaceOverview()`
 
 ### Implementation Notes
 
@@ -139,12 +139,12 @@
 
 ### Included Subtasks
 
-- [ ] T017 [P] Add `RaceProfileResponse`, `StageInfo`, `ProfileSummary` types to `packages/shared-types/src/api.ts`
-- [ ] T018 Create `apps/api/src/application/analyze/fetch-race-profile.use-case.ts` — orchestrate profile fetch from PCS URL
-- [ ] T019 Implement race type detection (classic vs stage race) and classic fallback to previous year
-- [ ] T020 Create `apps/api/src/presentation/race-profile.controller.ts` — `GET /api/race-profile`
-- [ ] T021 Register controller and use case in NestJS module
-- [ ] T022 Write tests for use case (mock PCS client) and controller
+- [x] T017 [P] Add `RaceProfileResponse`, `StageInfo`, `ProfileSummary` types to `packages/shared-types/src/api.ts`
+- [x] T018 Create `apps/api/src/application/analyze/fetch-race-profile.use-case.ts` — orchestrate profile fetch from PCS URL
+- [x] T019 Implement race type detection (classic vs stage race) and classic fallback to previous year
+- [x] T020 Create `apps/api/src/presentation/race-profile.controller.ts` — `GET /api/race-profile`
+- [x] T021 Register controller and use case in NestJS module
+- [x] T022 Write tests for use case (mock PCS client) and controller
 
 ### Implementation Notes
 
@@ -180,11 +180,11 @@
 
 ### Included Subtasks
 
-- [ ] T023 Create `apps/web/src/features/rider-list/components/race-profile-summary.tsx` component
-- [ ] T024 Modify `apps/web/src/features/rider-list/components/rider-input.tsx` — replace race type selector with PCS URL input
-- [ ] T025 Add API hook to call `GET /api/race-profile` on URL input (debounced)
-- [ ] T026 Auto-fill race type from profile response, handle loading/error/empty states
-- [ ] T027 Update `AnalyzeRequest` submission to use auto-detected race type
+- [x] T023 Create `apps/web/src/features/rider-list/components/race-profile-summary.tsx` component
+- [x] T024 Modify `apps/web/src/features/rider-list/components/rider-input.tsx` — replace race type selector with PCS URL input
+- [x] T025 Add API hook to call `GET /api/race-profile` on URL input (debounced)
+- [x] T026 Auto-fill race type from profile response, handle loading/error/empty states
+- [x] T027 Update `AnalyzeRequest` submission to use auto-detected race type
 
 ### Implementation Notes
 
@@ -222,10 +222,10 @@
 
 ### Included Subtasks
 
-- [ ] T028 Verify `seed-database` CLI command works with the updated schema and parsers
-- [ ] T029 Run full re-seed for at least 2 seasons of data
-- [ ] T030 Validate profile data for 3 known races: TdF 2024 (stage race), Paris-Nice 2024 (mini tour), Milano-Sanremo 2024 (classic)
-- [ ] T031 Verify existing scoring pipeline and `/api/analyze` still work correctly with enriched data
+- [x] T028 Verify `seed-database` CLI command works with the updated schema and parsers
+- [x] T029 Run full re-seed for at least 2 seasons of data
+- [x] T030 Validate profile data for 3 known races: TdF 2024 (stage race), Paris-Nice 2024 (mini tour), Milano-Sanremo 2024 (classic)
+- [x] T031 Verify existing scoring pipeline and `/api/analyze` still work correctly with enriched data
 
 ### Implementation Notes
 
