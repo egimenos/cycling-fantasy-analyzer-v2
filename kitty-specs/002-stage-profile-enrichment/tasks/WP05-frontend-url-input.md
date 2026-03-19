@@ -1,15 +1,20 @@
 ---
 work_package_id: WP05
 title: Frontend — URL Input & Profile Display
-lane: planned
+lane: 'done'
+reviewed_by: 'claude-opus'
+review_status: 'approved'
 dependencies: [WP04]
-base_branch: main
+base_branch: 002-stage-profile-enrichment-WP04
+base_commit: a3e4aca188a892fb0b5220f07e2072e0b92d1525
+created_at: '2026-03-19T15:10:59.758075+00:00'
 subtasks:
   - T023
   - T024
   - T025
   - T026
   - T027
+shell_pid: '13022'
 history:
   - timestamp: '2026-03-19T11:19:08Z'
     lane: planned
@@ -155,3 +160,4 @@ type: feature
 ## Activity Log
 
 - 2026-03-19T11:19:08Z – system – lane=planned – Prompt created.
+- 2026-03-19T16:20:00Z – claude-opus – lane=done – All subtasks complete: URL input replaces dropdown, profile summary component, debounced hook with AbortController, graceful degradation. Build green, 457 tests passing (104 web + 353 API).
