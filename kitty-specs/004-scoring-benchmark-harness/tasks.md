@@ -61,11 +61,11 @@
 
 ### Included Subtasks
 
-- [ ] T006 Create `startlist-entries.ts` Drizzle schema with unique constraint and composite index
-- [ ] T007 Export from `schema/index.ts` and generate Drizzle migration
-- [ ] T008 Create `StartlistEntry` domain entity with `create`/`reconstitute` factory methods
-- [ ] T009 Create `StartlistRepositoryPort` — `findByRace`, `existsForRace`, `saveMany`
-- [ ] T010 Create `StartlistRepositoryAdapter` Drizzle implementation
+- [x] T006 Create `startlist-entries.ts` Drizzle schema with unique constraint and composite index
+- [x] T007 Export from `schema/index.ts` and generate Drizzle migration
+- [x] T008 Create `StartlistEntry` domain entity with `create`/`reconstitute` factory methods
+- [x] T009 Create `StartlistRepositoryPort` — `findByRace`, `existsForRace`, `saveMany`
+- [x] T010 Create `StartlistRepositoryAdapter` Drizzle implementation
 
 ### Implementation Notes
 
