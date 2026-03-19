@@ -1,8 +1,11 @@
 ---
 work_package_id: WP01
 title: Race Date — Schema, Entity & Repository
-lane: planned
+lane: 'doing'
 dependencies: []
+base_branch: main
+base_commit: ece0b7c2ba315face43d075a8d63d6169e260e61
+created_at: '2026-03-19T18:44:42.475346+00:00'
 subtasks:
   - T001
   - T002
@@ -12,8 +15,8 @@ subtasks:
   - T005
 phase: Phase 0 - Foundation
 assignee: ''
-agent: ''
-shell_pid: ''
+agent: 'claude-opus'
+shell_pid: '14098'
 review_status: ''
 reviewed_by: ''
 history:
@@ -286,3 +289,4 @@ No dependencies — this is a foundation work package.
 ## Activity Log
 
 - 2026-03-19T18:18:14Z – system – lane=planned – Prompt created.
+- 2026-03-19T18:44:43Z – claude-opus – shell_pid=14098 – lane=doing – Assigned agent via workflow command
