@@ -1,11 +1,15 @@
 ---
 work_package_id: WP04
 title: Race Profile Use Case & API Endpoint
-lane: planned
+lane: 'done'
+reviewed_by: 'claude-opus'
+review_status: 'approved'
 dependencies:
   - WP02
   - WP03
-base_branch: main
+base_branch: 002-stage-profile-enrichment-WP04-merge-base
+base_commit: bf84a20e2f4f6caa9542a54680234048b0bac454
+created_at: '2026-03-19T12:06:32.327615+00:00'
 subtasks:
   - T017
   - T018
@@ -13,6 +17,8 @@ subtasks:
   - T020
   - T021
   - T022
+shell_pid: '8061'
+agent: 'claude-opus'
 history:
   - timestamp: '2026-03-19T11:19:08Z'
     lane: planned
@@ -256,3 +262,6 @@ type: feature
 ## Activity Log
 
 - 2026-03-19T11:19:08Z – system – lane=planned – Prompt created.
+- 2026-03-19T12:06:33Z – claude-opus – shell_pid=46679 – lane=doing – Assigned agent via workflow command
+- 2026-03-19T15:05:08Z – claude-opus – shell_pid=8061 – lane=doing – Started review via workflow command
+- 2026-03-19T16:10:00Z – claude-opus – lane=done – Review passed: all 8 criteria met, 21 WP04 tests + 353 total passing, no blocking issues
