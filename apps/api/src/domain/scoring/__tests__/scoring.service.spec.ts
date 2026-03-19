@@ -1,7 +1,9 @@
 import { RaceType } from '../../shared/race-type.enum';
 import { RaceClass } from '../../shared/race-class.enum';
 import { ResultCategory } from '../../shared/result-category.enum';
+import { ParcoursType } from '../../shared/parcours-type.enum';
 import { getTemporalWeight, TEMPORAL_WEIGHTS } from '../temporal-decay';
+import { ProfileDistribution } from '../profile-distribution';
 import {
   computeCategoryScore,
   computeStageScore,
@@ -780,5 +782,529 @@ describe('ScoringService', () => {
     const stats = service.computePoolStats([{ totalProjectedPts: 100, priceHillios: 200 }]);
     expect(stats.minPointsPerHillio).toBeCloseTo(0.5);
     expect(stats.maxPointsPerHillio).toBeCloseTo(0.5);
+  });
+});
+
+// ─── Profile-Aware Scoring Tests (WP02) ─────────────────────────────────────
+
+/** Mountain-heavy profile: 4 P1, 2 P2, 3 P3, 4 P4, 6 P5, 2 ITT, 0 TTT, 0 unknown */
+const mountainProfile = ProfileDistribution.fromProfileSummary({
+  p1Count: 4,
+  p2Count: 2,
+  p3Count: 3,
+  p4Count: 4,
+  p5Count: 6,
+  ittCount: 2,
+  tttCount: 0,
+  unknownCount: 0,
+})!;
+
+/** Flat profile: 8 P1, 4 P2, 3 P3, 2 P4, 2 P5, 2 ITT, 0 TTT, 0 unknown */
+const flatProfile = ProfileDistribution.fromProfileSummary({
+  p1Count: 8,
+  p2Count: 4,
+  p3Count: 3,
+  p4Count: 2,
+  p5Count: 2,
+  ittCount: 2,
+  tttCount: 0,
+  unknownCount: 0,
+})!;
+
+describe('Profile-Aware computeStageScore', () => {
+  it('should weight P5 stages higher than P1 stages on a mountain-heavy race', () => {
+    const climberResults = [
+      createRaceResult({
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+        year: 2024,
+        parcoursType: ParcoursType.P5,
+      }),
+      createRaceResult({
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 2,
+        year: 2024,
+        parcoursType: ParcoursType.P5,
+      }),
+    ];
+
+    const sprinterResults = [
+      createRaceResult({
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+        year: 2024,
+        parcoursType: ParcoursType.P1,
+      }),
+      createRaceResult({
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 2,
+        year: 2024,
+        parcoursType: ParcoursType.P1,
+      }),
+    ];
+
+    const climberScore = computeStageScore(
+      climberResults,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      mountainProfile,
+    );
+    const sprinterScore = computeStageScore(
+      sprinterResults,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      mountainProfile,
+    );
+    expect(climberScore).toBeGreaterThan(sprinterScore);
+  });
+
+  it('should weight P1 stages higher than P5 stages on a flat race', () => {
+    const climberResults = [
+      createRaceResult({
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+        year: 2024,
+        parcoursType: ParcoursType.P5,
+      }),
+    ];
+
+    const sprinterResults = [
+      createRaceResult({
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+        year: 2024,
+        parcoursType: ParcoursType.P1,
+      }),
+    ];
+
+    const climberScore = computeStageScore(
+      climberResults,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      flatProfile,
+    );
+    const sprinterScore = computeStageScore(
+      sprinterResults,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      flatProfile,
+    );
+    expect(sprinterScore).toBeGreaterThan(climberScore);
+  });
+
+  it('should apply profile weight per-stage within a race group', () => {
+    const mixedResults = [
+      createRaceResult({
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+        year: 2024,
+        parcoursType: ParcoursType.P5, // high weight on mountain profile
+      }),
+      createRaceResult({
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 2,
+        year: 2024,
+        parcoursType: ParcoursType.P1, // lower weight on mountain profile
+      }),
+    ];
+
+    const withProfile = computeStageScore(
+      mixedResults,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      mountainProfile,
+    );
+    const withoutProfile = computeStageScore(mixedResults, RaceType.GRAND_TOUR, 2024, 3);
+
+    // With mountain profile: P5 stage gets ~1.0 weight, P1 gets ~0.667
+    // Without profile: both get 1.0
+    // So with profile should be less than without (since P1 is penalized)
+    expect(withProfile).toBeLessThan(withoutProfile);
+  });
+
+  it('should give neutral weight to results with null parcoursType', () => {
+    const results = [
+      createRaceResult({
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+        year: 2024,
+        parcoursType: null,
+      }),
+    ];
+
+    const withProfile = computeStageScore(results, RaceType.GRAND_TOUR, 2024, 3, mountainProfile);
+    const withoutProfile = computeStageScore(results, RaceType.GRAND_TOUR, 2024, 3);
+    expect(withProfile).toBe(withoutProfile);
+  });
+
+  it('should give ITT bonus when target race has ITT stages', () => {
+    const ittResult = [
+      createRaceResult({
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+        year: 2024,
+        parcoursType: ParcoursType.P1,
+        isItt: true,
+      }),
+    ];
+
+    const nonIttResult = [
+      createRaceResult({
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+        year: 2024,
+        parcoursType: ParcoursType.P1,
+        isItt: false,
+      }),
+    ];
+
+    const ittScore = computeStageScore(
+      ittResult,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      mountainProfile, // has 2 ITT stages
+    );
+    const nonIttScore = computeStageScore(
+      nonIttResult,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      mountainProfile,
+    );
+    expect(ittScore).toBeGreaterThan(nonIttScore);
+  });
+});
+
+describe('Profile-Aware computeCategoryScore', () => {
+  it('should boost Mountain classification on a mountain-heavy race', () => {
+    const results = [
+      createRaceResult({
+        category: ResultCategory.MOUNTAIN,
+        position: 1,
+        year: 2024,
+      }),
+    ];
+
+    const mountainRace = computeCategoryScore(
+      results,
+      ResultCategory.MOUNTAIN,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      mountainProfile,
+    );
+    const flatRace = computeCategoryScore(
+      results,
+      ResultCategory.MOUNTAIN,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      flatProfile,
+    );
+    expect(mountainRace).toBeGreaterThan(flatRace);
+  });
+
+  it('should boost Sprint classification on a flat race', () => {
+    const results = [
+      createRaceResult({
+        category: ResultCategory.SPRINT,
+        position: 1,
+        year: 2024,
+      }),
+    ];
+
+    const flatRace = computeCategoryScore(
+      results,
+      ResultCategory.SPRINT,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      flatProfile,
+    );
+    const mountainRace = computeCategoryScore(
+      results,
+      ResultCategory.SPRINT,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      mountainProfile,
+    );
+    expect(flatRace).toBeGreaterThan(mountainRace);
+  });
+
+  it('should keep GC score neutral regardless of profile', () => {
+    const results = [
+      createRaceResult({
+        category: ResultCategory.GC,
+        position: 1,
+        year: 2024,
+      }),
+    ];
+
+    const mountainRace = computeCategoryScore(
+      results,
+      ResultCategory.GC,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      mountainProfile,
+    );
+    const flatRace = computeCategoryScore(
+      results,
+      ResultCategory.GC,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      flatProfile,
+    );
+    const noProfile = computeCategoryScore(results, ResultCategory.GC, RaceType.GRAND_TOUR, 2024);
+    expect(mountainRace).toBe(flatRace);
+    expect(mountainRace).toBe(noProfile);
+  });
+});
+
+describe('Profile-Aware computeRiderScore', () => {
+  it('should rank climber higher than sprinter for mountain-heavy race', () => {
+    const climberResults = [
+      createRaceResult({
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+        year: 2024,
+        parcoursType: ParcoursType.P5,
+      }),
+      createRaceResult({
+        category: ResultCategory.STAGE,
+        position: 2,
+        stageNumber: 2,
+        year: 2024,
+        parcoursType: ParcoursType.P5,
+      }),
+      createRaceResult({
+        category: ResultCategory.MOUNTAIN,
+        position: 1,
+        year: 2024,
+      }),
+    ];
+
+    const sprinterResults = [
+      createRaceResult({
+        riderId: 'rider-2',
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+        year: 2024,
+        parcoursType: ParcoursType.P1,
+      }),
+      createRaceResult({
+        riderId: 'rider-2',
+        category: ResultCategory.STAGE,
+        position: 2,
+        stageNumber: 2,
+        year: 2024,
+        parcoursType: ParcoursType.P1,
+      }),
+      createRaceResult({
+        riderId: 'rider-2',
+        category: ResultCategory.SPRINT,
+        position: 1,
+        year: 2024,
+      }),
+    ];
+
+    const climber = computeRiderScore(
+      'rider-1',
+      climberResults,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      mountainProfile,
+    );
+    const sprinter = computeRiderScore(
+      'rider-2',
+      sprinterResults,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      mountainProfile,
+    );
+    expect(climber.totalProjectedPts).toBeGreaterThan(sprinter.totalProjectedPts);
+  });
+
+  it('should rank sprinter higher than climber for flat race', () => {
+    const climberResults = [
+      createRaceResult({
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+        year: 2024,
+        parcoursType: ParcoursType.P5,
+      }),
+    ];
+
+    const sprinterResults = [
+      createRaceResult({
+        riderId: 'rider-2',
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+        year: 2024,
+        parcoursType: ParcoursType.P1,
+      }),
+    ];
+
+    const climber = computeRiderScore(
+      'rider-1',
+      climberResults,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      flatProfile,
+    );
+    const sprinter = computeRiderScore(
+      'rider-2',
+      sprinterResults,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      flatProfile,
+    );
+    expect(sprinter.totalProjectedPts).toBeGreaterThan(climber.totalProjectedPts);
+  });
+});
+
+describe('Profile-Aware Backward Compatibility', () => {
+  const regressionResults = [
+    createRaceResult({
+      year: 2024,
+      position: 1,
+      category: ResultCategory.GC,
+    }),
+    createRaceResult({
+      year: 2024,
+      position: 1,
+      category: ResultCategory.STAGE,
+      stageNumber: 1,
+      parcoursType: ParcoursType.P5,
+    }),
+    createRaceResult({
+      year: 2024,
+      position: 1,
+      category: ResultCategory.MOUNTAIN,
+    }),
+    createRaceResult({
+      year: 2023,
+      position: 3,
+      category: ResultCategory.STAGE,
+      stageNumber: 1,
+      raceSlug: 'race-b',
+      parcoursType: ParcoursType.P1,
+    }),
+  ];
+
+  it('computeRiderScore without profile equals with undefined profile', () => {
+    const withoutProfile = computeRiderScore(
+      'rider-1',
+      regressionResults,
+      RaceType.GRAND_TOUR,
+      2024,
+    );
+    const withUndefined = computeRiderScore(
+      'rider-1',
+      regressionResults,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      undefined,
+    );
+    expect(withoutProfile).toEqual(withUndefined);
+  });
+
+  it('computeStageScore without profile equals with undefined profile', () => {
+    const withoutProfile = computeStageScore(regressionResults, RaceType.GRAND_TOUR, 2024);
+    const withUndefined = computeStageScore(
+      regressionResults,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      undefined,
+    );
+    expect(withoutProfile).toBe(withUndefined);
+  });
+
+  it('computeCategoryScore without profile equals with undefined profile', () => {
+    const withoutProfile = computeCategoryScore(
+      regressionResults,
+      ResultCategory.GC,
+      RaceType.GRAND_TOUR,
+      2024,
+    );
+    const withUndefined = computeCategoryScore(
+      regressionResults,
+      ResultCategory.GC,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      undefined,
+    );
+    expect(withoutProfile).toBe(withUndefined);
+  });
+
+  it('golden values match pre-feature expected output', () => {
+    const score = computeRiderScore('rider-1', regressionResults, RaceType.GRAND_TOUR, 2024);
+    // GC: pos1 GT = 150 (temporal 1.0)
+    expect(score.categoryScores.gc).toBe(150);
+    // Stage: 2024 stage pos1=40 (temporal 1.0) + 2023 stage pos3=22 (temporal 0.6) = 40 + 13.2 = 53.2
+    expect(score.categoryScores.stage).toBeCloseTo(53.2);
+    // Mountain: pos1 GT = 50
+    expect(score.categoryScores.mountain).toBe(50);
+    expect(score.categoryScores.sprint).toBe(0);
+  });
+});
+
+describe('ScoringService with profile', () => {
+  const service = new ScoringService();
+
+  it('should pass through profileDistribution to computeRiderScore', () => {
+    const results = [
+      createRaceResult({
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+        year: 2024,
+        parcoursType: ParcoursType.P5,
+      }),
+    ];
+
+    const withProfile = service.computeRiderScore(
+      'rider-1',
+      results,
+      RaceType.GRAND_TOUR,
+      2024,
+      3,
+      mountainProfile,
+    );
+    const withoutProfile = service.computeRiderScore('rider-1', results, RaceType.GRAND_TOUR, 2024);
+
+    // P5 result on mountain profile gets weight ~1.0, so scores should be equal
+    // (P5 is dominant in the mountain profile)
+    expect(withProfile.categoryScores.stage).toBeCloseTo(withoutProfile.categoryScores.stage);
   });
 });

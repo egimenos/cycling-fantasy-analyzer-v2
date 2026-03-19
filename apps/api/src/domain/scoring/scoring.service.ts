@@ -1,10 +1,13 @@
 import { RaceResult } from '../race-result/race-result.entity';
 import { RaceType } from '../shared/race-type.enum';
 import { ResultCategory } from '../shared/result-category.enum';
+import { ProfileDistribution } from './profile-distribution';
+import { computeProfileWeight, computeCategoryProfileWeight } from './profile-weight';
 import {
   getPointsForPosition,
   getCrossTypeWeight,
   getRaceClassWeight,
+  getCategoryAffinity,
   COMPOSITE_SCORE_WEIGHTS,
 } from './scoring-weights.config';
 import { getTemporalWeight } from './temporal-decay';
@@ -68,7 +71,13 @@ export function computeCategoryScore(
   targetRaceType: RaceType,
   currentYear: number,
   maxSeasons = 3,
+  profileDistribution?: ProfileDistribution,
 ): number {
+  const affinity = getCategoryAffinity(category);
+  const categoryProfileWeight = affinity
+    ? computeCategoryProfileWeight(affinity, profileDistribution ?? null)
+    : 1.0;
+
   let weightedSum = 0;
 
   for (const result of results) {
@@ -82,7 +91,7 @@ export function computeCategoryScore(
 
     const classWeight = getRaceClassWeight(result.raceClass);
     const points = getPointsForPosition(category, result.position, result.raceType);
-    weightedSum += points * temporalWeight * crossWeight * classWeight;
+    weightedSum += points * temporalWeight * crossWeight * classWeight * categoryProfileWeight;
   }
 
   return weightedSum;
@@ -104,6 +113,7 @@ export function computeStageScore(
   targetRaceType: RaceType,
   currentYear: number,
   maxSeasons = 3,
+  profileDistribution?: ProfileDistribution,
 ): number {
   // Group by race (raceSlug + year)
   const raceGroups = new Map<string, RaceResult[]>();
@@ -130,13 +140,17 @@ export function computeStageScore(
 
     const classWeight = getRaceClassWeight(firstResult.raceClass);
 
+    // Profile weight is per-stage (each stage has its own parcoursType)
     let raceStageTotal = 0;
     for (const result of stageResults) {
-      raceStageTotal += getPointsForPosition(
-        ResultCategory.STAGE,
-        result.position,
-        result.raceType,
+      const points = getPointsForPosition(ResultCategory.STAGE, result.position, result.raceType);
+      const profileWeight = computeProfileWeight(
+        result.parcoursType,
+        result.isItt,
+        result.isTtt,
+        profileDistribution ?? null,
       );
+      raceStageTotal += points * profileWeight;
     }
 
     weightedSum += raceStageTotal * temporalWeight * crossWeight * classWeight;
@@ -160,6 +174,7 @@ export function computeRiderScore(
   targetRaceType: RaceType,
   currentYear: number,
   maxSeasons = 3,
+  profileDistribution?: ProfileDistribution,
 ): RiderScore {
   const gcScore = computeCategoryScore(
     results,
@@ -167,14 +182,22 @@ export function computeRiderScore(
     targetRaceType,
     currentYear,
     maxSeasons,
+    profileDistribution,
   );
-  const stageScore = computeStageScore(results, targetRaceType, currentYear, maxSeasons);
+  const stageScore = computeStageScore(
+    results,
+    targetRaceType,
+    currentYear,
+    maxSeasons,
+    profileDistribution,
+  );
   const mountainScore = computeCategoryScore(
     results,
     ResultCategory.MOUNTAIN,
     targetRaceType,
     currentYear,
     maxSeasons,
+    profileDistribution,
   );
   const sprintScore = computeCategoryScore(
     results,
@@ -182,6 +205,7 @@ export function computeRiderScore(
     targetRaceType,
     currentYear,
     maxSeasons,
+    profileDistribution,
   );
 
   const totalProjectedPts = gcScore + stageScore + mountainScore + sprintScore;
@@ -357,8 +381,16 @@ export class ScoringService {
     targetRaceType: RaceType,
     currentYear: number,
     maxSeasons = 3,
+    profileDistribution?: ProfileDistribution,
   ): RiderScore {
-    return computeRiderScore(riderId, results, targetRaceType, currentYear, maxSeasons);
+    return computeRiderScore(
+      riderId,
+      results,
+      targetRaceType,
+      currentYear,
+      maxSeasons,
+      profileDistribution,
+    );
   }
 
   computeSeasonBreakdown(
