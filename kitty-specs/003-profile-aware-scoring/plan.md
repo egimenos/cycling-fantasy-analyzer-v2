@@ -1,109 +1,113 @@
-# Implementation Plan: [FEATURE]
+# Implementation Plan: Profile-Aware Scoring
 
-_Path: [templates/plan-template.md](templates/plan-template.md)_
-
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/kitty-specs/[###-feature-name]/spec.md`
-
-**Note**: This template is filled in by the `/spec-kitty.plan` command. See `src/specify_cli/missions/software-dev/command-templates/plan.md` for the execution workflow.
-
-The planner will not begin until all planning questions have been answered—capture those answers in this document before progressing to later phases.
+**Branch**: `003-profile-aware-scoring` | **Date**: 2026-03-19 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `kitty-specs/003-profile-aware-scoring/spec.md`
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Add a profile match weight as a 4th multiplicative factor in the rider scoring algorithm. The target race's terrain distribution (P1-P5, ITT/TTT) — already available from the `/api/race-profile` endpoint — is used to weight each rider's historical results: results matching the dominant terrain profiles carry more weight. When no profile is provided, scoring is identical to today (all weights 1.0).
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
-
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: TypeScript (strict mode)
+**Primary Dependencies**: NestJS (backend), React + TanStack Start (frontend), shared-types package
+**Storage**: PostgreSQL via Drizzle ORM (no schema changes needed)
+**Testing**: Jest (backend, 100% coverage for scoring), Vitest + RTL (frontend)
+**Target Platform**: Web application (monorepo: apps/api + apps/web + packages/shared-types)
+**Project Type**: Turborepo monorepo
+**Performance Goals**: Scoring computation < 500ms per rider pool (no regression)
+**Constraints**: Pure domain functions, no framework dependencies in scoring layer
+**Scale/Scope**: Single-user tool, ~200 riders per analysis
 
 ## Constitution Check
 
 _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-[Gates determined based on constitution file]
+| Gate                       | Status   | Notes                                                                                                                       |
+| -------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------- |
+| DDD/Hexagonal compliance   | PASS     | ProfileDistribution is a pure domain value object. computeProfileWeight() is a pure function. No framework deps in scoring. |
+| 100% scoring test coverage | PASS     | All new scoring functions and modified signatures will have exhaustive unit tests.                                          |
+| No `any` types             | PASS     | All new types are fully typed (ProfileDistribution, ProfileWeightConfig).                                                   |
+| ADR for scoring changes    | REQUIRED | Must write ADR documenting the profile weight formula and rationale.                                                        |
+| English only               | PASS     | All code, comments, docs in English.                                                                                        |
+| Conventional commits       | PASS     | Will follow feat/test/docs prefixes.                                                                                        |
+
+**Post-Phase 1 re-check**: ADR must be created as part of implementation. All other gates remain green — no new framework dependencies introduced, no `any` types, all domain logic is pure.
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```
-kitty-specs/[###-feature]/
-├── plan.md              # This file (/spec-kitty.plan command output)
-├── research.md          # Phase 0 output (/spec-kitty.plan command)
-├── data-model.md        # Phase 1 output (/spec-kitty.plan command)
-├── quickstart.md        # Phase 1 output (/spec-kitty.plan command)
-├── contracts/           # Phase 1 output (/spec-kitty.plan command)
-└── tasks.md             # Phase 2 output (/spec-kitty.tasks command - NOT created by /spec-kitty.plan)
+kitty-specs/003-profile-aware-scoring/
+├── spec.md              # Feature specification
+├── plan.md              # This file
+├── research.md          # Phase 0: formula decisions and rationale
+├── data-model.md        # Phase 1: ProfileDistribution value object
+├── quickstart.md        # Phase 1: key files and build instructions
+├── contracts/
+│   └── analyze-request.md  # Updated AnalyzeRequest contract
+├── meta.json
+└── checklists/
+    └── requirements.md
 ```
 
-### Source Code (repository root)
-
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
+### Source Code (affected paths)
 
 ```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
+apps/api/src/
+├── domain/scoring/
+│   ├── scoring.service.ts          # MODIFY: add profileWeight to formulas
+│   ├── scoring-weights.config.ts   # MODIFY: add profile weight constants
+│   ├── profile-distribution.ts     # NEW: ProfileDistribution value object
+│   └── temporal-decay.ts           # UNCHANGED
+├── application/analyze/
+│   └── analyze-price-list.use-case.ts  # MODIFY: convert & pass ProfileDistribution
+└── presentation/
+    └── analyze.controller.ts       # MODIFY: validate optional profileSummary
 
-tests/
-├── contract/
-├── integration/
-└── unit/
+packages/shared-types/src/
+└── api.ts                          # MODIFY: add profileSummary? to AnalyzeRequest
 
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
+apps/web/src/features/rider-list/
+└── components/rider-input.tsx      # MODIFY: include profileSummary in request
 
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+docs/adr/
+└── YYYY-MM-DD-profile-aware-scoring.md  # NEW: ADR for scoring formula change
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: No new directories or packages. Changes are localized to the existing scoring domain module, the analyze use case, and the frontend input component. One new file (`profile-distribution.ts`) in the scoring domain.
 
 ## Complexity Tracking
 
-_Fill ONLY if Constitution Check has violations that must be justified_
+No constitution violations. All changes stay within existing architectural boundaries.
 
-| Violation                  | Why Needed         | Simpler Alternative Rejected Because |
-| -------------------------- | ------------------ | ------------------------------------ |
-| [e.g., 4th project]        | [current need]     | [why 3 projects insufficient]        |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient]  |
+## Design Decisions
+
+### D1: Profile Weight Formula
+
+**Normalized proportional with floor** (see [research.md](research.md#r1-profile-weight-formula)):
+
+```
+profileWeight = max(FLOOR, parcoursShare / maxParcoursShare)
+```
+
+Where `parcoursShare(Px) = pxCount / totalStages` and `maxParcoursShare = max(all parcours shares)`.
+
+The dominant profile gets weight 1.0. Others scale proportionally. Floor (0.25) prevents total discarding.
+
+### D2: ITT Bonus
+
+ITT results get `parcoursWeight + ITT_BONUS_FACTOR × ittRelevance` (see [research.md](research.md#r2-itttt-handling)). Parcours type dominates; ITT adds secondary signal.
+
+### D3: Category Affinity
+
+Mountain → average of P4+P5 shares. Sprint → average of P1+P2 shares. GC → neutral 1.0. (see [research.md](research.md#r3-non-stage-category-affinity))
+
+### D4: Data Flow
+
+Frontend passes existing `ProfileSummary` in `AnalyzeRequest` → use case converts to `ProfileDistribution` → passed to scoring functions. Pure domain, no HTTP in scoring.
+
+### D5: Backward Compatibility
+
+No `profileSummary` in request → all weights 1.0. Verified by regression tests comparing output with/without profile.
