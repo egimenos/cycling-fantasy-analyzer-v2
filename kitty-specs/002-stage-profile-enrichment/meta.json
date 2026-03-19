@@ -1,0 +1,11 @@
+{
+  "feature_number": "002",
+  "slug": "002-stage-profile-enrichment",
+  "feature_slug": "002-stage-profile-enrichment",
+  "created_at": "2026-03-19T00:00:00Z",
+  "target_branch": "main",
+  "friendly_name": "Stage Profile Enrichment",
+  "mission": "software-dev",
+  "source_description": "Enrich scraping and scoring pipeline with stage profile data (p1-p5 parcours type, ITT/TTT detection, ProfileScore) to enable future profile-aware scoring",
+  "vcs": "git"
+}
