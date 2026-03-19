@@ -199,6 +199,7 @@ export class TriggerScrapeUseCase {
         html,
         classUrl.classificationType,
         classUrl.stageNumber,
+        classUrl.label,
       );
 
       this.logger.debug(
@@ -275,12 +276,13 @@ export class TriggerScrapeUseCase {
     html: string,
     classificationType: string,
     stageNumber: number | null,
+    stageNameText?: string,
   ): ParsedResult[] {
     switch (classificationType) {
       case 'GC':
         return parseGcResults(html);
       case 'STAGE':
-        return parseStageResults(html, stageNumber!);
+        return parseStageResults(html, stageNumber!, stageNameText);
       case 'SPRINT':
         return parseSprintClassification(html);
       case 'MOUNTAIN':

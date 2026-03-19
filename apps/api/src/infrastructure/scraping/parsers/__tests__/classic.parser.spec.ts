@@ -50,5 +50,24 @@ describe('parseClassicResults', () => {
         expect(positions[i]).toBe(i + 1);
       }
     });
+
+    it('should extract parcoursType from sidebar profile data', () => {
+      for (const r of results) {
+        expect(r.parcoursType).toBe('p2');
+      }
+    });
+
+    it('should extract profileScore from sidebar', () => {
+      for (const r of results) {
+        expect(r.profileScore).toBe(59);
+      }
+    });
+
+    it('should have isItt and isTtt as false for classics', () => {
+      for (const r of results) {
+        expect(r.isItt).toBe(false);
+        expect(r.isTtt).toBe(false);
+      }
+    });
   });
 });

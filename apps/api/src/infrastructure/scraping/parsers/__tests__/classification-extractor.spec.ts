@@ -51,6 +51,15 @@ describe('extractClassificationUrls', () => {
       expect(gc!.stageNumber).toBeNull();
     });
 
+    it('should capture label text from option elements', () => {
+      const stage7 = classifications.find(
+        (c) => c.classificationType === 'STAGE' && c.stageNumber === 7,
+      );
+      expect(stage7).toBeDefined();
+      expect(stage7!.label).toContain('Stage 7');
+      expect(stage7!.label).toContain('(ITT)');
+    });
+
     it('should NOT include teams or youth classifications', () => {
       for (const c of classifications) {
         expect(c.urlPath).not.toContain('teams');
