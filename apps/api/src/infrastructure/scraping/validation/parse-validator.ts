@@ -15,7 +15,7 @@ export interface ClassificationValidationContext {
   readonly expectedMaxRiders?: number;
 }
 
-const RIDER_SLUG_REGEX = /^rider\/[a-z0-9-]+$/;
+const RIDER_SLUG_REGEX = /^[a-z0-9-]+$/;
 
 export function validateClassificationResults(
   results: ParsedResult[],

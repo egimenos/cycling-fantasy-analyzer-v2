@@ -30,7 +30,7 @@ describe('parseResultsTable', () => {
 
     it('should extract correct rider slug for winner', () => {
       const winner = results.find((r) => r.position === 1);
-      expect(winner!.riderSlug).toBe('rider/tadej-pogacar');
+      expect(winner!.riderSlug).toBe('tadej-pogacar');
     });
 
     it('should have sequential positions starting from 1', () => {
@@ -69,7 +69,7 @@ describe('parseResultsTable', () => {
     });
 
     it('should extract valid rider slugs', () => {
-      const slugRegex = /^rider\/[a-z0-9-]+$/;
+      const slugRegex = /^[a-z0-9-]+$/;
       for (const r of results) {
         expect(r.riderSlug).toMatch(slugRegex);
       }

@@ -9,7 +9,7 @@ import {
 function makeParsedResult(overrides: Partial<ParsedResult> = {}): ParsedResult {
   return {
     riderName: 'Test Rider',
-    riderSlug: 'rider/test-rider',
+    riderSlug: 'test-rider',
     teamName: 'Test Team',
     position: 1,
     category: ResultCategory.GC,
@@ -31,7 +31,7 @@ function makeSequentialResults(
   return Array.from({ length: count }, (_, i) =>
     makeParsedResult({
       riderName: `Rider ${i + 1}`,
-      riderSlug: `rider/rider-${i + 1}`,
+      riderSlug: `rider-${i + 1}`,
       position: i + 1,
       category,
     }),
@@ -62,8 +62,8 @@ describe('validateClassificationResults', () => {
   it('should warn for duplicate positions (ties are legitimate in PCS)', () => {
     const results = [
       makeParsedResult({ position: 1 }),
-      makeParsedResult({ position: 1, riderName: 'Rider 2', riderSlug: 'rider/rider-2' }),
-      makeParsedResult({ position: 2, riderName: 'Rider 3', riderSlug: 'rider/rider-3' }),
+      makeParsedResult({ position: 1, riderName: 'Rider 2', riderSlug: 'rider-2' }),
+      makeParsedResult({ position: 2, riderName: 'Rider 3', riderSlug: 'rider-3' }),
     ];
     const validation = validateClassificationResults(results, baseContext);
     expect(validation.valid).toBe(true);
@@ -73,7 +73,7 @@ describe('validateClassificationResults', () => {
   it('should warn for position gaps (ties cause gaps in PCS)', () => {
     const results = [
       makeParsedResult({ position: 1 }),
-      makeParsedResult({ position: 3, riderName: 'Rider 2', riderSlug: 'rider/rider-2' }),
+      makeParsedResult({ position: 3, riderName: 'Rider 2', riderSlug: 'rider-2' }),
     ];
     const validation = validateClassificationResults(results, baseContext);
     expect(validation.valid).toBe(true);
@@ -87,7 +87,7 @@ describe('validateClassificationResults', () => {
         position: 2,
         dnf: true,
         riderName: 'DNF Rider',
-        riderSlug: 'rider/dnf-rider',
+        riderSlug: 'dnf-rider',
       }),
     ];
     const validation = validateClassificationResults(results, baseContext);
@@ -110,7 +110,7 @@ describe('validateClassificationResults', () => {
   });
 
   it('should warn for invalid rider slug format', () => {
-    const results = [makeParsedResult({ riderSlug: 'invalid-slug-no-prefix' })];
+    const results = [makeParsedResult({ riderSlug: 'INVALID SLUG!!' })];
     const validation = validateClassificationResults(results, {
       ...baseContext,
       expectedMinRiders: 1,
@@ -125,7 +125,7 @@ describe('validateClassificationResults', () => {
         position: 2,
         category: ResultCategory.STAGE,
         riderName: 'Rider 2',
-        riderSlug: 'rider/rider-2',
+        riderSlug: 'rider-2',
       }),
     ];
     const validation = validateClassificationResults(results, baseContext);

@@ -171,7 +171,7 @@ describe('TriggerScrapeUseCase', () => {
 
     expect(mockRiderRepo.findByPcsSlugs).toHaveBeenCalledTimes(1);
     expect(mockRiderRepo.findByPcsSlugs).toHaveBeenCalledWith(
-      expect.arrayContaining(['rider/rider-1', 'rider/rider-2', 'rider/rider-3']),
+      expect.arrayContaining(['rider-1', 'rider-2', 'rider-3']),
     );
     expect(mockRiderRepo.saveMany).toHaveBeenCalledTimes(1);
     expect(mockRiderRepo.saveMany.mock.calls[0][0]).toHaveLength(3);

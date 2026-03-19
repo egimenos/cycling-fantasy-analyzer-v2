@@ -38,7 +38,8 @@ export function parseResultsTable(
     if (riderLink.length === 0) return;
 
     const riderName = riderLink.text().trim();
-    const riderSlug = riderLink.attr('href') ?? '';
+    const rawHref = riderLink.attr('href') ?? '';
+    const riderSlug = rawHref.replace(/^\/?rider\//, '');
     const teamName =
       teamCol !== -1 && cells.length > teamCol ? $(cells[teamCol]).text().trim() : '';
 
