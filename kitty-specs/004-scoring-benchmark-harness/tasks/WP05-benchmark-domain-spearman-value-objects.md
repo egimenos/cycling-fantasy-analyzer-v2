@@ -1,7 +1,7 @@
 ---
 work_package_id: WP05
 title: Benchmark Domain — Spearman Correlation & Value Objects
-lane: 'doing'
+lane: 'for_review'
 dependencies: []
 base_branch: main
 base_commit: 37796b52dca5c0a1f78c707a1c71d3379c29e1f0
@@ -329,3 +329,4 @@ No dependencies — this is pure domain logic.
 
 - 2026-03-19T18:18:14Z – system – lane=planned – Prompt created.
 - 2026-03-19T18:45:42Z – claude-opus – shell_pid=16093 – lane=doing – Assigned agent via workflow command
+- 2026-03-19T18:48:51Z – claude-opus – shell_pid=16093 – lane=for_review – Ready for review: Spearman ρ with 100% coverage, computeRankings utility, BenchmarkResult/SuiteResult interfaces

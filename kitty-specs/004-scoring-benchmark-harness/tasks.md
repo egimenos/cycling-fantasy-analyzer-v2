@@ -178,11 +178,11 @@
 
 ### Included Subtasks
 
-- [ ] T019 Implement `spearman-correlation.ts` pure function with average rank method for ties
-- [ ] T020 100% test coverage for Spearman (perfect, inverse, zero, ties, n=1, n=2, empty)
-- [ ] T021 Create `BenchmarkResult` interface in `domain/benchmark/benchmark-result.ts`
-- [ ] T022 Create `BenchmarkSuiteResult` interface in `domain/benchmark/benchmark-result.ts`
-- [ ] T023 Utility: `computeRankings(scores: number[]): number[]` — assigns ranks with average tie method
+- [x] T019 Implement `spearman-correlation.ts` pure function with average rank method for ties
+- [x] T020 100% test coverage for Spearman (perfect, inverse, zero, ties, n=1, n=2, empty)
+- [x] T021 Create `BenchmarkResult` interface in `domain/benchmark/benchmark-result.ts`
+- [x] T022 Create `BenchmarkSuiteResult` interface in `domain/benchmark/benchmark-result.ts`
+- [x] T023 Utility: `computeRankings(scores: number[]): number[]` — assigns ranks with average tie method
 
 ### Implementation Notes
 
