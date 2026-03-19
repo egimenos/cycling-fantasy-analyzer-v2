@@ -151,3 +151,4 @@ type: validation
 ## Activity Log
 
 - 2026-03-19T11:19:08Z – system – lane=planned – Prompt created.
+- 2026-03-19T17:00:00Z – egimenos – lane=done – Re-seed complete: 206 races, 113888 records. SC-001 pass (0 null parcours stages). TdF 2024 verified. Milano-Sanremo p2/59 confirmed.
