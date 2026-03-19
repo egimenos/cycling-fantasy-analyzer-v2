@@ -59,32 +59,57 @@ Both are optional. If neither exists, built-in defaults apply.
 
 ## Development Workflow
 
-| Command                                          | Description                              |
-| ------------------------------------------------ | ---------------------------------------- |
-| `pnpm dev`                                       | Start all apps in watch mode (Turborepo) |
-| `pnpm build`                                     | Build all packages and apps              |
-| `pnpm test`                                      | Run unit tests across all packages       |
-| `pnpm lint`                                      | Run ESLint across all packages           |
-| `pnpm --filter @cycling-analyzer/api db:migrate` | Run Drizzle migrations                   |
-| `pnpm --filter @cycling-analyzer/api db:studio`  | Open Drizzle Studio (database GUI)       |
-| `pnpm --filter @cycling-analyzer/web test:e2e`   | Run Playwright E2E tests                 |
+A `Makefile` provides shortcuts for all common operations. Run `make help` to see all available commands.
+
+| Command                | Description                              |
+| ---------------------- | ---------------------------------------- |
+| `make install`         | Install all dependencies                 |
+| `make dev`             | Start all apps in watch mode (Turborepo) |
+| `make build`           | Build all packages and apps              |
+| `make test`            | Run unit tests across all packages       |
+| `make lint`            | Run ESLint across all packages           |
+| `make typecheck`       | TypeScript type check (no emit)          |
+| `make db-up`           | Start PostgreSQL container               |
+| `make db-down`         | Stop PostgreSQL container                |
+| `make db-migrate`      | Apply Drizzle migrations                 |
+| `make db-generate`     | Generate Drizzle migration from schema   |
+| `make db-studio`       | Open Drizzle Studio (database GUI)       |
+| `make db-psql`         | Open psql shell to local DB              |
+| `make seed`            | Re-seed database from PCS                |
+| `make benchmark`       | Run single-race scoring benchmark        |
+| `make benchmark-suite` | Run multi-race benchmark suite           |
 
 ### CLI Commands
 
-The API includes CLI commands for scraping operations. These require a **build** first (`pnpm --filter @cycling-analyzer/api build`), then run from `apps/api/`:
+The API includes CLI commands for scraping and benchmarking. These run via `ts-node` (no build required):
 
 ```bash
 # Seed database — discover and scrape WT + ProSeries + Europe Tour .1 races
-node dist/cli.js seed-database              # last 3 years (default)
-node dist/cli.js seed-database --years 5    # last 5 years
-node dist/cli.js seed-database --dry-run    # preview races without scraping
+make seed
 
-# Scrape a single race (specify type for non-classics)
-node dist/cli.js trigger-scrape -r milano-sanremo -y 2024
-node dist/cli.js trigger-scrape -r tour-de-france -y 2024 -t grand_tour
+# Scrape a single race
+make scrape RACE=milano-sanremo YEAR=2024 TYPE=classic
+make scrape RACE=tour-de-france YEAR=2024 TYPE=grand_tour
+
+# Run scoring benchmark (interactive race selection)
+make benchmark           # single race
+make benchmark-suite     # multiple races with aggregate Spearman ρ
 ```
 
 The seed command discovers races dynamically from PCS calendar pages (WorldTour + ProSeries + Europe Tour .1), filters by allowed class, deduplicates, and skips races that have already been scraped successfully. Safe to re-run.
+
+### Scoring Benchmark
+
+The benchmark compares predicted rider scores (based on historical data) against actual race outcomes. It measures prediction quality using Spearman rank correlation (ρ):
+
+| ρ Range   | Interpretation                           |
+| --------- | ---------------------------------------- |
+| 0.8 – 1.0 | Excellent prediction quality             |
+| 0.6 – 0.8 | Good — algorithm captures major patterns |
+| 0.4 – 0.6 | Moderate — room for weight tuning        |
+| < 0.4     | Weak — algorithm needs rethinking        |
+
+**Tuning workflow**: Change a weight in `scoring-weights.config.ts` → re-run `make benchmark-suite` → see if ρ goes up or down.
 
 ## Project Structure
 

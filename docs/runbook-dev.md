@@ -14,29 +14,31 @@ Step-by-step guide to set up the dev environment, seed the database, and operate
 
 ## 1. Environment Setup
 
+A `Makefile` at the repo root provides shortcuts for all common operations. Run `make help` to see everything available.
+
 ```bash
 # Enable pnpm via corepack
 corepack enable
 
 # Install monorepo dependencies
-pnpm install
+make install
 
 # Copy environment variables (first time only)
 cp .env.example .env
 # For personal overrides without touching .env: create .env.local (gitignored)
 
 # Start PostgreSQL
-docker compose up -d
+make db-up
 
 # Verify Postgres is healthy
 docker compose ps
 # Should show cycling-postgres with status "healthy"
 
 # Run Drizzle migrations
-pnpm --filter @cycling-analyzer/api db:migrate
+make db-migrate
 
-# Build the API (required for CLI commands)
-pnpm --filter @cycling-analyzer/api build
+# Build the API (required for some CLI commands)
+make build
 ```
 
 > **Tip:** If you already have a `DATABASE_URL` exported in your shell (from another project), it takes precedence over `.env`. Use `unset DATABASE_URL` or set your value in `.env.local`.
@@ -216,19 +218,45 @@ CLI commands use `dist/cli.js` (compiled output), not TypeScript source directly
 
 ---
 
-## 6. Quick Reference
+## 6. Scoring Benchmark
 
-| Task               | Command                                                              |
-| ------------------ | -------------------------------------------------------------------- |
-| Start Postgres     | `docker compose up -d`                                               |
-| Stop Postgres      | `docker compose down`                                                |
-| Stop and wipe data | `docker compose down -v`                                             |
-| Run migrations     | `pnpm --filter @cycling-analyzer/api db:migrate`                     |
-| Build API          | `pnpm --filter @cycling-analyzer/api build`                          |
-| Dev (API + Web)    | `pnpm dev`                                                           |
-| Full seed          | `cd apps/api && node dist/cli.js seed-database`                      |
-| Seed dry-run       | `cd apps/api && node dist/cli.js seed-database --dry-run`            |
-| Single race scrape | `cd apps/api && node dist/cli.js trigger-scrape -r <slug> -y <year>` |
-| DB GUI             | `pnpm --filter @cycling-analyzer/api db:studio`                      |
-| Tests              | `pnpm test`                                                          |
-| Lint               | `pnpm lint`                                                          |
+The benchmark measures how well the scoring algorithm predicts real race outcomes. It compares predicted `totalProjectedPts` (from historical data) against actual points generated in a race, using Spearman rank correlation (ρ).
+
+```bash
+# Single race — interactive selection
+make benchmark
+
+# Multi-race suite — select multiple races, get aggregate ρ
+make benchmark-suite
+```
+
+**Tuning workflow:**
+
+1. Run `make benchmark-suite` → note baseline ρ
+2. Adjust a weight in `apps/api/src/domain/scoring/scoring-weights.config.ts`
+3. Re-run `make benchmark-suite` → compare ρ
+4. Keep if improved, revert if not
+
+---
+
+## 7. Quick Reference
+
+All commands available via `make help`. Most common:
+
+| Task               | Make command                                      |
+| ------------------ | ------------------------------------------------- |
+| Start Postgres     | `make db-up`                                      |
+| Stop Postgres      | `make db-down`                                    |
+| Run migrations     | `make db-migrate`                                 |
+| Generate migration | `make db-generate`                                |
+| Build              | `make build`                                      |
+| Dev (API + Web)    | `make dev`                                        |
+| Full seed          | `make seed`                                       |
+| Single race scrape | `make scrape RACE=<slug> YEAR=<year> TYPE=<type>` |
+| Benchmark          | `make benchmark`                                  |
+| Benchmark suite    | `make benchmark-suite`                            |
+| DB GUI             | `make db-studio`                                  |
+| psql shell         | `make db-psql`                                    |
+| Tests              | `make test`                                       |
+| Lint               | `make lint`                                       |
+| Type check         | `make typecheck`                                  |
