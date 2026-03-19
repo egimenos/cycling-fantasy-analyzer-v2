@@ -1,6 +1,7 @@
 import { ResultCategory } from '../../shared/result-category.enum';
 import { RaceType } from '../../shared/race-type.enum';
 import { RaceClass } from '../../shared/race-class.enum';
+import { ParcoursType } from '../../shared/parcours-type.enum';
 import {
   COMPOSITE_SCORE_WEIGHTS,
   CROSS_TYPE_WEIGHTS,
@@ -8,6 +9,9 @@ import {
   getCrossTypeWeight,
   getRaceClassWeight,
   getPointsForPosition,
+  PROFILE_WEIGHT_FLOOR,
+  ITT_BONUS_FACTOR,
+  getCategoryAffinity,
 } from '../scoring-weights.config';
 
 describe('ScoringWeightsConfig', () => {
@@ -169,6 +173,40 @@ describe('ScoringWeightsConfig', () => {
       it('should return 0 for negative position', () => {
         expect(getPointsForPosition(ResultCategory.GC, -1, RaceType.GRAND_TOUR)).toBe(0);
       });
+    });
+  });
+
+  describe('Profile weight config constants', () => {
+    it('should define PROFILE_WEIGHT_FLOOR as 0.25', () => {
+      expect(PROFILE_WEIGHT_FLOOR).toBe(0.25);
+    });
+
+    it('should define ITT_BONUS_FACTOR as 0.15', () => {
+      expect(ITT_BONUS_FACTOR).toBe(0.15);
+    });
+  });
+
+  describe('getCategoryAffinity', () => {
+    it('should return [P4, P5] for MOUNTAIN', () => {
+      expect(getCategoryAffinity(ResultCategory.MOUNTAIN)).toEqual([
+        ParcoursType.P4,
+        ParcoursType.P5,
+      ]);
+    });
+
+    it('should return [P1, P2] for SPRINT', () => {
+      expect(getCategoryAffinity(ResultCategory.SPRINT)).toEqual([
+        ParcoursType.P1,
+        ParcoursType.P2,
+      ]);
+    });
+
+    it('should return null for GC', () => {
+      expect(getCategoryAffinity(ResultCategory.GC)).toBeNull();
+    });
+
+    it('should return null for STAGE', () => {
+      expect(getCategoryAffinity(ResultCategory.STAGE)).toBeNull();
     });
   });
 });

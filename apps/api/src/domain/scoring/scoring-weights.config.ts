@@ -1,6 +1,7 @@
 import { ResultCategory } from '../shared/result-category.enum';
 import { RaceType } from '../shared/race-type.enum';
 import { RaceClass } from '../shared/race-class.enum';
+import { ParcoursType } from '../shared/parcours-type.enum';
 
 /**
  * Position-to-points mapping for each result category.
@@ -229,4 +230,39 @@ function getPointsTable(category: ResultCategory, raceType: RaceType): PositionP
       break;
   }
   return {};
+}
+
+// ─── Profile-aware scoring constants ────────────────────────────────────────
+
+/**
+ * Minimum weight that any parcours type can receive.
+ * Prevents complete exclusion of riders who don't match the target profile.
+ */
+export const PROFILE_WEIGHT_FLOOR = 0.25;
+
+/**
+ * Bonus factor applied when a result comes from an ITT or TTT stage.
+ * Rewards riders with proven time-trial ability on races that include TTs.
+ */
+export const ITT_BONUS_FACTOR = 0.15;
+
+/**
+ * Maps result categories to their affinity parcours types.
+ * - MOUNTAIN → P4, P5 (mountain stages)
+ * - SPRINT → P1, P2 (flat/sprint stages)
+ * - GC, STAGE → null (no specific affinity)
+ */
+export const CATEGORY_AFFINITY_MAP: Record<string, ParcoursType[] | null> = {
+  [ResultCategory.MOUNTAIN]: [ParcoursType.P4, ParcoursType.P5],
+  [ResultCategory.SPRINT]: [ParcoursType.P1, ParcoursType.P2],
+  [ResultCategory.GC]: null,
+  [ResultCategory.STAGE]: null,
+};
+
+/**
+ * Returns the affinity parcours types for a given result category,
+ * or null if the category has no specific parcours affinity.
+ */
+export function getCategoryAffinity(category: ResultCategory): ParcoursType[] | null {
+  return CATEGORY_AFFINITY_MAP[category] ?? null;
 }
