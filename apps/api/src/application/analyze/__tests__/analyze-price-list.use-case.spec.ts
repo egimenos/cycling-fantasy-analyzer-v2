@@ -65,6 +65,7 @@ function createMockRaceResult(
     isItt: false,
     isTtt: false,
     profileScore: null,
+    raceDate: null,
   });
 }
 
@@ -85,6 +86,7 @@ describe('AnalyzePriceListUseCase', () => {
       findAll: jest.fn(),
       findByPcsSlug: jest.fn(),
       findByPcsSlugs: jest.fn(),
+      findByIds: jest.fn(),
       save: jest.fn(),
       saveMany: jest.fn(),
     };
@@ -93,6 +95,7 @@ describe('AnalyzePriceListUseCase', () => {
       findByRider: jest.fn(),
       findByRiderIds: jest.fn(),
       findByRace: jest.fn(),
+      findByRiderIdsBeforeDate: jest.fn(),
       saveMany: jest.fn(),
     };
 

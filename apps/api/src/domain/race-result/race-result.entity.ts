@@ -21,6 +21,7 @@ export interface RaceResultProps {
   readonly isItt: boolean;
   readonly isTtt: boolean;
   readonly profileScore: number | null;
+  readonly raceDate: Date | null;
 }
 
 export class RaceResult {
@@ -96,6 +97,10 @@ export class RaceResult {
 
   get profileScore(): number | null {
     return this.props.profileScore;
+  }
+
+  get raceDate(): Date | null {
+    return this.props.raceDate;
   }
 
   isScoring(): boolean {

@@ -368,6 +368,7 @@ export class TriggerScrapeUseCase {
           isItt: r.isItt,
           isTtt: r.isTtt,
           profileScore: r.profileScore,
+          raceDate: null,
         }),
       );
 

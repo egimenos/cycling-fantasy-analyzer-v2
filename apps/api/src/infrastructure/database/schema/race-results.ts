@@ -1,4 +1,13 @@
-import { pgTable, uuid, varchar, integer, boolean, timestamp, unique } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  varchar,
+  integer,
+  boolean,
+  timestamp,
+  date,
+  unique,
+} from 'drizzle-orm/pg-core';
 import { riders } from './riders';
 import { raceTypeEnum, raceClassEnum, resultCategoryEnum, parcoursTypeEnum } from './enums';
 
@@ -23,6 +32,7 @@ export const raceResults = pgTable(
     isItt: boolean('is_itt').notNull().default(false),
     isTtt: boolean('is_ttt').notNull().default(false),
     profileScore: integer('profile_score'),
+    raceDate: date('race_date', { mode: 'date' }),
   },
   (table) => [
     unique('race_results_unique').on(
