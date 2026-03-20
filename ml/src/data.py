@@ -31,7 +31,7 @@ def load_data(db_url: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     results_df = pd.read_sql("""
         SELECT rr.rider_id, rr.race_slug, rr.race_name, rr.race_type, rr.race_class,
                rr.year, rr.category, rr.position, rr.stage_number, rr.dnf,
-               rr.race_date, rr.parcours_type, rr.is_itt, rr.is_ttt,
+               rr.race_date, rr.parcours_type, rr.is_itt, rr.is_ttt, rr.profile_score,
                r.full_name as rider_name, r.birth_date as rider_birth_date,
                r.current_team as rider_team
         FROM race_results rr

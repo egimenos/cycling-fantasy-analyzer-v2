@@ -72,16 +72,14 @@ def predict_race(
     startlists_df: pd.DataFrame,
     db_url: str,
     race_profile: dict | None = None,
+    rider_ids: list[str] | None = None,
 ) -> list[dict]:
-    """Generate predicted scores for all riders on a single race startlist.
+    """Generate predicted scores for riders in a race.
 
-    Steps:
-        1. Look up race info (race_type, race_date) from the database.
-        2. If classic -> return empty (not supported by ML models).
-        3. Extract features per rider via extract_features_for_race().
-        4. Select the appropriate model for the race_type.
-        5. Run model.predict(X) where X = features[FEATURE_COLS].fillna(0).
-        6. Return list of {rider_id, predicted_score} dicts.
+    Two modes:
+    - rider_ids provided (frontend on-demand): use these riders directly,
+      no DB startlist needed. Builds a synthetic startlist for feature extraction.
+    - rider_ids is None (benchmark): use startlist from DB as before.
 
     Args:
         race_slug: Race identifier (e.g. 'tour-de-france').
@@ -92,10 +90,12 @@ def predict_race(
         db_url: PostgreSQL connection string (for get_race_info).
         race_profile: Optional dict with target_flat_pct, target_mountain_pct,
             target_itt_pct from PCS scrape. If None, computed from DB.
+        rider_ids: Optional list of rider UUIDs from frontend matching.
+            If provided, used instead of DB startlist.
 
     Returns:
         List of {'rider_id': str, 'predicted_score': float} dicts.
-        Empty list if race not found, is a classic, or has no startlist.
+        Empty list if race not found, is a classic, or has no startlist/riders.
     """
     # 1. Get race info
     race_info = get_race_info(db_url, race_slug, year)
@@ -117,9 +117,23 @@ def predict_race(
         return []
 
     # 4. Extract features (with race profile for v4 features)
+    # If rider_ids provided (frontend), build synthetic startlist so feature
+    # extraction can find the riders without requiring DB startlist.
+    effective_startlists = startlists_df
+    if rider_ids:
+        import pandas as _pd
+        synthetic = _pd.DataFrame({
+            'race_slug': race_slug,
+            'year': year,
+            'rider_id': rider_ids,
+            'team_name': 'unknown',
+        })
+        effective_startlists = _pd.concat([startlists_df, synthetic], ignore_index=True)
+        logger.info("Using %d rider_ids from frontend (synthetic startlist)", len(rider_ids))
+
     features_df = extract_features_for_race(
         results_df=results_df,
-        startlists_df=startlists_df,
+        startlists_df=effective_startlists,
         race_slug=race_slug,
         race_year=year,
         race_type=race_type,

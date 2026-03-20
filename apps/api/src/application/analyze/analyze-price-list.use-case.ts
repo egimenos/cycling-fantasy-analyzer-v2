@@ -216,7 +216,7 @@ export class AnalyzePriceListUseCase {
     const poolStats = this.scoringService.computePoolStats(poolEntries);
 
     // --- ML prediction enrichment for stage races ---
-    const mlPredictions = await this.fetchMlPredictions(input);
+    const mlPredictions = await this.fetchMlPredictions(input, matchedRiderIds);
 
     const analyzedRiders: AnalyzedRider[] = scoredEntries.map((s) => {
       if (s.unmatched || s.riderScore === null) {
@@ -283,7 +283,10 @@ export class AnalyzePriceListUseCase {
    * Fetch ML predictions for stage races, using cache when available.
    * Returns a Map<riderId, predictedScore> or null if ML is not applicable/available.
    */
-  private async fetchMlPredictions(input: AnalyzeInput): Promise<Map<string, number> | null> {
+  private async fetchMlPredictions(
+    input: AnalyzeInput,
+    riderIds: string[],
+  ): Promise<Map<string, number> | null> {
     const isStageRace =
       input.raceType === RaceType.GRAND_TOUR || input.raceType === RaceType.MINI_TOUR;
 
@@ -323,7 +326,12 @@ export class AnalyzePriceListUseCase {
           ttt: input.profileSummary.tttCount ?? 0,
         }
       : undefined;
-    const predictions = await this.mlScoring.predictRace(input.raceSlug, input.year, profileForMl);
+    const predictions = await this.mlScoring.predictRace(
+      input.raceSlug,
+      input.year,
+      profileForMl,
+      riderIds,
+    );
     if (!predictions) {
       this.logger.warn(
         `ML predictRace returned null for ${input.raceSlug}/${input.year} — falling back to rules-based scoring`,

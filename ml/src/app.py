@@ -89,6 +89,7 @@ class PredictRequest(BaseModel):
     race_slug: str
     year: int
     profile_summary: ProfileSummary | None = None
+    rider_ids: list[str] | None = None  # If provided, use these instead of DB startlist
 
 
 # ── Model hot-reload (T018) ─────────────────────────────────────────
@@ -295,7 +296,7 @@ def predict(req: PredictRequest, request: Request):
     else:
         results_df, startlists_df = state.data_cache
 
-    # 5. Extract features and predict (with race profile if provided)
+    # 5. Extract features and predict (with race profile and optional rider_ids)
     race_profile = req.profile_summary.to_race_profile() if req.profile_summary else None
     predictions = predict_race(
         race_slug=req.race_slug,
@@ -305,6 +306,7 @@ def predict(req: PredictRequest, request: Request):
         startlists_df=startlists_df,
         db_url=DB_URL,
         race_profile=race_profile,
+        rider_ids=req.rider_ids,
     )
 
     if not predictions:
