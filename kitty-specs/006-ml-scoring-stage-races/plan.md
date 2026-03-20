@@ -1,109 +1,104 @@
-# Implementation Plan: [FEATURE]
+# Implementation Plan: ML Scoring for Stage Races
 
-_Path: [templates/plan-template.md](templates/plan-template.md)_
-
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/kitty-specs/[###-feature-name]/spec.md`
-
-**Note**: This template is filled in by the `/spec-kitty.plan` command. See `src/specify_cli/missions/software-dev/command-templates/plan.md` for the execution workflow.
-
-The planner will not begin until all planning questions have been answered—capture those answers in this document before progressing to later phases.
+**Branch**: `006-ml-scoring-stage-races` | **Date**: 2026-03-20 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `kitty-specs/006-ml-scoring-stage-races/spec.md`
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Implement ML scoring (Random Forest) for stage races in production. The system pre-computes predictions via a Python CLI pipeline and stores them in a `ml_scores` database table. The TypeScript API reads pre-computed scores and serves hybrid results: ML predictions alongside rules-based breakdown for stage races, rules-only for classics. Weekly retraining runs as a one-shot batch job. The benchmark suite is extended to compare rules, ML, and hybrid scoring side-by-side.
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
+**Language/Version**: TypeScript 5.9+ (API, existing) + Python 3.12 (ML pipeline, new)
+**Primary Dependencies**:
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+- API: NestJS 11, Drizzle ORM (existing)
+- ML: scikit-learn, pandas, psycopg2, joblib
+  **Storage**: PostgreSQL 16 (existing) — new `ml_scores` table
+  **Testing**: Jest (TypeScript), pytest (Python)
+  **Target Platform**: Linux VPS (Dokploy), Docker containers
+  **Project Type**: Monorepo (Turborepo) — adds Python ML module alongside existing TypeScript apps
+  **Performance Goals**: Retrain pipeline completes in < 15 min; API reads pre-computed scores (< 1ms DB lookup)
+  **Constraints**: Single-user tool; CLI-only for ML operations (no HTTP endpoints for Python)
+  **Scale/Scope**: ~210K race results, ~3,500 riders, ~381 races, 36 ML features
 
 ## Constitution Check
 
 _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-[Gates determined based on constitution file]
+| Rule                              | Status              | Notes                                                                                                                                                                                                                                                           |
+| --------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No Python in v1                   | JUSTIFIED EXCEPTION | Constitution states "Python may be added later if ML complexity warrants it." Feature 005 research validated GO for stage races (RF rho=0.52-0.59 vs baseline 0.39). ML complexity warrants Python.                                                             |
+| DDD/Hexagonal Architecture        | PASS                | New `MlScoreRepositoryPort` (domain) + `MlScoreRepositoryAdapter` (infrastructure). Python writes raw SQL to same schema. Domain layer remains pure.                                                                                                            |
+| Scoring logic 100% coverage       | PASS with NOTE      | Rules-based scoring remains 100% covered. ML scoring is a pre-computed lookup (not deterministic logic) — test coverage applies to the integration layer (reading from DB, fallback logic), not the model itself. Model quality is validated via benchmark rho. |
+| Scoring model changes require ADR | PASS                | ADR required for this feature documenting hybrid scoring rationale.                                                                                                                                                                                             |
+| English only                      | PASS                | All code, comments, docs in English.                                                                                                                                                                                                                            |
+| No half-finished features         | PASS                | Feature is independently functional: retrain → predict → serve → benchmark. Each user story is independently testable.                                                                                                                                          |
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```
-kitty-specs/[###-feature]/
-├── plan.md              # This file (/spec-kitty.plan command output)
-├── research.md          # Phase 0 output (/spec-kitty.plan command)
-├── data-model.md        # Phase 1 output (/spec-kitty.plan command)
-├── quickstart.md        # Phase 1 output (/spec-kitty.plan command)
-├── contracts/           # Phase 1 output (/spec-kitty.plan command)
-└── tasks.md             # Phase 2 output (/spec-kitty.tasks command - NOT created by /spec-kitty.plan)
+kitty-specs/006-ml-scoring-stage-races/
+├── spec.md
+├── plan.md              # This file
+├── research.md          # Phase 0 — architecture decisions
+├── data-model.md        # Phase 1 — ml_scores table schema
+├── quickstart.md        # Phase 1 — dev setup for this feature
+└── checklists/
+    └── requirements.md
 ```
 
 ### Source Code (repository root)
 
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
-
 ```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
+ml/                                    # Python ML pipeline (NEW)
 ├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
+│   ├── features.py                    # 36-feature extraction (from research_v3.py)
+│   ├── train.py                       # Model training (RF per race type)
+│   ├── predict.py                     # Prediction generation → DB writes
+│   └── retrain.py                     # CLI entrypoint (make retrain / make predict)
+├── models/                            # Trained model storage (gitignored)
+│   └── .gitkeep
+├── tests/
+│   ├── test_features.py               # Feature extraction unit tests
+│   ├── test_train.py                  # Training pipeline tests
+│   └── test_predict.py                # Prediction pipeline tests
+├── requirements.txt                   # Python dependencies
+└── src/research_v3.py                 # Original research script (unchanged)
 
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
+apps/api/src/
+├── domain/
+│   └── ml-score/                      # NEW aggregate
+│       ├── ml-score.entity.ts         # MlScore entity
+│       └── ml-score.repository.port.ts # Port interface
+├── infrastructure/database/
+│   ├── schema/
+│   │   └── ml-scores.ts               # NEW Drizzle schema
+│   └── ml-score.repository.adapter.ts  # NEW adapter
+├── application/
+│   ├── analyze/
+│   │   └── analyze-price-list.use-case.ts  # MODIFIED — inject ML scores
+│   └── benchmark/
+│       ├── run-benchmark.use-case.ts       # MODIFIED — 3-method comparison
+│       └── run-benchmark-suite.use-case.ts # MODIFIED — aggregate 3 rhos
+└── presentation/cli/
+    └── benchmark.command.ts                # MODIFIED — 3-column display
 
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
+packages/shared-types/src/
+└── scoring.ts                         # MODIFIED — add scoring_method, ml_predicted_score
 
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+docker/
+└── Dockerfile.ml                      # NEW — Python ML worker image
+
+Makefile                               # MODIFIED — add retrain, predict targets
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Extends the existing monorepo with a new `ml/` top-level module for Python ML code. The TypeScript API gains a new DDD aggregate (`ml-score`) following the established port/adapter pattern. No new NestJS modules — the ML score repository is added to `DatabaseModule` alongside existing repositories.
 
 ## Complexity Tracking
 
-_Fill ONLY if Constitution Check has violations that must be justified_
-
-| Violation                  | Why Needed         | Simpler Alternative Rejected Because |
-| -------------------------- | ------------------ | ------------------------------------ |
-| [e.g., 4th project]        | [current need]     | [why 3 projects insufficient]        |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient]  |
+| Violation                            | Why Needed                                                                                                                                     | Simpler Alternative Rejected Because                                                                                                                                     |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Adding Python to TypeScript monorepo | ML model training requires scikit-learn ecosystem (pandas, sklearn, joblib). 36-feature extraction is complex and already validated in Python. | Porting 36 features + RF training to TypeScript would duplicate ~500 lines of validated Python code and introduce sklearn-to-ONNX conversion complexity with no benefit. |
