@@ -6,26 +6,26 @@
 
 ## R1: ML Model Serving Architecture
 
-**Decision**: Pre-computed predictions stored in PostgreSQL `ml_scores` table.
+**Decision**: Internal Python FastAPI microservice with on-demand predictions cached in PostgreSQL `ml_scores` table.
 
-**Rationale**: Avoids duplicating 36-feature extraction in TypeScript, eliminates ONNX runtime dependency, zero deploy complexity (same Postgres instance), sub-millisecond read latency. Python CLI writes predictions; TypeScript API reads them.
-
-**Alternatives considered**:
-
-- ONNX Runtime in Node.js: Requires porting feature extraction to TypeScript (~500 lines) and sklearn-to-ONNX conversion. Feature parity risk.
-- Python HTTP microservice: Violates CLI-only constraint for ML operations. Extra service to deploy and monitor.
-- Direct sklearn in Python HTTP: Same violation + 24/7 process for a weekly batch job.
-
-## R2: Python Pipeline Structure
-
-**Decision**: Refactor `research_v3.py` into separate modules: `features.py`, `train.py`, `predict.py`, `retrain.py` (entrypoint).
-
-**Rationale**: Clean separation of concerns. `features.py` is the single source of truth for the 36-feature set, reusable by both training and prediction. `retrain.py` orchestrates the full pipeline.
+**Rationale**: The real user flow is on-demand: user uploads price list → system analyzes race → needs ML predictions now. Pre-computed predictions assume we know which races to predict in advance, but analysis is user-triggered. A microservice loads the model once at startup (zero cold start on predictions) and serves predictions in ~200-500ms. Results are cached in `ml_scores` for subsequent requests. The service is internal-only (Docker network), not exposed to the internet.
 
 **Alternatives considered**:
 
-- Single monolithic script: Faster to ship but couples production to research code. Hard to test individual components.
-- Importing from `research_v3.py` directly: Couples production to a script that includes evaluation logic, report generation, and hardcoded train/test splits.
+- Pre-computed predictions (batch): Doesn't match real user flow. User triggers analysis on-demand; can't pre-compute for races not yet requested. Would also re-predict all races on every retrain unnecessarily.
+- Python subprocess from Node.js: 2-3s cold start per call (Python interpreter boot + sklearn import + model load). Unacceptable UX for an interactive analysis request.
+- ONNX Runtime in Node.js: Requires porting 36-feature extraction to TypeScript (~500 lines). Feature parity risk and maintenance burden.
+
+## R2: Python Service Structure
+
+**Decision**: FastAPI service with modular internals: `app.py` (endpoints), `features.py` (36-feature extraction), `train.py` (model training), `predict.py` (prediction logic), `retrain.py` (CLI entrypoint for training only).
+
+**Rationale**: Clean separation of concerns. `features.py` is the single source of truth for the 36-feature set, reused by both training (`retrain.py`) and on-demand prediction (`predict.py` via `app.py`). FastAPI endpoints are minimal (~50 lines): `/predict` and `/health`.
+
+**Alternatives considered**:
+
+- Single monolithic script: Couples production to research code. Hard to test individual components.
+- Importing from `research_v3.py` directly: Couples production to a script with evaluation logic, report generation, and hardcoded splits.
 
 ## R3: DB Schema Ownership
 
@@ -35,38 +35,38 @@
 
 **Alternatives considered**:
 
-- Python creates table via `CREATE TABLE IF NOT EXISTS`: Two sources of truth. Schema drift risk between Python and TypeScript definitions.
+- Python creates table via `CREATE TABLE IF NOT EXISTS`: Two sources of truth. Schema drift risk.
 
 ## R4: Model Storage
 
-**Decision**: Local filesystem at `ml/models/`. Model file format: joblib (scikit-learn native).
+**Decision**: Local filesystem at `ml/models/`. Model file format: joblib (scikit-learn native). Model loaded into memory once at FastAPI startup.
 
-**Rationale**: Simplest approach. Works directly in dev. In production, the model is generated and read on the same server. No volume management or DB blobs needed at current scale (single-user, single-server).
+**Rationale**: Simplest approach. In dev, files are on local disk. In production, the ML service container has access to the model directory (Docker volume or bind mount). The model stays in memory for the lifetime of the service — no per-request loading overhead.
 
 **Alternatives considered**:
 
-- Docker volume mount: Unnecessary complexity for single-server deployment. Can migrate later if needed.
+- Docker volume mount: May be needed in production but not an architecture change — just a deployment detail.
 - PostgreSQL blob: Increases DB size unnecessarily. Model files are ~5-10 MB.
 
 ## R5: Feature Extraction Strategy
 
 **Decision**: Load all data into pandas DataFrames, compute features in-memory. Same approach as research.
 
-**Rationale**: 210K results fit trivially in RAM (~50 MB). Batch job runs weekly, not real-time. The approach is proven and validated in research. No premature SQL optimization.
+**Rationale**: 210K results fit trivially in RAM (~50 MB). For on-demand prediction of a single race (~150 riders), feature extraction is fast (~1-2s). The approach is proven and validated in research.
 
 **Alternatives considered**:
 
-- Push aggregations to SQL: More complex queries, harder to maintain parity with research features. Only beneficial at much larger scale (millions of results).
+- Push aggregations to SQL: Harder to maintain parity with research features. Only beneficial at much larger scale.
 
 ## R6: Model Versioning
 
-**Decision**: Timestamp-based `model_version` stored in `ml_scores` records. No automatic rollback. Benchmark compares versions for visibility.
+**Decision**: Timestamp-based `model_version` stored in `ml_scores` records and in `ml/models/model_version.txt`. No automatic rollback. Benchmark compares versions for visibility.
 
-**Rationale**: Single-user tool. Weekly benchmark provides visibility into regressions. Manual rollback (re-train with previous parameters or restore previous joblib) is sufficient.
+**Rationale**: Single-user tool. Weekly benchmark provides visibility into regressions. The ML service reads `model_version.txt` on startup and uses it to detect stale cache entries. When model version changes, cached predictions are invalidated.
 
 **Alternatives considered**:
 
-- Full rollback automation: Over-engineering for single-user scale. Adds complexity to the pipeline with little practical benefit.
+- Full rollback automation: Over-engineering for single-user scale.
 
 ## R7: Hybrid Scoring Interface
 
@@ -77,36 +77,57 @@
 **Alternatives considered**:
 
 - Replace rules-based score entirely for stage races: Loses transparency and category breakdown.
-- Train 4 separate models per category (gc, stage, mountain, sprint): Significantly more complex, not validated in research, and the target variable in research was total points.
+- Train 4 separate models per category: Not validated in research, significantly more complex.
 
 ## R8: Integration Points in TypeScript API
 
-**Decision**: Minimal changes to existing architecture. New components:
+**Decision**: Two new ports in the domain layer:
 
-1. **Domain layer**: `MlScore` entity + `MlScoreRepositoryPort` (read-only port — Python writes, TypeScript reads)
-2. **Infrastructure layer**: `ml-scores` Drizzle schema + `MlScoreRepositoryAdapter`
-3. **Application layer**: `AnalyzePriceListUseCase` injects `MlScoreRepositoryPort`, reads ML scores for stage races, enriches response
-4. **Benchmark layer**: `RunBenchmarkUseCase` computes 3 rhos (rules, ML, hybrid)
-5. **Shared types**: `AnalyzedRider` extended with `scoring_method` + `ml_predicted_score`
+1. **`MlScoringPort`** (domain): Abstract interface for requesting ML predictions for a race. The adapter (`MlScoringAdapter`) makes HTTP calls to the internal FastAPI service.
+2. **`MlScoreRepositoryPort`** (domain): Read/write interface for the `ml_scores` cache table. The adapter uses Drizzle ORM.
 
-**No new NestJS modules** — `MlScoreRepositoryPort` is registered in existing `DatabaseModule`.
+**Integration flow in `AnalyzePriceListUseCase`**:
+
+1. Compute rules-based scores (existing logic, unchanged)
+2. If race type is stage race (mini_tour / grand_tour):
+   a. Check `ml_scores` cache for current model version
+   b. Cache miss → call `MlScoringPort.predictRace(raceSlug, year)` → ML service → features + predict → write cache → return
+   c. Cache hit → read from `ml_scores`
+3. Enrich `AnalyzedRider` with `scoring_method` and `ml_predicted_score`
+
+**Fallback**: If ML service is unavailable (timeout, error, no model), return rules-based scoring only. Never fail the analysis request because of ML.
 
 ## R9: Constitution Compliance — Python Addition
 
 **Decision**: Adding Python is a justified exception to the "No Python in v1" constitution rule.
 
-**Rationale**: The constitution explicitly anticipates this: "Python may be added later if ML complexity warrants it." Feature 005 research proved ML complexity warrants Python (RF achieves rho=0.52-0.59 for stage races vs baseline 0.39). An ADR will document this decision.
+**Rationale**: The constitution explicitly anticipates this: "Python may be added later if ML complexity warrants it." Feature 005 research proved ML complexity warrants Python. An ADR will document this decision.
 
-**Action required**: Create ADR `docs/adr/2026-03-20-ml-scoring-python-addition.md` documenting the rationale.
+**Clarification on CLI-only rule**: The CLI-only rule applies to scraping operations that were previously proposed as REST endpoints exposed to the internet. The ML service is an internal microservice on the Docker network, not accessible from outside. This is service-to-service communication, not a public API endpoint.
+
+**Action required**: Create ADR `docs/adr/2026-03-20-ml-scoring-python-addition.md`.
 
 ## R10: Benchmark 3-Column Display
 
 **Decision**: Single `make benchmark-suite` command displays a table with columns: race, type, rho(rules), rho(ML), rho(hybrid). Aggregate mean rho per method at the bottom.
 
-**Rationale**: One command, complete picture. Hybrid rho is the production-relevant metric. Seeing all three together facilitates analysis and regression detection.
+**Rationale**: One command, complete picture. Hybrid rho is the production-relevant metric.
 
-**Implementation approach**: `RunBenchmarkUseCase` returns a `BenchmarkResult` extended with `mlSpearmanRho` and `hybridSpearmanRho`. For each race:
+**Implementation approach**: The benchmark generates ML predictions on-the-fly by calling the ML service for each historical race. For each race:
 
-- Rules rho: existing logic (predicted from rules-based scoring vs actual)
-- ML rho: predicted from `ml_scores` vs actual (null for classics)
+- Rules rho: existing logic (rules-based predicted vs actual)
+- ML rho: ML predicted vs actual (null for classics)
 - Hybrid rho: ML for stage races, rules for classics (matches production behavior)
+
+## R11: Cache Invalidation Strategy
+
+**Decision**: Model-version-based invalidation. Each cached prediction in `ml_scores` records the `model_version` that produced it. When the API (or benchmark) requests predictions, it compares the cached version against the current model version (read from ML service `/health` endpoint or `model_version.txt`). Stale entries trigger a re-prediction.
+
+**Rationale**: Simple and correct. No TTL-based expiration needed — the cache is only stale when the model changes (weekly retrain). The ML service knows its current model version and can be queried for it.
+
+**Cache lifecycle**:
+
+1. `make retrain` → trains model, writes new `model_version.txt`
+2. ML service detects new version (on next request or restart) and reloads model
+3. API checks cached `model_version` vs current → stale → re-predict
+4. Fresh predictions cached with new `model_version`

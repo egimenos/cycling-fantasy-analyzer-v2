@@ -7,115 +7,119 @@
 
 ## User Scenarios & Testing
 
-### User Story 1 - Weekly Model Retraining (Priority: P1)
+### User Story 1 - Model Training Pipeline (Priority: P1)
 
-The system operator runs a single command (`make retrain`) that trains a Random Forest model using historical race data, saves the trained model with a version identifier, and automatically generates predictions for all stage races that have startlists available. The pipeline detects races with startlists but no predictions for the current model version and computes them without manual intervention.
+The system operator runs a single command (`make retrain`) that trains Random Forest models using historical race data and the 36-feature set from research. The command saves trained models to disk with a version identifier. Training uses all available historical data. No predictions are generated during training — predictions happen on-demand when users request race analysis.
 
-**Why this priority**: Without a trained model and pre-computed predictions, no other part of the feature can function. This is the foundation of the entire ML scoring system.
+**Why this priority**: Without a trained model, no ML predictions can be served. This is the foundation of the entire ML scoring system.
 
-**Independent Test**: Can be fully tested by running `make retrain` against the existing database with 210K results and verifying that a model file is saved and prediction records appear in the database for stage races with startlists.
-
-**Acceptance Scenarios**:
-
-1. **Given** a database with historical race results (2022-2026) and startlists for upcoming stage races, **When** the operator runs `make retrain`, **Then** a Random Forest model is trained using all available data, saved to disk with a version identifier, and predictions are written to the database for every stage race that has a startlist.
-2. **Given** a previously trained model exists and new startlists have been scraped since the last retrain, **When** the operator runs `make retrain`, **Then** the new model replaces the previous one and predictions are generated for the newly discovered startlists as well as re-generated for existing ones with the new model version.
-3. **Given** no startlists exist for any upcoming race, **When** the operator runs `make retrain`, **Then** the model is trained and saved successfully but no prediction records are written, and the command exits cleanly with a message indicating zero races to predict.
-
----
-
-### User Story 2 - Hybrid Scoring in the API (Priority: P1)
-
-When scoring riders for a race, the system provides both the rules-based score (with full category breakdown: gc, stage, mountain, sprint) and, for stage races, the ML predicted score. The response includes a `scoring_method` field and an `ml_predicted_score` field without breaking the existing `RiderScore` interface. For classics, only rules-based scoring is returned.
-
-**Why this priority**: This is the core value delivery — users see ML predictions alongside rules-based scores for stage races, enabling better-informed team selection decisions.
-
-**Independent Test**: Can be tested by requesting rider scores for a stage race (e.g., a mini tour) and verifying that both `totalProjectedPts` (rules-based) and `ml_predicted_score` are present in the response, while requesting scores for a classic returns only rules-based scores with no ML fields.
+**Independent Test**: Can be fully tested by running `make retrain` against the existing database with 210K results and verifying that model files are saved to disk with a version identifier.
 
 **Acceptance Scenarios**:
 
-1. **Given** a mini tour or grand tour race with ML predictions in the database, **When** a user requests rider scores for that race, **Then** each rider's response includes the full rules-based breakdown (gc, stage, mountain, sprint, totalProjectedPts) plus `scoring_method: "hybrid"` and `ml_predicted_score` with the ML prediction.
-2. **Given** a classic race, **When** a user requests rider scores, **Then** each rider's response includes only the rules-based breakdown with `scoring_method: "rules"` and no `ml_predicted_score` field (or null).
-3. **Given** a stage race where ML predictions have not yet been generated (no startlist scraped, or retrain not yet run), **When** a user requests rider scores, **Then** the system falls back to rules-based scoring only with `scoring_method: "rules"`.
+1. **Given** a database with historical race results (2022-2026), **When** the operator runs `make retrain`, **Then** Random Forest models are trained (one per stage race type: mini tour, grand tour), saved to disk with a timestamp-based version identifier.
+2. **Given** a previously trained model exists, **When** the operator runs `make retrain`, **Then** a new model is trained with the latest data and replaces the previous version. The old model file may be overwritten.
+3. **Given** the database is empty or has insufficient data, **When** the operator runs `make retrain`, **Then** the command fails with a clear error message explaining the minimum data requirements.
 
 ---
 
-### User Story 3 - On-Demand Prediction for a Specific Race (Priority: P2)
+### User Story 2 - On-Demand ML Predictions via Internal Service (Priority: P1)
 
-The system operator can generate ML predictions for a single race by running `make predict RACE=<slug> YEAR=<year>`, using the most recently trained model. This supports the workflow of scraping a new startlist and immediately generating predictions without waiting for the weekly retrain.
+When a user requests analysis of a stage race (uploads price list, selects race), the TypeScript API calls an internal Python ML service to generate predictions. The ML service extracts features for the race's startlist riders, runs the trained model, caches results in the database, and returns predictions. Subsequent requests for the same race and model version are served from cache. For classics, the ML service is not called — only rules-based scoring is used.
 
-**Why this priority**: Enables responsiveness when a new startlist becomes available mid-week. Depends on Story 1 (a trained model must exist).
+**Why this priority**: This is the core value delivery — users get ML-enhanced predictions for stage races as part of the normal analysis workflow, without any manual prediction step.
 
-**Independent Test**: Can be tested by running `make predict RACE=tour-de-suisse YEAR=2026` after a model has been trained, and verifying that prediction records appear in the database for riders on that race's startlist.
+**Independent Test**: Can be tested by requesting analysis of a stage race and verifying that the ML service is called, predictions are generated and cached, and the response includes both rules-based breakdown and ML predicted score.
 
 **Acceptance Scenarios**:
 
-1. **Given** a trained model exists and a startlist has been scraped for a specific stage race, **When** the operator runs `make predict RACE=tour-de-suisse YEAR=2026`, **Then** predictions are generated for all riders on that startlist using the current model and written to the database.
-2. **Given** no trained model exists, **When** the operator runs `make predict`, **Then** the command fails with a clear error message indicating that `make retrain` must be run first.
-3. **Given** the specified race has no startlist in the database, **When** the operator runs `make predict`, **Then** the command fails with a clear error indicating no startlist is available for that race.
+1. **Given** a trained model exists and a startlist is available for a stage race, **When** a user requests analysis for that race (first time), **Then** the API calls the ML service, which extracts features, generates predictions, caches them in the database, and the API returns both rules-based scores (with category breakdown) and `ml_predicted_score` with `scoring_method: "hybrid"`.
+2. **Given** predictions are already cached for a race with the current model version, **When** a user requests analysis for the same race, **Then** the API reads cached predictions from the database without calling the ML service (cache hit).
+3. **Given** a classic race, **When** a user requests analysis, **Then** the API returns only rules-based scores with `scoring_method: "rules"` and `ml_predicted_score: null`. The ML service is not called.
+4. **Given** the ML service is unavailable or no trained model exists, **When** a user requests analysis for a stage race, **Then** the API falls back to rules-based scoring with `scoring_method: "rules"` and logs a warning.
+5. **Given** a new model version has been trained (via `make retrain`) since the last cached predictions, **When** a user requests analysis for a previously cached race, **Then** the system detects the stale cache and re-predicts using the new model.
 
 ---
 
-### User Story 4 - Team Optimizer Uses ML Score for Stage Races (Priority: P2)
+### User Story 3 - Hybrid Scoring in Analysis Results (Priority: P1)
 
-The team optimizer (knapsack algorithm) uses the ML predicted score instead of the rules-based score when optimizing teams for stage races. For classics, the optimizer continues using the rules-based score. This produces better team recommendations for stage races where ML has demonstrated superior predictive power.
+The analysis response for stage races includes both the rules-based score (with full category breakdown: gc, stage, mountain, sprint) and the ML predicted score. The response includes `scoring_method` and `ml_predicted_score` fields without breaking the existing interface. The optimizer uses ML score for stage races when available.
 
-**Why this priority**: Directly improves the quality of team recommendations for stage races — the primary value proposition of the ML integration.
+**Why this priority**: Users need both scores visible for transparency and informed decision-making. The optimizer needs ML scores to produce better team recommendations.
 
-**Independent Test**: Can be tested by running the team optimizer for a stage race and verifying the selected riders differ from (and improve upon) a purely rules-based optimization.
+**Independent Test**: Can be tested by verifying the API response shape includes both scoring methods for stage races and that the optimizer uses ML score for ranking when available.
 
 **Acceptance Scenarios**:
 
-1. **Given** a stage race with ML predictions available, **When** the optimizer runs, **Then** it uses `ml_predicted_score` as the scoring input for rider ranking and team selection.
-2. **Given** a classic race, **When** the optimizer runs, **Then** it uses `totalProjectedPts` (rules-based) as the scoring input, ignoring ML predictions.
-3. **Given** a stage race without ML predictions (model not yet trained or no startlist), **When** the optimizer runs, **Then** it falls back to rules-based scoring.
+1. **Given** a stage race with ML predictions available, **When** the optimizer runs, **Then** it uses `ml_predicted_score` as the ranking input for rider selection and team optimization.
+2. **Given** a classic race, **When** the optimizer runs, **Then** it uses `totalProjectedPts` (rules-based) as the ranking input, ignoring ML predictions.
+3. **Given** a stage race without ML predictions (service down or no model), **When** the optimizer runs, **Then** it falls back to rules-based scoring.
 
 ---
 
-### User Story 5 - Benchmark Suite Compares All Scoring Methods (Priority: P2)
+### User Story 4 - Benchmark Suite Compares All Scoring Methods (Priority: P2)
 
-Running `make benchmark-suite` displays a single table with three Spearman rho columns — rules-based, ML, and hybrid — for each race. This provides a complete picture of scoring quality across methods in one view.
+Running `make benchmark-suite` displays a single table with three Spearman rho columns — rules-based, ML, and hybrid — for each race. The benchmark generates ML predictions on-the-fly for historical races by calling the ML service. This provides a complete picture of scoring quality across methods in one view.
 
-**Why this priority**: Essential for validating that ML scoring actually improves predictions and for monitoring model quality over time. Also useful for tracking model version regressions.
+**Why this priority**: Essential for validating that ML scoring actually improves predictions and for monitoring model quality after each retrain.
 
 **Independent Test**: Can be tested by running `make benchmark-suite` and verifying the output table includes three rho columns, with ML rho values matching expectations from the research (rho ~0.52 mini tours, ~0.59 grand tours).
 
 **Acceptance Scenarios**:
 
-1. **Given** a database with historical results and ML predictions, **When** the operator runs `make benchmark-suite`, **Then** a table is displayed with columns: race name, race type, rho (rules), rho (ML), rho (hybrid), plus aggregate mean rho per method at the bottom.
+1. **Given** a database with historical results and a trained model, **When** the operator runs `make benchmark-suite`, **Then** a table is displayed with columns: race name, race type, rho (rules), rho (ML), rho (hybrid), plus aggregate mean rho per method at the bottom.
 2. **Given** a race in the benchmark suite is a classic (no ML scoring), **When** the benchmark runs, **Then** the ML column shows "n/a" and the hybrid column equals the rules column for that race.
-3. **Given** a stage race in the suite has no ML predictions yet, **When** the benchmark runs, **Then** the ML column shows "n/a" and the hybrid column falls back to the rules value.
+3. **Given** the ML service is unavailable, **When** the benchmark runs, **Then** the ML and hybrid columns show "n/a" for all races and the rules column displays normally.
+
+---
+
+### User Story 5 - ML Service Health and Observability (Priority: P2)
+
+The ML service exposes a health check endpoint that reports whether a trained model is loaded and ready. The API checks ML service health before attempting predictions and degrades gracefully when the service is down.
+
+**Why this priority**: Operational reliability — the system must never fail completely because the ML service is down. Graceful degradation to rules-based scoring is essential.
+
+**Independent Test**: Can be tested by stopping the ML service and verifying that the API still returns rules-based scores without errors.
+
+**Acceptance Scenarios**:
+
+1. **Given** the ML service is running with a loaded model, **When** its health endpoint is called, **Then** it responds with status "healthy" and the current model version.
+2. **Given** the ML service is running but no model is loaded, **When** its health endpoint is called, **Then** it responds with status "no_model" indicating retraining is needed.
+3. **Given** the ML service is down, **When** the API receives an analysis request for a stage race, **Then** the API returns rules-based scoring only and logs a warning about ML service unavailability.
 
 ---
 
 ### Edge Cases
 
 - What happens when a rider is on a startlist but has zero historical results? The model predicts based on all-zero features; the prediction will be low but valid.
-- What happens when the database has results but no startlists for any race? `make retrain` trains the model successfully but generates zero predictions, and reports this clearly.
-- What happens when the model file is corrupted or missing? `make predict` and the API gracefully fall back to rules-based scoring.
-- What happens when a rider appears in `ml_scores` but was removed from the startlist? Stale predictions are ignored — the API joins `ml_scores` with the current startlist.
-- What happens when `make retrain` is interrupted mid-execution? Predictions are written transactionally — partial writes are rolled back, and the previous model version remains valid.
+- What happens when the ML service receives a request for a classic race? It rejects the request (classics are filtered at the API layer, but the service validates too).
+- What happens when the model file is corrupted or missing? The ML service fails its health check and the API falls back to rules-based scoring.
+- What happens when a rider appears in cached `ml_scores` but was removed from the startlist? Stale predictions are ignored — the API joins `ml_scores` with the current startlist.
+- What happens when the ML service is slow (> 5s)? The API applies a timeout and falls back to rules-based scoring for that request.
+- What happens when `make retrain` is run while the ML service is serving requests? The service detects the new model version on the next request and reloads it (or requires a restart).
 
 ## Requirements
 
 ### Functional Requirements
 
-- **FR-001**: System MUST provide a `make retrain` command that trains a Random Forest model using all available historical race data and the 36-feature set from the research phase.
-- **FR-002**: System MUST save trained models to disk with a version identifier (timestamp-based) and persist the model version in prediction records.
-- **FR-003**: System MUST automatically detect stage races with startlists that lack predictions for the current model version and generate predictions for them during retrain.
-- **FR-004**: System MUST write predictions to a persistent store keyed by (rider_id, race_slug, year, model_version).
-- **FR-005**: System MUST provide a `make predict RACE=<slug> YEAR=<year>` command for on-demand prediction of a specific race using the latest trained model.
+- **FR-001**: System MUST provide a `make retrain` command that trains Random Forest models using all available historical race data and the 36-feature set from the research phase. Training only — no predictions generated.
+- **FR-002**: System MUST save trained models to disk with a timestamp-based version identifier.
+- **FR-003**: System MUST provide an internal ML service that accepts prediction requests for a given race and returns predicted scores for all riders on the startlist.
+- **FR-004**: The ML service MUST extract the same 36 features used in the research phase (v3), maintaining parity with the validated model.
+- **FR-005**: The ML service MUST cache predictions in a persistent store keyed by (rider_id, race_slug, year, model_version) and serve cached results for subsequent requests.
 - **FR-006**: System MUST extend rider scoring responses to include `scoring_method` ("rules" or "hybrid") and `ml_predicted_score` (for stage races with ML predictions) without altering the existing score structure.
 - **FR-007**: System MUST return both rules-based scores (with full category breakdown) and ML predicted scores for stage races in hybrid mode.
-- **FR-008**: System MUST fall back to rules-based scoring when ML predictions are unavailable for a given race.
+- **FR-008**: System MUST fall back to rules-based scoring when the ML service is unavailable, unhealthy, or when no trained model exists.
 - **FR-009**: System MUST use ML predicted score as the ranking input for the team optimizer when optimizing for stage races with available predictions.
 - **FR-010**: System MUST display three Spearman rho columns (rules, ML, hybrid) in the benchmark suite output.
 - **FR-011**: System MUST support retraining on a weekly schedule via external cron without manual intervention.
-- **FR-012**: System MUST extract the same 36 features used in the research phase (v3), maintaining parity with the validated model.
+- **FR-012**: The ML service MUST expose a health check endpoint reporting model load status and current version.
+- **FR-013**: System MUST detect stale cached predictions (model version mismatch) and re-predict using the current model.
 
 ### Key Entities
 
-- **ML Score**: A pre-computed prediction for a specific rider in a specific race, produced by a specific model version. Attributes: rider identity, race identity, year, predicted score, model version, creation timestamp.
-- **Model Version**: An identifier (timestamp-based) representing a trained model snapshot. Used to track which predictions correspond to which training run.
+- **ML Score (cache)**: A cached prediction for a specific rider in a specific race, produced by a specific model version. Attributes: rider identity, race identity, year, predicted score, model version, creation timestamp.
+- **Model Version**: An identifier (timestamp-based) representing a trained model snapshot. Used to track which predictions correspond to which training run and to detect stale cache entries.
 - **Hybrid Score**: An enriched rider score that combines the existing rules-based breakdown with an optional ML predicted score and a method indicator.
 
 ## Success Criteria
@@ -123,8 +127,8 @@ Running `make benchmark-suite` displays a single table with three Spearman rho c
 ### Measurable Outcomes
 
 - **SC-001**: ML scoring for stage races achieves Spearman rho >= 0.50 in the benchmark suite, consistent with research findings (mini tours ~0.52, grand tours ~0.59).
-- **SC-002**: The full retrain pipeline (train + predict all races) completes within 15 minutes on the production server.
+- **SC-002**: The full retrain pipeline (model training only) completes within 10 minutes on the production server.
 - **SC-003**: Hybrid scoring improves aggregate Spearman rho over rules-based scoring alone across the full benchmark suite.
-- **SC-004**: `make retrain` runs end-to-end without manual intervention, including auto-detection of new startlists.
+- **SC-004**: On-demand ML predictions for a race complete within 3 seconds (first request, cache miss) and within 100ms (cache hit).
 - **SC-005**: Existing rules-based scoring for classics remains unchanged — no regression in classic race rho values.
-- **SC-006**: The API serves hybrid scores for stage races with sub-second response time (reading pre-computed predictions).
+- **SC-006**: The API degrades gracefully to rules-based scoring when the ML service is down, with no user-facing errors.

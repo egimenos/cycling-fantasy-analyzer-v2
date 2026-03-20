@@ -1,7 +1,7 @@
 # Specification Quality Checklist: ML Scoring for Stage Races
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
-**Created**: 2026-03-20
+**Created**: 2026-03-20 (updated after architecture revision)
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -31,6 +31,8 @@
 
 ## Notes
 
-- All items pass validation. Spec is ready for `/spec-kitty.clarify` or `/spec-kitty.plan`.
-- Implementation details (Random Forest, Python, TypeScript, Drizzle, etc.) are referenced only as context in the feature description header, not in requirements or success criteria.
-- FR-012 references "36 features from research phase" — this is a domain concept (the validated feature set), not an implementation detail.
+- All items pass validation. Spec is ready for `/spec-kitty.tasks`.
+- Architecture revised from pre-computed batch to on-demand microservice with cache.
+- FR-003 through FR-005 now describe on-demand prediction via internal service with caching.
+- FR-012 added for health check endpoint. FR-013 added for stale cache detection.
+- SC-004 updated: on-demand prediction < 3s (cache miss), < 100ms (cache hit).
