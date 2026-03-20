@@ -124,14 +124,15 @@ export class AnalyzeController {
 
   @Get('import-price-list')
   async importPriceList(@Query('url') url: string): Promise<{ riders: ParsedPriceEntry[] }> {
-    if (!url) {
+    const trimmedUrl = url?.trim();
+    if (!trimmedUrl) {
       throw new BadRequestException('url query parameter is required');
     }
 
     const dynamicImport = new Function('specifier', 'return import(specifier)');
     const { gotScraping } = await dynamicImport('got-scraping');
     const response = await gotScraping({
-      url,
+      url: trimmedUrl,
       headerGeneratorOptions: {
         browsers: [{ name: 'chrome', minVersion: 100 }],
         locales: ['es-ES'],
