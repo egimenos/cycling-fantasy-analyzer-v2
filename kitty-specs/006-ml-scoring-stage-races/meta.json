@@ -1,0 +1,11 @@
+{
+  "feature_number": "006",
+  "slug": "006-ml-scoring-stage-races",
+  "feature_slug": "006-ml-scoring-stage-races",
+  "created_at": "2026-03-20T00:00:00Z",
+  "target_branch": "main",
+  "friendly_name": "ML Scoring for Stage Races",
+  "mission": "software-dev",
+  "source_description": "Implement ML scoring (Random Forest) for stage races in production with pre-computed predictions, hybrid scoring, and weekly retraining pipeline",
+  "vcs": "git"
+}
