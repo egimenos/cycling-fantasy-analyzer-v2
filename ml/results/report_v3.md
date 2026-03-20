@@ -1,6 +1,25 @@
 # ML Research v3 — Results
 
 **Date**: 2026-03-20
+**Feature**: 005-ml-scoring-feasibility-research
+**Baseline**: Rules-based scoring, ρ = 0.3872 (381 races, 2022-2026)
+**Go threshold**: ρ > 0.50
+
+## Decision
+
+**GO for stage races (mini tours + grand tours). NO-GO for classics.**
+
+- Mini tours: Random Forest achieves ρ = 0.52 (+8% vs baseline) — above go threshold
+- Grand tours: Random Forest achieves ρ = 0.59 (+7% vs baseline) — well above go threshold
+- Classics: ρ = 0.31 — no improvement, inherently unpredictable one-day races
+
+**Next step**: Feature 006 — implement ML scoring for stage races in production. Export trained Random Forest model (ONNX or pickle) and serve predictions from the TypeScript API. Keep rules-based scoring for classics.
+
+## Research iterations
+
+- **v1**: 3 years data (2024-2026), 16 features. All models below baseline. Cause: insufficient historical depth for training features.
+- **v2**: 5 years data (2022-2026), 25 features, separate per-type models. RF global ρ=0.40. Mini tour ρ=0.50. Improvement from richer historical data.
+- **v3**: 36 features adding micro-form (recent 30/14d), age/trajectory (birth_date), team leader context. RF global ρ=0.41. Mini tour ρ=0.52, grand tour ρ=0.59. New features add measurable signal.
 
 ## New features in v3
 

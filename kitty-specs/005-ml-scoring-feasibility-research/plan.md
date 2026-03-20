@@ -1,109 +1,43 @@
-# Implementation Plan: [FEATURE]
+# Research Plan: ML Scoring Feasibility
 
-_Path: [templates/plan-template.md](templates/plan-template.md)_
+**Branch**: `005-ml-scoring-feasibility-research` | **Date**: 2026-03-20 | **Spec**: [spec.md](spec.md)
+**Mission**: research
+**Status**: COMPLETE
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/kitty-specs/[###-feature-name]/spec.md`
+## Research Question
 
-**Note**: This template is filled in by the `/spec-kitty.plan` command. See `src/specify_cli/missions/software-dev/command-templates/plan.md` for the execution workflow.
+Can ML models predict fantasy cycling scores significantly better than the rules-based algorithm (ρ ≈ 0.39)?
 
-The planner will not begin until all planning questions have been answered—capture those answers in this document before progressing to later phases.
+## Outcome
 
-## Summary
+**GO for stage races. NO-GO for classics.**
 
-[Extract from feature spec: primary requirement + technical approach from research]
+See full results: [ml/results/report_v3.md](../../ml/results/report_v3.md)
 
-## Technical Context
+## Methodology
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
+- **Data**: 210K race results, 3,500 riders, 381 races (2022-2026)
+- **Features**: 36 features per (rider, race) pair including historical points, micro-form, age, team context
+- **Models**: Linear Regression, Random Forest, XGBoost
+- **Evaluation**: Spearman ρ per race, mean across test set (2025 season, 94 races)
+- **Train/test**: 2023-2024 train, 2025 test
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+## Key Results
 
-## Constitution Check
+| Scope       | Rules-based ρ | ML (RF) ρ | Decision |
+| ----------- | ------------- | --------- | -------- |
+| Global      | 0.39          | 0.41      | NO-GO    |
+| Mini tours  | ~0.48         | 0.52      | GO       |
+| Grand tours | ~0.55         | 0.59      | GO       |
+| Classics    | ~0.31         | 0.31      | NO-GO    |
 
-_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
+## Technical Decisions
 
-[Gates determined based on constitution file]
+- **Python environment**: `ml/.venv/` with pandas, scikit-learn, xgboost, psycopg2
+- **Scripts**: `ml/src/research_v3.py` (main), `ml/src/scrape_birth_dates.py` (age data)
+- **Schema change**: Added `riders.birth_date` column (migration 0005)
+- **No changes to TypeScript codebase** during research
 
-## Project Structure
+## Next Step
 
-### Documentation (this feature)
-
-```
-kitty-specs/[###-feature]/
-├── plan.md              # This file (/spec-kitty.plan command output)
-├── research.md          # Phase 0 output (/spec-kitty.plan command)
-├── data-model.md        # Phase 1 output (/spec-kitty.plan command)
-├── quickstart.md        # Phase 1 output (/spec-kitty.plan command)
-├── contracts/           # Phase 1 output (/spec-kitty.plan command)
-└── tasks.md             # Phase 2 output (/spec-kitty.tasks command - NOT created by /spec-kitty.plan)
-```
-
-### Source Code (repository root)
-
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
-
-```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
-```
-
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
-
-## Complexity Tracking
-
-_Fill ONLY if Constitution Check has violations that must be justified_
-
-| Violation                  | Why Needed         | Simpler Alternative Rejected Because |
-| -------------------------- | ------------------ | ------------------------------------ |
-| [e.g., 4th project]        | [current need]     | [why 3 projects insufficient]        |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient]  |
+Feature 006: implement ML scoring for stage races in production.
