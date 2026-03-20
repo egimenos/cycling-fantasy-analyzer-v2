@@ -90,6 +90,15 @@ class AnalyzeRequestDto {
   @ValidateNested()
   @Type(() => ProfileSummaryDto)
   profileSummary?: ProfileSummaryDto;
+
+  @IsOptional()
+  @IsString()
+  raceSlug?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(2000)
+  year?: number;
 }
 
 @Controller('api')
@@ -104,6 +113,8 @@ export class AnalyzeController {
       budget: dto.budget,
       seasons: dto.seasons,
       profileSummary: dto.profileSummary,
+      raceSlug: dto.raceSlug,
+      year: dto.year,
     });
   }
 }
