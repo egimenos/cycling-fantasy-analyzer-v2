@@ -2,6 +2,7 @@ import { RunBenchmarkUseCase } from '../run-benchmark.use-case';
 import { FetchStartlistUseCase, FetchStartlistOutput } from '../fetch-startlist.use-case';
 import { RaceResultRepositoryPort } from '../../../domain/race-result/race-result.repository.port';
 import { RiderRepositoryPort } from '../../../domain/rider/rider.repository.port';
+import { MlScoringPort } from '../../../domain/scoring/ml-scoring.port';
 import { RaceResult } from '../../../domain/race-result/race-result.entity';
 import { Rider } from '../../../domain/rider/rider.entity';
 import { StartlistEntry } from '../../../domain/startlist/startlist-entry.entity';
@@ -77,6 +78,7 @@ describe('RunBenchmarkUseCase', () => {
   let fetchStartlist: jest.Mocked<Pick<FetchStartlistUseCase, 'execute'>>;
   let resultRepo: jest.Mocked<RaceResultRepositoryPort>;
   let riderRepo: jest.Mocked<RiderRepositoryPort>;
+  let mlScoring: jest.Mocked<MlScoringPort>;
 
   beforeEach(() => {
     fetchStartlist = {
@@ -98,11 +100,17 @@ describe('RunBenchmarkUseCase', () => {
       save: jest.fn(),
       saveMany: jest.fn(),
     };
+    mlScoring = {
+      predictRace: jest.fn().mockResolvedValue(null),
+      getModelVersion: jest.fn().mockResolvedValue(null),
+      isHealthy: jest.fn().mockResolvedValue(false),
+    };
 
     useCase = new RunBenchmarkUseCase(
       fetchStartlist as unknown as FetchStartlistUseCase,
       resultRepo,
       riderRepo,
+      mlScoring,
     );
   });
 
@@ -215,8 +223,12 @@ describe('RunBenchmarkUseCase', () => {
       expect(result.riderResults).toHaveLength(3);
 
       // Verify that Spearman rho is a valid number (not null)
-      expect(result.spearmanRho).not.toBeNull();
-      expect(typeof result.spearmanRho).toBe('number');
+      expect(result.rulesSpearmanRho).not.toBeNull();
+      expect(typeof result.rulesSpearmanRho).toBe('number');
+
+      // Classic race: ML rho should be null, hybrid should equal rules
+      expect(result.mlSpearmanRho).toBeNull();
+      expect(result.hybridSpearmanRho).toBe(result.rulesSpearmanRho);
 
       // Verify that predicted and actual scores are computed
       for (const entry of result.riderResults) {
@@ -286,7 +298,7 @@ describe('RunBenchmarkUseCase', () => {
       expect(entry.riderName).toBe('New Rider');
 
       // With only 1 rider, Spearman should be null (n < 2)
-      expect(result.spearmanRho).toBeNull();
+      expect(result.rulesSpearmanRho).toBeNull();
     });
   });
 

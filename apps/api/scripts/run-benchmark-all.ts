@@ -22,11 +22,17 @@ async function main(): Promise<void> {
   }));
 
   const result = await suite.execute(inputs, (done: number, total: number, r: BenchmarkResult) => {
-    const rho = r.spearmanRho?.toFixed(4) ?? 'N/A';
-    process.stdout.write(`[${done}/${total}] ${r.raceName} ${r.year} (${r.raceType}) rho=${rho}\n`);
+    const rulesRho = r.rulesSpearmanRho?.toFixed(4) ?? 'N/A';
+    const mlRho = r.mlSpearmanRho?.toFixed(4) ?? 'n/a';
+    const hybridRho = r.hybridSpearmanRho?.toFixed(4) ?? 'N/A';
+    process.stdout.write(
+      `[${done}/${total}] ${r.raceName} ${r.year} (${r.raceType}) rules=${rulesRho} ml=${mlRho} hybrid=${hybridRho}\n`,
+    );
   });
 
-  process.stdout.write(`\nMean rho: ${result.meanSpearmanRho?.toFixed(4) ?? 'N/A'}\n`);
+  process.stdout.write(`\nMean ρ Rules:  ${result.meanRulesRho?.toFixed(4) ?? 'N/A'}\n`);
+  process.stdout.write(`Mean ρ ML:     ${result.meanMlRho?.toFixed(4) ?? 'N/A'}\n`);
+  process.stdout.write(`Mean ρ Hybrid: ${result.meanHybridRho?.toFixed(4) ?? 'N/A'}\n`);
   process.stdout.write(`Races: ${result.raceCount}\n`);
   await app.close();
 }

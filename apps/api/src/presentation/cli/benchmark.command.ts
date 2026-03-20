@@ -100,7 +100,7 @@ export class BenchmarkCommand extends CommandRunner {
       suiteInputs,
       (completed, total, result) => {
         this.logger.log(
-          `[${completed}/${total}] ${result.raceName} ${result.year} — ρ = ${result.spearmanRho?.toFixed(4) ?? 'N/A'}`,
+          `[${completed}/${total}] ${result.raceName} ${result.year} — ρ Rules=${result.rulesSpearmanRho?.toFixed(4) ?? 'N/A'}, ML=${result.mlSpearmanRho?.toFixed(4) ?? 'n/a'}, Hybrid=${result.hybridSpearmanRho?.toFixed(4) ?? 'N/A'}`,
         );
       },
     );
@@ -111,18 +111,24 @@ export class BenchmarkCommand extends CommandRunner {
       Year: r.year,
       Type: r.raceType,
       Riders: r.riderCount,
-      'Spearman ρ': r.spearmanRho?.toFixed(4) ?? 'N/A',
+      'ρ Rules': r.rulesSpearmanRho?.toFixed(4) ?? 'N/A',
+      'ρ ML': r.mlSpearmanRho?.toFixed(4) ?? 'n/a',
+      'ρ Hybrid': r.hybridSpearmanRho?.toFixed(4) ?? 'N/A',
     }));
     console.table(suiteTable);
 
-    console.log(`\nMean Spearman ρ: ${suiteResult.meanSpearmanRho?.toFixed(4) ?? 'N/A'}`);
+    console.log(`\nMean ρ Rules:  ${suiteResult.meanRulesRho?.toFixed(4) ?? 'N/A'}`);
+    console.log(`Mean ρ ML:     ${suiteResult.meanMlRho?.toFixed(4) ?? 'N/A'}`);
+    console.log(`Mean ρ Hybrid: ${suiteResult.meanHybridRho?.toFixed(4) ?? 'N/A'}`);
     console.log(`Races evaluated: ${suiteResult.raceCount}`);
   }
 
   private displayResult(result: BenchmarkResult): void {
     console.log(`\n=== ${result.raceName} ${result.year} (${result.raceType}) ===`);
     console.log(`Riders: ${result.riderCount}`);
-    console.log(`Spearman ρ: ${result.spearmanRho?.toFixed(4) ?? 'N/A'}\n`);
+    console.log(`ρ Rules:  ${result.rulesSpearmanRho?.toFixed(4) ?? 'N/A'}`);
+    console.log(`ρ ML:     ${result.mlSpearmanRho?.toFixed(4) ?? 'n/a'}`);
+    console.log(`ρ Hybrid: ${result.hybridSpearmanRho?.toFixed(4) ?? 'N/A'}\n`);
 
     const top30 = [...result.riderResults].sort((a, b) => a.actualRank - b.actualRank).slice(0, 30);
 
