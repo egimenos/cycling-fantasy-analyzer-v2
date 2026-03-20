@@ -22,20 +22,30 @@ export class RunBenchmarkSuiteUseCase {
       onProgress?.(i + 1, races.length, result);
     }
 
-    // Mean rho excluding nulls
-    const validRhos = results
-      .map((r) => r.spearmanRho)
-      .filter((rho): rho is number => rho !== null);
-    const meanRho =
-      validRhos.length > 0 ? validRhos.reduce((sum, rho) => sum + rho, 0) / validRhos.length : null;
+    // Mean rhos excluding nulls
+    const avg = (values: number[]): number => values.reduce((sum, v) => sum + v, 0) / values.length;
+
+    const validRulesRhos = results
+      .map((r) => r.rulesSpearmanRho)
+      .filter((r): r is number => r !== null);
+    const validMlRhos = results.map((r) => r.mlSpearmanRho).filter((r): r is number => r !== null);
+    const validHybridRhos = results
+      .map((r) => r.hybridSpearmanRho)
+      .filter((r): r is number => r !== null);
+
+    const meanRules = validRulesRhos.length > 0 ? avg(validRulesRhos) : null;
+    const meanMl = validMlRhos.length > 0 ? avg(validMlRhos) : null;
+    const meanHybrid = validHybridRhos.length > 0 ? avg(validHybridRhos) : null;
 
     this.logger.log(
-      `Suite complete: ${results.length} races, mean rho=${meanRho?.toFixed(4) ?? 'null'}`,
+      `Suite complete: ${results.length} races, meanRulesRho=${meanRules?.toFixed(4) ?? 'null'}, meanMlRho=${meanMl?.toFixed(4) ?? 'null'}, meanHybridRho=${meanHybrid?.toFixed(4) ?? 'null'}`,
     );
 
     return {
       races: results,
-      meanSpearmanRho: meanRho,
+      meanRulesRho: meanRules,
+      meanMlRho: meanMl,
+      meanHybridRho: meanHybrid,
       raceCount: results.length,
     };
   }

@@ -5,8 +5,7 @@ import { MlScoringPort, MlPrediction } from '../../domain/scoring/ml-scoring.por
 export class MlScoringAdapter implements MlScoringPort {
   private readonly logger = new Logger(MlScoringAdapter.name);
   private readonly baseUrl: string;
-  private readonly predictTimeout = 5000;
-  private readonly healthTimeout = 2000;
+  private readonly timeout = 5000;
 
   constructor() {
     this.baseUrl = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
@@ -18,54 +17,40 @@ export class MlScoringAdapter implements MlScoringPort {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ race_slug: raceSlug, year }),
-        signal: AbortSignal.timeout(this.predictTimeout),
+        signal: AbortSignal.timeout(this.timeout),
       });
-
-      if (!response.ok) {
-        this.logger.warn(`ML predict returned HTTP ${response.status} for ${raceSlug}/${year}`);
-        return null;
-      }
-
-      const data = await response.json();
-      return data.predictions.map((p: { rider_id: string; predicted_score: number }) => ({
+      if (!response.ok) return null;
+      const data = (await response.json()) as {
+        predictions: Array<{ rider_id: string; predicted_score: number }>;
+      };
+      return data.predictions.map((p) => ({
         riderId: p.rider_id,
         predictedScore: p.predicted_score,
       }));
-    } catch (error: unknown) {
-      this.logger.warn(
-        `ML predictRace failed for ${raceSlug}/${year}: ${error instanceof Error ? error.message : String(error)}`,
-      );
+    } catch {
+      this.logger.warn(`ML service unavailable for predictRace(${raceSlug}, ${year})`);
       return null;
     }
   }
 
   async getModelVersion(): Promise<string | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/health`, {
-        signal: AbortSignal.timeout(this.healthTimeout),
+      const resp = await fetch(`${this.baseUrl}/health`, {
+        signal: AbortSignal.timeout(2000),
       });
-
-      if (!response.ok) return null;
-
-      const data = await response.json();
+      const data = (await resp.json()) as { model_version?: string };
       return data.model_version ?? null;
-    } catch (error: unknown) {
-      this.logger.warn(
-        `ML getModelVersion failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
+    } catch {
       return null;
     }
   }
 
   async isHealthy(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/health`, {
-        signal: AbortSignal.timeout(this.healthTimeout),
+      const resp = await fetch(`${this.baseUrl}/health`, {
+        signal: AbortSignal.timeout(2000),
       });
-
-      if (!response.ok) return false;
-
-      const data = await response.json();
+      const data = (await resp.json()) as { status?: string };
       return data.status === 'healthy';
     } catch {
       return false;
