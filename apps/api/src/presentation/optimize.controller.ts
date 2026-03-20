@@ -2,6 +2,7 @@ import { Controller, Post, Body, HttpException, HttpStatus } from '@nestjs/commo
 import {
   IsArray,
   IsNumber,
+  IsOptional,
   IsString,
   Min,
   ArrayMinSize,
@@ -49,6 +50,10 @@ class ScoredRiderDto {
 
   @IsNumber()
   totalProjectedPts!: number;
+
+  @IsOptional()
+  @IsNumber()
+  mlPredictedScore?: number;
 
   @ValidateNested()
   @Type(() => CategoryScoresDto)
