@@ -26,16 +26,21 @@ FEATURE_COLS = [
     'days_since_last', 'same_race_best', 'same_race_mean', 'same_race_editions',
     'pts_total_alltime', 'race_type_enc', 'pts_trend_3m',
     'stage_pts_12m', 'gc_pts_same_type',
-    # V3 NEW: Micro-form
+    # V3: Micro-form
     'pts_30d', 'pts_14d', 'race_count_30d',
     'last_race_pts', 'last_3_mean_pts', 'last_3_max_pts',
-    # V3 NEW: Age
+    # V3: Age
     'age', 'is_young', 'is_veteran', 'pts_per_career_year',
-    # V3 NEW: Team leader
+    # V3: Team leader
     'team_rank', 'is_leader', 'team_size', 'pct_of_team', 'team_total_pts',
+    # V4: Rider profile specialization
+    'pct_pts_p1p2', 'pct_pts_p4p5', 'pct_pts_p3',
+    'itt_top10_rate', 'stage_wins_flat', 'stage_wins_mountain',
+    # V4: Race profile distribution
+    'target_flat_pct', 'target_mountain_pct', 'target_itt_pct',
 ]
 
-assert len(FEATURE_COLS) == 40, f"Expected 40 feature cols, got {len(FEATURE_COLS)}"  # noqa: S101
+assert len(FEATURE_COLS) == 49, f"Expected 49 feature cols, got {len(FEATURE_COLS)}"  # noqa: S101
 
 # Race type encoding lookup
 _RACE_TYPE_ENC = {'classic': 0, 'mini_tour': 1, 'grand_tour': 2}
@@ -183,13 +188,54 @@ def _compute_rider_features(
         feats['is_veteran'] = 0
         feats['pts_per_career_year'] = 0.0
 
-    # ── V3 NEW: Feature 3 — Team leader signal ──────────────────
+    # ── V3: Feature 3 — Team leader signal ───────────────────────
     ti = rider_team_info.get(rider_id, {})
     feats['team_rank'] = ti.get('team_rank', 4)
     feats['is_leader'] = ti.get('is_leader', 0)
     feats['team_size'] = ti.get('team_size', 7)
     feats['pct_of_team'] = ti.get('pct_of_team', 0)
     feats['team_total_pts'] = ti.get('team_total_pts', 0)
+
+    # ── V4: Rider profile specialization ───────────────────────
+    stages = rh_12m[
+        (rh_12m['category'] == 'stage') &
+        (rh_12m['parcours_type'].notna()) &
+        (rh_12m['position'].notna())
+    ] if 'parcours_type' in rh_12m.columns else pd.DataFrame()
+
+    total_stage_pts = stages['pts'].sum() if len(stages) > 0 else 0
+    if total_stage_pts > 0:
+        flat_pts = stages[stages['parcours_type'].isin(['p1', 'p2'])]['pts'].sum()
+        mtn_pts = stages[stages['parcours_type'].isin(['p4', 'p5'])]['pts'].sum()
+        p3_pts = stages[stages['parcours_type'] == 'p3']['pts'].sum()
+        feats['pct_pts_p1p2'] = flat_pts / total_stage_pts
+        feats['pct_pts_p4p5'] = mtn_pts / total_stage_pts
+        feats['pct_pts_p3'] = p3_pts / total_stage_pts
+    else:
+        feats['pct_pts_p1p2'] = 0.0
+        feats['pct_pts_p4p5'] = 0.0
+        feats['pct_pts_p3'] = 0.0
+
+    itt_results = rh_12m[
+        (rh_12m.get('is_itt', pd.Series(dtype=bool)) == True) &
+        (rh_12m['position'].notna())
+    ] if 'is_itt' in rh_12m.columns else pd.DataFrame()
+    n_itt = len(itt_results)
+    feats['itt_top10_rate'] = (itt_results['position'] <= 10).sum() / n_itt if n_itt > 0 else 0.0
+
+    feats['stage_wins_flat'] = len(stages[
+        (stages['parcours_type'].isin(['p1', 'p2'])) & (stages['position'] == 1)
+    ]) if len(stages) > 0 else 0
+    feats['stage_wins_mountain'] = len(stages[
+        (stages['parcours_type'].isin(['p4', 'p5'])) & (stages['position'] == 1)
+    ]) if len(stages) > 0 else 0
+
+    # V4: Race profile features are set by the caller (not here)
+    # They're passed as race_profile_feats and merged externally
+    # Default to 0 if not provided
+    feats.setdefault('target_flat_pct', 0.0)
+    feats.setdefault('target_mountain_pct', 0.0)
+    feats.setdefault('target_itt_pct', 0.0)
 
     return feats
 
@@ -242,6 +288,38 @@ def _compute_team_info(
     return rider_team_info
 
 
+# ── Race profile computation ─────────────────────────────────────────
+
+def compute_race_profile(results_df: pd.DataFrame, race_slug: str, race_year: int) -> dict:
+    """Compute profile distribution for a race from its stage results in DB.
+
+    Used during training to derive the target race's profile. For on-demand
+    prediction, the profile can be provided externally (from PCS scrape).
+
+    Returns:
+        Dict with 'target_flat_pct', 'target_mountain_pct', 'target_itt_pct'.
+    """
+    stages = results_df[
+        (results_df['race_slug'] == race_slug) &
+        (results_df['year'] == race_year) &
+        (results_df['category'] == 'stage') &
+        (results_df['parcours_type'].notna())
+    ]
+    distinct = stages.drop_duplicates(subset=['stage_number'])
+    total = len(distinct)
+    if total == 0:
+        return {'target_flat_pct': 0.0, 'target_mountain_pct': 0.0, 'target_itt_pct': 0.0}
+
+    p_counts = distinct['parcours_type'].value_counts().to_dict()
+    itt_count = distinct['is_itt'].sum() if 'is_itt' in distinct.columns else 0
+
+    return {
+        'target_flat_pct': (p_counts.get('p1', 0) + p_counts.get('p2', 0)) / total,
+        'target_mountain_pct': (p_counts.get('p4', 0) + p_counts.get('p5', 0)) / total,
+        'target_itt_pct': int(itt_count) / total,
+    }
+
+
 # ── Public API ───────────────────────────────────────────────────────
 
 def extract_features_for_race(
@@ -251,10 +329,11 @@ def extract_features_for_race(
     race_year: int,
     race_type: str,
     race_date,
+    race_profile: dict | None = None,
 ) -> pd.DataFrame:
     """Extract features for all riders on a single race's startlist.
 
-    Used for on-demand prediction (WP03). Does NOT include actual_pts target.
+    Used for on-demand prediction. Does NOT include actual_pts target.
 
     Args:
         results_df: Full results DataFrame with pre-computed `pts` column.
@@ -263,6 +342,8 @@ def extract_features_for_race(
         race_year: Race year.
         race_type: One of 'classic', 'mini_tour', 'grand_tour'.
         race_date: Race date (pandas Timestamp or datetime).
+        race_profile: Optional dict with target_flat_pct, target_mountain_pct,
+            target_itt_pct. If None, computed from DB stage results.
 
     Returns:
         DataFrame with FEATURE_COLS + ['rider_id', 'race_slug', 'race_year', 'race_type'].
@@ -299,6 +380,9 @@ def extract_features_for_race(
     # Team info
     rider_team_info = _compute_team_info(sl, sl_riders, hist, d365)
 
+    # Race profile (v4): from caller or computed from DB
+    rp = race_profile if race_profile else compute_race_profile(results_df, race_slug, race_year)
+
     # Per-rider features
     rows = []
     for rider_id in sl_riders:
@@ -313,6 +397,11 @@ def extract_features_for_race(
             d365=d365, d180=d180, d90=d90, d30=d30, d14=d14,
             rider_team_info=rider_team_info,
         )
+        # Set race profile features (v4)
+        feats['target_flat_pct'] = rp.get('target_flat_pct', 0.0)
+        feats['target_mountain_pct'] = rp.get('target_mountain_pct', 0.0)
+        feats['target_itt_pct'] = rp.get('target_itt_pct', 0.0)
+
         feats['rider_id'] = rider_id
         feats['race_slug'] = race_slug
         feats['race_year'] = race_year
@@ -389,6 +478,9 @@ def extract_all_training_features(
         # Team info
         rider_team_info = _compute_team_info(sl, sl_riders, hist, d365)
 
+        # Race profile (v4): computed from DB stage results
+        rp = compute_race_profile(results_df, race_slug, race_year)
+
         # Per-rider features
         for rider_id in sl_riders:
             feats = _compute_rider_features(
@@ -402,6 +494,10 @@ def extract_all_training_features(
                 d365=d365, d180=d180, d90=d90, d30=d30, d14=d14,
                 rider_team_info=rider_team_info,
             )
+            # Set race profile features (v4)
+            feats['target_flat_pct'] = rp.get('target_flat_pct', 0.0)
+            feats['target_mountain_pct'] = rp.get('target_mountain_pct', 0.0)
+            feats['target_itt_pct'] = rp.get('target_itt_pct', 0.0)
 
             # Target + metadata
             rider_actual = actual[actual['rider_id'] == rider_id]

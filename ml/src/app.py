@@ -64,9 +64,31 @@ app = FastAPI(title="Cycling ML Service", lifespan=lifespan)
 
 # ── Request model ────────────────────────────────────────────────────
 
+class ProfileSummary(BaseModel):
+    """Race stage profile counts — mirrors the TypeScript ProfileSummary."""
+    p1: int = 0
+    p2: int = 0
+    p3: int = 0
+    p4: int = 0
+    p5: int = 0
+    itt: int = 0
+    ttt: int = 0
+
+    def to_race_profile(self) -> dict:
+        total = self.p1 + self.p2 + self.p3 + self.p4 + self.p5
+        if total == 0:
+            return {'target_flat_pct': 0.0, 'target_mountain_pct': 0.0, 'target_itt_pct': 0.0}
+        return {
+            'target_flat_pct': (self.p1 + self.p2) / total,
+            'target_mountain_pct': (self.p4 + self.p5) / total,
+            'target_itt_pct': self.itt / total,
+        }
+
+
 class PredictRequest(BaseModel):
     race_slug: str
     year: int
+    profile_summary: ProfileSummary | None = None
 
 
 # ── Model hot-reload (T018) ─────────────────────────────────────────
@@ -273,7 +295,8 @@ def predict(req: PredictRequest, request: Request):
     else:
         results_df, startlists_df = state.data_cache
 
-    # 5. Extract features and predict
+    # 5. Extract features and predict (with race profile if provided)
+    race_profile = req.profile_summary.to_race_profile() if req.profile_summary else None
     predictions = predict_race(
         race_slug=req.race_slug,
         year=req.year,
@@ -281,6 +304,7 @@ def predict(req: PredictRequest, request: Request):
         results_df=results_df,
         startlists_df=startlists_df,
         db_url=DB_URL,
+        race_profile=race_profile,
     )
 
     if not predictions:
