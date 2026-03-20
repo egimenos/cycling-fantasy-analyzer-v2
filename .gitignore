@@ -45,3 +45,5 @@ Thumbs.db
 .turbo/
 .kittify/workspaces/
 skills-lock.json
+ml/.venv/
+ml/data/*.csv
