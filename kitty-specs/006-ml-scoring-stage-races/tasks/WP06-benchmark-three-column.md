@@ -1,7 +1,7 @@
 ---
 work_package_id: WP06
 title: Benchmark Suite 3-Column Comparison
-lane: planned
+lane: 'done'
 dependencies: [WP04]
 subtasks:
   - T031
@@ -14,8 +14,8 @@ phase: Phase 4 - Benchmark
 assignee: ''
 agent: ''
 shell_pid: ''
-review_status: ''
-reviewed_by: ''
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-20T16:27:36Z'
     lane: planned
@@ -204,3 +204,5 @@ spec-kitty implement WP06 --base WP04
 ## Activity Log
 
 - 2026-03-20T16:27:36Z – system – lane=planned – Prompt created.
+- 2026-03-20T17:19:32Z – unknown – lane=for_review – All 6 subtasks complete
+- 2026-03-20T17:20:06Z – unknown – lane=done – Review passed: 3-column display, codebase-wide rename complete (zero spearmanRho refs), ML rho computation, hybrid fallback, aggregates.

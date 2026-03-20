@@ -1,7 +1,7 @@
 ---
 work_package_id: WP05
 title: Optimizer ML Integration
-lane: planned
+lane: 'done'
 dependencies: [WP04]
 subtasks:
   - T027
@@ -12,8 +12,8 @@ phase: Phase 4 - Optimizer
 assignee: ''
 agent: ''
 shell_pid: ''
-review_status: ''
-reviewed_by: ''
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-20T16:27:36Z'
     lane: planned
@@ -127,3 +127,5 @@ spec-kitty implement WP05 --base WP04
 ## Activity Log
 
 - 2026-03-20T16:27:36Z – system – lane=planned – Prompt created.
+- 2026-03-20T17:17:56Z – unknown – lane=for_review – All 4 subtasks complete
+- 2026-03-20T17:19:14Z – unknown – lane=done – Review passed: ScoredRider extended, applyEffectiveScores pattern correct, knapsack untouched, fallback via null coalescing.

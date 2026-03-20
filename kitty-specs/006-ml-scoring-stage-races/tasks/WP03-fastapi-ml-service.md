@@ -1,7 +1,7 @@
 ---
 work_package_id: WP03
 title: FastAPI ML Service — /predict and /health
-lane: planned
+lane: 'done'
 dependencies: [WP02]
 subtasks:
   - T014
@@ -14,8 +14,8 @@ phase: Phase 2 - ML Service
 assignee: ''
 agent: ''
 shell_pid: ''
-review_status: ''
-reviewed_by: ''
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-20T16:27:36Z'
     lane: planned
@@ -235,3 +235,5 @@ spec-kitty implement WP03 --base WP02
 ## Activity Log
 
 - 2026-03-20T16:27:36Z – system – lane=planned – Prompt created.
+- 2026-03-20T17:00:46Z – unknown – lane=for_review – All 6 subtasks complete
+- 2026-03-20T17:01:58Z – unknown – lane=done – Review passed: predict.py and app.py verified. Parameterized SQL, hot-reload, lazy data cache, graceful error handling.

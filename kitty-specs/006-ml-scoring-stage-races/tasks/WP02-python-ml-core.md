@@ -1,8 +1,11 @@
 ---
 work_package_id: WP02
 title: Python ML Core — Feature Extraction + Training
-lane: planned
+lane: 'done'
 dependencies: [WP01]
+base_branch: 006-ml-scoring-stage-races-WP01
+base_commit: d63f593170b6f92614f7477b4c87f1086768c386
+created_at: '2026-03-20T16:49:36.675277+00:00'
 subtasks:
   - T008
   - T009
@@ -12,10 +15,10 @@ subtasks:
   - T013
 phase: Phase 1 - ML Pipeline
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '71937'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-20T16:27:36Z'
     lane: planned
@@ -222,3 +225,6 @@ spec-kitty implement WP02 --base WP01
 ## Activity Log
 
 - 2026-03-20T16:27:36Z – system – lane=planned – Prompt created.
+- 2026-03-20T16:49:37Z – claude-opus – shell_pid=71937 – lane=doing – Assigned agent via workflow command
+- 2026-03-20T16:55:41Z – claude-opus – shell_pid=71937 – lane=for_review – All 6 subtasks complete
+- 2026-03-20T16:58:30Z – claude-opus – shell_pid=71937 – lane=done – Review passed: 40 features match research_v3.py exactly. RF params correct. Training pipeline complete.

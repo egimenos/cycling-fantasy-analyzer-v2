@@ -1,7 +1,7 @@
 ---
 work_package_id: WP07
 title: ADR, Documentation, Polish
-lane: planned
+lane: 'done'
 dependencies: [WP06]
 subtasks:
   - T037
@@ -17,8 +17,8 @@ phase: Phase 5 - Polish
 assignee: ''
 agent: ''
 shell_pid: ''
-review_status: ''
-reviewed_by: ''
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-20T16:27:36Z'
     lane: planned
@@ -252,3 +252,5 @@ spec-kitty implement WP07 --base WP06
 ## Activity Log
 
 - 2026-03-20T16:27:36Z – system – lane=planned – Prompt created.
+- 2026-03-20T17:28:20Z – unknown – lane=for_review – All 9 subtasks complete
+- 2026-03-20T17:29:21Z – unknown – lane=done – Review passed: ADR created, 3 Python test files + 2 TS test files, README updated, .gitignore for models. All 9 subtasks complete.
