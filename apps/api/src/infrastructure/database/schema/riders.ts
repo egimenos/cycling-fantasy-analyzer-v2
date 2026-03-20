@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, char, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, char, timestamp, date } from 'drizzle-orm/pg-core';
 
 export const riders = pgTable('riders', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -7,5 +7,6 @@ export const riders = pgTable('riders', {
   normalizedName: varchar('normalized_name', { length: 255 }).notNull(),
   currentTeam: varchar('current_team', { length: 255 }),
   nationality: char('nationality', { length: 2 }),
+  birthDate: date('birth_date', { mode: 'date' }),
   lastScrapedAt: timestamp('last_scraped_at', { withTimezone: true }),
 });

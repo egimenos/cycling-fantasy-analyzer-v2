@@ -1,6 +1,6 @@
 {
-  "id": "7466f24c-c763-499c-a54b-919b4600da00",
-  "prevId": "a12d78fd-f764-41a7-8200-ae84d8cc6a66",
+  "id": "9425470a-b83f-4542-9790-fb2096488580",
+  "prevId": "7466f24c-c763-499c-a54b-919b4600da00",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -112,6 +112,12 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
+        },
+        "race_date": {
+          "name": "race_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -176,6 +182,12 @@
         "nationality": {
           "name": "nationality",
           "type": "char(2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "birth_date": {
+          "name": "birth_date",
+          "type": "date",
           "primaryKey": false,
           "notNull": false
         },
