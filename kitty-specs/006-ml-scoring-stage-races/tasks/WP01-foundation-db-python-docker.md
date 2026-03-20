@@ -1,8 +1,11 @@
 ---
 work_package_id: WP01
 title: Foundation — DB Schema, Python Scaffold, Docker
-lane: planned
+lane: 'done'
 dependencies: []
+base_branch: main
+base_commit: 9a6072992c0a33e5ec9df7fdbd9c9725d73c5b66
+created_at: '2026-03-20T16:42:34.019669+00:00'
 subtasks:
   - T001
   - T002
@@ -13,10 +16,10 @@ subtasks:
   - T007
 phase: Phase 0 - Foundation
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '71254'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-20T16:27:36Z'
     lane: planned
@@ -304,3 +307,7 @@ spec-kitty implement WP01
 ## Activity Log
 
 - 2026-03-20T16:27:36Z – system – lane=planned – Prompt created.
+- 2026-03-20T16:42:34Z – claude-opus – shell_pid=64100 – lane=doing – Assigned agent via workflow command
+- 2026-03-20T16:47:29Z – claude-opus – shell_pid=64100 – lane=for_review – All 7 subtasks complete: Python scaffold, Drizzle schema+migration, DDD entity/port/adapter, Docker+compose, Makefile targets, .gitignore, .env.example. TypeScript compiles clean. Migration SQL verified.
+- 2026-03-20T16:48:40Z – claude-opus – shell_pid=71254 – lane=doing – Started review via workflow command
+- 2026-03-20T16:50:01Z – claude-opus – shell_pid=71254 – lane=done – Review passed: all 15 deliverables verified — schema, DDD compliance, Docker, Makefile, migration SQL all correct

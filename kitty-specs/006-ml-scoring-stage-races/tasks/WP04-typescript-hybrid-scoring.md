@@ -1,7 +1,7 @@
 ---
 work_package_id: WP04
 title: TypeScript API — Hybrid Scoring Integration
-lane: planned
+lane: 'done'
 dependencies:
   - WP01
   - WP03
@@ -17,8 +17,8 @@ phase: Phase 3 - API Integration
 assignee: ''
 agent: ''
 shell_pid: ''
-review_status: ''
-reviewed_by: ''
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-20T16:27:36Z'
     lane: planned
@@ -299,3 +299,5 @@ spec-kitty implement WP04 --base WP03
 ## Activity Log
 
 - 2026-03-20T16:27:36Z – system – lane=planned – Prompt created.
+- 2026-03-20T17:10:32Z – unknown – lane=for_review – All 7 subtasks complete
+- 2026-03-20T17:12:56Z – unknown – lane=done – Review passed: DDD compliant, graceful degradation, camelCase fields, existing scoring untouched, timeouts configured.
