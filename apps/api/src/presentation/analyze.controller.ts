@@ -1,4 +1,4 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Get, Query, Body, BadRequestException } from '@nestjs/common';
 import {
   IsString,
   IsNotEmpty,
@@ -18,6 +18,10 @@ import {
   AnalyzePriceListUseCase,
   AnalyzeResponse,
 } from '../application/analyze/analyze-price-list.use-case';
+import {
+  parsePriceListPage,
+  ParsedPriceEntry,
+} from '../infrastructure/scraping/parsers/price-list.parser';
 
 class PriceListEntryDto {
   @IsString()
@@ -116,5 +120,35 @@ export class AnalyzeController {
       raceSlug: dto.raceSlug,
       year: dto.year,
     });
+  }
+
+  @Get('import-price-list')
+  async importPriceList(@Query('url') url: string): Promise<{ riders: ParsedPriceEntry[] }> {
+    if (!url) {
+      throw new BadRequestException('url query parameter is required');
+    }
+
+    const dynamicImport = new Function('specifier', 'return import(specifier)');
+    const { gotScraping } = await dynamicImport('got-scraping');
+    const response = await gotScraping({
+      url,
+      headerGeneratorOptions: {
+        browsers: [{ name: 'chrome', minVersion: 100 }],
+        locales: ['es-ES'],
+        operatingSystems: ['windows'],
+      },
+      timeout: { request: 15000 },
+    });
+
+    if (response.statusCode !== 200) {
+      throw new BadRequestException(`Failed to fetch price list (HTTP ${response.statusCode})`);
+    }
+
+    const riders = parsePriceListPage(response.body);
+    if (riders.length === 0) {
+      throw new BadRequestException('No riders found on the page. Check the URL.');
+    }
+
+    return { riders };
   }
 }
