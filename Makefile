@@ -65,8 +65,8 @@ benchmark-suite: ## Run multi-race benchmark suite (interactive)
 	$(CLI) benchmark --suite
 
 # ── ML Service ────────────────────────────────────────────
-retrain: ## Train ML models (Python CLI)
-	cd ml && python -m src.retrain
+retrain: ## Train ML models (runs in Docker)
+	docker compose run --rm ml-service python -m src.retrain
 
 ml-up: ## Start ML service (docker-compose)
 	docker compose up -d ml-service
