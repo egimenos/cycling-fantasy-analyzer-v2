@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { PriceListEntryDto, ProfileSummary } from '@cycling-analyzer/shared-types';
 import { RaceType } from '@cycling-analyzer/shared-types';
 import { Button } from '@/shared/ui/button';
@@ -6,9 +6,10 @@ import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Download } from 'lucide-react';
 import { useRaceProfile } from '../hooks/use-race-profile';
 import { RaceProfileSummary } from './race-profile-summary';
+import { importPriceList } from '@/shared/lib/api-client';
 
 interface RiderInputProps {
   onAnalyze: (
@@ -43,6 +44,9 @@ function parseRiderLines(text: string): PriceListEntryDto[] {
 export function RiderInput({ onAnalyze, isLoading }: RiderInputProps) {
   const [text, setText] = useState('');
   const [raceUrl, setRaceUrl] = useState('');
+  const [gameUrl, setGameUrl] = useState('');
+  const [importStatus, setImportStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [importError, setImportError] = useState('');
   const [budget, setBudget] = useState(2000);
   const [seasons, setSeasons] = useState(3);
 
@@ -53,6 +57,21 @@ export function RiderInput({ onAnalyze, isLoading }: RiderInputProps) {
   const parsedRiders = useMemo(() => parseRiderLines(text), [text]);
   const lineCount = text.split('\n').filter((l) => l.trim().length > 0).length;
   const invalidCount = lineCount - parsedRiders.length;
+
+  const handleImport = useCallback(async () => {
+    if (!gameUrl) return;
+    setImportStatus('loading');
+    setImportError('');
+    const result = await importPriceList(gameUrl);
+    if (result.status === 'success') {
+      const lines = result.data.riders.map((r) => `${r.name}, ${r.team}, ${r.price}`).join('\n');
+      setText(lines);
+      setImportStatus('idle');
+    } else {
+      setImportStatus('error');
+      setImportError(result.error);
+    }
+  }, [gameUrl]);
 
   const handleSubmit = () => {
     if (parsedRiders.length === 0) return;
@@ -98,6 +117,39 @@ export function RiderInput({ onAnalyze, isLoading }: RiderInputProps) {
             <RaceProfileSummary profile={profileState.data} />
           </div>
         )}
+      </div>
+
+      <div>
+        <label htmlFor="game-url" className="mb-1.5 block text-sm font-medium">
+          Game Price List URL
+          <span className="ml-1 text-xs font-normal text-muted-foreground">(optional)</span>
+        </label>
+        <div className="flex gap-2">
+          <Input
+            id="game-url"
+            value={gameUrl}
+            onChange={(e) => setGameUrl(e.target.value)}
+            placeholder="https://grandesminivueltas.com/index.php/..."
+            className="flex-1"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleImport}
+            disabled={!gameUrl || importStatus === 'loading'}
+          >
+            {importStatus === 'loading' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            Import
+          </Button>
+        </div>
+        {importStatus === 'error' && <p className="mt-1 text-xs text-red-600">{importError}</p>}
+        <p className="mt-1 text-xs text-muted-foreground">
+          Import riders and prices from a fantasy game page, or paste manually below.
+        </p>
       </div>
 
       <div>

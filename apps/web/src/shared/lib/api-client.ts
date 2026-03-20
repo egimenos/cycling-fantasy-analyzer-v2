@@ -75,3 +75,19 @@ export function fetchRaceProfile(
 ): Promise<ApiResult<RaceProfileResponse>> {
   return apiGet<RaceProfileResponse>(`/api/race-profile?url=${encodeURIComponent(url)}`, signal);
 }
+
+export interface ImportedPriceEntry {
+  name: string;
+  team: string;
+  price: number;
+}
+
+export function importPriceList(
+  url: string,
+  signal?: AbortSignal,
+): Promise<ApiResult<{ riders: ImportedPriceEntry[] }>> {
+  return apiGet<{ riders: ImportedPriceEntry[] }>(
+    `/api/import-price-list?url=${encodeURIComponent(url)}`,
+    signal,
+  );
+}
