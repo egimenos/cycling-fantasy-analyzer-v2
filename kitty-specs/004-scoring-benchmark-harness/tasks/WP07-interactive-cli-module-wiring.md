@@ -1,10 +1,13 @@
 ---
 work_package_id: WP07
 title: Interactive CLI & Module Wiring
-lane: planned
+lane: 'for_review'
 dependencies:
   - WP01
   - WP06
+base_branch: 004-scoring-benchmark-harness-WP07-merge-base
+base_commit: dcde565f2d2c9a66237f3a706ce1af26d638580e
+created_at: '2026-03-19T19:05:52.526963+00:00'
 subtasks:
   - T029
   - T029b
@@ -13,8 +16,8 @@ subtasks:
   - T032
 phase: Phase 2 - Presentation
 assignee: ''
-agent: ''
-shell_pid: ''
+agent: 'claude-opus'
+shell_pid: '36720'
 review_status: ''
 reviewed_by: ''
 history:
@@ -415,3 +418,5 @@ Depends on WP06 (benchmark use cases).
 ## Activity Log
 
 - 2026-03-19T18:18:14Z – system – lane=planned – Prompt created.
+- 2026-03-19T19:05:53Z – claude-opus – shell_pid=36720 – lane=doing – Assigned agent via workflow command
+- 2026-03-19T19:11:03Z – claude-opus – shell_pid=36720 – lane=for_review – Ready for review: BenchmarkCommand with interactive prompts, BenchmarkModule, AppModule registration, findDistinctRacesWithDate
