@@ -21,7 +21,10 @@ function makeRider(overrides: Partial<AnalyzedRider> = {}): AnalyzedRider {
     totalProjectedPts: 85,
     categoryScores: { gc: 40, stage: 20, mountain: 10, sprint: 5 },
     seasonsUsed: 3,
+    seasonBreakdown: null,
     unmatched: false,
+    scoringMethod: 'rules' as const,
+    mlPredictedScore: null,
     ...overrides,
   };
 }
