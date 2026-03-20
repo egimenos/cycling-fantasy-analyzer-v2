@@ -19,11 +19,15 @@ export class MlScoringAdapter implements MlScoringPort {
     raceSlug: string,
     year: number,
     profileSummary?: RaceProfileSummary,
+    riderIds?: string[],
   ): Promise<MlPrediction[] | null> {
     try {
       const body: Record<string, unknown> = { race_slug: raceSlug, year };
       if (profileSummary) {
         body.profile_summary = profileSummary;
+      }
+      if (riderIds && riderIds.length > 0) {
+        body.rider_ids = riderIds;
       }
       const response = await fetch(`${this.baseUrl}/predict`, {
         method: 'POST',
