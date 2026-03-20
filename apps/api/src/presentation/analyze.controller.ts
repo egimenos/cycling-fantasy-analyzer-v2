@@ -83,7 +83,7 @@ class AnalyzeRequestDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(3)
+  @Max(5)
   seasons?: number;
 
   @IsOptional()
