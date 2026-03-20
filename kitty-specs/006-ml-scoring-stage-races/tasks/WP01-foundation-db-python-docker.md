@@ -238,6 +238,12 @@ spec-kitty implement WP01
            condition: service_healthy
        volumes:
          - ./ml/models:/app/models
+       healthcheck:
+         test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+         interval: 30s
+         timeout: 10s
+         retries: 3
+         start_period: 15s
      ```
 
 - **Files**: `docker/Dockerfile.ml`, `docker-compose.yml`, `ml/src/app.py` (placeholder)
@@ -268,7 +274,8 @@ spec-kitty implement WP01
      ```
 
   2. Update `.PHONY` line at top of Makefile to include new targets
-  3. Add to root `.gitignore`:
+  3. Add `ML_SERVICE_URL=http://localhost:8000` to `.env.example` (so developers know the ML service URL is configurable)
+  4. Add to root `.gitignore`:
      ```
      # ML models and Python
      ml/models/*.joblib

@@ -70,9 +70,9 @@
 
 ## R7: Hybrid Scoring Interface
 
-**Decision**: Extend `AnalyzedRider` (shared-types) with `scoring_method: "rules" | "hybrid"` and `ml_predicted_score: number | null`. Keep full rules-based breakdown intact. For stage races, return both.
+**Decision**: Extend `AnalyzedRider` (shared-types) with `scoringMethod: "rules" | "hybrid"` and `mlPredictedScore: number | null`. Keep full rules-based breakdown intact. For stage races, return both.
 
-**Rationale**: Maximum transparency — users see both scoring methods side by side. No breaking changes to existing interface. The optimizer uses `ml_predicted_score` for stage races when available, falls back to `totalProjectedPts`.
+**Rationale**: Maximum transparency — users see both scoring methods side by side. No breaking changes to existing interface. The optimizer uses `mlPredictedScore` for stage races when available, falls back to `totalProjectedPts`.
 
 **Alternatives considered**:
 
@@ -93,7 +93,7 @@
    a. Check `ml_scores` cache for current model version
    b. Cache miss → call `MlScoringPort.predictRace(raceSlug, year)` → ML service → features + predict → write cache → return
    c. Cache hit → read from `ml_scores`
-3. Enrich `AnalyzedRider` with `scoring_method` and `ml_predicted_score`
+3. Enrich `AnalyzedRider` with `scoringMethod` and `mlPredictedScore`
 
 **Fallback**: If ML service is unavailable (timeout, error, no model), return rules-based scoring only. Never fail the analysis request because of ML.
 

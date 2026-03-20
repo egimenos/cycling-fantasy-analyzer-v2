@@ -9,6 +9,10 @@ subtasks:
   - T039
   - T040
   - T041
+  - T042
+  - T043
+  - T044
+  - T045
 phase: Phase 5 - Polish
 assignee: ''
 agent: ''
@@ -51,8 +55,10 @@ spec-kitty implement WP07 --base WP06
 ## Objectives & Success Criteria
 
 - ADR documenting Python addition and hybrid scoring architecture exists
-- Python tests pass for feature extraction and FastAPI endpoints
+- Python tests pass for feature extraction, prediction logic, and FastAPI endpoints
+- TypeScript tests pass for ML integration layer (adapter, use case fallback)
 - Full end-to-end workflow validates successfully
+- README updated with ML setup instructions
 - `.gitignore` properly excludes model files
 
 ## Context & Constraints
@@ -168,10 +174,74 @@ spec-kitty implement WP07 --base WP06
 - **Files**: `ml/models/.gitignore`
 - **Parallel?**: Yes
 
+### Subtask T042 – TypeScript unit tests for MlScoringAdapter
+
+- **Purpose**: Verify the HTTP client adapter handles ML service responses and failures correctly. Required by constitution (90% backend test coverage).
+- **Steps**:
+  1. Create `apps/api/src/infrastructure/ml/__tests__/ml-scoring.adapter.spec.ts`
+  2. Test cases (mock `fetch`):
+     - `predictRace` returns predictions on 200 response
+     - `predictRace` returns null on timeout
+     - `predictRace` returns null on connection refused
+     - `predictRace` returns null on 503 (no model)
+     - `getModelVersion` returns version string on healthy response
+     - `getModelVersion` returns null on failure
+     - `isHealthy` returns true/false based on response status
+  3. Use Jest with mocked `fetch` (no real HTTP calls)
+- **Files**: `apps/api/src/infrastructure/ml/__tests__/ml-scoring.adapter.spec.ts` (new, ~100 lines)
+- **Parallel?**: Yes
+
+### Subtask T043 – TypeScript unit tests for hybrid scoring integration
+
+- **Purpose**: Verify the AnalyzePriceListUseCase correctly enriches responses with ML scores and falls back to rules-based. Required by constitution (scoring logic changes need test coverage).
+- **Steps**:
+  1. Create or extend test file for analyze-price-list use case
+  2. Test cases (mock MlScoringPort and MlScoreRepositoryPort):
+     - Stage race with ML available → response has `scoringMethod: "hybrid"` and `mlPredictedScore` values
+     - Classic race → response has `scoringMethod: "rules"` and `mlPredictedScore: null`
+     - Stage race with ML service down → falls back to `scoringMethod: "rules"`
+     - Stage race with cache hit → MlScoringPort.predictRace NOT called
+     - Stage race with cache miss → MlScoringPort.predictRace called
+     - Existing rules-based scores unchanged in all scenarios (totalProjectedPts, categoryScores identical)
+  3. Mock the ML port to return controlled predictions. Verify enrichment logic.
+- **Files**: `apps/api/src/application/analyze/__tests__/analyze-price-list.use-case.spec.ts` (new or extend)
+- **Parallel?**: Yes
+
+### Subtask T044 – Update README with ML setup instructions
+
+- **Purpose**: Constitution requires README update for features that change setup or user-facing behavior. This feature adds Python, Docker ml-service, and new Makefile targets.
+- **Steps**:
+  1. Add "ML Scoring" section to README covering:
+     - Python 3.12+ prerequisite
+     - `make retrain` — train ML models
+     - `make ml-up` / `make ml-down` — manage ML service
+     - `ML_SERVICE_URL` environment variable
+     - Weekly retraining recommendation
+  2. Add to existing "Getting Started" / setup section:
+     - `cd ml && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt`
+  3. Note that ML scoring is optional — API works without it (falls back to rules-based)
+- **Files**: `README.md` (modify)
+- **Parallel?**: Yes
+
+### Subtask T045 – Python tests for prediction logic
+
+- **Purpose**: Verify the single-race prediction module (predict.py) works correctly. This was listed in plan.md but missing from tasks.
+- **Steps**:
+  1. Create `ml/tests/test_predict.py`
+  2. Test cases:
+     - `test_predict_race_mini_tour`: mock model + data → returns predictions list with correct shape
+     - `test_predict_race_classic_rejected`: classic race_type → returns empty (not supported)
+     - `test_load_models`: mock joblib files → models loaded into dict
+     - `test_load_models_missing_file`: missing model file → partial dict or empty
+     - `test_get_model_version`: read from file, handle missing file
+  3. Use pytest with mock DataFrames and mock models (sklearn `RandomForestRegressor` with fit on tiny data)
+- **Files**: `ml/tests/test_predict.py` (new, ~80 lines)
+- **Parallel?**: Yes
+
 ## Risks & Mitigations
 
 - **E2E failures**: Integration issues may surface during T040. Budget time for debugging.
-- **Test environment**: Python tests need a venv with dependencies installed.
+- **Test environment**: Python tests need a venv with dependencies installed. TypeScript tests need `make build` first.
 
 ## Review Guidance
 

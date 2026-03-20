@@ -5,7 +5,7 @@
 
 **Tests**: Python tests included for ML pipeline (critical path). TypeScript test coverage for integration layer.
 
-**Organization**: 41 fine-grained subtasks (`Txxx`) roll up into 7 work packages (`WPxx`). Each work package is independently deliverable and testable.
+**Organization**: 45 fine-grained subtasks (`Txxx`) roll up into 7 work packages (`WPxx`). Each work package is independently deliverable and testable.
 
 **Prompt Files**: Each work package references a matching prompt file in `tasks/`.
 
@@ -134,7 +134,7 @@
 ## Work Package WP04: TypeScript API — Hybrid Scoring Integration (Priority: P1) 🎯 MVP
 
 **Goal**: Modify the TypeScript API to call the ML service for stage races, read cached predictions, and return hybrid scores (rules + ML) in the analysis response. Graceful fallback when ML is unavailable.
-**Independent Test**: Analyze a stage race via the API → response includes `scoring_method: "hybrid"` and `ml_predicted_score`. Analyze a classic → `scoring_method: "rules"`. Stop ML service → stage race falls back to rules-only.
+**Independent Test**: Analyze a stage race via the API → response includes `scoringMethod: "hybrid"` and `mlPredictedScore`. Analyze a classic → `scoringMethod: "rules"`. Stop ML service → stage race falls back to rules-only.
 **Prompt**: `tasks/WP04-typescript-hybrid-scoring.md`
 
 **Requirements Refs**: FR-003, FR-005, FR-006, FR-007, FR-008, FR-013
@@ -143,8 +143,8 @@
 
 - [ ] T020 Create `MlScoringPort` in `apps/api/src/domain/scoring/ml-scoring.port.ts` — abstract interface: `predictRace(raceSlug, year): Promise<MlPrediction[] | null>`
 - [ ] T021 Create `MlScoringAdapter` in `apps/api/src/infrastructure/ml/ml-scoring.adapter.ts` — HTTP client to ML service with timeout (5s), error handling, retry logic
-- [ ] T022 Extend `AnalyzedRider` in `packages/shared-types/src/scoring.ts` — add `scoring_method: "rules" | "hybrid"` and `ml_predicted_score: number | null`
-- [ ] T023 Modify `AnalyzePriceListUseCase` — for stage races: check ml_scores cache → cache miss calls MlScoringPort → enrich response with ML score → set scoring_method
+- [ ] T022 Extend `AnalyzedRider` in `packages/shared-types/src/scoring.ts` — add `scoringMethod: "rules" | "hybrid"` and `mlPredictedScore: number | null`
+- [ ] T023 Modify `AnalyzePriceListUseCase` — for stage races: check ml_scores cache → cache miss calls MlScoringPort → enrich response with ML score → set scoringMethod
 - [ ] T024 Register `MlScoringPort` + `MlScoringAdapter` in DI (add to appropriate module, inject in use case)
 - [ ] T025 Implement graceful degradation — ML service unavailable → log warning, return rules-based only, no user-facing error
 - [ ] T026 Verify end-to-end: start ML service + API → analyze stage race → hybrid response → stop ML service → rules fallback
@@ -168,7 +168,7 @@
 
 ### Risks & Mitigations
 
-- Breaking existing scoring: rules-based scoring must remain unchanged for all race types. Only ADD ml_predicted_score, never modify totalProjectedPts.
+- Breaking existing scoring: rules-based scoring must remain unchanged for all race types. Only ADD mlPredictedScore, never modify totalProjectedPts.
 - Race condition: concurrent requests for same uncached race → both call ML service → duplicate cache entries → UNIQUE constraint handles this (ON CONFLICT DO NOTHING)
 
 ---
@@ -176,21 +176,21 @@
 ## Work Package WP05: Optimizer ML Integration (Priority: P2)
 
 **Goal**: Modify the team optimizer to use ML predicted score for stage races. Rules-based for classics. Fallback when ML unavailable.
-**Independent Test**: Optimize team for a stage race with ML predictions → optimizer uses ml_predicted_score. Optimize classic → uses totalProjectedPts. Remove ML predictions → falls back to rules.
+**Independent Test**: Optimize team for a stage race with ML predictions → optimizer uses mlPredictedScore. Optimize classic → uses totalProjectedPts. Remove ML predictions → falls back to rules.
 **Prompt**: `tasks/WP05-optimizer-ml-integration.md`
 
 **Requirements Refs**: FR-009
 
 ### Included Subtasks
 
-- [ ] T027 Modify `ScoredRider` type or optimize-team input to accept optional `ml_predicted_score`
+- [ ] T027 Modify `ScoredRider` type or optimize-team input to accept optional `mlPredictedScore`
 - [ ] T028 Modify `AnalyzePriceListUseCase` or optimizer orchestration to pass ML score as primary ranking for stage races
-- [ ] T029 Ensure optimizer fallback: if `ml_predicted_score` is null → use `totalProjectedPts`
+- [ ] T029 Ensure optimizer fallback: if `mlPredictedScore` is null → use `totalProjectedPts`
 - [ ] T030 Verify optimizer produces different team selections for stage races with ML vs rules-only
 
 ### Implementation Notes
 
-- The knapsack optimizer already takes `ScoredRider[]` with `totalProjectedPts` — simplest approach: for stage races with ML, set the effective score to ml_predicted_score before passing to optimizer
+- The knapsack optimizer already takes `ScoredRider[]` with `totalProjectedPts` — simplest approach: for stage races with ML, set the effective score to mlPredictedScore before passing to optimizer
 - Alternative: add a new field to ScoredRider and let optimizer pick which to use
 - Critical: do NOT change optimizer algorithm itself — only change the input score
 
@@ -204,7 +204,7 @@
 
 ### Risks & Mitigations
 
-- ML score scale mismatch with price: ml_predicted_score may have different scale than totalProjectedPts — verify composite score calculation still works
+- ML score scale mismatch with price: mlPredictedScore may have different scale than totalProjectedPts — verify composite score calculation still works
 
 ---
 
@@ -261,6 +261,10 @@
 - [ ] T039 Create `ml/tests/test_app.py` — FastAPI endpoint tests (health, predict with mock model)
 - [ ] T040 Full end-to-end validation: `make retrain` → `make ml-up` → analyze stage race via API → `make benchmark-suite` → verify 3-column output
 - [ ] T041 Update `ml/models/.gitignore` to ignore `*.joblib` and `model_version.txt` but keep `.gitkeep`
+- [ ] T042 [P] Create TypeScript unit tests for `MlScoringAdapter` — mock fetch, verify timeout/error handling returns null
+- [ ] T043 [P] Create TypeScript unit tests for `AnalyzePriceListUseCase` ML integration — mock ML port, verify hybrid enrichment + fallback
+- [ ] T044 [P] Update README with ML setup instructions (Python prereqs, make targets, ML_SERVICE_URL env var)
+- [ ] T045 [P] Create `ml/tests/test_predict.py` — unit tests for single-race prediction logic
 
 ### Implementation Notes
 
@@ -270,7 +274,7 @@
 
 ### Parallel Opportunities
 
-- T037 (ADR), T038 (feature tests), T039 (app tests) can all proceed in parallel
+- T037 (ADR), T038-T039 (Python tests), T042-T043 (TS tests), T044 (README), T045 (predict tests) can all proceed in parallel
 
 ### Dependencies
 
@@ -345,3 +349,7 @@ WP01 (Foundation)
 | T039    | Python test_app.py                         | WP07 | P3       | Yes       |
 | T040    | Full end-to-end validation                 | WP07 | P3       | No        |
 | T041    | .gitignore for ml/models/                  | WP07 | P3       | Yes       |
+| T042    | TS tests: MlScoringAdapter                 | WP07 | P3       | Yes       |
+| T043    | TS tests: AnalyzePriceList ML integration  | WP07 | P3       | Yes       |
+| T044    | Update README with ML setup                | WP07 | P3       | Yes       |
+| T045    | Python test_predict.py                     | WP07 | P3       | Yes       |

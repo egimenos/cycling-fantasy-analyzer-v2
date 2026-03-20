@@ -48,7 +48,7 @@ spec-kitty implement WP05 --base WP04
 
 ## Objectives & Success Criteria
 
-- Team optimizer uses `ml_predicted_score` for stage races when available
+- Team optimizer uses `mlPredictedScore` for stage races when available
 - Classic races use `totalProjectedPts` as before
 - Fallback: no ML predictions → use rules-based score
 - Optimizer produces different (improved) team selections for stage races with ML
@@ -76,7 +76,7 @@ spec-kitty implement WP05 --base WP04
 
 ### Subtask T028 – Wire ML score into optimizer orchestration
 
-- **Purpose**: When optimizing for a stage race with ML predictions, use `ml_predicted_score` as the effective score.
+- **Purpose**: When optimizing for a stage race with ML predictions, use `mlPredictedScore` as the effective score.
 - **Steps**:
   1. Read `apps/api/src/application/optimize/optimize-team.use-case.ts` to understand orchestration
   2. The use case receives pre-scored riders from the analysis flow
@@ -96,7 +96,7 @@ spec-kitty implement WP05 --base WP04
 
 - **Purpose**: If ML predictions are null, optimizer must fall back to rules-based scoring seamlessly.
 - **Steps**:
-  1. When `ml_predicted_score` is null for a rider (no ML predictions):
+  1. When `mlPredictedScore` is null for a rider (no ML predictions):
      - `effectiveScore` defaults to `totalProjectedPts`
   2. This should be handled naturally by the null coalescing in T028: `rider.mlPredictedScore ?? rider.totalProjectedPts`
   3. Verify: analyze a stage race with ML service DOWN → optimizer still produces valid team using rules-based scores
