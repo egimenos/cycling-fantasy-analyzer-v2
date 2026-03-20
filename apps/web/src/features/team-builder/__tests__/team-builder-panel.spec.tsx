@@ -17,6 +17,9 @@ function makeRider(name: string, price = 100, score = 50): AnalyzedRider {
     totalProjectedPts: score,
     categoryScores: { gc: 20, stage: 10, mountain: 10, sprint: 5 },
     seasonsUsed: 2,
+    seasonBreakdown: null,
+    scoringMethod: 'rules' as const,
+    mlPredictedScore: null,
   };
 }
 
