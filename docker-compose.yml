@@ -16,5 +16,26 @@ services:
       timeout: 5s
       retries: 5
 
+  ml-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ml
+    container_name: cycling-ml-service
+    ports:
+      - '8000:8000'
+    environment:
+      DATABASE_URL: postgresql://cycling:cycling@postgres:5432/cycling_analyzer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./ml/models:/app/models
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
 volumes:
   postgres_data:

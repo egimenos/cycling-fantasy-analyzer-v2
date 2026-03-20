@@ -1,6 +1,7 @@
 .PHONY: help install build dev test lint typecheck \
        db-up db-down db-generate db-migrate db-studio db-push db-psql \
-       seed scrape benchmark benchmark-suite
+       seed scrape benchmark benchmark-suite \
+       retrain ml-up ml-down ml-logs ml-restart
 
 # ── Defaults ──────────────────────────────────────────────
 help: ## Show this help
@@ -62,3 +63,19 @@ benchmark: ## Run single-race benchmark (interactive)
 
 benchmark-suite: ## Run multi-race benchmark suite (interactive)
 	$(CLI) benchmark --suite
+
+# ── ML Service ────────────────────────────────────────────
+retrain: ## Train ML models (Python CLI)
+	cd ml && python -m src.retrain
+
+ml-up: ## Start ML service (docker-compose)
+	docker compose up -d ml-service
+
+ml-down: ## Stop ML service
+	docker compose stop ml-service
+
+ml-logs: ## View ML service logs
+	docker compose logs -f ml-service
+
+ml-restart: ## Restart ML service (reload model)
+	docker compose restart ml-service
