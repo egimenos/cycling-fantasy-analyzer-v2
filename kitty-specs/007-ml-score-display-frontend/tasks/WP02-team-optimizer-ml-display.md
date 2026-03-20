@@ -1,21 +1,24 @@
 ---
 work_package_id: WP02
-title: 'Team Aggregates + Optimizer ML Display'
-lane: planned
+title: Team Aggregates + Optimizer ML Display
+lane: 'done'
 dependencies: [WP01]
+base_branch: 007-ml-score-display-frontend-WP01
+base_commit: 0a04a96a5579972aeff480d0ce47c5879f758031
+created_at: '2026-03-20T20:02:19.425178+00:00'
 subtasks: [T007, T008, T009, T010, T011, T012]
-phase: 'Phase 2 - Team Display'
+phase: Phase 2 - Team Display
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '51697'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-20T19:20:00Z'
     lane: planned
     agent: system
     shell_pid: ''
-    action: 'Prompt generated via /spec-kitty.tasks'
+    action: Prompt generated via /spec-kitty.tasks
 requirement_refs: [FR-004, FR-005]
 ---
 
@@ -120,3 +123,6 @@ spec-kitty implement WP02 --base WP01
 ## Activity Log
 
 - 2026-03-20T19:20:00Z – system – lane=planned – Prompt created.
+- 2026-03-20T20:02:20Z – claude-opus – shell_pid=51697 – lane=doing – Assigned agent via workflow command
+- 2026-03-20T20:07:47Z – claude-opus – shell_pid=51697 – lane=for_review – All 6 subtasks complete
+- 2026-03-20T20:08:13Z – claude-opus – shell_pid=51697 – lane=done – Review passed: ML totals in team builder, summary, optimizer, alternatives. Conditional rendering, computeMlTotal utility, 103/104 tests pass.

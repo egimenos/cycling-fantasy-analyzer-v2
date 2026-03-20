@@ -1,21 +1,24 @@
 ---
 work_package_id: WP01
-title: 'ML Badge + Rider Table Integration'
-lane: planned
+title: ML Badge + Rider Table Integration
+lane: 'done'
 dependencies: []
+base_branch: main
+base_commit: 0a04a96a5579972aeff480d0ce47c5879f758031
+created_at: '2026-03-20T20:02:14.300776+00:00'
 subtasks: [T001, T002, T003, T004, T005, T006]
-phase: 'Phase 1 - Core Display'
+phase: Phase 1 - Core Display
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '51339'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-20T19:20:00Z'
     lane: planned
     agent: system
     shell_pid: ''
-    action: 'Prompt generated via /spec-kitty.tasks'
+    action: Prompt generated via /spec-kitty.tasks
 requirement_refs: [FR-001, FR-002, FR-003, FR-005, FR-006]
 ---
 
@@ -123,3 +126,6 @@ spec-kitty implement WP01
 ## Activity Log
 
 - 2026-03-20T19:20:00Z – system – lane=planned – Prompt created.
+- 2026-03-20T20:02:15Z – claude-opus – shell_pid=51339 – lane=doing – Assigned agent via workflow command
+- 2026-03-20T20:03:48Z – claude-opus – shell_pid=51339 – lane=for_review – All 6 subtasks complete
+- 2026-03-20T20:04:12Z – claude-opus – shell_pid=51339 – lane=done – Review passed: MlBadge component + rider table ML display with conditional rendering, null handling, dark mode.
