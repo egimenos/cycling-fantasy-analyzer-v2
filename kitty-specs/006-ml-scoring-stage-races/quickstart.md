@@ -19,9 +19,6 @@ source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Verify connection to local DB
-python -c "import psycopg2; psycopg2.connect('postgresql://cycling:cycling@localhost:5432/cycling_analyzer'); print('OK')"
 ```
 
 ## Database Migration
@@ -37,39 +34,70 @@ make db-migrate
 ## Train Model
 
 ```bash
-# Train RF models and generate predictions for all races with startlists
+# Train RF models (training only, no predictions)
 make retrain
-# Output: ml/models/model_mini_tour.joblib, model_grand_tour.joblib
-# Output: predictions written to ml_scores table
+# Output: ml/models/model_mini_tour.joblib, model_grand_tour.joblib, model_version.txt
 ```
 
-## Generate Predictions (on-demand)
+## Start ML Service
 
 ```bash
-# After scraping a new startlist
-make scrape RACE=tour-de-suisse YEAR=2026 TYPE=mini_tour
+# Option 1: Docker (recommended, matches production)
+make ml-up
+# Starts FastAPI service on port 8000, model loaded into memory
 
-# Generate predictions for that race
-make predict RACE=tour-de-suisse YEAR=2026
+# Option 2: Local dev (for debugging)
+cd ml && source venv/bin/activate
+uvicorn src.app:app --host 0.0.0.0 --port 8000 --reload
+
+# Verify health
+curl http://localhost:8000/health
+# → {"status": "healthy", "model_version": "20260320T030000", "models_loaded": ["mini_tour", "grand_tour"]}
+```
+
+## Test End-to-End
+
+```bash
+# Start API (in another terminal)
+make dev
+
+# Analyze a stage race — triggers on-demand ML prediction
+# (via frontend or API call)
+# The API will call ML service → extract features → predict → cache → return hybrid scores
+
+# Run benchmark suite — shows rules vs ML vs hybrid
+make benchmark-suite
 ```
 
 ## Validate
 
 ```bash
-# Run benchmark suite — shows rules vs ML vs hybrid
-make benchmark-suite
-
 # Run TypeScript tests
 make test
 
 # Run Python tests
 cd ml && python -m pytest tests/
+
+# Check ML service logs
+make ml-logs
 ```
 
 ## Development Workflow
 
 1. Edit Python ML code in `ml/src/`
-2. Run `make retrain` to test the full pipeline
-3. Edit TypeScript integration in `apps/api/src/`
-4. Run `make test` to verify API changes
-5. Run `make benchmark-suite` to validate scoring quality
+2. Restart ML service to pick up changes: `make ml-restart` (or use `--reload` in dev)
+3. Run `make retrain` if changing feature extraction or training logic
+4. Edit TypeScript integration in `apps/api/src/`
+5. Run `make test` to verify API changes
+6. Run `make benchmark-suite` to validate scoring quality
+
+## New Makefile Targets
+
+```bash
+make retrain          # Train ML models (Python CLI)
+make ml-up            # Start ML service (docker-compose)
+make ml-down          # Stop ML service
+make ml-logs          # View ML service logs
+make ml-restart       # Restart ML service (reload model)
+make benchmark-suite  # Run benchmark with 3-column comparison
+```
