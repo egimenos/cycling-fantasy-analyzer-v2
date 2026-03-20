@@ -124,13 +124,38 @@ def check_cache(
             (race_slug, year, model_version),
         )
         rows = cur.fetchall()
+
+        if not rows:
+            cur.close()
+            conn.close()
+            return None
+
+        # Compare cached riders with current startlist — if startlist
+        # changed (rider added/removed), invalidate cache and re-predict.
+        cur.execute(
+            """
+            SELECT rider_id::text
+            FROM startlist_entries
+            WHERE race_slug = %s AND year = %s
+            """,
+            (race_slug, year),
+        )
+        startlist_ids = {row[0] for row in cur.fetchall()}
+        cached_ids = {row[0] for row in rows}
+
         cur.close()
         conn.close()
+
+        if cached_ids != startlist_ids:
+            logger.info(
+                "Startlist changed for %s/%d — cache invalidated "
+                "(cached=%d riders, startlist=%d riders)",
+                race_slug, year, len(cached_ids), len(startlist_ids),
+            )
+            return None
+
     except Exception:
         logger.exception("Cache check failed")
-        return None
-
-    if not rows:
         return None
 
     return [
