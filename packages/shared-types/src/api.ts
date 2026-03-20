@@ -27,6 +27,8 @@ export interface SeasonBreakdown {
   weight: number;
 }
 
+export type ScoringMethod = 'rules' | 'hybrid';
+
 export interface AnalyzedRider {
   rawName: string;
   rawTeam: string;
@@ -40,6 +42,8 @@ export interface AnalyzedRider {
   categoryScores: CategoryScores | null;
   seasonsUsed: number | null;
   seasonBreakdown: SeasonBreakdown[] | null;
+  scoringMethod: ScoringMethod;
+  mlPredictedScore: number | null;
 }
 
 export interface AnalyzeRequest {
@@ -48,6 +52,8 @@ export interface AnalyzeRequest {
   budget: number;
   seasons?: number;
   profileSummary?: ProfileSummary;
+  raceSlug?: string;
+  year?: number;
 }
 
 export interface AnalyzeResponse {

@@ -1,4 +1,4 @@
-import { Injectable, Inject, UnprocessableEntityException } from '@nestjs/common';
+import { Injectable, Inject, Logger, UnprocessableEntityException } from '@nestjs/common';
 import {
   RiderMatcherPort,
   RIDER_MATCHER_PORT,
@@ -12,6 +12,11 @@ import {
   RaceResultRepositoryPort,
   RACE_RESULT_REPOSITORY_PORT,
 } from '../../domain/race-result/race-result.repository.port';
+import { MlScoringPort, ML_SCORING_PORT } from '../../domain/scoring/ml-scoring.port';
+import {
+  MlScoreRepositoryPort,
+  ML_SCORE_REPOSITORY_PORT,
+} from '../../domain/ml-score/ml-score.repository.port';
 import {
   ScoringService,
   CompositeRiderScore,
@@ -29,6 +34,8 @@ export interface AnalyzeInput {
   budget: number;
   seasons?: number;
   profileSummary?: ProfileSummary;
+  raceSlug?: string;
+  year?: number;
 }
 
 interface MatchedRiderInfo {
@@ -56,6 +63,8 @@ export interface AnalyzedRider {
   } | null;
   seasonsUsed: number | null;
   seasonBreakdown: SeasonBreakdown[] | null;
+  scoringMethod: 'rules' | 'hybrid';
+  mlPredictedScore: number | null;
 }
 
 export interface AnalyzeResponse {
@@ -67,11 +76,15 @@ export interface AnalyzeResponse {
 
 @Injectable()
 export class AnalyzePriceListUseCase {
+  private readonly logger = new Logger(AnalyzePriceListUseCase.name);
+
   constructor(
     @Inject(RIDER_MATCHER_PORT) private readonly matcher: RiderMatcherPort,
     @Inject(RIDER_REPOSITORY_PORT) private readonly riderRepo: RiderRepositoryPort,
     @Inject(RACE_RESULT_REPOSITORY_PORT) private readonly resultRepo: RaceResultRepositoryPort,
     private readonly scoringService: ScoringService,
+    @Inject(ML_SCORING_PORT) private readonly mlScoring: MlScoringPort,
+    @Inject(ML_SCORE_REPOSITORY_PORT) private readonly mlScoreRepo: MlScoreRepositoryPort,
   ) {}
 
   async execute(input: AnalyzeInput): Promise<AnalyzeResponse> {
@@ -202,6 +215,9 @@ export class AnalyzePriceListUseCase {
 
     const poolStats = this.scoringService.computePoolStats(poolEntries);
 
+    // --- ML prediction enrichment for stage races ---
+    const mlPredictions = await this.fetchMlPredictions(input);
+
     const analyzedRiders: AnalyzedRider[] = scoredEntries.map((s) => {
       if (s.unmatched || s.riderScore === null) {
         return {
@@ -217,6 +233,8 @@ export class AnalyzePriceListUseCase {
           categoryScores: null,
           seasonsUsed: null,
           seasonBreakdown: null,
+          scoringMethod: 'rules' as const,
+          mlPredictedScore: null,
         };
       }
 
@@ -239,6 +257,8 @@ export class AnalyzePriceListUseCase {
         categoryScores: { ...s.riderScore.categoryScores },
         seasonsUsed: s.riderScore.seasonsUsed,
         seasonBreakdown: s.seasonBreakdown,
+        scoringMethod: mlPredictions ? ('hybrid' as const) : ('rules' as const),
+        mlPredictedScore: mlPredictions?.get(s.matchedRider?.id ?? '') ?? null,
       };
     });
 
@@ -257,5 +277,52 @@ export class AnalyzePriceListUseCase {
       totalMatched,
       unmatchedCount: entries.length - totalMatched,
     };
+  }
+
+  /**
+   * Fetch ML predictions for stage races, using cache when available.
+   * Returns a Map<riderId, predictedScore> or null if ML is not applicable/available.
+   */
+  private async fetchMlPredictions(input: AnalyzeInput): Promise<Map<string, number> | null> {
+    const isStageRace =
+      input.raceType === RaceType.GRAND_TOUR || input.raceType === RaceType.MINI_TOUR;
+
+    if (!isStageRace) {
+      return null;
+    }
+
+    if (!input.raceSlug || !input.year) {
+      this.logger.debug('Stage race without raceSlug/year — skipping ML predictions');
+      return null;
+    }
+
+    const modelVersion = await this.mlScoring.getModelVersion();
+    if (!modelVersion) {
+      this.logger.warn('ML service unavailable — falling back to rules-based scoring');
+      return null;
+    }
+
+    // Check cache first
+    const cached = await this.mlScoreRepo.findByRace(input.raceSlug, input.year, modelVersion);
+    if (cached.length > 0) {
+      this.logger.debug(
+        `ML cache hit for ${input.raceSlug}/${input.year} (model ${modelVersion}, ${cached.length} predictions)`,
+      );
+      return new Map(cached.map((s) => [s.riderId, s.predictedScore]));
+    }
+
+    // Cache miss — call ML service
+    const predictions = await this.mlScoring.predictRace(input.raceSlug, input.year);
+    if (!predictions) {
+      this.logger.warn(
+        `ML predictRace returned null for ${input.raceSlug}/${input.year} — falling back to rules-based scoring`,
+      );
+      return null;
+    }
+
+    this.logger.log(
+      `ML predictions received for ${input.raceSlug}/${input.year}: ${predictions.length} riders`,
+    );
+    return new Map(predictions.map((p) => [p.riderId, p.predictedScore]));
   }
 }
