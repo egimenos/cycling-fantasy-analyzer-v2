@@ -33,17 +33,17 @@ When a user requests analysis of a stage race (uploads price list, selects race)
 
 **Acceptance Scenarios**:
 
-1. **Given** a trained model exists and a startlist is available for a stage race, **When** a user requests analysis for that race (first time), **Then** the API calls the ML service, which extracts features, generates predictions, caches them in the database, and the API returns both rules-based scores (with category breakdown) and `ml_predicted_score` with `scoring_method: "hybrid"`.
+1. **Given** a trained model exists and a startlist is available for a stage race, **When** a user requests analysis for that race (first time), **Then** the API calls the ML service, which extracts features, generates predictions, caches them in the database, and the API returns both rules-based scores (with category breakdown) and `mlPredictedScore` with `scoringMethod: "hybrid"`.
 2. **Given** predictions are already cached for a race with the current model version, **When** a user requests analysis for the same race, **Then** the API reads cached predictions from the database without calling the ML service (cache hit).
-3. **Given** a classic race, **When** a user requests analysis, **Then** the API returns only rules-based scores with `scoring_method: "rules"` and `ml_predicted_score: null`. The ML service is not called.
-4. **Given** the ML service is unavailable or no trained model exists, **When** a user requests analysis for a stage race, **Then** the API falls back to rules-based scoring with `scoring_method: "rules"` and logs a warning.
+3. **Given** a classic race, **When** a user requests analysis, **Then** the API returns only rules-based scores with `scoringMethod: "rules"` and `mlPredictedScore: null`. The ML service is not called.
+4. **Given** the ML service is unavailable or no trained model exists, **When** a user requests analysis for a stage race, **Then** the API falls back to rules-based scoring with `scoringMethod: "rules"` and logs a warning.
 5. **Given** a new model version has been trained (via `make retrain`) since the last cached predictions, **When** a user requests analysis for a previously cached race, **Then** the system detects the stale cache and re-predicts using the new model.
 
 ---
 
 ### User Story 3 - Hybrid Scoring in Analysis Results (Priority: P1)
 
-The analysis response for stage races includes both the rules-based score (with full category breakdown: gc, stage, mountain, sprint) and the ML predicted score. The response includes `scoring_method` and `ml_predicted_score` fields without breaking the existing interface. The optimizer uses ML score for stage races when available.
+The analysis response for stage races includes both the rules-based score (with full category breakdown: gc, stage, mountain, sprint) and the ML predicted score. The response includes `scoringMethod` and `mlPredictedScore` fields without breaking the existing interface. The optimizer uses ML score for stage races when available.
 
 **Why this priority**: Users need both scores visible for transparency and informed decision-making. The optimizer needs ML scores to produce better team recommendations.
 
@@ -51,7 +51,7 @@ The analysis response for stage races includes both the rules-based score (with 
 
 **Acceptance Scenarios**:
 
-1. **Given** a stage race with ML predictions available, **When** the optimizer runs, **Then** it uses `ml_predicted_score` as the ranking input for rider selection and team optimization.
+1. **Given** a stage race with ML predictions available, **When** the optimizer runs, **Then** it uses `mlPredictedScore` as the ranking input for rider selection and team optimization.
 2. **Given** a classic race, **When** the optimizer runs, **Then** it uses `totalProjectedPts` (rules-based) as the ranking input, ignoring ML predictions.
 3. **Given** a stage race without ML predictions (service down or no model), **When** the optimizer runs, **Then** it falls back to rules-based scoring.
 
@@ -107,7 +107,7 @@ The ML service exposes a health check endpoint that reports whether a trained mo
 - **FR-003**: System MUST provide an internal ML service that accepts prediction requests for a given race and returns predicted scores for all riders on the startlist.
 - **FR-004**: The ML service MUST extract the same 36 features used in the research phase (v3), maintaining parity with the validated model.
 - **FR-005**: The ML service MUST cache predictions in a persistent store keyed by (rider_id, race_slug, year, model_version) and serve cached results for subsequent requests.
-- **FR-006**: System MUST extend rider scoring responses to include `scoring_method` ("rules" or "hybrid") and `ml_predicted_score` (for stage races with ML predictions) without altering the existing score structure.
+- **FR-006**: System MUST extend rider scoring responses to include `scoringMethod` ("rules" or "hybrid") and `mlPredictedScore` (for stage races with ML predictions) without altering the existing score structure.
 - **FR-007**: System MUST return both rules-based scores (with full category breakdown) and ML predicted scores for stage races in hybrid mode.
 - **FR-008**: System MUST fall back to rules-based scoring when the ML service is unavailable, unhealthy, or when no trained model exists.
 - **FR-009**: System MUST use ML predicted score as the ranking input for the team optimizer when optimizing for stage races with available predictions.

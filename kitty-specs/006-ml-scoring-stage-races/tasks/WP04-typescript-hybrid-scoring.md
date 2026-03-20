@@ -4,6 +4,7 @@ title: TypeScript API — Hybrid Scoring Integration
 lane: planned
 dependencies:
   - WP01
+  - WP03
 subtasks:
   - T020
   - T021
@@ -58,7 +59,7 @@ spec-kitty implement WP04 --base WP03
 ## Objectives & Success Criteria
 
 - TypeScript API calls ML service for stage races and returns hybrid scores
-- `AnalyzedRider` response includes `scoring_method` and `ml_predicted_score` without breaking existing fields
+- `AnalyzedRider` response includes `scoringMethod` and `mlPredictedScore` without breaking existing fields
 - Cache flow works: first request → ML service call → cache write → second request → cache hit
 - Graceful degradation: ML service down → rules-based only, no user-facing error
 - Classic races remain rules-based only (ML service never called)
@@ -177,8 +178,8 @@ spec-kitty implement WP04 --base WP03
   1. Edit `packages/shared-types/src/scoring.ts`
   2. Add to `AnalyzedRider` interface:
      ```typescript
-     scoring_method: 'rules' | 'hybrid';
-     ml_predicted_score: number | null;
+     scoringMethod: 'rules' | 'hybrid';
+     mlPredictedScore: number | null;
      ```
   3. Update the `ScoringMethod` type if needed (or create it)
   4. Verify: `make typecheck` passes — no downstream type errors
@@ -225,8 +226,8 @@ spec-kitty implement WP04 --base WP03
      // Enrich each AnalyzedRider
      const enrichedRiders = analyzedRiders.map((rider) => ({
        ...rider,
-       scoring_method: mlPredictions ? ('hybrid' as const) : ('rules' as const),
-       ml_predicted_score: mlPredictions?.get(rider.matchedRider?.id ?? '') ?? null,
+       scoringMethod: mlPredictions ? ('hybrid' as const) : ('rules' as const),
+       mlPredictedScore: mlPredictions?.get(rider.matchedRider?.id ?? '') ?? null,
      }));
      ```
 
@@ -257,14 +258,14 @@ spec-kitty implement WP04 --base WP03
 - **Purpose**: ML service unavailability must never break the analysis flow.
 - **Steps**:
   1. Verify that `MlScoringAdapter` methods return null/false on any error (timeout, connection refused, 500)
-  2. In the use case, if `mlPredictions` is null → set `scoring_method: 'rules'` and `ml_predicted_score: null`
+  2. In the use case, if `mlPredictions` is null → set `scoringMethod: 'rules'` and `mlPredictedScore: null`
   3. Add Logger.warn when ML service is unavailable:
      ```typescript
      if (!modelVersion) {
        this.logger.warn('ML service unavailable — falling back to rules-based scoring');
      }
      ```
-  4. Test: stop ML service → analyze stage race → response should have `scoring_method: 'rules'` with no errors
+  4. Test: stop ML service → analyze stage race → response should have `scoringMethod: 'rules'` with no errors
 - **Files**: `apps/api/src/application/analyze/analyze-price-list.use-case.ts`
 
 ### Subtask T026 – Verify hybrid scoring end-to-end
@@ -275,23 +276,23 @@ spec-kitty implement WP04 --base WP03
   2. Analyze a stage race (mini tour or grand tour) via API
   3. Verify response includes:
      - All existing fields (compositeScore, totalProjectedPts, categoryScores)
-     - `scoring_method: "hybrid"`
-     - `ml_predicted_score` with a numeric value for each rider
-  4. Analyze a classic race → verify `scoring_method: "rules"` and `ml_predicted_score: null`
-  5. Stop ML service → analyze stage race → verify `scoring_method: "rules"` with no error
-  6. Restart ML service → analyze same stage race → verify `scoring_method: "hybrid"` (predictions served from cache)
+     - `scoringMethod: "hybrid"`
+     - `mlPredictedScore` with a numeric value for each rider
+  4. Analyze a classic race → verify `scoringMethod: "rules"` and `mlPredictedScore: null`
+  5. Stop ML service → analyze stage race → verify `scoringMethod: "rules"` with no error
+  6. Restart ML service → analyze same stage race → verify `scoringMethod: "hybrid"` (predictions served from cache)
 - **Files**: No new files — validation step
 
 ## Risks & Mitigations
 
-- **Breaking existing API responses**: `scoring_method` and `ml_predicted_score` are new fields. Existing consumers ignore unknown fields (JSON is additive). But verify `make typecheck` passes.
+- **Breaking existing API responses**: `scoringMethod` and `mlPredictedScore` are new fields. Existing consumers ignore unknown fields (JSON is additive). But verify `make typecheck` passes.
 - **Race condition**: Two concurrent requests for uncached race. Both call ML service. Both try to cache. The `ON CONFLICT DO NOTHING` in ml_scores handles this — second insert is silently ignored.
 - **ML service timeout**: 5s timeout is generous. If feature extraction takes longer, the first prediction for a race with many riders might time out. Mitigation: increase timeout to 10s or optimize.
 
 ## Review Guidance
 
 - **Critical**: Verify rules-based scoring is completely unchanged. `totalProjectedPts`, `categoryScores` must be identical with or without ML.
-- Verify `scoring_method` is "hybrid" for stage races with ML, "rules" for classics and fallback
+- Verify `scoringMethod` is "hybrid" for stage races with ML, "rules" for classics and fallback
 - Verify graceful degradation: stop ML service → no errors in API response
 - Verify DDD compliance: no HTTP calls in domain layer, only via infrastructure adapter
 

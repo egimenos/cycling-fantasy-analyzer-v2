@@ -95,7 +95,7 @@ apps/api/src/
     └── benchmark.command.ts                # MODIFIED — 3-column display
 
 packages/shared-types/src/
-└── scoring.ts                         # MODIFIED — add scoring_method, ml_predicted_score
+└── scoring.ts                         # MODIFIED — add scoringMethod, mlPredictedScore
 
 docker/
 ├── Dockerfile.api                     # UNCHANGED — Node-only
