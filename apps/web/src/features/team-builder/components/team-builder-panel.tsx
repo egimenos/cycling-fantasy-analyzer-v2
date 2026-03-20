@@ -1,5 +1,6 @@
 import type { AnalyzedRider } from '@cycling-analyzer/shared-types';
 import { BudgetIndicator } from '@/shared/ui/budget-indicator';
+import { MlBadge } from '@/shared/ui/ml-badge';
 import { Button } from '@/shared/ui/button';
 import { TeamSummary } from './team-summary';
 import { X } from 'lucide-react';
@@ -8,6 +9,7 @@ interface TeamBuilderPanelProps {
   selectedRiders: AnalyzedRider[];
   totalCost: number;
   totalScore: number;
+  mlTotalScore: number | null;
   budgetRemaining: number;
   budget: number;
   isTeamComplete: boolean;
@@ -19,6 +21,7 @@ export function TeamBuilderPanel({
   selectedRiders,
   totalCost,
   totalScore,
+  mlTotalScore,
   budgetRemaining,
   budget,
   isTeamComplete,
@@ -31,6 +34,7 @@ export function TeamBuilderPanel({
         riders={selectedRiders}
         totalCost={totalCost}
         totalScore={totalScore}
+        mlTotalScore={mlTotalScore}
         budget={budget}
         onReset={onClearAll}
       />
@@ -85,6 +89,15 @@ export function TeamBuilderPanel({
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Projected Score</span>
           <span className="font-medium">{totalScore.toFixed(1)}</span>
+        </div>
+      )}
+
+      {selectedRiders.length > 0 && mlTotalScore !== null && (
+        <div className="flex items-center justify-between text-sm">
+          <span className="flex items-center gap-1.5 text-muted-foreground">
+            ML Score <MlBadge />
+          </span>
+          <span className="font-medium">{mlTotalScore.toFixed(1)}</span>
         </div>
       )}
 

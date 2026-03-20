@@ -1,6 +1,7 @@
 import type { AnalyzedRider } from '@cycling-analyzer/shared-types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card';
 import { BudgetIndicator } from '@/shared/ui/budget-indicator';
+import { MlBadge } from '@/shared/ui/ml-badge';
 import { Button } from '@/shared/ui/button';
 import { formatNumber } from '@/shared/lib/utils';
 import { Check, Copy, RotateCcw } from 'lucide-react';
@@ -10,24 +11,30 @@ interface TeamSummaryProps {
   riders: AnalyzedRider[];
   totalCost: number;
   totalScore: number;
+  mlTotalScore: number | null;
   budget: number;
   onReset: () => void;
 }
 
-export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: TeamSummaryProps) {
+export function TeamSummary({
+  riders,
+  totalCost,
+  totalScore,
+  mlTotalScore,
+  budget,
+  onReset,
+}: TeamSummaryProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
     const lines = riders.map(
       (r) => `${r.rawName} (${r.rawTeam}) - ${formatNumber(r.priceHillios)}H`,
     );
-    const text = [
-      'Team Selection',
-      '---',
-      ...lines,
-      '---',
-      `Total: ${formatNumber(totalCost)}H | Score: ${totalScore.toFixed(1)}`,
-    ].join('\n');
+    const scoreLine =
+      mlTotalScore !== null
+        ? `Total: ${formatNumber(totalCost)}H | Rules: ${totalScore.toFixed(1)} | ML: ${mlTotalScore.toFixed(1)}`
+        : `Total: ${formatNumber(totalCost)}H | Score: ${totalScore.toFixed(1)}`;
+    const text = ['Team Selection', '---', ...lines, '---', scoreLine].join('\n');
 
     await navigator.clipboard.writeText(text);
     setCopied(true);
@@ -61,9 +68,19 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
       </CardContent>
       <CardFooter className="flex-col items-stretch gap-3 border-t pt-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Total Score</span>
+          <span className="text-sm text-muted-foreground">
+            {mlTotalScore !== null ? 'Rules' : 'Total Score'}
+          </span>
           <span className="text-lg font-bold">{totalScore.toFixed(1)}</span>
         </div>
+        {mlTotalScore !== null && (
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              ML <MlBadge />
+            </span>
+            <span className="text-lg font-bold">{mlTotalScore.toFixed(1)}</span>
+          </div>
+        )}
         <BudgetIndicator spent={totalCost} total={budget} />
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => void handleCopy()}>

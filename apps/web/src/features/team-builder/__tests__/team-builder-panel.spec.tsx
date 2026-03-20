@@ -27,6 +27,7 @@ const defaultProps = {
   selectedRiders: [] as AnalyzedRider[],
   totalCost: 0,
   totalScore: 0,
+  mlTotalScore: null as number | null,
   budgetRemaining: 2000,
   budget: 2000,
   isTeamComplete: false,
