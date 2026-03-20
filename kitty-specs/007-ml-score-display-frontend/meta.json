@@ -1,0 +1,11 @@
+{
+  "feature_number": "007",
+  "slug": "007-ml-score-display-frontend",
+  "feature_slug": "007-ml-score-display-frontend",
+  "created_at": "2026-03-20T19:15:00Z",
+  "target_branch": "main",
+  "friendly_name": "ML Score Display in Frontend",
+  "mission": "software-dev",
+  "source_description": "Display ML scoring data (scoringMethod, mlPredictedScore) in React frontend across all score display locations",
+  "vcs": "git"
+}
