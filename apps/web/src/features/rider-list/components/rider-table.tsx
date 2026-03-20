@@ -2,6 +2,7 @@ import type { ColumnDef, Row } from '@tanstack/react-table';
 import type { AnalyzedRider, AnalyzeResponse } from '@cycling-analyzer/shared-types';
 import { DataTable } from '@/shared/ui/data-table';
 import { ScoreBadge } from '@/shared/ui/score-badge';
+import { MlBadge } from '@/shared/ui/ml-badge';
 import { Badge } from '@/shared/ui/badge';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { formatNumber, cn } from '@/shared/lib/utils';
@@ -36,6 +37,7 @@ function createColumns(
   onToggleExclude: (name: string) => void,
   onToggleSelect: (name: string) => void,
   canSelect: (name: string) => boolean,
+  hasML: boolean,
 ): ColumnDef<AnalyzedRider, unknown>[] {
   return [
     {
@@ -106,9 +108,36 @@ function createColumns(
           return <span className="text-muted-foreground">---</span>;
         }
         const maxScore = findMaxScore(table.getCoreRowModel().rows.map((r) => r.original));
-        return <ScoreBadge score={row.original.totalProjectedPts} maxScore={maxScore} />;
+        return (
+          <div className="flex items-center gap-1.5">
+            <ScoreBadge score={row.original.totalProjectedPts} maxScore={maxScore} />
+            {row.original.scoringMethod === 'hybrid' && <MlBadge />}
+          </div>
+        );
       },
     },
+    ...(hasML
+      ? [
+          {
+            accessorKey: 'mlPredictedScore',
+            header: 'ML Score',
+            enableSorting: true,
+            cell: ({ row }: { row: Row<AnalyzedRider> }) => {
+              if (row.original.unmatched) {
+                return <span className="text-muted-foreground">---</span>;
+              }
+              if (row.original.scoringMethod !== 'hybrid') {
+                return <span className="text-muted-foreground">---</span>;
+              }
+              return row.original.mlPredictedScore !== null ? (
+                <span className="text-sm font-medium">{row.original.mlPredictedScore.toFixed(1)}</span>
+              ) : (
+                <span className="text-sm text-muted-foreground">n/a</span>
+              );
+            },
+          } satisfies ColumnDef<AnalyzedRider, unknown>,
+        ]
+      : []),
     {
       accessorKey: 'pointsPerHillio',
       header: 'Pts/H',
@@ -195,6 +224,19 @@ function ExpandedRowContent({ rider }: { rider: AnalyzedRider }) {
         {rider.compositeScore !== null && (
           <ScoreDetail label="Composite" value={rider.compositeScore} />
         )}
+        {rider.scoringMethod === 'hybrid' && (
+          <div className="flex items-center gap-1.5">
+            <div>
+              <span className="text-xs text-muted-foreground">ML Predicted</span>
+              {rider.mlPredictedScore !== null ? (
+                <p className="text-sm font-medium">{rider.mlPredictedScore.toFixed(1)} pts</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">n/a</p>
+              )}
+            </div>
+            <MlBadge className="mt-3" />
+          </div>
+        )}
       </div>
 
       {/* Season breakdown table */}
@@ -273,6 +315,8 @@ export function RiderTable({
     return <EmptyState title="No riders" description="Submit riders to see analysis results." />;
   }
 
+  const hasML = data.riders.some((r) => r.scoringMethod === 'hybrid');
+
   const columns = createColumns(
     lockedIds,
     excludedIds,
@@ -281,6 +325,7 @@ export function RiderTable({
     onToggleExclude,
     onToggleSelect,
     canSelect,
+    hasML,
   );
 
   return (
