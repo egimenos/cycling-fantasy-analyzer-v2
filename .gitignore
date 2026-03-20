@@ -46,5 +46,11 @@ Thumbs.db
 .kittify/workspaces/
 skills-lock.json
 ml/.venv/
+ml/venv/
 ml/data/*.csv
 ml/src/__pycache__/
+ml/tests/__pycache__/
+ml/models/*.joblib
+ml/models/model_version.txt
+__pycache__/
+*.pyc
