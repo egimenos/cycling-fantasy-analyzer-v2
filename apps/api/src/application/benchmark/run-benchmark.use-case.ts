@@ -7,6 +7,7 @@ import {
   RiderRepositoryPort,
   RIDER_REPOSITORY_PORT,
 } from '../../domain/rider/rider.repository.port';
+import { MlScoringPort, ML_SCORING_PORT } from '../../domain/scoring/ml-scoring.port';
 import { RaceType } from '../../domain/shared/race-type.enum';
 import { computeRiderScore } from '../../domain/scoring/scoring.service';
 import { computeSpearmanRho, computeRankings } from '../../domain/scoring/spearman-correlation';
@@ -30,6 +31,8 @@ export class RunBenchmarkUseCase {
     private readonly resultRepo: RaceResultRepositoryPort,
     @Inject(RIDER_REPOSITORY_PORT)
     private readonly riderRepo: RiderRepositoryPort,
+    @Inject(ML_SCORING_PORT)
+    private readonly mlScoring: MlScoringPort,
   ) {}
 
   async execute(input: RunBenchmarkInput): Promise<BenchmarkResult> {
@@ -94,11 +97,31 @@ export class RunBenchmarkUseCase {
       actualRank: actualRanks[i],
     }));
 
-    // 7. Compute Spearman rho
-    const rho = computeSpearmanRho(predictedScores, actualScores);
+    // 7. Compute rules-based Spearman rho
+    const rulesRho = computeSpearmanRho(predictedScores, actualScores);
+
+    // 8. ML predictions (stage races only)
+    let mlRho: number | null = null;
+    if (input.raceType === RaceType.GRAND_TOUR || input.raceType === RaceType.MINI_TOUR) {
+      try {
+        const mlPredictions = await this.mlScoring.predictRace(input.raceSlug, input.year);
+        if (mlPredictions) {
+          const mlScoreMap = new Map(mlPredictions.map((p) => [p.riderId, p.predictedScore]));
+          const mlScores = riderIds.map((id) => mlScoreMap.get(id) ?? 0);
+          mlRho = computeSpearmanRho(mlScores, actualScores);
+        }
+      } catch {
+        this.logger.warn(
+          `ML scoring unavailable for ${input.raceSlug} ${input.year} — skipping ML rho`,
+        );
+      }
+    }
+
+    // 9. Hybrid rho: ML for stage races, rules for classics
+    const hybridRho = mlRho !== null ? mlRho : rulesRho;
 
     this.logger.log(
-      `Benchmark ${input.raceSlug} ${input.year}: ${riderEntries.length} riders, rho=${rho?.toFixed(4) ?? 'null'}`,
+      `Benchmark ${input.raceSlug} ${input.year}: ${riderEntries.length} riders, rulesRho=${rulesRho?.toFixed(4) ?? 'null'}, mlRho=${mlRho?.toFixed(4) ?? 'null'}, hybridRho=${hybridRho?.toFixed(4) ?? 'null'}`,
     );
 
     return {
@@ -107,7 +130,9 @@ export class RunBenchmarkUseCase {
       year: input.year,
       raceType: input.raceType,
       riderResults: rankedEntries,
-      spearmanRho: rho,
+      rulesSpearmanRho: rulesRho,
+      mlSpearmanRho: mlRho,
+      hybridSpearmanRho: hybridRho,
       riderCount: riderEntries.length,
     };
   }
