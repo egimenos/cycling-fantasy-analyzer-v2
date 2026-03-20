@@ -17,6 +17,8 @@ interface RiderInputProps {
     budget: number,
     seasons: number,
     profileSummary?: ProfileSummary,
+    raceSlug?: string,
+    year?: number,
   ) => void;
   isLoading: boolean;
 }
@@ -56,7 +58,9 @@ export function RiderInput({ onAnalyze, isLoading }: RiderInputProps) {
     if (parsedRiders.length === 0) return;
     const profileSummary =
       profileState.status === 'success' ? profileState.data.profileSummary : undefined;
-    onAnalyze(parsedRiders, raceType, budget, seasons, profileSummary);
+    const raceSlug = profileState.status === 'success' ? profileState.data.raceSlug : undefined;
+    const year = profileState.status === 'success' ? profileState.data.year : undefined;
+    onAnalyze(parsedRiders, raceType, budget, seasons, profileSummary, raceSlug, year);
   };
 
   return (

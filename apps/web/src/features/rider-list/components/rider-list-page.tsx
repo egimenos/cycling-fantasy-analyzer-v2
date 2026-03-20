@@ -58,10 +58,20 @@ export function RiderListPage() {
       newBudget: number,
       seasons: number,
       profileSummary?: ProfileSummary,
+      raceSlug?: string,
+      year?: number,
     ) => {
       setBudget(newBudget);
       teamBuilder.clearAll();
-      void analyze({ riders: parsedRiders, raceType, budget: newBudget, seasons, profileSummary });
+      void analyze({
+        riders: parsedRiders,
+        raceType,
+        budget: newBudget,
+        seasons,
+        profileSummary,
+        raceSlug,
+        year,
+      });
     },
     [analyze, teamBuilder],
   );
