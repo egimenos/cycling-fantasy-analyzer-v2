@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { MlScoringPort, MlPrediction } from '../../domain/scoring/ml-scoring.port';
+import {
+  MlScoringPort,
+  MlPrediction,
+  RaceProfileSummary,
+} from '../../domain/scoring/ml-scoring.port';
 
 @Injectable()
 export class MlScoringAdapter implements MlScoringPort {
@@ -11,12 +15,20 @@ export class MlScoringAdapter implements MlScoringPort {
     this.baseUrl = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
   }
 
-  async predictRace(raceSlug: string, year: number): Promise<MlPrediction[] | null> {
+  async predictRace(
+    raceSlug: string,
+    year: number,
+    profileSummary?: RaceProfileSummary,
+  ): Promise<MlPrediction[] | null> {
     try {
+      const body: Record<string, unknown> = { race_slug: raceSlug, year };
+      if (profileSummary) {
+        body.profile_summary = profileSummary;
+      }
       const response = await fetch(`${this.baseUrl}/predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ race_slug: raceSlug, year }),
+        body: JSON.stringify(body),
         signal: AbortSignal.timeout(this.timeout),
       });
       if (!response.ok) return null;

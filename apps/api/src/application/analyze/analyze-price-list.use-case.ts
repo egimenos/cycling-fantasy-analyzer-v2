@@ -311,8 +311,19 @@ export class AnalyzePriceListUseCase {
       return new Map(cached.map((s) => [s.riderId, s.predictedScore]));
     }
 
-    // Cache miss — call ML service
-    const predictions = await this.mlScoring.predictRace(input.raceSlug, input.year);
+    // Cache miss — call ML service (pass race profile for v4 features)
+    const profileForMl = input.profileSummary
+      ? {
+          p1: input.profileSummary.p1Count ?? 0,
+          p2: input.profileSummary.p2Count ?? 0,
+          p3: input.profileSummary.p3Count ?? 0,
+          p4: input.profileSummary.p4Count ?? 0,
+          p5: input.profileSummary.p5Count ?? 0,
+          itt: input.profileSummary.ittCount ?? 0,
+          ttt: input.profileSummary.tttCount ?? 0,
+        }
+      : undefined;
+    const predictions = await this.mlScoring.predictRace(input.raceSlug, input.year, profileForMl);
     if (!predictions) {
       this.logger.warn(
         `ML predictRace returned null for ${input.raceSlug}/${input.year} — falling back to rules-based scoring`,

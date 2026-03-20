@@ -71,13 +71,14 @@ def predict_race(
     results_df: pd.DataFrame,
     startlists_df: pd.DataFrame,
     db_url: str,
+    race_profile: dict | None = None,
 ) -> list[dict]:
     """Generate predicted scores for all riders on a single race startlist.
 
     Steps:
         1. Look up race info (race_type, race_date) from the database.
         2. If classic -> return empty (not supported by ML models).
-        3. Extract 40 features per rider via extract_features_for_race().
+        3. Extract features per rider via extract_features_for_race().
         4. Select the appropriate model for the race_type.
         5. Run model.predict(X) where X = features[FEATURE_COLS].fillna(0).
         6. Return list of {rider_id, predicted_score} dicts.
@@ -89,6 +90,8 @@ def predict_race(
         results_df: Full results DataFrame (with pre-computed pts column).
         startlists_df: Full startlists DataFrame.
         db_url: PostgreSQL connection string (for get_race_info).
+        race_profile: Optional dict with target_flat_pct, target_mountain_pct,
+            target_itt_pct from PCS scrape. If None, computed from DB.
 
     Returns:
         List of {'rider_id': str, 'predicted_score': float} dicts.
@@ -113,7 +116,7 @@ def predict_race(
         logger.warning("No model loaded for race_type=%s", race_type)
         return []
 
-    # 4. Extract features
+    # 4. Extract features (with race profile for v4 features)
     features_df = extract_features_for_race(
         results_df=results_df,
         startlists_df=startlists_df,
@@ -121,6 +124,7 @@ def predict_race(
         race_year=year,
         race_type=race_type,
         race_date=race_date,
+        race_profile=race_profile,
     )
 
     if features_df.empty:
