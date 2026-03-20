@@ -7,6 +7,7 @@ Data-driven team selection tool for [Grandes miniVueltas](https://www.velogames.
 - **Node.js** 20+
 - **pnpm** 8+ (via `corepack enable`)
 - **Docker** (for PostgreSQL in development)
+- **Python** 3.12+ (optional, for ML scoring)
 
 ## Quick Start
 
@@ -54,6 +55,7 @@ Both are optional. If neither exists, built-in defaults apply.
 | `PORT`                 | `3001`                                                         | API server port                   |
 | `VITE_API_URL`         | `http://localhost:3001`                                        | API URL for frontend              |
 | `PCS_REQUEST_DELAY_MS` | `1500`                                                         | Delay between PCS scrape requests |
+| `ML_SERVICE_URL`       | `http://localhost:8000`                                        | ML scoring microservice URL       |
 
 > **Note:** If you have a `DATABASE_URL` already exported in your shell (e.g. from another project), it will take precedence over `.env` files. Use `.env.local` or `unset DATABASE_URL` to fix this.
 
@@ -78,6 +80,11 @@ A `Makefile` provides shortcuts for all common operations. Run `make help` to se
 | `make seed`            | Re-seed database from PCS                |
 | `make benchmark`       | Run single-race scoring benchmark        |
 | `make benchmark-suite` | Run multi-race benchmark suite           |
+| `make retrain`         | Train/retrain ML models from DB data     |
+| `make ml-up`           | Start ML scoring service (Docker)        |
+| `make ml-down`         | Stop ML scoring service                  |
+| `make ml-logs`         | Tail ML service logs                     |
+| `make ml-restart`      | Restart ML service                       |
 
 ### CLI Commands
 
@@ -111,6 +118,50 @@ The benchmark compares predicted rider scores (based on historical data) against
 
 **Tuning workflow**: Change a weight in `scoring-weights.config.ts` → re-run `make benchmark-suite` → see if ρ goes up or down.
 
+## ML Scoring (Optional)
+
+The project includes an optional Python ML microservice that improves scoring accuracy for stage races (mini tours and grand tours) using Random Forest models trained on historical data. When the ML service is running, stage race scoring uses a hybrid approach (ML predictions + rules-based); for classics, rules-based scoring is always used.
+
+**ML scoring is optional.** The API works without it and falls back to rules-based scoring for all race types.
+
+### Setup
+
+```bash
+# 1. Create Python virtual environment
+cd ml
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# 2. Train models (requires seeded database)
+make retrain
+
+# 3. Start the ML service
+make ml-up
+
+# 4. Verify it is running
+curl http://localhost:8000/health
+# → {"status":"healthy","model_version":"...","models_loaded":["mini_tour","grand_tour"]}
+```
+
+### Commands
+
+| Command           | Description                                                 |
+| ----------------- | ----------------------------------------------------------- |
+| `make retrain`    | Train RF models from database data, outputs to `ml/models/` |
+| `make ml-up`      | Start the ML scoring service (FastAPI on port 8000)         |
+| `make ml-down`    | Stop the ML scoring service                                 |
+| `make ml-logs`    | Tail logs from the ML service container                     |
+| `make ml-restart` | Restart the ML service (picks up new models)                |
+
+### Retraining
+
+Models should be retrained weekly to incorporate newly scraped race data. The `make retrain` command extracts features from the database, trains per-type Random Forest models, and writes them to `ml/models/`. The service hot-reloads new models without a restart.
+
+### Architecture
+
+The ML service runs as an internal FastAPI microservice on the Docker network. The TypeScript API calls it via HTTP (`ML_SERVICE_URL` env var). Predictions are cached in the `ml_scores` database table to avoid redundant computation. See [`docs/adr/2026-03-20-ml-scoring-python-addition.md`](docs/adr/2026-03-20-ml-scoring-python-addition.md) for the full architecture decision record.
+
 ## Project Structure
 
 ```
@@ -120,7 +171,7 @@ cycling-analyzer-v2/
 │   │   ├── src/
 │   │   │   ├── domain/          # Entities, value objects, ports
 │   │   │   ├── application/     # Use cases (analyze, optimize, scraping)
-│   │   │   ├── infrastructure/  # DB adapters, scraping, matching
+│   │   │   ├── infrastructure/  # DB adapters, scraping, matching, ML client
 │   │   │   └── presentation/    # Controllers, CLI commands
 │   │   └── drizzle/             # Migrations
 │   └── web/          # React frontend (Feature-Sliced Design)
@@ -128,6 +179,10 @@ cycling-analyzer-v2/
 │           ├── features/        # rider-list, optimizer, team-builder
 │           ├── shared/          # UI primitives, utilities, API client
 │           └── routes/          # TanStack Router pages
+├── ml/               # Python ML scoring microservice
+│   ├── src/          # FastAPI app, feature extraction, prediction
+│   ├── tests/        # pytest test suite
+│   └── models/       # Trained model files (gitignored)
 ├── packages/
 │   └── shared-types/ # DTOs, enums shared between API and web
 ├── docker/           # Dockerfiles for containerized builds

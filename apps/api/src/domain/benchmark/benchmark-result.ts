@@ -15,12 +15,16 @@ export interface BenchmarkResult {
   readonly year: number;
   readonly raceType: RaceType;
   readonly riderResults: ReadonlyArray<RiderBenchmarkEntry>;
-  readonly spearmanRho: number | null;
+  readonly rulesSpearmanRho: number | null;
+  readonly mlSpearmanRho: number | null;
+  readonly hybridSpearmanRho: number | null;
   readonly riderCount: number;
 }
 
 export interface BenchmarkSuiteResult {
   readonly races: ReadonlyArray<BenchmarkResult>;
-  readonly meanSpearmanRho: number | null;
+  readonly meanRulesRho: number | null;
+  readonly meanMlRho: number | null;
+  readonly meanHybridRho: number | null;
   readonly raceCount: number;
 }
