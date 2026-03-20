@@ -268,11 +268,11 @@
 
 ### Included Subtasks
 
-- [ ] T029 Install `@inquirer/prompts` dependency in `apps/api`
-- [ ] T029b Add `findDistinctRacesWithDate()` to `RaceResultRepositoryPort` and adapter (needed by CLI for race selection)
-- [ ] T030 Create `BenchmarkCommand` — interactive CLI with nest-commander + inquirer prompts
-- [ ] T031 Create `BenchmarkModule` — NestJS module with all DI providers for benchmark feature
-- [ ] T032 Register `BenchmarkModule` in `AppModule` and verify CLI entry point picks it up
+- [x] T029 Install `@inquirer/prompts` dependency in `apps/api`
+- [x] T029b Add `findDistinctRacesWithDate()` to `RaceResultRepositoryPort` and adapter (needed by CLI for race selection)
+- [x] T030 Create `BenchmarkCommand` — interactive CLI with nest-commander + inquirer prompts
+- [x] T031 Create `BenchmarkModule` — NestJS module with all DI providers for benchmark feature
+- [x] T032 Register `BenchmarkModule` in `AppModule` and verify CLI entry point picks it up
 
 ### Implementation Notes
 

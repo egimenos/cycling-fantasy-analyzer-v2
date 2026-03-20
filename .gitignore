@@ -47,3 +47,4 @@ Thumbs.db
 skills-lock.json
 ml/.venv/
 ml/data/*.csv
+ml/src/__pycache__/
