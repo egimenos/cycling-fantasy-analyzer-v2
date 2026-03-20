@@ -8,7 +8,8 @@ Step-by-step guide to set up the dev environment, seed the database, and operate
 | ------- | ----------- | ------------------------------ |
 | Node.js | 20+         | LTS recommended                |
 | pnpm    | 8+          | Activate via `corepack enable` |
-| Docker  | 24+         | PostgreSQL only                |
+| Docker  | 24+         | PostgreSQL + ML service        |
+| Python  | 3.12+       | ML scoring only (optional)     |
 
 ---
 
@@ -218,9 +219,102 @@ CLI commands use `dist/cli.js` (compiled output), not TypeScript source directly
 
 ---
 
-## 6. Scoring Benchmark
+## 6. ML Scoring (Optional)
 
-The benchmark measures how well the scoring algorithm predicts real race outcomes. It compares predicted `totalProjectedPts` (from historical data) against actual points generated in a race, using Spearman rank correlation (ρ).
+ML scoring enhances predictions for stage races (mini tours and grand tours) using a Random Forest model. It runs as an internal Python FastAPI microservice. The API falls back to rules-based scoring when the ML service is unavailable, so ML setup is entirely optional.
+
+### Python setup (one-time)
+
+```bash
+cd ml
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Train the model
+
+```bash
+# Train RF models using all historical data in the DB
+make retrain
+# Output: ml/models/model_mini_tour.joblib, model_grand_tour.joblib, model_version.txt
+```
+
+Training requires a seeded database (`make seed` must have run first). Takes ~5-10 minutes.
+
+### Start the ML service
+
+```bash
+# Via Docker (recommended — matches production)
+make ml-up
+
+# Verify it's running
+curl http://localhost:8000/health
+# → {"status": "healthy", "model_version": "20260320T030000", "models_loaded": ["mini_tour", "grand_tour"]}
+```
+
+Other ML service commands:
+
+```bash
+make ml-down      # Stop the service
+make ml-logs      # Tail service logs
+make ml-restart   # Restart (picks up new models after retrain)
+```
+
+### How it works
+
+1. User requests analysis of a stage race via the API
+2. API checks `ml_scores` cache → if cached for current model version, returns immediately
+3. Cache miss → API calls ML service (`POST /predict`) → service extracts features, predicts, caches, returns
+4. API enriches response with `scoringMethod: "hybrid"` and `mlPredictedScore`
+5. For classic races: ML service is never called, `scoringMethod: "rules"`
+
+### Weekly retraining
+
+Set up a cron job (or Dokploy scheduled task) to retrain weekly:
+
+```bash
+# Example cron (Sundays 3am)
+0 3 * * 0 cd /path/to/project && make retrain && make ml-restart
+```
+
+The ML service hot-reloads new models automatically (checks `model_version.txt` on each request), so `make ml-restart` is optional but ensures a clean state.
+
+### Cache invalidation
+
+The cache auto-invalidates in two cases:
+
+- **Model retrained**: new `model_version` → old cached predictions are stale → re-predicted on next request
+- **Startlist changed**: ML service compares cached rider IDs with current startlist → mismatch → re-predicts
+
+### Troubleshooting
+
+```bash
+# ML service won't start
+make ml-logs                    # Check for errors
+curl http://localhost:8000/health  # Should return JSON
+
+# "no_model" status
+make retrain                    # Train models first
+
+# Predictions seem wrong
+make benchmark-suite            # Compare rules vs ML rho
+# ML rho should be ~0.52 (mini tours) / ~0.59 (grand tours)
+```
+
+### Configuration
+
+| Variable         | Default                    | Description             |
+| ---------------- | -------------------------- | ----------------------- |
+| `ML_SERVICE_URL` | `http://localhost:8000`    | ML service base URL     |
+| `DATABASE_URL`   | `postgresql://cycling:...` | Shared with API + ML    |
+| `MODEL_DIR`      | `ml/models/`               | Model storage directory |
+
+---
+
+## 7. Scoring Benchmark
+
+The benchmark measures how well the scoring algorithm predicts real race outcomes using Spearman rank correlation (ρ). With ML scoring enabled, it shows three columns: rules-based, ML, and hybrid.
 
 ```bash
 # Single race — interactive selection
@@ -230,12 +324,25 @@ make benchmark
 make benchmark-suite
 ```
 
+Output (with ML service running):
+
+```
+Race                    │ Type       │ ρ Rules │ ρ ML   │ ρ Hybrid
+Tour de Suisse 2025     │ mini_tour  │ 0.3812  │ 0.5185 │ 0.5185
+Tour de France 2025     │ grand_tour │ 0.4521  │ 0.5872 │ 0.5872
+Milano-Sanremo 2025     │ classic    │ 0.3521  │ n/a    │ 0.3521
+MEAN                    │            │ 0.3951  │ 0.5529 │ 0.4859
+```
+
+If the ML service is down, ML and hybrid columns show "n/a" and the rules column works as before.
+
 **Tuning workflow:**
 
-1. Run `make benchmark-suite` → note baseline ρ
+1. Run `make benchmark-suite` → note baseline ρ (rules) and ML ρ
 2. Adjust a weight in `apps/api/src/domain/scoring/scoring-weights.config.ts`
 3. Re-run `make benchmark-suite` → compare ρ
 4. Keep if improved, revert if not
+5. For ML tuning: adjust features in `ml/src/features.py`, retrain with `make retrain`, re-benchmark
 
 ---
 
@@ -255,6 +362,11 @@ All commands available via `make help`. Most common:
 | Single race scrape | `make scrape RACE=<slug> YEAR=<year> TYPE=<type>` |
 | Benchmark          | `make benchmark`                                  |
 | Benchmark suite    | `make benchmark-suite`                            |
+| Train ML models    | `make retrain`                                    |
+| Start ML service   | `make ml-up`                                      |
+| Stop ML service    | `make ml-down`                                    |
+| ML service logs    | `make ml-logs`                                    |
+| Restart ML service | `make ml-restart`                                 |
 | DB GUI             | `make db-studio`                                  |
 | psql shell         | `make db-psql`                                    |
 | Tests              | `make test`                                       |
