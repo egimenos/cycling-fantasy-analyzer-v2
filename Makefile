@@ -15,8 +15,10 @@ install: ## Install all dependencies
 build: ## Build all packages
 	pnpm run build
 
-dev: ## Start API in watch mode
-	pnpm --filter @cycling-analyzer/api run dev
+dev: db-up ml-up ## Start all services (DB + ML + API + Web)
+	pnpm --filter @cycling-analyzer/api run dev & \
+	pnpm --filter @cycling-analyzer/web run dev & \
+	wait
 
 test: ## Run all tests
 	pnpm --filter @cycling-analyzer/api run test
