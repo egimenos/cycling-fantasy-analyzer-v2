@@ -1,0 +1,11 @@
+{
+  "feature_number": "008",
+  "slug": "008-complete-fantasy-scoring",
+  "feature_slug": "008-complete-fantasy-scoring",
+  "created_at": "2026-03-21T13:00:00Z",
+  "target_branch": "008-complete-fantasy-scoring",
+  "friendly_name": "Complete Fantasy Game Scoring Pipeline",
+  "mission": "software-dev",
+  "source_description": "Capture all missing game scoring categories (daily GC, mountain passes, intermediate sprints, daily regularidad) from PCS, update scoring tables, retrain ML model, evaluate ρ improvement",
+  "vcs": "git"
+}
