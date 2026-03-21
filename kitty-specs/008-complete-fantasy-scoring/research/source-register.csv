@@ -1,0 +1,18 @@
+id,type,location,description,accessed
+S001,code,ml/src/train.py,Model training script — RF params and training loop,2026-03-21
+S002,code,ml/src/features.py,Feature extraction — 49 features + FEATURE_COLS list,2026-03-21
+S003,code,ml/src/predict.py,Prediction pipeline — inference flow,2026-03-21
+S004,code,ml/src/data.py,Data loading from PostgreSQL,2026-03-21
+S005,code,ml/src/app.py,FastAPI serving — caching and hot-reload,2026-03-21
+S006,code,ml/src/retrain.py,Production retraining script,2026-03-21
+S007,code,ml/src/research_v3.py,V3 research — RF vs XGBoost comparison,2026-03-21
+S008,code,ml/src/research_v5.py,V5 research — continuous profile_score (NO-GO),2026-03-21
+S009,spec,kitty-specs/005-ml-scoring-feasibility-research/,Feasibility research spec and findings,2026-03-21
+S010,spec,kitty-specs/006-ml-scoring-stage-races/,Stage race ML scoring spec and plan,2026-03-21
+S011,report,ml/results/report_v3.md,V3 benchmark results and feature importance,2026-03-21
+S012,web,https://grandesminivueltas.com/index.php/normas/,Official game scoring rules — all point tables,2026-03-21
+S013,code,ml/src/points.py,Current scoring tables — matches game for captured categories,2026-03-21
+S014,code,kitty-specs/001-*/poc/poc-stage-race-full.mjs,POC scraper for stage race classifications,2026-03-21
+S015,scrape,PCS race/paris-nice/2026/stage-8,Live test — hidden tabs with daily GC/points/KOM data,2026-03-21
+S016,scrape,PCS race/tour-de-france/2024/stage-15,Live test — mountain pass headings with category/name/km + sprint intermediates,2026-03-21
+S017,db,PostgreSQL: SELECT DISTINCT category FROM race_results,Confirmed only 4 categories exist: stage gc mountain sprint,2026-03-21

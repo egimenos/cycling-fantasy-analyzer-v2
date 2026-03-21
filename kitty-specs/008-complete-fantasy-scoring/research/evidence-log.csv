@@ -1,0 +1,15 @@
+id,date,source,finding,impact,axis
+E001,2026-03-21,ml/src/research_v3.py,RF global ρ=0.4060 vs XGB ρ=0.3904 — RF wins with default params,RF chosen for production but XGB untested with tuning,A1
+E002,2026-03-21,ml/src/research_v3.py,"Per-type split: mini_tour ρ=0.52, grand_tour ρ=0.59, classic ρ=0.31",Classics excluded from ML; stage races are the target,A1
+E003,2026-03-21,ml/src/research_v5.py,Continuous profile_score (0-483) did not improve ρ over categorical P1-P5,V5 features abandoned; v4b (49 features) is production standard,A3
+E004,2026-03-21,ml/src/train.py,"RF params fixed: n_estimators=500, max_depth=14, min_samples_leaf=5 — no systematic tuning",Hyperparameter optimization is a low-hanging fruit,A1
+E005,2026-03-21,ml/src/features.py,"Feature importance: stage_pts_12m (0.14), win_rate (0.07), pts_total_12m (0.05) dominate",Top 3 features capture ~26% of importance; long tail may be noise,A3
+E006,2026-03-21,ml/src/features.py,"Evaluation is single-split (train 2023-24, test 2025) — no CV",ρ estimates may be noisy; need temporal CV for reliable comparison,A6
+E007,2026-03-21,memory/project_benchmark_findings.md,"Production v4b benchmarks: mini tour ρ=0.53, grand tour ρ=0.60",Current production baseline to beat,All
+E008,2026-03-21,ml/src/features.py,"Rider profile × race profile features exist separately but no explicit interaction terms",Tree models must learn interactions implicitly; explicit cross-terms may help,A3
+E009,2026-03-21,grandesminivueltas.com/normas,"Game scoring tables verified: stage (40/25/22), GC GT (150/125/100), daily GC (15/10/8), mountain passes HC (12/8/6), sprints (6/4/2)",Our points.py tables match for captured categories but we miss daily GC + passes + sprints,A0
+E010,2026-03-21,ml/src/points.py + DB query,"DB has only 4 categories: stage gc mountain sprint — all final classifications, no daily data",~35% of game scoring is missing from training target,A0
+E011,2026-03-21,PCS scrape test (paris-nice/2026/stage-8),"Stage page has 6 hidden tabs: GC daily, points/sprints, KOM/passes, youth, teams — all in one page",No extra HTTP requests needed; just parse hidden div.resTab tabs,A0
+E012,2026-03-21,PCS scrape test (tour-de-france/2024/stage-15),"Individual mountain pass headings contain category: 'KOM Sprint (HC) Plateau de Beille (197.7 km)', 'KOM Sprint (1) Col de Peyresourde (7 km)'",Can parse climb category (HC/1/2/3/4) and name from heading text,A0
+E013,2026-03-21,PCS scrape test (tour-de-france/2024/stage-15),"Sprint intermediate heading: 'Sprint | Marignac (37 km)' with rider positions and points",Can extract sprint location and positions from heading + table,A0
+E014,2026-03-21,PCS scrape test (tour-de-france/2024/stage-15),"KOM tab has 'Today' column showing points gained that day per rider, plus cumulative 'Pnt' column",Today column directly gives daily points for regularidad/KOM standings,A0
