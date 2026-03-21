@@ -189,10 +189,6 @@ function parsePointsTab(
   const sprints: ParsedResult[] = [];
   const regularidad: ParsedResult[] = [];
 
-  const allHeadings = collectHeadings(q, tab);
-  const sprintHeadings = allHeadings.filter((h) => SPRINT_INTERMEDIATE_RE.test(h));
-  const totalSprintsInStage = sprintHeadings.length;
-
   const subTables = q(tab).find('table.results').toArray();
 
   for (const table of subTables) {
@@ -218,7 +214,6 @@ function parsePointsTab(
             buildResult(rider, position, ResultCategory.SPRINT_INTERMEDIATE, stageNumber, {
               sprintName,
               kmMarker,
-              totalSprintsInStage,
             }),
           );
         });
@@ -323,7 +318,6 @@ interface BuildResultOptions {
   readonly climbName?: string;
   readonly sprintName?: string;
   readonly kmMarker?: number;
-  readonly totalSprintsInStage?: number;
 }
 
 function buildResult(
