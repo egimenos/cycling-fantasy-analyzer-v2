@@ -47,6 +47,10 @@ function makeResult(
     isTtt: false,
     profileScore: null,
     raceDate: 'raceDate' in overrides ? overrides.raceDate! : new Date('2025-03-15'),
+    climbCategory: null,
+    climbName: null,
+    sprintName: null,
+    kmMarker: null,
   });
 }
 

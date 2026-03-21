@@ -105,6 +105,10 @@ export class RaceResultRepositoryAdapter implements RaceResultRepositoryPort {
             isTtt: props.isTtt,
             profileScore: props.profileScore,
             raceDate: props.raceDate,
+            climbCategory: props.climbCategory,
+            climbName: props.climbName,
+            sprintName: props.sprintName,
+            kmMarker: props.kmMarker,
           })
           .onConflictDoUpdate({
             target: [
@@ -113,6 +117,8 @@ export class RaceResultRepositoryAdapter implements RaceResultRepositoryPort {
               raceResults.year,
               raceResults.category,
               raceResults.stageNumber,
+              raceResults.climbName,
+              raceResults.sprintName,
             ],
             set: {
               position: props.position,
@@ -123,6 +129,8 @@ export class RaceResultRepositoryAdapter implements RaceResultRepositoryPort {
               isTtt: props.isTtt,
               profileScore: props.profileScore,
               raceDate: props.raceDate,
+              climbCategory: props.climbCategory,
+              kmMarker: props.kmMarker,
             },
           });
         count++;
@@ -151,6 +159,10 @@ export class RaceResultRepositoryAdapter implements RaceResultRepositoryPort {
       isTtt: row.isTtt,
       profileScore: row.profileScore,
       raceDate: row.raceDate ?? null,
+      climbCategory: row.climbCategory ?? null,
+      climbName: row.climbName ?? null,
+      sprintName: row.sprintName ?? null,
+      kmMarker: row.kmMarker ?? null,
     } satisfies RaceResultProps);
   }
 }
