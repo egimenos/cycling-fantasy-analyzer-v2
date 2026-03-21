@@ -50,6 +50,13 @@
       "when": 1774025193608,
       "tag": "0006_ancient_triton",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1774125631874,
+      "tag": "0007_right_norman_osborn",
+      "breakpoints": true
     }
   ]
 }
