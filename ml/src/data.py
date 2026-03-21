@@ -16,6 +16,30 @@ import psycopg2
 from .points import get_points
 
 
+def get_sprint_count_per_stage(df: pd.DataFrame) -> dict[tuple[str, int, int], int]:
+    """Return the number of distinct intermediate sprints per stage.
+
+    Counts unique ``sprint_name`` values among ``sprint_intermediate`` rows
+    grouped by (race_slug, year, stage_number).  Stages without sprints are
+    simply absent from the returned dict, so callers should default to 1.
+
+    Args:
+        df: DataFrame with at least columns ``category``, ``race_slug``,
+            ``year``, ``stage_number``, and ``sprint_name``.
+
+    Returns:
+        Mapping from ``(race_slug, year, stage_number)`` to the number of
+        distinct sprints on that stage.
+    """
+    sprint_rows = df[df['category'] == 'sprint_intermediate']
+    if sprint_rows.empty:
+        return {}
+    counts = sprint_rows.groupby(
+        ['race_slug', 'year', 'stage_number']
+    )['sprint_name'].nunique()
+    return counts.to_dict()
+
+
 def load_data(db_url: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Load race results and startlist entries from the database.
 
@@ -32,6 +56,7 @@ def load_data(db_url: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
         SELECT rr.rider_id, rr.race_slug, rr.race_name, rr.race_type, rr.race_class,
                rr.year, rr.category, rr.position, rr.stage_number, rr.dnf,
                rr.race_date, rr.parcours_type, rr.is_itt, rr.is_ttt, rr.profile_score,
+               rr.climb_category, rr.sprint_name,
                r.full_name as rider_name, r.birth_date as rider_birth_date,
                r.current_team as rider_team
         FROM race_results rr
@@ -47,10 +72,23 @@ def load_data(db_url: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
 
     conn.close()
 
+    # Pre-compute sprint counts per stage (for multi-sprint reduced scoring)
+    sprint_counts = get_sprint_count_per_stage(results_df)
+
     # Pre-compute points
-    results_df['pts'] = results_df.apply(
-        lambda r: get_points(r['category'], r['position'], r['race_type']), axis=1
-    )
+    def _compute_pts(row):
+        sc = sprint_counts.get(
+            (row['race_slug'], row['year'], row['stage_number']), 1
+        )
+        return get_points(
+            row['category'],
+            row['position'],
+            row['race_type'],
+            climb_category=row.get('climb_category'),
+            sprint_count=sc,
+        )
+
+    results_df['pts'] = results_df.apply(_compute_pts, axis=1)
 
     birth_dates = results_df[['rider_id', 'rider_birth_date']].drop_duplicates()
     n_with_bd = birth_dates['rider_birth_date'].notna().sum()

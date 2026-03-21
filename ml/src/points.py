@@ -29,14 +29,40 @@ GC_GRAND_TOUR = {
 FINAL_CLASS_MINI = {1: 40, 2: 25, 3: 15}
 FINAL_CLASS_GT = {1: 50, 2: 35, 3: 25, 4: 15, 5: 10}
 
+GC_DAILY = {
+    1: 15, 2: 10, 3: 8, 4: 7, 5: 6,
+    6: 5, 7: 4, 8: 3, 9: 2, 10: 1,
+}
 
-def get_points(category: str, position, race_type: str) -> float:
+MOUNTAIN_PASS_HC = {1: 12, 2: 8, 3: 6, 4: 5, 5: 4, 6: 3, 7: 2, 8: 1}
+MOUNTAIN_PASS_CAT1 = {1: 8, 2: 6, 3: 4, 4: 2, 5: 1}
+MOUNTAIN_PASS_CAT2 = {1: 5, 2: 3, 3: 1}
+MOUNTAIN_PASS_CAT3 = {1: 3, 2: 2}
+MOUNTAIN_PASS_CAT4 = {1: 1}
+
+SPRINT_INTERMEDIATE_SINGLE = {1: 6, 2: 4, 3: 2}
+SPRINT_INTERMEDIATE_MULTI = {1: 3, 2: 2, 3: 1}
+
+REGULARIDAD_DAILY = {1: 6, 2: 4, 3: 2}
+
+
+def get_points(
+    category: str,
+    position,
+    race_type: str,
+    climb_category: str | None = None,
+    sprint_count: int = 1,
+) -> float:
     """Return points for a given (category, position, race_type) combination.
 
     Args:
-        category: One of 'stage', 'gc', 'mountain', 'sprint'.
+        category: One of 'stage', 'gc', 'mountain', 'sprint', 'gc_daily',
+            'mountain_pass', 'sprint_intermediate', 'regularidad_daily'.
         position: Finishing position (int or float). None/NaN/< 1 returns 0.
         race_type: One of 'classic', 'mini_tour', 'grand_tour'.
+        climb_category: For mountain_pass, one of 'HC', '1', '2', '3', '4'.
+        sprint_count: Number of intermediate sprints in the stage (>=2 uses
+            reduced multi-sprint table).
 
     Returns:
         Points as a float.
@@ -57,5 +83,25 @@ def get_points(category: str, position, race_type: str) -> float:
             return 0.0
         tbl = FINAL_CLASS_GT if race_type == 'grand_tour' else FINAL_CLASS_MINI
         return float(tbl.get(position, 0))
+
+    if category == 'gc_daily':
+        return float(GC_DAILY.get(position, 0))
+
+    if category == 'mountain_pass':
+        tbl = {
+            'HC': MOUNTAIN_PASS_HC,
+            '1': MOUNTAIN_PASS_CAT1,
+            '2': MOUNTAIN_PASS_CAT2,
+            '3': MOUNTAIN_PASS_CAT3,
+            '4': MOUNTAIN_PASS_CAT4,
+        }
+        return float(tbl.get(climb_category or '', {}).get(position, 0))
+
+    if category == 'sprint_intermediate':
+        tbl = SPRINT_INTERMEDIATE_SINGLE if sprint_count <= 1 else SPRINT_INTERMEDIATE_MULTI
+        return float(tbl.get(position, 0))
+
+    if category == 'regularidad_daily':
+        return float(REGULARIDAD_DAILY.get(position, 0))
 
     return 0.0
