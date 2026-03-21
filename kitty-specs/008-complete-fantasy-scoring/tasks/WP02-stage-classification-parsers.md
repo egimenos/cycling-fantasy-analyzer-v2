@@ -1,8 +1,11 @@
 ---
 work_package_id: WP02
 title: Stage Classification Parsers
-lane: planned
+lane: 'for_review'
 dependencies: [WP01]
+base_branch: 008-complete-fantasy-scoring-WP01
+base_commit: 5b2194a873f0ac0a436649837b2d077621e504f2
+created_at: '2026-03-21T20:51:02.718394+00:00'
 subtasks:
   - T004
   - T005
@@ -12,8 +15,8 @@ subtasks:
   - T009
 phase: Phase 1 - Core Parsing
 assignee: ''
-agent: ''
-shell_pid: ''
+agent: 'claude-opus'
+shell_pid: '61220'
 review_status: ''
 reviewed_by: ''
 history:
@@ -227,3 +230,5 @@ _[This section is empty initially.]_
 ## Activity Log
 
 - 2026-03-21T13:44:59Z – system – lane=planned – Prompt created.
+- 2026-03-21T20:51:03Z – claude-opus – shell_pid=61220 – lane=doing – Assigned agent via workflow command
+- 2026-03-21T20:57:20Z – claude-opus – shell_pid=61220 – lane=for_review – All parsers implemented with 10/10 tests passing. Daily GC, mountain passes, intermediate sprints, daily regularidad.

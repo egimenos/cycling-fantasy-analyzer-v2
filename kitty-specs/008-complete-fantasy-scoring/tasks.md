@@ -52,12 +52,12 @@
 
 ### Included Subtasks
 
-- [ ] T004 Create tab coordinator that iterates hidden `div.resTab` elements and dispatches to type-specific parsers
-- [ ] T005 Implement `parseDailyGC()` — Tab 1: extract top 10 GC standings after stage
-- [ ] T006 Implement `parseMountainPasses()` — Tab 3: regex extract category (HC/1/2/3/4), name, km from headings; parse rider positions per pass
-- [ ] T007 Implement `parseIntermediateSprints()` — Tab 2: match `"Sprint | Location"` headings, skip `"Points at finish"`; detect single vs multi-sprint stages
-- [ ] T008 [P] Save PCS HTML fixtures for TdF 2024 stage 15 (mountain) and Paris-Nice 2026 stage 1 (flat) for testing
-- [ ] T009 Unit tests for all parsers using saved fixtures
+- [x] T004 Create tab coordinator that iterates hidden `div.resTab` elements and dispatches to type-specific parsers
+- [x] T005 Implement `parseDailyGC()` — Tab 1: extract top 10 GC standings after stage
+- [x] T006 Implement `parseMountainPasses()` — Tab 3: regex extract category (HC/1/2/3/4), name, km from headings; parse rider positions per pass
+- [x] T007 Implement `parseIntermediateSprints()` — Tab 2: match `"Sprint | Location"` headings, skip `"Points at finish"`; detect single vs multi-sprint stages
+- [x] T008 [P] Save PCS HTML fixtures for TdF 2024 stage 15 (mountain) and Paris-Nice 2026 stage 1 (flat) for testing
+- [x] T009 Unit tests for all parsers using saved fixtures
 
 ### Implementation Notes
 
@@ -93,10 +93,10 @@
 
 ### Included Subtasks
 
-- [ ] T010 Extend scraping use case to call tab coordinator for each stage page already fetched
-- [ ] T011 Map parser output to `race_results` entity and persist via repository (match `riderSlug` → `rider_id`)
-- [ ] T012 Handle edge cases: missing tabs (old races), cancelled stages, TTT stages, empty classifications
-- [ ] T013 Integration test: seed one race end-to-end, assert all category types present with plausible row counts
+- [x] T010 Extend scraping use case to call tab coordinator for each stage page already fetched
+- [x] T011 Map parser output to `race_results` entity and persist via repository (match `riderSlug` → `rider_id`)
+- [x] T012 Handle edge cases: missing tabs (old races), cancelled stages, TTT stages, empty classifications
+- [x] T013 Integration test: seed one race end-to-end, assert all category types present with plausible row counts
 
 ### Implementation Notes
 
@@ -130,11 +130,11 @@
 
 ### Included Subtasks
 
-- [ ] T014 Add scoring tables to `ml/src/points.py`: `GC_DAILY`, `MOUNTAIN_PASS_HC`, `MOUNTAIN_PASS_CAT1-4`, `SPRINT_INTERMEDIATE_SINGLE`, `SPRINT_INTERMEDIATE_MULTI`, `REGULARIDAD_DAILY`
-- [ ] T015 Update `get_points()` to route new categories to correct tables; handle `climb_category` param for mountain passes; handle single/multi sprint detection
-- [ ] T016 Update `ml/src/data.py` SQL query to load new categories from `race_results`
-- [ ] T017 Add `sprint_count_per_stage` helper to detect multi-sprint stages from data
-- [ ] T018 Tests for all new scoring logic — 100% coverage on scoring tables per constitution
+- [x] T014 Add scoring tables to `ml/src/points.py`: `GC_DAILY`, `MOUNTAIN_PASS_HC`, `MOUNTAIN_PASS_CAT1-4`, `SPRINT_INTERMEDIATE_SINGLE`, `SPRINT_INTERMEDIATE_MULTI`, `REGULARIDAD_DAILY`
+- [x] T015 Update `get_points()` to route new categories to correct tables; handle `climb_category` param for mountain passes; handle single/multi sprint detection
+- [x] T016 Update `ml/src/data.py` SQL query to load new categories from `race_results`
+- [x] T017 Add `sprint_count_per_stage` helper to detect multi-sprint stages from data
+- [x] T018 Tests for all new scoring logic — 100% coverage on scoring tables per constitution
 
 ### Implementation Notes
 

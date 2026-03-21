@@ -1,8 +1,11 @@
 ---
 work_package_id: WP04
 title: ML Scoring Tables
-lane: planned
+lane: 'for_review'
 dependencies: [WP01]
+base_branch: 008-complete-fantasy-scoring-WP01
+base_commit: 5b2194a873f0ac0a436649837b2d077621e504f2
+created_at: '2026-03-21T21:01:02.358530+00:00'
 subtasks:
   - T014
   - T015
@@ -11,8 +14,8 @@ subtasks:
   - T018
 phase: Phase 2 - ML Pipeline
 assignee: ''
-agent: ''
-shell_pid: ''
+agent: 'claude-opus'
+shell_pid: '69424'
 review_status: ''
 reviewed_by: ''
 history:
@@ -211,3 +214,5 @@ _[This section is empty initially.]_
 ## Activity Log
 
 - 2026-03-21T13:44:59Z – system – lane=planned – Prompt created.
+- 2026-03-21T21:01:03Z – claude-opus – shell_pid=69424 – lane=doing – Assigned agent via workflow command
+- 2026-03-21T21:04:04Z – claude-opus – shell_pid=69424 – lane=for_review – All scoring tables + tests. 100% coverage on points.py (106 tests pass).

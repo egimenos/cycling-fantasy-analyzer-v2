@@ -1,8 +1,11 @@
 ---
 work_package_id: WP03
 title: Seed Pipeline Integration
-lane: planned
+lane: 'for_review'
 dependencies: [WP02]
+base_branch: 008-complete-fantasy-scoring-WP02
+base_commit: 309a3d6f67ab18e740425da75e29724dfbc84082
+created_at: '2026-03-21T21:01:07.900835+00:00'
 subtasks:
   - T010
   - T011
@@ -10,8 +13,8 @@ subtasks:
   - T013
 phase: Phase 1 - Core Parsing
 assignee: ''
-agent: ''
-shell_pid: ''
+agent: 'claude-opus'
+shell_pid: '69805'
 review_status: ''
 reviewed_by: ''
 history:
@@ -138,3 +141,5 @@ _[This section is empty initially.]_
 ## Activity Log
 
 - 2026-03-21T13:44:59Z – system – lane=planned – Prompt created.
+- 2026-03-21T21:01:08Z – claude-opus – shell_pid=69805 – lane=doing – Assigned agent via workflow command
+- 2026-03-21T21:07:30Z – claude-opus – shell_pid=69805 – lane=for_review – Seed pipeline extended with stage classification parsing
