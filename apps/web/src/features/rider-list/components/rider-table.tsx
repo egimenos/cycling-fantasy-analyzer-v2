@@ -6,7 +6,7 @@ import { MlBadge } from '@/shared/ui/ml-badge';
 import { Badge } from '@/shared/ui/badge';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { formatNumber, cn } from '@/shared/lib/utils';
-import { Lock, Unlock, XCircle, ExternalLink } from 'lucide-react';
+import { Lock, Unlock, XCircle, ExternalLink, Info } from 'lucide-react';
 
 interface RiderTableProps {
   data: AnalyzeResponse;
@@ -19,14 +19,27 @@ interface RiderTableProps {
   canSelect: (riderName: string) => boolean;
 }
 
-function findMaxScore(riders: AnalyzedRider[]): number {
+function getEffectiveScore(rider: AnalyzedRider, hasML: boolean): number | null {
+  if (hasML && rider.mlPredictedScore !== null) return rider.mlPredictedScore;
+  return rider.totalProjectedPts;
+}
+
+function findMaxEffectiveScore(riders: AnalyzedRider[], hasML: boolean): number {
   let max = 0;
   for (const r of riders) {
-    if (r.totalProjectedPts !== null && r.totalProjectedPts > max) {
-      max = r.totalProjectedPts;
-    }
+    const score = getEffectiveScore(r, hasML);
+    if (score !== null && score > max) max = score;
   }
   return max || 100;
+}
+
+function HeaderWithTooltip({ label, tooltip }: { label: string; tooltip: string }) {
+  return (
+    <span className="inline-flex items-center gap-1" title={tooltip}>
+      {label}
+      <Info className="h-3 w-3 text-muted-foreground/60" />
+    </span>
+  );
 }
 
 function createColumns(
@@ -95,54 +108,46 @@ function createColumns(
     },
     {
       accessorKey: 'priceHillios',
-      header: 'Price (H)',
+      header: () => <HeaderWithTooltip label="Price (H)" tooltip="Fantasy game price in Hillios" />,
       enableSorting: true,
       cell: ({ getValue }) => formatNumber(getValue<number>()),
     },
     {
-      accessorKey: 'totalProjectedPts',
-      header: 'Score',
+      id: 'effectiveScore',
+      accessorFn: (row) => getEffectiveScore(row, hasML),
+      header: () =>
+        hasML ? (
+          <span className="inline-flex items-center gap-1.5">
+            <HeaderWithTooltip
+              label="Score"
+              tooltip="ML-predicted fantasy points based on rider form, race profile, and historical data"
+            />
+            <MlBadge />
+          </span>
+        ) : (
+          <HeaderWithTooltip
+            label="Score"
+            tooltip="Projected fantasy points based on weighted historical results"
+          />
+        ),
       enableSorting: true,
       cell: ({ row, table }) => {
         if (row.original.unmatched) {
           return <span className="text-muted-foreground">---</span>;
         }
-        const maxScore = findMaxScore(table.getCoreRowModel().rows.map((r) => r.original));
-        return (
-          <div className="flex items-center gap-1.5">
-            <ScoreBadge score={row.original.totalProjectedPts} maxScore={maxScore} />
-            {row.original.scoringMethod === 'hybrid' && <MlBadge />}
-          </div>
+        const maxScore = findMaxEffectiveScore(
+          table.getCoreRowModel().rows.map((r) => r.original),
+          hasML,
         );
+        const score = getEffectiveScore(row.original, hasML);
+        return <ScoreBadge score={score} maxScore={maxScore} />;
       },
     },
-    ...(hasML
-      ? [
-          {
-            accessorKey: 'mlPredictedScore',
-            header: 'ML Score',
-            enableSorting: true,
-            cell: ({ row }: { row: Row<AnalyzedRider> }) => {
-              if (row.original.unmatched) {
-                return <span className="text-muted-foreground">---</span>;
-              }
-              if (row.original.scoringMethod !== 'hybrid') {
-                return <span className="text-muted-foreground">---</span>;
-              }
-              return row.original.mlPredictedScore !== null ? (
-                <span className="text-sm font-medium">
-                  {row.original.mlPredictedScore.toFixed(1)}
-                </span>
-              ) : (
-                <span className="text-sm text-muted-foreground">n/a</span>
-              );
-            },
-          } satisfies ColumnDef<AnalyzedRider, unknown>,
-        ]
-      : []),
     {
       accessorKey: 'pointsPerHillio',
-      header: 'Pts/H',
+      header: () => (
+        <HeaderWithTooltip label="Pts/H" tooltip="Points per Hillio — value for money ratio" />
+      ),
       enableSorting: true,
       cell: ({ getValue, row }) => {
         if (row.original.unmatched) return <span className="text-muted-foreground">---</span>;
@@ -199,7 +204,7 @@ function createColumns(
   ];
 }
 
-function ExpandedRowContent({ rider }: { rider: AnalyzedRider }) {
+function ExpandedRowContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boolean }) {
   if (rider.unmatched) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -210,40 +215,39 @@ function ExpandedRowContent({ rider }: { rider: AnalyzedRider }) {
 
   return (
     <div className="space-y-3">
-      {/* Weighted totals */}
-      <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-3 lg:grid-cols-6">
-        {rider.categoryScores && (
-          <>
+      {/* Rules-based breakdown */}
+      {rider.categoryScores && (
+        <div>
+          <h4 className="mb-1.5 text-xs font-medium text-muted-foreground">
+            Rules-Based Breakdown
+            {hasML && rider.mlPredictedScore !== null && (
+              <span className="ml-2 font-normal">
+                (total: {rider.totalProjectedPts?.toFixed(1)} pts)
+              </span>
+            )}
+          </h4>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-4">
             <ScoreDetail label="GC" value={rider.categoryScores.gc} />
             <ScoreDetail label="Stage" value={rider.categoryScores.stage} />
             <ScoreDetail label="Mountain" value={rider.categoryScores.mountain} />
             <ScoreDetail label="Sprint" value={rider.categoryScores.sprint} />
-          </>
-        )}
-        {rider.totalProjectedPts !== null && (
-          <ScoreDetail label="Total Projected" value={rider.totalProjectedPts} />
-        )}
-        {rider.compositeScore !== null && (
-          <ScoreDetail label="Composite" value={rider.compositeScore} />
-        )}
-        {rider.scoringMethod === 'hybrid' && (
-          <div className="flex items-center gap-1.5">
-            <div>
-              <span className="text-xs text-muted-foreground">ML Predicted</span>
-              {rider.mlPredictedScore !== null ? (
-                <p className="text-sm font-medium">{rider.mlPredictedScore.toFixed(1)} pts</p>
-              ) : (
-                <p className="text-sm text-muted-foreground">n/a</p>
-              )}
-            </div>
-            <MlBadge className="mt-3" />
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* ML score in detail if available */}
+      {hasML && rider.mlPredictedScore !== null && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">ML Predicted:</span>
+          <span className="text-sm font-medium">{rider.mlPredictedScore.toFixed(1)} pts</span>
+          <MlBadge />
+        </div>
+      )}
 
       {/* Season breakdown table */}
       {rider.seasonBreakdown && rider.seasonBreakdown.length > 0 && (
         <div className="overflow-x-auto">
+          <h4 className="mb-1.5 text-xs font-medium text-muted-foreground">Season History</h4>
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
@@ -343,8 +347,10 @@ export function RiderTable({
       <DataTable<AnalyzedRider>
         columns={columns}
         data={data.riders}
-        initialSorting={[{ id: 'totalProjectedPts', desc: true }]}
-        renderExpandedRow={(row: Row<AnalyzedRider>) => <ExpandedRowContent rider={row.original} />}
+        initialSorting={[{ id: 'effectiveScore', desc: true }]}
+        renderExpandedRow={(row: Row<AnalyzedRider>) => (
+          <ExpandedRowContent rider={row.original} hasML={hasML} />
+        )}
         getRowClassName={(row: Row<AnalyzedRider>) => {
           if (lockedIds.has(row.original.rawName))
             return 'border-l-2 border-green-500 bg-green-50/30 dark:bg-green-950/10';
