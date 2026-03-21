@@ -1,20 +1,23 @@
 ---
 work_package_id: WP05
 title: ML Retrain & Benchmark
-lane: planned
+lane: 'for_review'
 dependencies:
   - WP03
   - WP04
+base_branch: 008-complete-fantasy-scoring-WP05-merge-base
+base_commit: 8f67c4409d561d61fd308f6f796a15a1571b8143
+created_at: '2026-03-21T22:53:48.621073+00:00'
 subtasks:
-  - T019
-  - T020
-  - T021
-  - T022
-  - T023
+  - T019 # done — verified actual_pts includes all 8 categories
+  - T020 # done — saved benchmark_before_008.txt
+  - T021 # done — retrained models (version 20260321T234503)
+  - T022 # done — saved benchmark_after_008.txt
+  - T023 # done — updated research.md and evidence-log.csv
 phase: Phase 3 - Evaluation
 assignee: ''
-agent: ''
-shell_pid: ''
+agent: 'claude-opus'
+shell_pid: '92366'
 review_status: ''
 reviewed_by: ''
 history:
@@ -154,3 +157,5 @@ _[This section is empty initially.]_
 ## Activity Log
 
 - 2026-03-21T13:44:59Z – system – lane=planned – Prompt created.
+- 2026-03-21T22:53:49Z – claude-opus – shell_pid=92366 – lane=doing – Assigned agent via workflow command
+- 2026-03-22T01:00:00Z – claude-opus – shell_pid=92366 – lane=for_review – All subtasks done. mini_tour rho 0.4950->0.6256, grand_tour rho 0.6564->0.7678. Both targets exceeded.

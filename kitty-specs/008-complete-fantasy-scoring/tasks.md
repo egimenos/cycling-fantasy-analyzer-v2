@@ -169,11 +169,11 @@
 
 ### Included Subtasks
 
-- [ ] T019 Update `ml/src/features.py` `actual_pts` calculation to sum ALL 8 categories (not just 4)
-- [ ] T020 Save current model benchmark results as "before" baseline
-- [ ] T021 Retrain models with corrected target (`make retrain`)
-- [ ] T022 Run benchmark suite on 2025 holdout, compare ρ per race type (mini_tour, grand_tour)
-- [ ] T023 Document results in `kitty-specs/008-complete-fantasy-scoring/research.md` — update baseline table
+- [x] T019 Update `ml/src/features.py` `actual_pts` calculation to sum ALL 8 categories (not just 4)
+- [x] T020 Save current model benchmark results as "before" baseline
+- [x] T021 Retrain models with corrected target (`make retrain`)
+- [x] T022 Run benchmark suite on 2025 holdout, compare ρ per race type (mini_tour, grand_tour)
+- [x] T023 Document results in `kitty-specs/008-complete-fantasy-scoring/research.md` — update baseline table
 
 ### Implementation Notes
 
