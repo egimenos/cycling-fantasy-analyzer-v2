@@ -32,7 +32,6 @@ export interface AnalyzeInput {
   riders: PriceListEntryDto[];
   raceType: RaceType;
   budget: number;
-  seasons?: number;
   profileSummary?: ProfileSummary;
   raceSlug?: string;
   year?: number;
@@ -133,7 +132,7 @@ export class AnalyzePriceListUseCase {
     }
 
     const currentYear = new Date().getFullYear();
-    const maxSeasons = input.seasons ?? 3;
+    const maxSeasons = 5;
     const profileDistribution = input.profileSummary
       ? ProfileDistribution.fromProfileSummary(input.profileSummary)
       : null;

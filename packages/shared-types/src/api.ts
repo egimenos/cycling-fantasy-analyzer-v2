@@ -50,7 +50,6 @@ export interface AnalyzeRequest {
   riders: PriceListEntryDto[];
   raceType: RaceType;
   budget: number;
-  seasons?: number;
   profileSummary?: ProfileSummary;
   raceSlug?: string;
   year?: number;

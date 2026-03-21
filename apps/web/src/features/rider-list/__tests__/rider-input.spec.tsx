@@ -92,7 +92,9 @@ describe('RiderInput', () => {
       [{ name: 'Pogačar', team: 'UAE', price: 700 }],
       'grand_tour',
       2000,
-      3,
+      undefined,
+      undefined,
+      undefined,
     );
   });
 

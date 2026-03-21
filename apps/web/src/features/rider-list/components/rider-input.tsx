@@ -4,7 +4,6 @@ import { RaceType } from '@cycling-analyzer/shared-types';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
 import { Loader2, Download } from 'lucide-react';
 import { useRaceProfile } from '../hooks/use-race-profile';
@@ -16,7 +15,6 @@ interface RiderInputProps {
     riders: PriceListEntryDto[],
     raceType: RaceType,
     budget: number,
-    seasons: number,
     profileSummary?: ProfileSummary,
     raceSlug?: string,
     year?: number,
@@ -48,7 +46,6 @@ export function RiderInput({ onAnalyze, isLoading }: RiderInputProps) {
   const [importStatus, setImportStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [importError, setImportError] = useState('');
   const [budget, setBudget] = useState(2000);
-  const [seasons, setSeasons] = useState(3);
 
   const profileState = useRaceProfile(raceUrl);
   const raceType =
@@ -79,7 +76,7 @@ export function RiderInput({ onAnalyze, isLoading }: RiderInputProps) {
       profileState.status === 'success' ? profileState.data.profileSummary : undefined;
     const raceSlug = profileState.status === 'success' ? profileState.data.raceSlug : undefined;
     const year = profileState.status === 'success' ? profileState.data.year : undefined;
-    onAnalyze(parsedRiders, raceType, budget, seasons, profileSummary, raceSlug, year);
+    onAnalyze(parsedRiders, raceType, budget, profileSummary, raceSlug, year);
   };
 
   return (
@@ -189,24 +186,6 @@ export function RiderInput({ onAnalyze, isLoading }: RiderInputProps) {
             onChange={(e) => setBudget(Number(e.target.value))}
             placeholder="Budget in Hillios"
           />
-        </div>
-
-        <div className="min-w-[120px]">
-          <label htmlFor="seasons" className="mb-1.5 block text-sm font-medium">
-            Seasons
-          </label>
-          <Select value={String(seasons)} onValueChange={(v) => setSeasons(Number(v))}>
-            <SelectTrigger id="seasons">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1">1 (current)</SelectItem>
-              <SelectItem value="2">2</SelectItem>
-              <SelectItem value="3">3</SelectItem>
-              <SelectItem value="4">4</SelectItem>
-              <SelectItem value="5">5</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         <Button onClick={handleSubmit} disabled={parsedRiders.length === 0 || isLoading}>

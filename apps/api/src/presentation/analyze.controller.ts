@@ -8,7 +8,6 @@ import {
   IsOptional,
   IsInt,
   Min,
-  Max,
   ArrayMinSize,
   ValidateNested,
 } from 'class-validator';
@@ -85,12 +84,6 @@ class AnalyzeRequestDto {
   budget!: number;
 
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(5)
-  seasons?: number;
-
-  @IsOptional()
   @ValidateNested()
   @Type(() => ProfileSummaryDto)
   profileSummary?: ProfileSummaryDto;
@@ -115,7 +108,6 @@ export class AnalyzeController {
       riders: dto.riders,
       raceType: dto.raceType,
       budget: dto.budget,
-      seasons: dto.seasons,
       profileSummary: dto.profileSummary,
       raceSlug: dto.raceSlug,
       year: dto.year,
