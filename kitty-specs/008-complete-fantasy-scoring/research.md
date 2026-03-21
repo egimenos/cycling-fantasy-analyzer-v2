@@ -57,16 +57,18 @@ Our `points.py` scoring tables are correct for the categories we capture, but we
 
 All missing data is available on PCS stage pages **in a single HTTP request per stage**, inside hidden `div.resTab` tabs:
 
-| Tab             | Content                                                | How to identify                                                                            |
-| --------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| Tab 0 (visible) | Stage result                                           | Already scraped                                                                            |
-| Tab 1 (hidden)  | GC after stage                                         | Headers include "Time won/lost"                                                            |
-| Tab 2 (hidden)  | Points/Regularidad — general + daily                   | Heading contains "Sprint" or sprint location                                               |
-| Tab 3 (hidden)  | KOM/Mountain — general + daily + **individual passes** | Headings like `"KOM Sprint (HC) Plateau de Beille"`, `"KOM Sprint (1) Col de Peyresourde"` |
-| Tab 4 (hidden)  | Youth + TTT                                            | Low priority                                                                               |
-| Tab 5 (hidden)  | Teams classification                                   | Not needed                                                                                 |
+| Tab             | Content                                                     | How to identify                                                                                                                                          |
+| --------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tab 0 (visible) | Stage result                                                | Already scraped                                                                                                                                          |
+| Tab 1 (hidden)  | GC after stage                                              | Headers include "Time won/lost"                                                                                                                          |
+| Tab 2 (hidden)  | Points/Regularidad — general + daily + intermediate sprints | Subtabs with headings: `"Sprint \| Location (km)"` = intermediate sprint (CAPTURE), `"Points at finish"` = stage result points (SKIP — already in Tab 0) |
+| Tab 3 (hidden)  | KOM/Mountain — general + daily + **individual passes**      | Headings like `"KOM Sprint (HC) Plateau de Beille"`, `"KOM Sprint (1) Col de Peyresourde"`                                                               |
+| Tab 4 (hidden)  | Youth + TTT                                                 | Low priority                                                                                                                                             |
+| Tab 5 (hidden)  | Teams classification                                        | Not needed                                                                                                                                               |
 
 **Key finding**: Individual mountain pass results include the **category (HC, 1, 2, 3, 4)** in the heading and rider positions with points in the "Today" column. Sprint intermediates similarly have location and points.
+
+**Important**: Tab 2 (Points) contains both intermediate sprints AND "Points at finish" subtabs. The "Points at finish" data duplicates what we already capture as stage results — **skip it**. Only parse subtabs with heading `"Sprint | <location>"` for intermediate sprints.
 
 ### Implementation Approach
 
