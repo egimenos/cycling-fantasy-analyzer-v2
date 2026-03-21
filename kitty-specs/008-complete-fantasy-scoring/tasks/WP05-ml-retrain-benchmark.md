@@ -159,3 +159,4 @@ _[This section is empty initially.]_
 - 2026-03-21T13:44:59Z – system – lane=planned – Prompt created.
 - 2026-03-21T22:53:49Z – claude-opus – shell_pid=92366 – lane=doing – Assigned agent via workflow command
 - 2026-03-22T01:00:00Z – claude-opus – shell_pid=92366 – lane=for_review – All subtasks done. mini_tour rho 0.4950->0.6256, grand_tour rho 0.6564->0.7678. Both targets exceeded.
+- 2026-03-21T23:57:47Z – claude-opus – shell_pid=92366 – lane=for_review – Moved to for_review
