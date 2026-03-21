@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import type { OptimizeRequest, OptimizeResponse } from '@cycling-analyzer/shared-types';
 import type { AsyncState } from '@/shared/lib/async-state';
 import { optimizeTeam } from '@/shared/lib/api-client';
+import { toast } from 'sonner';
 
 export function useOptimize() {
   const [state, setState] = useState<AsyncState<OptimizeResponse>>({ status: 'idle' });
@@ -15,6 +16,7 @@ export function useOptimize() {
       setState({ status: 'success', data: response.data });
     } else {
       setState({ status: 'error', error: response.error });
+      toast.error('Optimization failed', { description: response.error });
     }
   }, []);
 

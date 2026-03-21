@@ -20,9 +20,10 @@ async function apiPost<TReq, TRes>(path: string, body: TReq): Promise<ApiResult<
 
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}));
-      const message =
-        (errorBody as { message?: string }).message ??
-        `Request failed with status ${response.status}`;
+      const raw = (errorBody as { message?: string | string[] }).message;
+      const message = Array.isArray(raw)
+        ? (raw[0] ?? 'Validation error')
+        : (raw ?? `Request failed with status ${response.status}`);
       return { status: 'error', error: message };
     }
 
