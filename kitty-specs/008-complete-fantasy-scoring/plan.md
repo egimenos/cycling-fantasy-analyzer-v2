@@ -1,109 +1,166 @@
-# Implementation Plan: [FEATURE]
+# Implementation Plan: Complete Fantasy Game Scoring Pipeline
 
-_Path: [templates/plan-template.md](templates/plan-template.md)_
-
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/kitty-specs/[###-feature-name]/spec.md`
-
-**Note**: This template is filled in by the `/spec-kitty.plan` command. See `src/specify_cli/missions/software-dev/command-templates/plan.md` for the execution workflow.
-
-The planner will not begin until all planning questions have been answered—capture those answers in this document before progressing to later phases.
+**Branch**: `008-complete-fantasy-scoring` | **Date**: 2026-03-21 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `kitty-specs/008-complete-fantasy-scoring/spec.md`
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Extend the existing PCS scraper to parse hidden classification tabs (daily GC, mountain passes, intermediate sprints, daily regularidad) from stage pages already being fetched. Add new scoring tables to `points.py`, migrate the DB schema with new category values and optional metadata columns, run a full seed backfill (2022–present), retrain the ML model on the corrected target variable, and benchmark Spearman ρ improvement.
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
-
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: TypeScript (NestJS backend, strict mode) + Python 3.11 (ML service)
+**Primary Dependencies**: NestJS, Cheerio (parsing), Drizzle ORM (migrations), scikit-learn (ML), got-scraping (HTTP)
+**Storage**: PostgreSQL 16 (existing `race_results` table extended)
+**Testing**: Jest (backend unit), Vitest (frontend), pytest (ML)
+**Target Platform**: Linux server (Dokploy VPS), Docker Compose locally
+**Project Type**: Monorepo (Turborepo) — `apps/api`, `apps/web`, `ml/`
+**Performance Goals**: Seed backfill ~462 stage pages at 1.5s throttle ≈ 12 min. No API latency impact (scraping is async CLI).
+**Constraints**: PCS rate limiting (1.5s between requests). Scraping is CLI/cron only (no REST endpoints per security policy).
+**Scale/Scope**: ~35K new DB rows from backfill. Single-user tool.
 
 ## Constitution Check
 
 _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-[Gates determined based on constitution file]
+| Principle                   | Status | Notes                                                                                              |
+| --------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
+| DDD/Hexagonal Architecture  | PASS   | Parser lives in infrastructure layer, scoring in domain, use case orchestrates                     |
+| English only                | PASS   | All code, comments, docs in English                                                                |
+| TypeScript strict mode      | PASS   | Backend changes follow strict mode                                                                 |
+| Python (ML service)         | NOTED  | Constitution says "No Python in v1" but ML service already exists in production (v2). No conflict. |
+| Scraping: CLI/cron only     | PASS   | Seed runs via CLI command, no REST endpoint for scraping                                           |
+| Scoring logic 100% coverage | PASS   | New scoring tables in `points.py` and domain scoring service must have full test coverage          |
+| Conventional Commits        | PASS   | All commits follow convention                                                                      |
+
+**No violations. Proceeding.**
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```
-kitty-specs/[###-feature]/
-├── plan.md              # This file (/spec-kitty.plan command output)
-├── research.md          # Phase 0 output (/spec-kitty.plan command)
-├── data-model.md        # Phase 1 output (/spec-kitty.plan command)
-├── quickstart.md        # Phase 1 output (/spec-kitty.plan command)
-├── contracts/           # Phase 1 output (/spec-kitty.plan command)
-└── tasks.md             # Phase 2 output (/spec-kitty.tasks command - NOT created by /spec-kitty.plan)
+kitty-specs/008-complete-fantasy-scoring/
+├── spec.md              # Feature specification
+├── plan.md              # This file
+├── research.md          # Phase 0 research (completed during discovery)
+├── data-model.md        # Data model (completed during discovery)
+├── meta.json            # Feature metadata
+├── checklists/
+│   └── requirements.md  # Spec quality checklist
+└── research/
+    ├── evidence-log.csv
+    └── source-register.csv
 ```
 
-### Source Code (repository root)
-
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
+### Source Code (affected paths)
 
 ```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
+apps/api/src/
+├── infrastructure/
+│   └── scraping/
+│       └── parsers/              # Extended: new stage classification parsers
+├── domain/
+│   └── scoring/
+│       └── scoring.service.ts    # Extended: new category scoring
+├── application/
+│   └── scraping/                 # Extended: seed use case handles new categories
+└── cli.ts                        # Existing seed-database command (no changes expected)
 
-tests/
-├── contract/
-├── integration/
-└── unit/
+ml/src/
+├── points.py                     # Extended: new scoring tables
+├── features.py                   # Extended: actual_pts includes all categories
+├── data.py                       # Extended: query loads new categories
+└── retrain.py                    # No changes expected (reads from DB)
 
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+apps/api/drizzle/
+└── XXXX_add_stage_classifications.sql  # New migration
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Extends existing monorepo structure. No new packages or services. Parser additions follow the existing infrastructure/scraping/parsers/ pattern. ML changes are contained within `ml/src/`.
+
+## Architecture
+
+### Phase Dependency Graph
+
+```
+[1] DB Migration (new columns + category values)
+        │
+        ▼
+[2] Parser Extensions (parse hidden tabs) ──────┐
+        │                                        │
+        ▼                                        ▼
+[3] Scoring Tables (points.py)          [4] Seed Backfill (run by user)
+        │                                        │
+        ▼                                        ▼
+[5] ML Target Update (features.py + data.py)
+        │
+        ▼
+[6] Retrain + Benchmark (evaluate ρ)
+```
+
+### Key Design Decisions
+
+**D1: Extend `race_results` table vs new table**
+
+- Decision: Extend `race_results` with new `category` values and nullable metadata columns
+- Rationale: Same entity (rider result in a scoring context), avoids JOIN complexity in ML data loading. Nullable columns add minimal overhead for existing rows.
+- Alternative rejected: Separate `stage_classifications` table — adds JOIN complexity to every ML query and the scoring service for little benefit.
+
+**D2: Parser approach — one function per tab vs unified parser**
+
+- Decision: One parser function per classification type (daily GC, mountain passes, sprints), called from a coordinator that iterates tabs
+- Rationale: Each tab has different heading formats and extraction logic. Separate functions are easier to test and debug independently.
+
+**D3: Mountain pass category extraction**
+
+- Decision: Regex on heading text: `/KOM Sprint \((HC|[1-4])\)\s+(.+?)\s*\((\d+(?:\.\d+)?)\s*km\)/`
+- Rationale: PCS headings follow consistent format verified across multiple races (TdF 2024, Paris-Nice 2026). Regex captures category, name, and km in one pass.
+
+**D4: Sprint intermediate detection**
+
+- Decision: Match headings starting with `"Sprint |"`, skip `"Points at finish"` subtabs
+- Rationale: "Points at finish" duplicates stage results already captured. Only intermediate sprint headings contain location data.
+
+**D5: Multi-sprint point reduction**
+
+- Decision: Count sprint subtabs per stage. If >1 sprint, use reduced table (3/2/1); if exactly 1, use full table (6/4/2)
+- Rationale: Matches official game rules for stages with multiple intermediate sprints.
+
+### Data Flow
+
+```
+PCS stage page HTML (already fetched by existing scraper)
+    │
+    ├─ Tab 0 [visible] ──→ parseStageResults()        [EXISTS]
+    ├─ Tab 1 [hidden]  ──→ parseDailyGC()             [NEW] → race_results (category='gc_daily', top 10)
+    ├─ Tab 2 [hidden]  ──→ parseIntermediateSprints()  [NEW] → race_results (category='sprint_intermediate')
+    │                      (skip "Points at finish")
+    ├─ Tab 3 [hidden]  ──→ parseMountainPasses()       [NEW] → race_results (category='mountain_pass')
+    │                      + parseKomDaily()            [NEW] → race_results (category='regularidad_daily' concept via KOM today)
+    └─ Tab 4/5         ──→ skip (youth/teams)
+
+                            │
+                            ▼
+                     race_results table
+                            │
+                            ▼
+              points.py: get_points() extended
+                            │
+                            ▼
+              features.py: actual_pts = SUM(all categories)
+                            │
+                            ▼
+              train.py → model retrained
+                            │
+                            ▼
+              benchmark: compare ρ before/after
+```
 
 ## Complexity Tracking
 
-_Fill ONLY if Constitution Check has violations that must be justified_
+No constitution violations to justify.
 
-| Violation                  | Why Needed         | Simpler Alternative Rejected Because |
-| -------------------------- | ------------------ | ------------------------------------ |
-| [e.g., 4th project]        | [current need]     | [why 3 projects insufficient]        |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient]  |
+---
+
+_STOP: Plan complete. Run `/spec-kitty.tasks` to generate work packages._
