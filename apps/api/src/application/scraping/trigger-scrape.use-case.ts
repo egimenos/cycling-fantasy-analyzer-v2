@@ -28,6 +28,7 @@ import {
 import { parseClassicResults } from '../../infrastructure/scraping/parsers/classic.parser';
 import { parseRaceDate } from '../../infrastructure/scraping/parsers/race-date.parser';
 import { ParsedResult } from '../../infrastructure/scraping/parsers/parsed-result.type';
+import { parseStageClassifications } from '../../infrastructure/scraping/parsers/stage-classifications.parser';
 import {
   validateClassificationResults,
   validateStageRaceCompleteness,
@@ -277,6 +278,47 @@ export class TriggerScrapeUseCase {
         type: classUrl.classificationType,
         stageNumber: classUrl.stageNumber ?? undefined,
       });
+
+      // For stage pages, also extract daily classifications from hidden tabs
+      if (classUrl.classificationType === 'STAGE' && classUrl.stageNumber != null) {
+        try {
+          const stageClassifications = parseStageClassifications(html, classUrl.stageNumber);
+
+          const classificationResults = [
+            ...stageClassifications.dailyGC,
+            ...stageClassifications.mountainPasses,
+            ...stageClassifications.intermediateSprints,
+            ...stageClassifications.dailyRegularidad,
+          ];
+
+          // Stamp raceDate on classification results (same date as the stage)
+          const classificationResultsWithDate = classificationResults.map((r) => ({
+            ...r,
+            raceDate: resultDate,
+          }));
+
+          const gcCount = stageClassifications.dailyGC.length;
+          const mtCount = stageClassifications.mountainPasses.length;
+          const spCount = stageClassifications.intermediateSprints.length;
+          const rgCount = stageClassifications.dailyRegularidad.length;
+
+          if (classificationResultsWithDate.length > 0) {
+            allResults.push(...classificationResultsWithDate);
+            this.logger.log(
+              `Stage ${classUrl.stageNumber}: ${gcCount} GC daily, ${mtCount} mountain passes, ${spCount} sprints, ${rgCount} regularidad`,
+            );
+          } else {
+            this.logger.warn(
+              `Stage ${classUrl.stageNumber}: no daily classifications found (old race or missing tabs)`,
+            );
+          }
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          this.logger.warn(
+            `Stage ${classUrl.stageNumber}: failed to parse daily classifications — ${msg}`,
+          );
+        }
+      }
     }
 
     // Backfill GC/classification results with the last stage date (final race day)
@@ -410,6 +452,10 @@ export class TriggerScrapeUseCase {
           isTtt: r.isTtt,
           profileScore: r.profileScore,
           raceDate: r.raceDate ?? null,
+          climbCategory: r.climbCategory ?? null,
+          climbName: r.climbName ?? null,
+          sprintName: r.sprintName ?? null,
+          kmMarker: r.kmMarker ?? null,
         }),
       );
 

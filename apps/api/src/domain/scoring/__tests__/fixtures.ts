@@ -47,5 +47,9 @@ export function createRaceResult(overrides: RaceResultOverrides = {}): RaceResul
     isTtt: overrides.isTtt ?? false,
     profileScore: overrides.profileScore === undefined ? null : overrides.profileScore,
     raceDate: overrides.raceDate === undefined ? null : overrides.raceDate,
+    climbCategory: null,
+    climbName: null,
+    sprintName: null,
+    kmMarker: null,
   });
 }

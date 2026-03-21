@@ -22,6 +22,10 @@ export interface RaceResultProps {
   readonly isTtt: boolean;
   readonly profileScore: number | null;
   readonly raceDate: Date | null;
+  readonly climbCategory: string | null;
+  readonly climbName: string | null;
+  readonly sprintName: string | null;
+  readonly kmMarker: number | null;
 }
 
 export class RaceResult {
@@ -101,6 +105,22 @@ export class RaceResult {
 
   get raceDate(): Date | null {
     return this.props.raceDate;
+  }
+
+  get climbCategory(): string | null {
+    return this.props.climbCategory;
+  }
+
+  get climbName(): string | null {
+    return this.props.climbName;
+  }
+
+  get sprintName(): string | null {
+    return this.props.sprintName;
+  }
+
+  get kmMarker(): number | null {
+    return this.props.kmMarker;
   }
 
   isScoring(): boolean {

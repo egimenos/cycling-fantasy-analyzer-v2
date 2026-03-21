@@ -63,6 +63,68 @@ function makeResultHtml(riderCount: number): string {
     <tbody>${rows}</tbody></table></div></body></html>`;
 }
 
+/**
+ * Build stage HTML that includes hidden classification tabs (daily GC, mountain, sprint).
+ * The first resTab is visible (stage results), hidden tabs contain daily classifications.
+ */
+function makeStageHtmlWithClassificationTabs(riderCount: number): string {
+  const stageRows = Array.from(
+    { length: riderCount },
+    (_, i) =>
+      `<tr><td>${i + 1}</td><td><a href="rider/rider-${i + 1}">Rider ${i + 1}</a></td><td><a href="team/team-${i + 1}">Team ${i + 1}</a></td></tr>`,
+  ).join('');
+
+  // Hidden GC tab with "Time won/lost" header
+  const gcRows = Array.from(
+    { length: 10 },
+    (_, i) =>
+      `<tr><td>${i + 1}</td><td><a href="rider/rider-${i + 1}">Rider ${i + 1}</a></td><td><a href="team/team-${i + 1}">Team ${i + 1}</a></td><td>+0:${String(i).padStart(2, '0')}</td></tr>`,
+  ).join('');
+
+  // Hidden mountain tab with a KOM Sprint heading
+  const mountainRows = Array.from(
+    { length: 5 },
+    (_, i) =>
+      `<tr><td>${i + 1}</td><td><a href="rider/rider-${i + 1}">Rider ${i + 1}</a></td><td><a href="team/team-${i + 1}">Team ${i + 1}</a></td></tr>`,
+  ).join('');
+
+  // Hidden points tab with sprint and regularidad data
+  const sprintRows = Array.from(
+    { length: 3 },
+    (_, i) =>
+      `<tr><td>${i + 1}</td><td><a href="rider/rider-${i + 1}">Rider ${i + 1}</a></td><td><a href="team/team-${i + 1}">Team ${i + 1}</a></td></tr>`,
+  ).join('');
+
+  const regulRows = Array.from(
+    { length: 10 },
+    (_, i) =>
+      `<tr><td>${i + 1}</td><td><a href="rider/rider-${i + 1}">Rider ${i + 1}</a></td><td><a href="team/team-${i + 1}">Team ${i + 1}</a></td><td>${50 - i * 5}</td><td>${10 - i}</td></tr>`,
+  ).join('');
+
+  return `<html><body>
+    <div class="resTab"><table class="results">
+      <thead><tr><th>Rnk</th><th>Rider</th><th>Team</th></tr></thead>
+      <tbody>${stageRows}</tbody></table></div>
+    <div class="resTab hide">
+      <table class="results">
+        <thead><tr><th>Rnk</th><th>Rider</th><th>Team</th><th>Time won/lost</th></tr></thead>
+        <tbody>${gcRows}</tbody></table></div>
+    <div class="resTab hide">
+      <h3>KOM Sprint (1) Col du Test (45.2 km)</h3>
+      <table class="results">
+        <thead><tr><th>Rnk</th><th>Rider</th><th>Team</th></tr></thead>
+        <tbody>${mountainRows}</tbody></table></div>
+    <div class="resTab hide">
+      <h3>Sprint | Test Sprint (80.5 km)</h3>
+      <table class="results">
+        <thead><tr><th>Rnk</th><th>Rider</th><th>Team</th></tr></thead>
+        <tbody>${sprintRows}</tbody></table>
+      <table class="results">
+        <thead><tr><th>Rnk</th><th>Rider</th><th>Team</th><th>Pnt</th><th>Today</th></tr></thead>
+        <tbody>${regulRows}</tbody></table></div>
+    </body></html>`;
+}
+
 function makeGcPageWithSelectNav(): string {
   const gcHtml = makeResultHtml(150);
   const selectNav = `
@@ -256,5 +318,130 @@ describe('TriggerScrapeUseCase', () => {
       expect(r.toProps().raceSlug).toBe('milano-sanremo');
       expect(r.toProps().year).toBe(2024);
     }
+  });
+
+  describe('stage classification integration', () => {
+    it('should extract daily classifications from stage pages and include in results', async () => {
+      const gcHtml = makeGcPageWithSelectNav();
+      const stageHtml = makeStageHtmlWithClassificationTabs(150);
+      const plainHtml = makeResultHtml(150);
+
+      mockPcsClient.fetchPage.mockImplementation((path: string) => {
+        if (path.includes('/gc')) return Promise.resolve(gcHtml);
+        if (path.includes('stage-')) return Promise.resolve(stageHtml);
+        return Promise.resolve(plainHtml);
+      });
+
+      mockResultRepo.saveMany.mockResolvedValue(5000);
+
+      const result = await useCase.execute({
+        raceSlug: 'tour-de-france',
+        year: 2024,
+        raceMetadata: GRAND_TOUR_METADATA,
+      });
+
+      expect(result.status).toBe(ScrapeStatus.SUCCESS);
+
+      const savedResults = mockResultRepo.saveMany.mock.calls[0][0];
+      const categories = savedResults.map(
+        (r: { toProps: () => { category: string } }) => r.toProps().category,
+      );
+
+      // Should include the new daily classification categories
+      expect(categories).toContain(ResultCategory.GC_DAILY);
+      expect(categories).toContain(ResultCategory.MOUNTAIN_PASS);
+      expect(categories).toContain(ResultCategory.SPRINT_INTERMEDIATE);
+      expect(categories).toContain(ResultCategory.REGULARIDAD_DAILY);
+    });
+
+    it('should include climbCategory and climbName for mountain pass results', async () => {
+      const gcHtml = makeGcPageWithSelectNav();
+      const stageHtml = makeStageHtmlWithClassificationTabs(150);
+      const plainHtml = makeResultHtml(150);
+
+      mockPcsClient.fetchPage.mockImplementation((path: string) => {
+        if (path.includes('/gc')) return Promise.resolve(gcHtml);
+        if (path.includes('stage-')) return Promise.resolve(stageHtml);
+        return Promise.resolve(plainHtml);
+      });
+
+      mockResultRepo.saveMany.mockResolvedValue(5000);
+
+      await useCase.execute({
+        raceSlug: 'tour-de-france',
+        year: 2024,
+        raceMetadata: GRAND_TOUR_METADATA,
+      });
+
+      const savedResults = mockResultRepo.saveMany.mock.calls[0][0];
+      const mountainResults = savedResults.filter(
+        (r: { toProps: () => { category: string } }) =>
+          r.toProps().category === ResultCategory.MOUNTAIN_PASS,
+      );
+
+      expect(mountainResults.length).toBeGreaterThan(0);
+      for (const r of mountainResults) {
+        const props = r.toProps();
+        expect(props.climbCategory).toBe('1');
+        expect(props.climbName).toBe('Col du Test');
+        expect(props.kmMarker).toBe(45.2);
+      }
+    });
+
+    it('should include sprintName for sprint intermediate results', async () => {
+      const gcHtml = makeGcPageWithSelectNav();
+      const stageHtml = makeStageHtmlWithClassificationTabs(150);
+      const plainHtml = makeResultHtml(150);
+
+      mockPcsClient.fetchPage.mockImplementation((path: string) => {
+        if (path.includes('/gc')) return Promise.resolve(gcHtml);
+        if (path.includes('stage-')) return Promise.resolve(stageHtml);
+        return Promise.resolve(plainHtml);
+      });
+
+      mockResultRepo.saveMany.mockResolvedValue(5000);
+
+      await useCase.execute({
+        raceSlug: 'tour-de-france',
+        year: 2024,
+        raceMetadata: GRAND_TOUR_METADATA,
+      });
+
+      const savedResults = mockResultRepo.saveMany.mock.calls[0][0];
+      const sprintResults = savedResults.filter(
+        (r: { toProps: () => { category: string } }) =>
+          r.toProps().category === ResultCategory.SPRINT_INTERMEDIATE,
+      );
+
+      expect(sprintResults.length).toBeGreaterThan(0);
+      for (const r of sprintResults) {
+        const props = r.toProps();
+        expect(props.sprintName).toBe('Test Sprint');
+        expect(props.kmMarker).toBe(80.5);
+      }
+    });
+
+    it('should continue gracefully when parseStageClassifications returns empty arrays', async () => {
+      const gcHtml = makeGcPageWithSelectNav();
+      // Stage HTML with no hidden tabs — only visible results tab
+      const stageHtml = makeResultHtml(150);
+      const plainHtml = makeResultHtml(150);
+
+      mockPcsClient.fetchPage.mockImplementation((path: string) => {
+        if (path.includes('/gc')) return Promise.resolve(gcHtml);
+        return Promise.resolve(path.includes('stage-') ? stageHtml : plainHtml);
+      });
+
+      mockResultRepo.saveMany.mockResolvedValue(3600);
+
+      const result = await useCase.execute({
+        raceSlug: 'tour-de-france',
+        year: 2024,
+        raceMetadata: GRAND_TOUR_METADATA,
+      });
+
+      // Should still succeed without classification data
+      expect(result.status).toBe(ScrapeStatus.SUCCESS);
+    });
   });
 });

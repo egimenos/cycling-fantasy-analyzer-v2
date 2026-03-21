@@ -76,6 +76,10 @@ function createMockRaceResult(
     isTtt: false,
     profileScore: null,
     raceDate: null,
+    climbCategory: null,
+    climbName: null,
+    sprintName: null,
+    kmMarker: null,
   });
 }
 
