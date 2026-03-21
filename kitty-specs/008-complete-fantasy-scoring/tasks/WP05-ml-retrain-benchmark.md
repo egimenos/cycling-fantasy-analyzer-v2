@@ -4,6 +4,7 @@ title: ML Retrain & Benchmark
 lane: planned
 dependencies:
   - WP03
+  - WP04
 subtasks:
   - T019
   - T020

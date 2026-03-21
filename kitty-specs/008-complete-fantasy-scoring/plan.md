@@ -58,14 +58,18 @@ kitty-specs/008-complete-fantasy-scoring/
 ```
 apps/api/src/
 ├── infrastructure/
+│   ├── database/
+│   │   └── schema.ts             # Extended: new columns + category values
 │   └── scraping/
 │       └── parsers/              # Extended: new stage classification parsers
-├── domain/
-│   └── scoring/
-│       └── scoring.service.ts    # Extended: new category scoring
 ├── application/
 │   └── scraping/                 # Extended: seed use case handles new categories
 └── cli.ts                        # Existing seed-database command (no changes expected)
+
+# NOTE: domain/scoring/scoring.service.ts is NOT modified. The TS scoring
+# service computes projected scores from weighted historical results (stage,
+# gc, mountain, sprint) — a different computation from summing game points.
+# The new scoring categories only affect the ML training target (Python side).
 
 ml/src/
 ├── points.py                     # Extended: new scoring tables
@@ -135,9 +139,9 @@ PCS stage page HTML (already fetched by existing scraper)
     ├─ Tab 0 [visible] ──→ parseStageResults()        [EXISTS]
     ├─ Tab 1 [hidden]  ──→ parseDailyGC()             [NEW] → race_results (category='gc_daily', top 10)
     ├─ Tab 2 [hidden]  ──→ parseIntermediateSprints()  [NEW] → race_results (category='sprint_intermediate')
+    │                      + parseDailyRegularidad()   [NEW] → race_results (category='regularidad_daily', top 3 from "Today" column)
     │                      (skip "Points at finish")
     ├─ Tab 3 [hidden]  ──→ parseMountainPasses()       [NEW] → race_results (category='mountain_pass')
-    │                      + parseKomDaily()            [NEW] → race_results (category='regularidad_daily' concept via KOM today)
     └─ Tab 4/5         ──→ skip (youth/teams)
 
                             │

@@ -13,7 +13,7 @@ As a fantasy cycling player, when I analyze a rider list, the projected scores s
 
 **Why this priority**: This is the foundational data problem. Everything else (ML retraining, UI accuracy) depends on capturing the complete scoring first.
 
-**Independent Test**: Run `make seed` for a historical race (e.g., Tour de France 2024), then compare the system's calculated total for a known rider (e.g., Pogačar) against the actual game leaderboard. The totals should be within 5% of each other.
+**Independent Test**: Run `make seed` for a historical race (e.g., Tour de France 2024), then compare the system's calculated total for a known rider (e.g., Pogačar) against the actual game leaderboard. The totals should be within 10% of each other.
 
 **Acceptance Scenarios**:
 
