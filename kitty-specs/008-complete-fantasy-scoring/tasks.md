@@ -18,9 +18,9 @@
 
 ### Included Subtasks
 
-- [ ] T001 Add new columns to race_results Drizzle schema (`climb_category`, `climb_name`, `sprint_name`, `km_marker`)
-- [ ] T002 Add new category enum values (`gc_daily`, `mountain_pass`, `sprint_intermediate`, `regularidad_daily`)
-- [ ] T003 Generate and apply Drizzle migration
+- [x] T001 Add new columns to race_results Drizzle schema (`climb_category`, `climb_name`, `sprint_name`, `km_marker`)
+- [x] T002 Add new category enum values (`gc_daily`, `mountain_pass`, `sprint_intermediate`, `regularidad_daily`)
+- [x] T003 Generate and apply Drizzle migration
 
 ### Implementation Notes
 

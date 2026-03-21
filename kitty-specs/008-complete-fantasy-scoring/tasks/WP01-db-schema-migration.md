@@ -1,16 +1,19 @@
 ---
 work_package_id: WP01
 title: DB Schema Migration
-lane: planned
+lane: 'for_review'
 dependencies: []
+base_branch: 008-complete-fantasy-scoring
+base_commit: f85e4a4b177b7f07c938869c2fd511b00343dfc1
+created_at: '2026-03-21T20:38:17.339802+00:00'
 subtasks:
   - T001
   - T002
   - T003
 phase: Phase 0 - Foundation
 assignee: ''
-agent: ''
-shell_pid: ''
+agent: 'claude-opus'
+shell_pid: '54580'
 review_status: ''
 reviewed_by: ''
 history:
@@ -108,3 +111,5 @@ _[This section is empty initially.]_
 ## Activity Log
 
 - 2026-03-21T13:44:59Z – system – lane=planned – Prompt created.
+- 2026-03-21T20:38:18Z – claude-opus – shell_pid=54580 – lane=doing – Assigned agent via workflow command
+- 2026-03-21T20:41:33Z – claude-opus – shell_pid=54580 – lane=for_review – Schema migration ready: 4 new enum values, 4 new columns, updated unique constraint
