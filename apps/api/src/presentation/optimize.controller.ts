@@ -2,18 +2,17 @@ import { Controller, Post, Body, HttpException, HttpStatus } from '@nestjs/commo
 import {
   IsArray,
   IsNumber,
-  IsOptional,
   IsString,
+  IsBoolean,
   Min,
   ArrayMinSize,
   ValidateNested,
   IsNotEmpty,
+  Allow,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import {
-  OptimizeTeamUseCase,
-  OptimizeResponse,
-} from '../application/optimize/optimize-team.use-case';
+import { OptimizeTeamUseCase } from '../application/optimize/optimize-team.use-case';
+import { ScoredRider } from '../domain/optimizer/types';
 import {
   InsufficientRidersError,
   BudgetExceededByLockedRidersError,
@@ -21,51 +20,60 @@ import {
   RiderNotFoundError,
 } from '../domain/optimizer/errors';
 
-class CategoryScoresDto {
-  @IsNumber()
-  gc!: number;
+/* ── DTO: matches shared-types AnalyzedRider ─────────────── */
 
-  @IsNumber()
-  stage!: number;
-
-  @IsNumber()
-  mountain!: number;
-
-  @IsNumber()
-  sprint!: number;
-}
-
-class ScoredRiderDto {
+class AnalyzedRiderDto {
   @IsString()
   @IsNotEmpty()
-  id!: string;
+  rawName!: string;
 
   @IsString()
-  @IsNotEmpty()
-  name!: string;
+  rawTeam!: string;
 
   @IsNumber()
   @Min(1)
   priceHillios!: number;
 
-  @IsNumber()
-  totalProjectedPts!: number;
+  @Allow()
+  matchedRider!: unknown;
 
-  @IsOptional()
   @IsNumber()
-  mlPredictedScore?: number;
+  matchConfidence!: number;
 
-  @ValidateNested()
-  @Type(() => CategoryScoresDto)
-  categoryScores!: CategoryScoresDto;
+  @IsBoolean()
+  unmatched!: boolean;
+
+  @Allow()
+  compositeScore!: number | null;
+
+  @Allow()
+  pointsPerHillio!: number | null;
+
+  @Allow()
+  totalProjectedPts!: number | null;
+
+  @Allow()
+  categoryScores!: Record<string, number> | null;
+
+  @Allow()
+  seasonsUsed!: number | null;
+
+  @Allow()
+  seasonBreakdown!: unknown;
+
+  @Allow()
+  scoringMethod!: string;
+
+  @Allow()
+  mlPredictedScore!: number | null;
 }
 
 class OptimizeRequestDto {
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
-  @Type(() => ScoredRiderDto)
-  riders!: ScoredRiderDto[];
+  @Type(() => AnalyzedRiderDto)
+  riders!: AnalyzedRiderDto[];
 
   @IsNumber()
   @Min(1)
@@ -80,19 +88,48 @@ class OptimizeRequestDto {
   mustExclude!: string[];
 }
 
+/* ── Controller ──────────────────────────────────────────── */
+
 @Controller('api')
 export class OptimizeController {
   constructor(private readonly optimizeUseCase: OptimizeTeamUseCase) {}
 
   @Post('optimize')
-  optimize(@Body() dto: OptimizeRequestDto): OptimizeResponse {
+  optimize(@Body() dto: OptimizeRequestDto) {
+    const ridersByName = new Map(dto.riders.map((r) => [r.rawName, r]));
+
+    const scoredRiders: ScoredRider[] = dto.riders
+      .filter((r) => !r.unmatched && r.totalProjectedPts != null && r.categoryScores != null)
+      .map((r) => ({
+        id: r.rawName,
+        name: r.rawName,
+        priceHillios: r.priceHillios,
+        totalProjectedPts: r.totalProjectedPts!,
+        mlPredictedScore: r.mlPredictedScore ?? undefined,
+        categoryScores: r.categoryScores as ScoredRider['categoryScores'],
+      }));
+
     try {
-      return this.optimizeUseCase.execute({
-        riders: dto.riders,
+      const result = this.optimizeUseCase.execute({
+        riders: scoredRiders,
         budget: dto.budget,
         mustInclude: dto.mustInclude,
         mustExclude: dto.mustExclude,
       });
+
+      // Map domain ScoredRider back to AnalyzedRider for the frontend
+      const toAnalyzed = (r: ScoredRider) => ridersByName.get(r.id)!;
+
+      return {
+        optimalTeam: {
+          ...result.optimalTeam,
+          riders: result.optimalTeam.riders.map(toAnalyzed),
+        },
+        alternativeTeams: result.alternativeTeams.map((team) => ({
+          ...team,
+          riders: team.riders.map(toAnalyzed),
+        })),
+      };
     } catch (error) {
       if (error instanceof ConflictingConstraintsError) {
         throw new HttpException(error.message, HttpStatus.BAD_REQUEST);

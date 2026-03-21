@@ -13,13 +13,44 @@ describe('OptimizeController', () => {
   let controller: OptimizeController;
   let mockUseCase: jest.Mocked<Pick<OptimizeTeamUseCase, 'execute'>>;
 
+  const analyzedRider = {
+    rawName: 'Pogacar Tadej',
+    rawTeam: 'UAE',
+    priceHillios: 100,
+    matchedRider: {
+      id: 'pogacar-tadej',
+      pcsSlug: 'pogacar-tadej',
+      fullName: 'Tadej Pogacar',
+      currentTeam: 'UAE',
+    },
+    matchConfidence: 1,
+    unmatched: false,
+    compositeScore: 50,
+    pointsPerHillio: 0.5,
+    totalProjectedPts: 50,
+    categoryScores: { gc: 10, stage: 10, mountain: 10, sprint: 10 },
+    seasonsUsed: 3,
+    seasonBreakdown: [],
+    scoringMethod: 'rules' as const,
+    mlPredictedScore: null,
+  };
+
+  const domainRider = {
+    id: 'Pogacar Tadej',
+    name: 'Pogacar Tadej',
+    priceHillios: 100,
+    totalProjectedPts: 50,
+    mlPredictedScore: undefined,
+    categoryScores: { gc: 10, stage: 10, mountain: 10, sprint: 10 },
+  };
+
   const sampleResponse = {
     optimalTeam: {
-      riders: [],
-      totalCostHillios: 900,
-      totalProjectedPts: 500,
-      budgetRemaining: 100,
-      scoreBreakdown: { gc: 200, stage: 100, mountain: 50, sprint: 50 },
+      riders: [domainRider],
+      totalCostHillios: 100,
+      totalProjectedPts: 50,
+      budgetRemaining: 900,
+      scoreBreakdown: { gc: 10, stage: 10, mountain: 10, sprint: 10 },
     },
     alternativeTeams: [],
   };
@@ -41,17 +72,9 @@ describe('OptimizeController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('should call use case and return response', () => {
+  it('should map AnalyzedRider to ScoredRider and call use case', () => {
     const dto = {
-      riders: [
-        {
-          id: 'r1',
-          name: 'Rider 1',
-          priceHillios: 100,
-          totalProjectedPts: 50,
-          categoryScores: { gc: 10, stage: 10, mountain: 10, sprint: 10 },
-        },
-      ],
+      riders: [analyzedRider],
       budget: 1000,
       mustInclude: [] as string[],
       mustExclude: [] as string[],
@@ -61,12 +84,37 @@ describe('OptimizeController', () => {
     const result = controller.optimize(dto as any);
 
     expect(mockUseCase.execute).toHaveBeenCalledWith({
-      riders: dto.riders,
-      budget: dto.budget,
-      mustInclude: dto.mustInclude,
-      mustExclude: dto.mustExclude,
+      riders: [domainRider],
+      budget: 1000,
+      mustInclude: [],
+      mustExclude: [],
     });
-    expect(result).toEqual(sampleResponse);
+
+    // Response should map domain riders back to AnalyzedRider
+    expect(result.optimalTeam.riders).toEqual([analyzedRider]);
+  });
+
+  it('should filter out unmatched riders', () => {
+    const unmatchedRider = {
+      ...analyzedRider,
+      rawName: 'Unknown',
+      unmatched: true,
+      totalProjectedPts: null,
+      categoryScores: null,
+    };
+    const dto = {
+      riders: [analyzedRider, unmatchedRider],
+      budget: 1000,
+      mustInclude: [] as string[],
+      mustExclude: [] as string[],
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test DTO
+    controller.optimize(dto as any);
+
+    expect(mockUseCase.execute).toHaveBeenCalledWith(
+      expect.objectContaining({ riders: [domainRider] }),
+    );
   });
 
   it('should map InsufficientRidersError to 422', () => {
