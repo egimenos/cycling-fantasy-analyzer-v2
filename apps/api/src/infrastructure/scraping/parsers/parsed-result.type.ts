@@ -13,4 +13,8 @@ export interface ParsedResult {
   readonly isTtt: boolean;
   readonly profileScore: number | null;
   readonly raceDate: Date | null;
+  readonly climbCategory?: string | null;
+  readonly climbName?: string | null;
+  readonly sprintName?: string | null;
+  readonly kmMarker?: number | null;
 }
