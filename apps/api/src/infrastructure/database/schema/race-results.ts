@@ -40,14 +40,16 @@ export const raceResults = pgTable(
     kmMarker: real('km_marker'),
   },
   (table) => [
-    unique('race_results_unique').on(
-      table.riderId,
-      table.raceSlug,
-      table.year,
-      table.category,
-      table.stageNumber,
-      table.climbName,
-      table.sprintName,
-    ),
+    unique('race_results_unique')
+      .on(
+        table.riderId,
+        table.raceSlug,
+        table.year,
+        table.category,
+        table.stageNumber,
+        table.climbName,
+        table.sprintName,
+      )
+      .nullsNotDistinct(),
   ],
 );
