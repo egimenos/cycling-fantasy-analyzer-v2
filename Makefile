@@ -54,8 +54,11 @@ db-psql: ## Open psql shell to local DB
 # ── CLI Commands ──────────────────────────────────────────
 CLI = cd apps/api && npx ts-node -r tsconfig-paths/register src/cli.ts
 
-seed: ## Re-seed database from PCS (scrapes all configured races)
+seed: ## Re-seed database from PCS (scrapes all configured races, last 3 years)
 	$(CLI) seed-database
+
+seed-full: ## Full seed from 2022 to present (5 years)
+	$(CLI) seed-database --years 5
 
 scrape: ## Scrape a single race (usage: make scrape RACE=tour-de-france YEAR=2025 TYPE=grand_tour)
 	$(CLI) trigger-scrape -r $(RACE) -y $(YEAR) -t $(TYPE)
