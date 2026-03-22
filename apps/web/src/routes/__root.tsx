@@ -7,11 +7,16 @@ export const Route = createRootRoute({
 
 function RootLayout() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b bg-card px-6 py-4">
-        <h1 className="text-xl font-bold">Cycling Fantasy Optimizer</h1>
-      </header>
-      <main className="container mx-auto px-4 py-6">
+    <div className="min-h-screen bg-surface-dim text-on-surface">
+      <nav className="fixed top-0 w-full z-50 bg-surface-dim/70 backdrop-blur-md border-b border-outline-variant/15 shadow-sm shadow-black/20 flex justify-between items-center px-6 h-16">
+        <span className="text-xl font-black tracking-tighter text-on-surface uppercase italic font-headline">
+          CYCLING FANTASY OPTIMIZER
+        </span>
+        <div className="flex items-center gap-4">
+          {/* Theme toggle placeholder — dark-only for now */}
+        </div>
+      </nav>
+      <main className="pt-16">
         <Outlet />
       </main>
       <Toaster richColors position="top-right" />
