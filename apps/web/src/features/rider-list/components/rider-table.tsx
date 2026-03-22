@@ -194,7 +194,7 @@ function createColumns(
                 onToggleLock(name);
               }}
               className={cn(
-                'cursor-pointer hover:text-primary transition-colors',
+                'p-1.5 rounded-sm cursor-pointer hover:text-primary hover:bg-surface-container-highest transition-colors',
                 isLocked && 'text-secondary',
               )}
               aria-label={isLocked ? `Unlock ${name}` : `Lock ${name}`}
@@ -207,7 +207,7 @@ function createColumns(
                 onToggleExclude(name);
               }}
               className={cn(
-                'cursor-pointer hover:text-error transition-colors',
+                'p-1.5 rounded-sm cursor-pointer hover:text-error hover:bg-surface-container-highest transition-colors',
                 isExcluded && 'text-error',
               )}
               aria-label={isExcluded ? `Include ${name}` : `Exclude ${name}`}
