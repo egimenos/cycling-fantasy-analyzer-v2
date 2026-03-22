@@ -63,6 +63,7 @@ function createColumns(
             checked={isSelected || isLocked}
             disabled={disabled}
             onChange={() => onToggleSelect(name)}
+            onClick={(e) => e.stopPropagation()}
             className="h-4 w-4 bg-surface-dim border-outline-variant rounded-none checked:bg-primary"
             aria-label={`Select ${name}`}
           />
