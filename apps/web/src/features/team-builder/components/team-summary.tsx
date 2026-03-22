@@ -50,16 +50,16 @@ export function TeamSummary({
   return (
     <div className="space-y-10">
       {/* Success Banner */}
-      <div className="bg-green-900/20 border-l-4 border-green-500 p-6 rounded-sm flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="bg-green-500/10 dark:bg-green-900/20 border-l-4 border-green-500 p-6 rounded-sm flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="flex items-center gap-4">
-          <div className="bg-green-500 text-surface-dim p-2 rounded-full">
+          <div className="bg-green-500 text-white p-2 rounded-full">
             <CheckCircle className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="font-headline text-2xl font-extrabold tracking-tight text-green-100">
+            <h1 className="font-headline text-2xl font-extrabold tracking-tight text-green-800 dark:text-green-100">
               Team Complete!
             </h1>
-            <p className="text-green-200/60 text-sm">
+            <p className="text-green-700 dark:text-green-200/60 text-sm">
               Your roster is mathematically optimized for the upcoming stage.
             </p>
           </div>
@@ -135,7 +135,7 @@ export function TeamSummary({
                     <div className="text-[10px] text-on-primary-container font-mono uppercase">
                       Value
                     </div>
-                    <div className="font-mono text-green-400 font-bold">
+                    <div className="font-mono text-green-700 dark:text-green-400 font-bold">
                       {rider.pointsPerHillio?.toFixed(1) ?? '—'}
                     </div>
                   </div>
