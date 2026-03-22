@@ -20,13 +20,13 @@
 
 ### Included Subtasks
 
-- [ ] T001 Replace CSS custom properties in `apps/web/src/styles/app.css` with new design tokens (surface hierarchy, on-surface, primary/secondary, category colors, typography, radius)
-- [ ] T002 Add Google Fonts preconnect and stylesheet links to `apps/web/index.html` for Manrope, Inter, JetBrains Mono
-- [ ] T003 [P] Restyle `button.tsx` — sharp corners (0.125rem), metallic gradient for primary variant, new color tokens
-- [ ] T004 [P] Restyle `card.tsx`, `badge.tsx` — no-line philosophy, surface layer backgrounds, category color variants for badges
-- [ ] T005 [P] Restyle `input.tsx`, `textarea.tsx`, `select.tsx` — surface-container-high background, no visible border, focus ring with primary-fixed
-- [ ] T006 [P] Restyle `score-badge.tsx`, `ml-badge.tsx`, `budget-indicator.tsx` — monospace font, gradient progress bar, category color coding
-- [ ] T007 [P] Restyle `accordion.tsx`, `empty-state.tsx`, `error-alert.tsx`, `alert.tsx`, `loading-spinner.tsx` — new palette, tonal shift separators
+- [x] T001 Replace CSS custom properties in `apps/web/src/styles/app.css` with new design tokens (surface hierarchy, on-surface, primary/secondary, category colors, typography, radius)
+- [x] T002 Add Google Fonts preconnect and stylesheet links to `apps/web/index.html` for Manrope, Inter, JetBrains Mono
+- [x] T003 [P] Restyle `button.tsx` — sharp corners (0.125rem), metallic gradient for primary variant, new color tokens
+- [x] T004 [P] Restyle `card.tsx`, `badge.tsx` — no-line philosophy, surface layer backgrounds, category color variants for badges
+- [x] T005 [P] Restyle `input.tsx`, `textarea.tsx`, `select.tsx` — surface-container-high background, no visible border, focus ring with primary-fixed
+- [x] T006 [P] Restyle `score-badge.tsx`, `ml-badge.tsx`, `budget-indicator.tsx` — monospace font, gradient progress bar, category color coding
+- [x] T007 [P] Restyle `accordion.tsx`, `empty-state.tsx`, `error-alert.tsx`, `alert.tsx`, `loading-spinner.tsx` — new palette, tonal shift separators
 
 ### Implementation Notes
 
@@ -61,12 +61,12 @@
 
 ### Included Subtasks
 
-- [ ] T008 Create `features/flow/types.ts` — FlowStep enum, FlowState interface, FlowAction discriminated union
-- [ ] T009 Create `features/flow/hooks/use-flow-state.ts` — useReducer-based state machine with FlowContext provider
-- [ ] T010 Create `features/flow/components/flow-tabs.tsx` — horizontal tab bar component with locked/active/completed visual states
-- [ ] T011 Rewrite `routes/__root.tsx` — glassmorphic nav bar (backdrop-blur, semi-transparent bg), branded title, Toaster
-- [ ] T012 Rewrite `routes/index.tsx` — add validateSearch for `?tab=` param, render FlowProvider + FlowTabs + tab content switcher
-- [ ] T013 Create tab content switcher — conditionally render Setup/Dashboard/Optimization/Roster components based on active tab and unlock state
+- [x] T008 Create `features/flow/types.ts` — FlowStep enum, FlowState interface, FlowAction discriminated union
+- [x] T009 Create `features/flow/hooks/use-flow-state.ts` — useReducer-based state machine with FlowContext provider
+- [x] T010 Create `features/flow/components/flow-tabs.tsx` — horizontal tab bar component with locked/active/completed visual states
+- [x] T011 Rewrite `routes/__root.tsx` — glassmorphic nav bar (backdrop-blur, semi-transparent bg), branded title, Toaster
+- [x] T012 Rewrite `routes/index.tsx` — add validateSearch for `?tab=` param, render FlowProvider + FlowTabs + tab content switcher
+- [x] T013 Create tab content switcher — conditionally render Setup/Dashboard/Optimization/Roster components based on active tab and unlock state
 
 ### Implementation Notes
 
@@ -102,11 +102,11 @@
 
 ### Included Subtasks
 
-- [ ] T014 Restyle `rider-input.tsx` — new layout with labeled sections (Race URL, Import Price List, Manual Input, Budget), Material Symbols icons, new input styling
-- [ ] T015 Create empty-state preview component for right panel — icon, "No Roster Detected" title, descriptive text, skeleton placeholders
-- [ ] T016 Build Setup tab container — 5/7 grid split, left panel (inputs), right panel (preview)
-- [ ] T017 Build footer summary bar — selected riders count, budget allocation, status indicator
-- [ ] T018 Wire analyze action to flow state — on success dispatch ANALYZE_SUCCESS, auto-navigate to Dashboard tab
+- [x] T014 Restyle `rider-input.tsx` — new layout with labeled sections (Race URL, Import Price List, Manual Input, Budget), Material Symbols icons, new input styling
+- [x] T015 Create empty-state preview component for right panel — icon, "No Roster Detected" title, descriptive text, skeleton placeholders
+- [x] T016 Build Setup tab container — 5/7 grid split, left panel (inputs), right panel (preview)
+- [x] T017 Build footer summary bar — selected riders count, budget allocation, status indicator
+- [x] T018 Wire analyze action to flow state — on success dispatch ANALYZE_SUCCESS, auto-navigate to Dashboard tab
 
 ### Implementation Notes
 
@@ -141,12 +141,12 @@
 
 ### Included Subtasks
 
-- [ ] T019 Restyle `race-profile-summary.tsx` — race name, type badge, rider/matched counts, analysis status indicator with green pulse
-- [ ] T020 Build collapsible configuration section — summarize inputs (URL, price list, budget), "Edit Inputs" button, Radix Collapsible
-- [ ] T021 Restyle `rider-table.tsx` — new column layout (checkbox, rank, name, team, price, score badge, pts/H, match status, actions), no vertical lines, ghost border rows
-- [ ] T022 Create `rider-detail-panel.tsx` — expandable sub-row with category score cards (GC blue, Stage green, MTN orange, SPR red with colored left borders) and 3-season performance history mini-table
-- [ ] T023 Add TanStack Table expansion support to `data-table.tsx` — `getRowCanExpand`, `toggleExpanded`, `renderSubComponent` integration
-- [ ] T024 Wire table interactions to flow state — lock/exclude changes dispatch INVALIDATE_FROM for optimization tab
+- [x] T019 Restyle `race-profile-summary.tsx` — race name, type badge, rider/matched counts, analysis status indicator with green pulse
+- [x] T020 Build collapsible configuration section — summarize inputs (URL, price list, budget), "Edit Inputs" button, Radix Collapsible
+- [x] T021 Restyle `rider-table.tsx` — new column layout (checkbox, rank, name, team, price, score badge, pts/H, match status, actions), no vertical lines, ghost border rows
+- [x] T022 Create `rider-detail-panel.tsx` — expandable sub-row with category score cards (GC blue, Stage green, MTN orange, SPR red with colored left borders) and 3-season performance history mini-table
+- [x] T023 Add TanStack Table expansion support to `data-table.tsx` — `getRowCanExpand`, `toggleExpanded`, `renderSubComponent` integration
+- [x] T024 Wire table interactions to flow state — lock/exclude changes dispatch INVALIDATE_FROM for optimization tab
 
 ### Implementation Notes
 
@@ -183,11 +183,11 @@
 
 ### Included Subtasks
 
-- [ ] T025 Restyle `team-builder-panel.tsx` — "TEAM BUILDER" header, active roster count (X/9), rider cards with remove button, empty slot placeholders with dashed borders
-- [ ] T026 Restyle budget meter — gradient progress bar (secondary-to-blue-400), remaining budget display, efficiency percentage
-- [ ] T027 Add projected score display and "Get Optimal Team" CTA button with metallic gradient
-- [ ] T028 Add "Review Team" CTA — appears when 9 riders selected, navigates to Roster tab
-- [ ] T029 Wire team builder to flow state — team completion dispatches TEAM_COMPLETE, optimize click dispatches to Optimization tab
+- [x] T025 Restyle `team-builder-panel.tsx` — "TEAM BUILDER" header, active roster count (X/9), rider cards with remove button, empty slot placeholders with dashed borders
+- [x] T026 Restyle budget meter — gradient progress bar (secondary-to-blue-400), remaining budget display, efficiency percentage
+- [x] T027 Add projected score display and "Get Optimal Team" CTA button with metallic gradient
+- [x] T028 Add "Review Team" CTA — appears when 9 riders selected, navigates to Roster tab
+- [x] T029 Wire team builder to flow state — team completion dispatches TEAM_COMPLETE, optimize click dispatches to Optimization tab
 
 ### Implementation Notes
 
@@ -221,11 +221,11 @@
 
 ### Included Subtasks
 
-- [ ] T030 Restructure `optimizer-panel.tsx` as full-width Optimization tab content — "OPTIMAL CONFIGURATION" header with projected total and budget efficiency stats
-- [ ] T031 Restyle `score-breakdown.tsx` as point distribution bar — horizontal stacked bar with GC (blue), Stage (green), Mountain (orange), Sprint (red) segments, legend
-- [ ] T032 Restyle `optimal-team-card.tsx` — rider card with photo placeholder, name, team, projected points; 3-column grid layout
-- [ ] T033 Build Optimization tab container — header + distribution bar + rider grid + "Apply to Roster" CTA
-- [ ] T034 Wire "Apply to Roster" to flow state — applies optimal team to team builder state, dispatches TEAM_COMPLETE, navigates to Roster tab
+- [x] T030 Restructure `optimizer-panel.tsx` as full-width Optimization tab content — "OPTIMAL CONFIGURATION" header with projected total and budget efficiency stats
+- [x] T031 Restyle `score-breakdown.tsx` as point distribution bar — horizontal stacked bar with GC (blue), Stage (green), Mountain (orange), Sprint (red) segments, legend
+- [x] T032 Restyle `optimal-team-card.tsx` — rider card with photo placeholder, name, team, projected points; 3-column grid layout
+- [x] T033 Build Optimization tab container — header + distribution bar + rider grid + "Apply to Roster" CTA
+- [x] T034 Wire "Apply to Roster" to flow state — applies optimal team to team builder state, dispatches TEAM_COMPLETE, navigates to Roster tab
 
 ### Implementation Notes
 

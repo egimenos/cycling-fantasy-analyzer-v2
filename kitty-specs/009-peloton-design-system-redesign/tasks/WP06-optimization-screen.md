@@ -1,9 +1,12 @@
 ---
 work_package_id: WP06
 title: Optimization Screen
-lane: planned
+lane: 'for_review'
 dependencies:
   - WP01
+base_branch: 009-peloton-design-system-redesign-WP01
+base_commit: c4db9570d2f127116b9f0cd2c51d4fae6d2ccae8
+created_at: '2026-03-22T12:41:43.394666+00:00'
 subtasks:
   - T030
   - T031
@@ -12,8 +15,8 @@ subtasks:
   - T034
 phase: Phase 2 - Advanced Screens
 assignee: ''
-agent: ''
-shell_pid: ''
+agent: 'claude-opus'
+shell_pid: '34212'
 review_status: ''
 reviewed_by: ''
 history:
@@ -217,3 +220,5 @@ _[Empty initially.]_
 ## Activity Log
 
 - 2026-03-22T12:03:57Z – system – lane=planned – Prompt created.
+- 2026-03-22T12:41:44Z – claude-opus – shell_pid=34212 – lane=doing – Assigned agent via workflow command
+- 2026-03-22T12:43:58Z – claude-opus – shell_pid=34212 – lane=for_review – Optimization screen complete: header with stats, distribution bar, rider grid, apply to roster wiring

@@ -1,8 +1,11 @@
 ---
 work_package_id: WP02
 title: Tab Flow Infrastructure
-lane: planned
+lane: 'done'
 dependencies: [WP01]
+base_branch: 009-peloton-design-system-redesign-WP01
+base_commit: c4db9570d2f127116b9f0cd2c51d4fae6d2ccae8
+created_at: '2026-03-22T12:23:36.264697+00:00'
 subtasks:
   - T008
   - T009
@@ -12,10 +15,10 @@ subtasks:
   - T013
 phase: Phase 0 - Foundation
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '19838'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-22T12:03:57Z'
     lane: planned
@@ -327,3 +330,6 @@ _[Empty initially.]_
 ## Activity Log
 
 - 2026-03-22T12:03:57Z – system – lane=planned – Prompt created.
+- 2026-03-22T12:23:37Z – claude-opus – shell_pid=19838 – lane=doing – Assigned agent via workflow command
+- 2026-03-22T12:25:05Z – claude-opus – shell_pid=19838 – lane=for_review – Tab flow infrastructure complete: types, reducer, tabs component, glassmorphic nav, URL search params
+- 2026-03-22T12:41:14Z – claude-opus – shell_pid=19838 – lane=done – Review passed: strict types, correct reducer logic, glassmorphic nav, URL search params

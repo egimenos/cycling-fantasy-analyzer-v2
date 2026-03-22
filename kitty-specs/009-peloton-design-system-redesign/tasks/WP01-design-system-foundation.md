@@ -1,8 +1,11 @@
 ---
 work_package_id: WP01
 title: Design System Foundation
-lane: planned
+lane: 'done'
 dependencies: []
+base_branch: main
+base_commit: cb200ea39a10b206868140f0c75b0f6a72886f69
+created_at: '2026-03-22T12:17:36.056478+00:00'
 subtasks:
   - T001
   - T002
@@ -13,10 +16,10 @@ subtasks:
   - T007
 phase: Phase 0 - Foundation
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '31655'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-22T12:03:57Z'
     lane: planned
@@ -315,3 +318,7 @@ _[This section is empty initially. Reviewers will populate it if the work is ret
 ## Activity Log
 
 - 2026-03-22T12:03:57Z – system – lane=planned – Prompt created.
+- 2026-03-22T12:17:37Z – claude-opus – shell_pid=14218 – lane=doing – Assigned agent via workflow command
+- 2026-03-22T12:22:09Z – claude-opus – shell_pid=14218 – lane=for_review – Design system foundation complete: tokens, fonts, 15 restyled components
+- 2026-03-22T12:39:06Z – claude-opus – shell_pid=31655 – lane=doing – Started review via workflow command
+- 2026-03-22T12:41:12Z – claude-opus – shell_pid=31655 – lane=done – Review passed: all design tokens via CSS vars, zero hardcoded hex, 15 components restyled with no-line philosophy
