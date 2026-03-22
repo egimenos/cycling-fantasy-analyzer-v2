@@ -1,59 +1,70 @@
-import type { AnalyzedRider } from '@cycling-analyzer/shared-types';
-import { Button } from '@/shared/ui/button';
-import { ErrorAlert } from '@/shared/ui/error-alert';
-import { LoadingSpinner } from '@/shared/ui/loading-spinner';
+import type { OptimizeResponse } from '@cycling-analyzer/shared-types';
 import { OptimalTeamCard } from './optimal-team-card';
-import { AlternativeTeams } from './alternative-teams';
-import { useOptimize } from '../hooks/use-optimize';
-import { Loader2 } from 'lucide-react';
+import { ScoreBreakdown } from './score-breakdown';
+import { formatNumber } from '@/shared/lib/utils';
 
 interface OptimizerPanelProps {
-  riders: AnalyzedRider[];
+  data: OptimizeResponse;
   budget: number;
-  mustInclude: string[];
-  mustExclude: string[];
-  lockedIds: Set<string>;
+  onApplyToRoster: () => void;
 }
 
-export function OptimizerPanel({
-  riders,
-  budget,
-  mustInclude,
-  mustExclude,
-  lockedIds,
-}: OptimizerPanelProps) {
-  const { state, optimize, retry } = useOptimize();
-  const hasMatchedRiders = riders.some((r) => !r.unmatched);
-
-  const handleOptimize = () => {
-    void optimize({ riders, budget, mustInclude, mustExclude });
-  };
+export function OptimizerPanel({ data, budget, onApplyToRoster }: OptimizerPanelProps) {
+  const { optimalTeam } = data;
+  const efficiency = budget > 0 ? ((optimalTeam.totalCostHillios / budget) * 100).toFixed(1) : '0';
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Button onClick={handleOptimize} disabled={!hasMatchedRiders || state.status === 'loading'}>
-          {state.status === 'loading' ? (
-            <>
-              <Loader2 className="animate-spin" />
-              Optimizing...
-            </>
-          ) : (
-            'Get Optimal Team'
-          )}
-        </Button>
+    <div className="space-y-10">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-end gap-6">
+        <div>
+          <span className="text-secondary font-mono text-xs tracking-widest uppercase mb-2 block">
+            Optimization Results
+          </span>
+          <h1 className="text-5xl font-extrabold font-headline tracking-tighter text-on-surface">
+            OPTIMAL CONFIGURATION
+          </h1>
+        </div>
+        <div className="flex items-center gap-8 bg-surface-container-low p-6 rounded-sm">
+          <div className="text-right">
+            <div className="text-xs font-mono text-on-surface-variant uppercase tracking-widest mb-1">
+              Projected Total
+            </div>
+            <div className="text-4xl font-mono font-bold text-secondary tracking-tighter">
+              {formatNumber(optimalTeam.totalProjectedPts)}
+            </div>
+          </div>
+          <div className="h-12 w-px bg-outline-variant/20" />
+          <div className="text-right">
+            <div className="text-xs font-mono text-on-surface-variant uppercase tracking-widest mb-1">
+              Budget Efficiency
+            </div>
+            <div className="text-4xl font-mono font-bold text-tertiary tracking-tighter">
+              {efficiency}
+              <span className="text-xl">%</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {state.status === 'loading' && <LoadingSpinner message="Finding optimal team..." />}
+      {/* Primary Lineup Header + CTA */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold font-headline flex items-center gap-2 uppercase tracking-wide">
+          Primary Lineup
+        </h2>
+        <button
+          onClick={onApplyToRoster}
+          className="bg-primary-fixed text-primary-foreground px-8 py-3 rounded-sm font-headline font-extrabold uppercase tracking-tighter shadow-xl shadow-primary/10 hover:brightness-110 active:scale-95 transition-all"
+        >
+          Apply to Roster
+        </button>
+      </div>
 
-      {state.status === 'error' && <ErrorAlert message={state.error} onRetry={retry} />}
+      {/* Score Distribution */}
+      <ScoreBreakdown breakdown={optimalTeam.scoreBreakdown} />
 
-      {state.status === 'success' && (
-        <div className="space-y-6">
-          <OptimalTeamCard team={state.data.optimalTeam} budget={budget} lockedIds={lockedIds} />
-          <AlternativeTeams teams={state.data.alternativeTeams} budget={budget} />
-        </div>
-      )}
+      {/* Rider Grid */}
+      <OptimalTeamCard team={optimalTeam} />
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { MlBadge } from '@/shared/ui/ml-badge';
 import { Badge } from '@/shared/ui/badge';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { formatNumber, cn } from '@/shared/lib/utils';
-import { Lock, Unlock, XCircle, ExternalLink, Info } from 'lucide-react';
+import { Lock, Unlock, Ban, ExternalLink } from 'lucide-react';
 
 interface RiderTableProps {
   data: AnalyzeResponse;
@@ -31,15 +31,6 @@ function findMaxEffectiveScore(riders: AnalyzedRider[], hasML: boolean): number 
     if (score !== null && score > max) max = score;
   }
   return max || 100;
-}
-
-function HeaderWithTooltip({ label, tooltip }: { label: string; tooltip: string }) {
-  return (
-    <span className="inline-flex items-center gap-1" title={tooltip}>
-      {label}
-      <Info className="h-3 w-3 text-muted-foreground/60" />
-    </span>
-  );
 }
 
 function createColumns(
@@ -70,7 +61,7 @@ function createColumns(
             checked={isSelected || isLocked}
             disabled={disabled}
             onChange={() => onToggleSelect(name)}
-            className="h-4 w-4 rounded border-input"
+            className="h-4 w-4 bg-surface-dim border-outline-variant rounded-none checked:bg-primary"
             aria-label={`Select ${name}`}
           />
         );
@@ -79,24 +70,31 @@ function createColumns(
     {
       id: 'rank',
       header: '#',
-      cell: ({ row }) => <span className="text-muted-foreground">{row.index + 1}</span>,
+      cell: ({ row }) => (
+        <span className="font-mono font-bold text-primary">
+          {String(row.index + 1).padStart(2, '0')}
+        </span>
+      ),
       enableSorting: false,
     },
     {
       accessorKey: 'rawName',
-      header: 'Name',
+      header: 'Rider Name',
       enableSorting: true,
       cell: ({ getValue, row }) => {
+        const name = getValue<string>();
+        const isLocked = lockedIds.has(row.original.rawName);
         const isExcluded = excludedIds.has(row.original.rawName);
         return (
           <span
             className={cn(
-              'max-w-[200px] truncate font-medium',
+              'max-w-[200px] truncate font-headline font-bold',
               isExcluded && 'line-through opacity-50',
             )}
-            title={getValue<string>()}
+            title={name}
           >
-            {getValue<string>()}
+            {name}
+            {isLocked && <Lock className="inline ml-1.5 h-3 w-3 text-secondary" />}
           </span>
         );
       },
@@ -105,12 +103,17 @@ function createColumns(
       accessorKey: 'rawTeam',
       header: 'Team',
       enableSorting: true,
+      cell: ({ getValue }) => (
+        <span className="text-xs font-mono text-outline uppercase">{getValue<string>()}</span>
+      ),
     },
     {
       accessorKey: 'priceHillios',
-      header: () => <HeaderWithTooltip label="Price (H)" tooltip="Fantasy game price in Hillios" />,
+      header: 'Price (H)',
       enableSorting: true,
-      cell: ({ getValue }) => formatNumber(getValue<number>()),
+      cell: ({ getValue }) => (
+        <span className="text-right font-mono font-bold">{formatNumber(getValue<number>())}</span>
+      ),
     },
     {
       id: 'effectiveScore',
@@ -118,22 +121,16 @@ function createColumns(
       header: () =>
         hasML ? (
           <span className="inline-flex items-center gap-1.5">
-            <HeaderWithTooltip
-              label="Score"
-              tooltip="ML-predicted fantasy points based on rider form, race profile, and historical data"
-            />
+            Score
             <MlBadge />
           </span>
         ) : (
-          <HeaderWithTooltip
-            label="Score"
-            tooltip="Projected fantasy points based on weighted historical results"
-          />
+          'Score'
         ),
       enableSorting: true,
       cell: ({ row, table }) => {
         if (row.original.unmatched) {
-          return <span className="text-muted-foreground">---</span>;
+          return <span className="text-on-primary-container font-mono">---</span>;
         }
         const maxScore = findMaxEffectiveScore(
           table.getCoreRowModel().rows.map((r) => r.original),
@@ -145,26 +142,40 @@ function createColumns(
     },
     {
       accessorKey: 'pointsPerHillio',
-      header: () => (
-        <HeaderWithTooltip label="Pts/H" tooltip="Points per Hillio — value for money ratio" />
-      ),
+      header: 'Pts/H',
       enableSorting: true,
       cell: ({ getValue, row }) => {
-        if (row.original.unmatched) return <span className="text-muted-foreground">---</span>;
+        if (row.original.unmatched)
+          return <span className="text-on-primary-container font-mono">---</span>;
         const val = getValue<number | null>();
-        return val !== null ? val.toFixed(2) : '---';
+        return (
+          <span className="text-right font-mono">{val !== null ? val.toFixed(2) : '---'}</span>
+        );
       },
     },
     {
       id: 'matchStatus',
       header: 'Match',
       enableSorting: false,
-      cell: ({ row }) =>
-        row.original.unmatched ? (
-          <Badge variant="warning">Unmatched</Badge>
+      cell: ({ row }) => {
+        const isExcluded = excludedIds.has(row.original.rawName);
+        if (isExcluded) {
+          return (
+            <Badge variant="outline" className="text-[10px] rounded-full">
+              EXCLUDED
+            </Badge>
+          );
+        }
+        return row.original.unmatched ? (
+          <Badge variant="warning" className="text-[10px] rounded-full">
+            UNMATCHED
+          </Badge>
         ) : (
-          <Badge variant="success">Matched</Badge>
-        ),
+          <Badge variant="secondary" className="text-[10px] rounded-full">
+            MATCH
+          </Badge>
+        );
+      },
     },
     {
       id: 'actions',
@@ -176,26 +187,32 @@ function createColumns(
         const isExcluded = excludedIds.has(name);
         if (row.original.unmatched) return null;
         return (
-          <div className="flex items-center gap-1">
+          <div className="flex justify-end gap-3 text-outline">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleLock(name);
               }}
-              className={cn('rounded p-1 hover:bg-muted', isLocked && 'text-green-600')}
+              className={cn(
+                'cursor-pointer hover:text-primary transition-colors',
+                isLocked && 'text-secondary',
+              )}
               aria-label={isLocked ? `Unlock ${name}` : `Lock ${name}`}
             >
-              {isLocked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+              {isLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleExclude(name);
               }}
-              className={cn('rounded p-1 hover:bg-muted', isExcluded && 'text-red-600')}
+              className={cn(
+                'cursor-pointer hover:text-error transition-colors',
+                isExcluded && 'text-error',
+              )}
               aria-label={isExcluded ? `Include ${name}` : `Exclude ${name}`}
             >
-              <XCircle className={cn('h-3.5 w-3.5', isExcluded && 'fill-red-100')} />
+              <Ban className="h-4 w-4" />
             </button>
           </div>
         );
@@ -207,102 +224,114 @@ function createColumns(
 function ExpandedRowContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boolean }) {
   if (rider.unmatched) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm text-on-surface-variant">
         No match found in database for &ldquo;{rider.rawName}&rdquo;.
       </p>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {/* Rules-based breakdown */}
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Category Scores */}
       {rider.categoryScores && (
-        <div>
-          <h4 className="mb-1.5 text-xs font-medium text-muted-foreground">
-            Rules-Based Breakdown
-            {hasML && rider.mlPredictedScore !== null && (
-              <span className="ml-2 font-normal">
-                (total: {rider.totalProjectedPts?.toFixed(1)} pts)
-              </span>
-            )}
-          </h4>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-4">
-            <ScoreDetail label="GC" value={rider.categoryScores.gc} />
-            <ScoreDetail label="Stage" value={rider.categoryScores.stage} />
-            <ScoreDetail label="Mountain" value={rider.categoryScores.mountain} />
-            <ScoreDetail label="Sprint" value={rider.categoryScores.sprint} />
+        <div className="space-y-4">
+          <h4 className="text-[10px] font-mono text-outline uppercase">Category Scores</h4>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-surface-container-high p-3 rounded-sm border-l-2 border-gc">
+              <p className="text-[9px] text-outline uppercase font-mono">GC</p>
+              <p className="font-mono font-bold text-gc text-lg">
+                {rider.categoryScores.gc.toFixed(1)}
+              </p>
+            </div>
+            <div className="bg-surface-container-high p-3 rounded-sm border-l-2 border-stage">
+              <p className="text-[9px] text-outline uppercase font-mono">Stage</p>
+              <p className="font-mono font-bold text-stage text-lg">
+                {rider.categoryScores.stage.toFixed(1)}
+              </p>
+            </div>
+            <div className="bg-surface-container-high p-3 rounded-sm border-l-2 border-mountain">
+              <p className="text-[9px] text-outline uppercase font-mono">MTN</p>
+              <p className="font-mono font-bold text-mountain text-lg">
+                {rider.categoryScores.mountain.toFixed(1)}
+              </p>
+            </div>
+            <div className="bg-surface-container-high p-3 rounded-sm border-l-2 border-sprint">
+              <p className="text-[9px] text-outline uppercase font-mono">SPR</p>
+              <p className="font-mono font-bold text-sprint text-lg">
+                {rider.categoryScores.sprint.toFixed(1)}
+              </p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ML score in detail if available */}
-      {hasML && rider.mlPredictedScore !== null && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">ML Predicted:</span>
-          <span className="text-sm font-medium">{rider.mlPredictedScore.toFixed(1)} pts</span>
-          <MlBadge />
-        </div>
-      )}
+      {/* Season History */}
+      <div className={rider.categoryScores ? 'col-span-3' : 'col-span-4'}>
+        {hasML && rider.mlPredictedScore !== null && (
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-xs text-on-surface-variant">ML Predicted:</span>
+            <span className="text-sm font-mono font-medium">
+              {rider.mlPredictedScore.toFixed(1)} pts
+            </span>
+            <MlBadge />
+          </div>
+        )}
 
-      {/* Season breakdown table */}
-      {rider.seasonBreakdown && rider.seasonBreakdown.length > 0 && (
-        <div className="overflow-x-auto">
-          <h4 className="mb-1.5 text-xs font-medium text-muted-foreground">Season History</h4>
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="pb-1 pr-4 font-medium">Season</th>
-                <th className="pb-1 pr-4 text-right font-medium">GC</th>
-                <th className="pb-1 pr-4 text-right font-medium">Stage</th>
-                <th className="pb-1 pr-4 text-right font-medium">Mtn</th>
-                <th className="pb-1 pr-4 text-right font-medium">Sprint</th>
-                <th className="pb-1 pr-4 text-right font-medium">Total</th>
-                <th className="pb-1 text-right font-medium">Weight</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rider.seasonBreakdown.map((s) => (
-                <tr key={s.year} className="border-b border-dashed last:border-0">
-                  <td className="py-1 pr-4 font-medium">{s.year}</td>
-                  <td className="py-1 pr-4 text-right">{s.gc.toFixed(1)}</td>
-                  <td className="py-1 pr-4 text-right">{s.stage.toFixed(1)}</td>
-                  <td className="py-1 pr-4 text-right">{s.mountain.toFixed(1)}</td>
-                  <td className="py-1 pr-4 text-right">{s.sprint.toFixed(1)}</td>
-                  <td className="py-1 pr-4 text-right font-medium">{s.total.toFixed(1)}</td>
-                  <td className="py-1 text-right text-muted-foreground">&times;{s.weight}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+        {rider.seasonBreakdown && rider.seasonBreakdown.length > 0 && (
+          <div>
+            <h4 className="text-[10px] font-mono text-outline uppercase mb-4">
+              Season Performance History
+            </h4>
+            <div className="bg-surface-container-high rounded-sm overflow-hidden border border-outline-variant/10">
+              <table className="w-full text-xs font-mono">
+                <thead className="bg-surface-container-highest/50 text-outline">
+                  <tr>
+                    <th className="p-3 text-left">Season</th>
+                    <th className="p-3 text-right">GC</th>
+                    <th className="p-3 text-right">Stage</th>
+                    <th className="p-3 text-right">Mtn</th>
+                    <th className="p-3 text-right">Sprint</th>
+                    <th className="p-3 text-right">Total</th>
+                    <th className="p-3 text-right">Weight</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant/10">
+                  {rider.seasonBreakdown.map((s) => (
+                    <tr key={s.year}>
+                      <td className="p-3 font-bold">{s.year}</td>
+                      <td className="p-3 text-right">{s.gc.toFixed(1)}</td>
+                      <td className="p-3 text-right">{s.stage.toFixed(1)}</td>
+                      <td className="p-3 text-right">{s.mountain.toFixed(1)}</td>
+                      <td className="p-3 text-right">{s.sprint.toFixed(1)}</td>
+                      <td className="p-3 text-right font-bold">{s.total.toFixed(1)}</td>
+                      <td className="p-3 text-right text-on-primary-container">
+                        &times;{s.weight}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
-      {/* Match info + PCS link */}
-      {rider.matchedRider && (
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span>
-            Matched: {rider.matchedRider.fullName} ({rider.matchedRider.currentTeam}) — confidence:{' '}
-            {(rider.matchConfidence * 100).toFixed(0)}%
-          </span>
-          <a
-            href={`https://www.procyclingstats.com/rider/${rider.matchedRider.pcsSlug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400"
-          >
-            PCS Profile <ExternalLink className="h-3 w-3" />
-          </a>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ScoreDetail({ label, value }: { label: string; value: number }) {
-  return (
-    <div>
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <p className="text-sm font-medium">{value.toFixed(1)}</p>
+        {rider.matchedRider && (
+          <div className="flex items-center gap-3 text-xs text-on-primary-container mt-4">
+            <span>
+              Matched: {rider.matchedRider.fullName} ({rider.matchedRider.currentTeam}) —
+              confidence: {(rider.matchConfidence * 100).toFixed(0)}%
+            </span>
+            <a
+              href={`https://www.procyclingstats.com/rider/${rider.matchedRider.pcsSlug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-secondary hover:underline"
+            >
+              PCS Profile <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -336,7 +365,7 @@ export function RiderTable({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+      <div className="flex flex-wrap gap-3 text-xs font-mono text-outline px-1">
         <span>
           Showing {data.riders.length} rider{data.riders.length !== 1 ? 's' : ''}
         </span>
@@ -352,10 +381,9 @@ export function RiderTable({
           <ExpandedRowContent rider={row.original} hasML={hasML} />
         )}
         getRowClassName={(row: Row<AnalyzedRider>) => {
-          if (lockedIds.has(row.original.rawName))
-            return 'border-l-2 border-green-500 bg-green-50/30 dark:bg-green-950/10';
-          if (excludedIds.has(row.original.rawName)) return 'opacity-50';
-          if (row.original.unmatched) return 'bg-yellow-50/50 dark:bg-yellow-950/20';
+          if (excludedIds.has(row.original.rawName)) return 'opacity-40 grayscale';
+          if (lockedIds.has(row.original.rawName)) return 'bg-secondary-container/5';
+          if (row.original.unmatched) return 'opacity-60';
           return '';
         }}
       />
