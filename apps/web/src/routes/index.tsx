@@ -20,6 +20,7 @@ import { useTeamBuilder } from '@/features/team-builder/hooks/use-team-builder';
 import { useRaceProfile } from '@/features/rider-list/hooks/use-race-profile';
 import { LoadingSpinner } from '@/shared/ui/loading-spinner';
 import { ErrorAlert } from '@/shared/ui/error-alert';
+import { useOptimize } from '@/features/optimizer/hooks/use-optimize';
 import { TrendingUp, Settings, ChevronDown } from 'lucide-react';
 import * as Collapsible from '@radix-ui/react-collapsible';
 
@@ -51,6 +52,7 @@ function HomePageContent() {
 
   // Shared state across tabs
   const { state: analyzeState, analyze, retry: retryAnalyze } = useAnalyze();
+  const { state: optimizeState, optimize, reset: resetOptimize } = useOptimize();
   const { lockedIds, excludedIds, toggleLock, toggleExclude } = useLockExclude();
   const [budget, setBudget] = useState(2000);
   const [raceUrl, setRaceUrl] = useState('');
@@ -104,6 +106,33 @@ function HomePageContent() {
     },
     [toggleExclude, dispatch],
   );
+
+  // Handle optimize
+  const handleOptimize = useCallback(() => {
+    if (analyzeState.status !== 'success') return;
+    const mustInclude = Array.from(lockedIds);
+    const mustExclude = Array.from(excludedIds);
+    void optimize({
+      riders: analyzeState.data.riders,
+      budget,
+      mustInclude,
+      mustExclude,
+    });
+  }, [analyzeState, lockedIds, excludedIds, budget, optimize]);
+
+  // When optimization succeeds, unlock optimization tab and navigate
+  useEffect(() => {
+    if (optimizeState.status === 'success' && !isUnlocked('optimization')) {
+      dispatch({ type: 'OPTIMIZE_SUCCESS' });
+      void navigate({ search: { tab: 'optimization' } });
+    }
+  }, [optimizeState.status, dispatch, navigate, isUnlocked]);
+
+  // Handle team complete (manual path)
+  const handleReviewTeam = useCallback(() => {
+    dispatch({ type: 'TEAM_COMPLETE' });
+    void navigate({ search: { tab: 'roster' } });
+  }, [dispatch, navigate]);
 
   // Tab navigation
   const handleTabChange = (newTab: FlowStep): void => {
@@ -178,6 +207,9 @@ function HomePageContent() {
             teamBuilder={teamBuilder}
             budget={budget}
             profileState={profileState}
+            onOptimize={handleOptimize}
+            isOptimizing={optimizeState.status === 'loading'}
+            onReviewTeam={handleReviewTeam}
           />
         )}
         {tab === 'optimization' && <OptimizationTab />}
@@ -312,6 +344,9 @@ interface DashboardTabProps {
   teamBuilder: ReturnType<typeof useTeamBuilder>;
   budget: number;
   profileState: ReturnType<typeof useRaceProfile>;
+  onOptimize: () => void;
+  isOptimizing: boolean;
+  onReviewTeam: () => void;
 }
 
 function DashboardTab({
@@ -326,6 +361,9 @@ function DashboardTab({
   teamBuilder,
   budget,
   profileState,
+  onOptimize,
+  isOptimizing,
+  onReviewTeam,
 }: DashboardTabProps) {
   const [configOpen, setConfigOpen] = useState(false);
 
@@ -381,7 +419,7 @@ function DashboardTab({
           />
         </section>
 
-        <aside className="lg:w-[30%]">
+        <aside className="lg:w-[30%] space-y-4">
           <TeamBuilderPanel
             selectedRiders={teamBuilder.selectedRiders}
             totalCost={teamBuilder.totalCost}
@@ -393,6 +431,24 @@ function DashboardTab({
             onRemoveRider={teamBuilder.removeRider}
             onClearAll={teamBuilder.clearAll}
           />
+
+          {/* CTAs */}
+          {teamBuilder.isTeamComplete ? (
+            <button
+              onClick={onReviewTeam}
+              className="w-full py-3 bg-green-500/20 text-green-400 border border-green-500/30 font-headline font-bold uppercase tracking-wider text-sm rounded-sm hover:bg-green-500/30 transition-colors"
+            >
+              Review Team &rarr;
+            </button>
+          ) : (
+            <button
+              onClick={onOptimize}
+              disabled={isOptimizing}
+              className="w-full py-4 bg-gradient-to-br from-primary-fixed-dim to-primary-container text-on-surface font-headline font-extrabold uppercase tracking-widest text-sm rounded-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-black/40 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {isOptimizing ? 'Optimizing...' : 'Get Optimal Team'}
+            </button>
+          )}
         </aside>
       </div>
     </div>
