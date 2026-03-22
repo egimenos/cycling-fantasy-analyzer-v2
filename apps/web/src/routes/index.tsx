@@ -120,24 +120,24 @@ function HomePageContent() {
     });
   }, [analyzeState, lockedIds, excludedIds, budget, optimize]);
 
-  // When optimization succeeds, unlock optimization tab and navigate
+  // When optimization succeeds, populate team builder and unlock tabs
   useEffect(() => {
     if (optimizeState.status === 'success' && !isUnlocked('optimization')) {
+      // Populate team builder with optimal riders
+      teamBuilder.clearAll();
+      for (const rider of optimizeState.data.optimalTeam.riders) {
+        teamBuilder.addRider(rider.rawName);
+      }
       dispatch({ type: 'OPTIMIZE_SUCCESS' });
+      dispatch({ type: 'TEAM_COMPLETE' });
       void navigate({ search: { tab: 'optimization' } });
     }
-  }, [optimizeState.status, dispatch, navigate, isUnlocked]);
+  }, [optimizeState.status]); // eslint-disable-line
 
-  // Handle apply optimal team to roster
+  // Handle apply optimal team to roster (just navigates — team already populated)
   const handleApplyToRoster = useCallback(() => {
-    if (optimizeState.status !== 'success') return;
-    teamBuilder.clearAll();
-    for (const rider of optimizeState.data.optimalTeam.riders) {
-      teamBuilder.addRider(rider.rawName);
-    }
-    dispatch({ type: 'TEAM_COMPLETE' });
     void navigate({ search: { tab: 'roster' } });
-  }, [optimizeState, teamBuilder, dispatch, navigate]);
+  }, [navigate]);
 
   // Handle full reset from Roster tab
   const handleFullReset = useCallback(() => {
