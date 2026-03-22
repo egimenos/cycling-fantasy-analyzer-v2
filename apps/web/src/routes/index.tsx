@@ -343,26 +343,26 @@ function SetupTab({
                 Input your budget and rider list to see the optimized lineup preview here. Our
                 engine uses historical performance data to find the best value for your budget.
               </p>
-              <div className="w-full flex flex-col gap-3 opacity-30">
-                <div className="flex justify-between items-center py-3 border-b border-outline-variant/10">
+              <div className="w-full flex flex-col gap-3 opacity-50">
+                <div className="flex justify-between items-center py-3 border-b border-outline-variant/20">
                   <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded bg-surface-container-high" />
+                    <div className="w-8 h-8 rounded bg-surface-container-highest" />
                     <div className="flex flex-col gap-1">
-                      <div className="w-32 h-3 bg-surface-container-high rounded" />
-                      <div className="w-20 h-2 bg-surface-container-high rounded" />
+                      <div className="w-32 h-3 bg-surface-container-highest rounded" />
+                      <div className="w-20 h-2 bg-surface-container-highest rounded" />
                     </div>
                   </div>
-                  <div className="w-16 h-4 bg-surface-container-high rounded" />
+                  <div className="w-16 h-4 bg-surface-container-highest rounded" />
                 </div>
-                <div className="flex justify-between items-center py-3 border-b border-outline-variant/10">
+                <div className="flex justify-between items-center py-3 border-b border-outline-variant/20">
                   <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded bg-surface-container-high" />
+                    <div className="w-8 h-8 rounded bg-surface-container-highest" />
                     <div className="flex flex-col gap-1">
-                      <div className="w-40 h-3 bg-surface-container-high rounded" />
-                      <div className="w-24 h-2 bg-surface-container-high rounded" />
+                      <div className="w-40 h-3 bg-surface-container-highest rounded" />
+                      <div className="w-24 h-2 bg-surface-container-highest rounded" />
                     </div>
                   </div>
-                  <div className="w-16 h-4 bg-surface-container-high rounded" />
+                  <div className="w-16 h-4 bg-surface-container-highest rounded" />
                 </div>
               </div>
             </div>

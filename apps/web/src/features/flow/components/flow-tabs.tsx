@@ -27,7 +27,7 @@ export function FlowTabs({ activeTab, onTabChange }: FlowTabsProps) {
               'px-4 py-3 text-xs font-mono uppercase tracking-widest transition-colors relative',
               active && 'text-on-surface font-bold',
               !active && unlocked && 'text-on-surface-variant hover:text-on-surface cursor-pointer',
-              !unlocked && 'text-outline/40 cursor-not-allowed',
+              !unlocked && 'text-on-primary-container/50 cursor-not-allowed',
             )}
           >
             <span className="flex items-center gap-1.5">
