@@ -1,0 +1,11 @@
+{
+  "feature_number": "010",
+  "slug": "010-e2e-test-suite-redesigned-frontend",
+  "feature_slug": "010-e2e-test-suite-redesigned-frontend",
+  "created_at": "2026-03-22T00:00:00Z",
+  "target_branch": "main",
+  "friendly_name": "E2E Test Suite for Redesigned Frontend",
+  "mission": "software-dev",
+  "source_description": "Rewrite and expand Playwright e2e test suite for the redesigned cycling analyzer frontend, with Page Object Model architecture and real backend integration",
+  "vcs": "git"
+}
