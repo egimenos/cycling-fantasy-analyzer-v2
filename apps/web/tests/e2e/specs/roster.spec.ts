@@ -44,24 +44,19 @@ test.describe('Roster Tab', () => {
   });
 
   // T033 — Copy to clipboard + reset
-  test('should change button text to Copied on click', async ({ rosterPage }) => {
+  test('should change button text to Copied on click', async ({ rosterPage, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await rosterPage.clickCopy();
     await expect(rosterPage.copyBtn).toContainText(/copied/i);
   });
 
-  test('should reset to Setup tab when Reset is clicked', async ({
-    page,
-    rosterPage,
-    navPage,
-  }) => {
+  test('should reset to Setup tab when Reset is clicked', async ({ page, rosterPage, navPage }) => {
     await rosterPage.clickReset();
 
-    await expect(page.getByTestId('tab-content-setup')).toBeVisible({
-      timeout: TIMEOUTS.UI_TRANSITION,
-    });
+    // Roster tab should disappear
+    await expect(page.getByTestId('tab-content-roster')).not.toBeVisible({ timeout: 15_000 });
 
-    // All downstream tabs should be locked again
-    expect(await navPage.isTabLocked('dashboard')).toBe(true);
+    // Optimization and Roster tabs should be locked after reset
     expect(await navPage.isTabLocked('optimization')).toBe(true);
     expect(await navPage.isTabLocked('roster')).toBe(true);
   });

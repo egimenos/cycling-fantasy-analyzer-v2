@@ -43,13 +43,13 @@ test.describe('Setup Tab', () => {
     await expect(page.getByTestId('race-profile-type')).toBeVisible();
   });
 
-  // T023 — Game URL import
+  // T023 — Game URL import (depends on external service availability)
   test('should import price list from game URL', async ({ setupPage }) => {
+    test.skip(!!process.env.SKIP_EXTERNAL, 'Skipped: external services unavailable');
     test.slow(); // External scraping call
 
     await setupPage.goto();
 
-    // Use the grandesminivueltas URL for a known race
     await setupPage.setGameUrl(
       'https://www.grandesminivueltas.com/partida/ver/tour-de-france-2025',
     );

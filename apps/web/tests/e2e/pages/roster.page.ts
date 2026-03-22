@@ -35,7 +35,7 @@ export class RosterPage {
   }
 
   async getRiderCount(): Promise<number> {
-    return this.page.locator('[data-testid^="roster-rider-"]').count();
+    return this.riderList.locator('[data-testid^="roster-rider-"]').count();
   }
 
   async getTotalScoreText(): Promise<string> {

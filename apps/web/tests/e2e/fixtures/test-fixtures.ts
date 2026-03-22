@@ -1,7 +1,11 @@
 import { test as base } from '@playwright/test';
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import { NavPage } from '../pages/nav.page';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 import { SetupPage } from '../pages/setup.page';
 import { DashboardPage } from '../pages/dashboard.page';
 import { OptimizationPage } from '../pages/optimization.page';
@@ -34,15 +38,18 @@ export const test = base.extend<E2EFixtures>({
   rosterPage: async ({ page }, use) => {
     await use(new RosterPage(page));
   },
-  validPriceList: async (_deps, use) => {
+  // eslint-disable-next-line no-empty-pattern
+  validPriceList: async ({}, use) => {
     const content = readFileSync(join(__dirname, 'valid-price-list.txt'), 'utf-8');
     await use(content);
   },
-  invalidPriceList: async (_deps, use) => {
+  // eslint-disable-next-line no-empty-pattern
+  invalidPriceList: async ({}, use) => {
     const content = readFileSync(join(__dirname, 'invalid-price-list.txt'), 'utf-8');
     await use(content);
   },
-  partialMatchList: async (_deps, use) => {
+  // eslint-disable-next-line no-empty-pattern
+  partialMatchList: async ({}, use) => {
     const content = readFileSync(join(__dirname, 'partial-match-list.txt'), 'utf-8');
     await use(content);
   },

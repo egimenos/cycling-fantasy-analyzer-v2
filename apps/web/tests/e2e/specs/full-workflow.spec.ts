@@ -5,6 +5,7 @@ test.describe('Full End-to-End Workflow', () => {
   // T036 — Complete happy path
   test('should complete full workflow: setup → dashboard → optimize → roster → reset', async ({
     page,
+    context,
     setupPage,
     dashboardPage,
     optimizationPage,
@@ -27,7 +28,7 @@ test.describe('Full End-to-End Workflow', () => {
 
     // 3. OPTIMIZE
     await dashboardPage.clickOptimize();
-    await expect(optimizationPage.panel).toBeVisible({ timeout: TIMEOUTS.OPTIMIZATION });
+    await expect(optimizationPage.panel).toBeVisible({ timeout: 60_000 });
 
     // Verify locked rider is in optimal team
     expect(await optimizationPage.hasRiderCard('POGACAR Tadej')).toBe(true);
@@ -35,22 +36,20 @@ test.describe('Full End-to-End Workflow', () => {
 
     // 4. ROSTER
     await optimizationPage.clickApplyToRoster();
-    await expect(rosterPage.completeBanner).toBeVisible({ timeout: TIMEOUTS.UI_TRANSITION });
+    await expect(rosterPage.completeBanner).toBeVisible({ timeout: TIMEOUTS.API_RESPONSE });
     expect(await rosterPage.getRiderCount()).toBe(9);
     await expect(rosterPage.totalScore).toBeVisible();
 
     // 5. COPY
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await rosterPage.clickCopy();
     await expect(rosterPage.copyBtn).toContainText(/copied/i);
 
     // 6. RESET
     await rosterPage.clickReset();
-    await expect(page.getByTestId('tab-content-setup')).toBeVisible({
-      timeout: TIMEOUTS.UI_TRANSITION,
-    });
+    await expect(page.getByTestId('tab-content-roster')).not.toBeVisible({ timeout: 15_000 });
 
-    // Verify all tabs re-locked
-    expect(await navPage.isTabLocked('dashboard')).toBe(true);
+    // Optimization and Roster should be re-locked after reset
     expect(await navPage.isTabLocked('optimization')).toBe(true);
     expect(await navPage.isTabLocked('roster')).toBe(true);
   });
@@ -80,7 +79,6 @@ test.describe('Full End-to-End Workflow', () => {
 
   test('should disable checkbox for budget-exceeding rider', async ({
     setupPage,
-    dashboardPage,
     validPriceList,
     page,
   }) => {

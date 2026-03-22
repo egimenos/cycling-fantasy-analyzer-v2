@@ -24,6 +24,9 @@ dev: db-up ml-up ## Start all services (DB + ML + API + Web)
 test: ## Run all tests
 	pnpm --filter @cycling-analyzer/api run test
 
+test-e2e: ## Run Playwright e2e tests
+	cd apps/web && pnpm test:e2e
+
 lint: ## Run linter
 	pnpm run lint
 
