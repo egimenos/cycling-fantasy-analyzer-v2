@@ -21,6 +21,7 @@ import { useRaceProfile } from '@/features/rider-list/hooks/use-race-profile';
 import { LoadingSpinner } from '@/shared/ui/loading-spinner';
 import { ErrorAlert } from '@/shared/ui/error-alert';
 import { useOptimize } from '@/features/optimizer/hooks/use-optimize';
+import { OptimizerPanel } from '@/features/optimizer/components/optimizer-panel';
 import { TrendingUp, Settings, ChevronDown } from 'lucide-react';
 import * as Collapsible from '@radix-ui/react-collapsible';
 
@@ -128,6 +129,17 @@ function HomePageContent() {
     }
   }, [optimizeState.status, dispatch, navigate, isUnlocked]);
 
+  // Handle apply optimal team to roster
+  const handleApplyToRoster = useCallback(() => {
+    if (optimizeState.status !== 'success') return;
+    teamBuilder.clearAll();
+    for (const rider of optimizeState.data.optimalTeam.riders) {
+      teamBuilder.addRider(rider.rawName);
+    }
+    dispatch({ type: 'TEAM_COMPLETE' });
+    void navigate({ search: { tab: 'roster' } });
+  }, [optimizeState, teamBuilder, dispatch, navigate]);
+
   // Handle team complete (manual path)
   const handleReviewTeam = useCallback(() => {
     dispatch({ type: 'TEAM_COMPLETE' });
@@ -212,7 +224,13 @@ function HomePageContent() {
             onReviewTeam={handleReviewTeam}
           />
         )}
-        {tab === 'optimization' && <OptimizationTab />}
+        {tab === 'optimization' && (
+          <OptimizationTab
+            optimizeState={optimizeState}
+            budget={budget}
+            onApplyToRoster={handleApplyToRoster}
+          />
+        )}
         {tab === 'roster' && <RosterTab />}
       </div>
     </>
@@ -459,11 +477,27 @@ function DashboardTab({
 // Placeholder Tabs
 // ============================================================
 
-function OptimizationTab() {
+interface OptimizationTabProps {
+  optimizeState: ReturnType<typeof useOptimize>['state'];
+  budget: number;
+  onApplyToRoster: () => void;
+}
+
+function OptimizationTab({ optimizeState, budget, onApplyToRoster }: OptimizationTabProps) {
+  if (optimizeState.status !== 'success') {
+    return (
+      <div className="flex items-center justify-center py-24 text-on-surface-variant font-mono text-sm uppercase tracking-widest">
+        No optimization results available.
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-center justify-center py-24 text-on-surface-variant font-mono text-sm uppercase tracking-widest">
-      Optimization — Coming in WP06
-    </div>
+    <OptimizerPanel
+      data={optimizeState.data}
+      budget={budget}
+      onApplyToRoster={onApplyToRoster}
+    />
   );
 }
 

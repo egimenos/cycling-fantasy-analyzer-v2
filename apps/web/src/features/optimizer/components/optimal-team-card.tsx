@@ -1,87 +1,41 @@
 import type { TeamSelection } from '@cycling-analyzer/shared-types';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card';
-import { BudgetIndicator } from '@/shared/ui/budget-indicator';
-import { MlBadge } from '@/shared/ui/ml-badge';
-import { ScoreBreakdown } from './score-breakdown';
-import { computeMlTotal } from '@/features/team-builder/hooks/use-team-builder';
-import { formatNumber } from '@/shared/lib/utils';
-import { Trophy } from 'lucide-react';
-import { cn } from '@/shared/lib/utils';
+import { Bike } from 'lucide-react';
 
 interface OptimalTeamCardProps {
   team: TeamSelection;
-  budget: number;
-  lockedIds?: Set<string>;
-  variant?: 'primary' | 'secondary';
-  title?: string;
 }
 
-export function OptimalTeamCard({
-  team,
-  budget,
-  lockedIds,
-  variant = 'primary',
-  title = 'Optimal Team',
-}: OptimalTeamCardProps) {
-  const mlTotal = computeMlTotal(team.riders);
-
+export function OptimalTeamCard({ team }: OptimalTeamCardProps) {
   return (
-    <Card className={cn(variant === 'secondary' && 'bg-muted/30')}>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          {variant === 'primary' && <Trophy className="h-4 w-4 text-yellow-500" />}
-          {title}
-          {mlTotal !== null && <MlBadge />}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="divide-y">
-          {team.riders.map((rider) => {
-            const isLocked = lockedIds?.has(rider.rawName);
-            return (
-              <div
-                key={rider.rawName}
-                className={cn(
-                  'flex items-center justify-between py-1.5 text-sm',
-                  isLocked && 'border-l-2 border-green-500 pl-2',
-                )}
-              >
-                <div className="min-w-0 flex-1">
-                  <span className="font-medium">{rider.rawName}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">{rider.rawTeam}</span>
-                </div>
-                <div className="flex items-center gap-4 text-right">
-                  <span className="text-xs text-muted-foreground">
-                    {formatNumber(rider.priceHillios)}H
-                  </span>
-                  <span className="w-12 font-medium">
-                    {rider.totalProjectedPts?.toFixed(1) ?? '---'}
-                  </span>
-                </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-1">
+      {team.riders.map((rider, index) => {
+        const isTopThree = index < 3;
+        return (
+          <div
+            key={rider.rawName}
+            className="bg-surface-container-high p-5 flex items-center gap-4 group hover:bg-surface-bright transition-colors relative overflow-hidden"
+          >
+            <div
+              className={`${isTopThree ? 'w-16 h-16' : 'w-12 h-12'} rounded-sm bg-surface-container-highest flex-shrink-0 flex items-center justify-center`}
+            >
+              <Bike className={`${isTopThree ? 'h-7 w-7' : 'h-5 w-5'} text-on-primary-container`} />
+            </div>
+            <div className="flex-grow min-w-0">
+              <div className="text-[10px] font-mono text-on-surface-variant uppercase tracking-widest mb-0.5 truncate">
+                {rider.rawName}
               </div>
-            );
-          })}
-        </div>
-
-        <ScoreBreakdown breakdown={team.scoreBreakdown} />
-      </CardContent>
-      <CardFooter className="flex-col items-stretch gap-3 border-t pt-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
-            {mlTotal !== null ? 'Rules Score' : 'Total Score'}
-          </span>
-          <span className="text-lg font-bold">{team.totalProjectedPts.toFixed(1)}</span>
-        </div>
-        {mlTotal !== null && (
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              ML Score <MlBadge />
-            </span>
-            <span className="text-lg font-bold">{mlTotal.toFixed(1)}</span>
+              <div className="flex justify-between items-baseline">
+                <span className="font-bold font-headline tracking-tight truncate">
+                  {rider.rawTeam}
+                </span>
+                <span className="font-mono text-sm text-on-surface flex-shrink-0 ml-2">
+                  {rider.totalProjectedPts?.toFixed(0) ?? '—'} pts
+                </span>
+              </div>
+            </div>
           </div>
-        )}
-        <BudgetIndicator spent={team.totalCostHillios} total={budget} />
-      </CardFooter>
-    </Card>
+        );
+      })}
+    </div>
   );
 }

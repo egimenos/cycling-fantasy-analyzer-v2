@@ -5,39 +5,44 @@ interface ScoreBreakdownProps {
   breakdown: CategoryScores;
 }
 
-const CATEGORY_CONFIG: { key: keyof CategoryScores; label: string; color: string }[] = [
-  { key: ResultCategory.GC, label: 'GC', color: 'bg-blue-500' },
-  { key: ResultCategory.STAGE, label: 'Stage', color: 'bg-green-500' },
-  { key: ResultCategory.MOUNTAIN, label: 'Mountain', color: 'bg-orange-500' },
-  { key: ResultCategory.SPRINT, label: 'Sprint', color: 'bg-red-500' },
+const CATEGORY_CONFIG: { key: keyof CategoryScores; label: string; colorBar: string; colorDot: string }[] = [
+  { key: ResultCategory.GC, label: 'GC', colorBar: 'bg-gc/80', colorDot: 'bg-gc' },
+  { key: ResultCategory.STAGE, label: 'STAGE', colorBar: 'bg-stage/80', colorDot: 'bg-stage' },
+  { key: ResultCategory.MOUNTAIN, label: 'MOUNTAIN', colorBar: 'bg-mountain/80', colorDot: 'bg-mountain' },
+  { key: ResultCategory.SPRINT, label: 'SPRINT', colorBar: 'bg-sprint/80', colorDot: 'bg-sprint' },
 ];
 
 export function ScoreBreakdown({ breakdown }: ScoreBreakdownProps) {
   const total = Object.values(breakdown).reduce((sum, v) => sum + v, 0);
 
   return (
-    <div className="space-y-2">
-      <div className="flex h-3 w-full overflow-hidden rounded-full bg-secondary">
-        {CATEGORY_CONFIG.map(({ key, color }) => {
+    <div className="bg-surface-container-low p-8 rounded-sm">
+      <div className="flex justify-between items-end mb-4">
+        <span className="text-xs font-mono uppercase tracking-widest text-on-surface-variant">
+          Point Distribution Analysis
+        </span>
+        <div className="flex gap-4 text-[10px] font-mono uppercase tracking-widest">
+          {CATEGORY_CONFIG.map(({ key, label, colorDot }) => (
+            <span key={key} className="flex items-center gap-1.5">
+              <span className={cn('w-2 h-2 rounded-full', colorDot)} />
+              {label}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="h-6 w-full flex rounded-sm overflow-hidden bg-surface-container-highest">
+        {CATEGORY_CONFIG.map(({ key, colorBar }) => {
           const pct = total > 0 ? (breakdown[key] / total) * 100 : 0;
           if (pct === 0) return null;
           return (
             <div
               key={key}
-              className={cn('h-full transition-all', color)}
+              className={cn('h-full hover:brightness-125 transition-all', colorBar)}
               style={{ width: `${pct}%` }}
+              title={`${key}: ${pct.toFixed(0)}%`}
             />
           );
         })}
-      </div>
-      <div className="flex flex-wrap gap-3">
-        {CATEGORY_CONFIG.map(({ key, label, color }) => (
-          <div key={key} className="flex items-center gap-1.5 text-xs">
-            <div className={cn('h-2.5 w-2.5 rounded-sm', color)} />
-            <span className="text-muted-foreground">{label}</span>
-            <span className="font-medium">{breakdown[key].toFixed(1)}</span>
-          </div>
-        ))}
       </div>
     </div>
   );
