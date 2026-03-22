@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import type { PriceListEntryDto, ProfileSummary } from '@cycling-analyzer/shared-types';
 import { type RaceType } from '@cycling-analyzer/shared-types';
@@ -58,23 +58,23 @@ function HomePageContent() {
   const teamBuilder = useTeamBuilder(budget, riders);
   const profileState = useRaceProfile(raceUrl);
 
-  // Use ref to avoid re-triggering sync effects when teamBuilder object changes
-  const teamBuilderRef = useRef(teamBuilder);
-  teamBuilderRef.current = teamBuilder;
-
   // Sync lock -> auto-select in team builder
   useEffect(() => {
     for (const name of lockedIds) {
-      teamBuilderRef.current.addRider(name);
+      if (!teamBuilder.isSelected(name)) {
+        teamBuilder.addRider(name);
+      }
     }
-  }, [lockedIds]);
+  }, [lockedIds, teamBuilder]);
 
   // Sync exclude -> auto-remove from team builder
   useEffect(() => {
     for (const name of excludedIds) {
-      teamBuilderRef.current.removeRider(name);
+      if (teamBuilder.isSelected(name)) {
+        teamBuilder.removeRider(name);
+      }
     }
-  }, [excludedIds]);
+  }, [excludedIds, teamBuilder]);
 
   const handleToggleSelect = useCallback(
     (name: string) => {
@@ -494,12 +494,8 @@ function DashboardTab({
             budgetRemaining={teamBuilder.budgetRemaining}
             budget={budget}
             isTeamComplete={teamBuilder.isTeamComplete}
-            onRemoveRider={(name: string) => {
-              if (lockedIds.has(name)) toggleLock(name);
-              teamBuilder.removeRider(name);
-              resetOptimize();
-              dispatch({ type: 'INVALIDATE_FROM', step: 'optimization' });
-            }}
+            onRemoveRider={teamBuilder.removeRider}
+            lockedIds={lockedIds}
             onClearAll={teamBuilder.clearAll}
             onOptimize={onOptimize}
             isOptimizing={isOptimizing}

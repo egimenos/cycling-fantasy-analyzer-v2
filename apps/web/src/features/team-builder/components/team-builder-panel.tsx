@@ -1,7 +1,7 @@
 import type { AnalyzedRider } from '@cycling-analyzer/shared-types';
 import { MlBadge } from '@/shared/ui/ml-badge';
 import { cn } from '@/shared/lib/utils';
-import { X, User } from 'lucide-react';
+import { X, User, Lock } from 'lucide-react';
 
 interface TeamBuilderPanelProps {
   selectedRiders: AnalyzedRider[];
@@ -13,6 +13,7 @@ interface TeamBuilderPanelProps {
   isTeamComplete: boolean;
   onRemoveRider: (riderName: string) => void;
   onClearAll: () => void;
+  lockedIds?: Set<string>;
   onOptimize?: () => void;
   isOptimizing?: boolean;
   onReviewTeam?: () => void;
@@ -30,6 +31,7 @@ export function TeamBuilderPanel({
   isTeamComplete,
   onRemoveRider,
   onClearAll,
+  lockedIds,
   onOptimize,
   isOptimizing = false,
   onReviewTeam,
@@ -70,29 +72,38 @@ export function TeamBuilderPanel({
 
         <div className="space-y-2">
           {/* Selected rider cards */}
-          {selectedRiders.map((rider) => (
-            <div
-              key={rider.rawName}
-              className="flex items-center gap-3 bg-surface-container-low p-2.5 border border-outline-variant/10 rounded-sm"
-            >
-              <div className="w-10 h-10 bg-surface-container-highest rounded-sm flex-shrink-0 flex items-center justify-center">
-                <User className="h-5 w-5 text-outline" />
-              </div>
-              <div className="flex-grow min-w-0">
-                <p className="text-xs font-bold font-headline truncate">{rider.rawName}</p>
-                <p className="text-[10px] text-outline font-mono">
-                  {rider.priceHillios}H{rider.rawTeam && ` · ${rider.rawTeam}`}
-                </p>
-              </div>
-              <button
-                onClick={() => onRemoveRider(rider.rawName)}
-                className="text-outline hover:text-error transition-colors flex-shrink-0"
-                aria-label={`Remove ${rider.rawName}`}
+          {selectedRiders.map((rider) => {
+            const isLocked = lockedIds?.has(rider.rawName) ?? false;
+            return (
+              <div
+                key={rider.rawName}
+                className="flex items-center gap-3 bg-surface-container-low p-2.5 border border-outline-variant/10 rounded-sm"
               >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          ))}
+                <div className="w-10 h-10 bg-surface-container-highest rounded-sm flex-shrink-0 flex items-center justify-center">
+                  {isLocked ? (
+                    <Lock className="h-4 w-4 text-secondary" />
+                  ) : (
+                    <User className="h-5 w-5 text-outline" />
+                  )}
+                </div>
+                <div className="flex-grow min-w-0">
+                  <p className="text-xs font-bold font-headline truncate">{rider.rawName}</p>
+                  <p className="text-[10px] text-outline font-mono">
+                    {rider.priceHillios}H{rider.rawTeam && ` · ${rider.rawTeam}`}
+                  </p>
+                </div>
+                {!isLocked && (
+                  <button
+                    onClick={() => onRemoveRider(rider.rawName)}
+                    className="text-outline hover:text-error transition-colors flex-shrink-0"
+                    aria-label={`Remove ${rider.rawName}`}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
 
           {/* Empty slots */}
           {Array.from({ length: emptySlots }).map((_, i) => (
