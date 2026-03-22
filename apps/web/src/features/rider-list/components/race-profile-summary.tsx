@@ -81,10 +81,10 @@ export function RaceProfileSummary({
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-tertiary" />
-            <h2 className="font-headline font-extrabold text-lg text-on-surface">
+            <h2 data-testid="race-profile-name" className="font-headline font-extrabold text-lg text-on-surface">
               {profile.raceName}
             </h2>
-            <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
+            <Badge data-testid="race-profile-type" variant="secondary" className="text-[10px] uppercase tracking-wider">
               {raceTypeLabel}
             </Badge>
           </div>
@@ -94,13 +94,13 @@ export function RaceProfileSummary({
               <div className="h-6 w-px bg-outline-variant/20 hidden md:block" />
               <div className="flex gap-4">
                 {totalRiders !== undefined && (
-                  <div className="flex items-baseline gap-1.5">
+                  <div data-testid="race-profile-rider-count" className="flex items-baseline gap-1.5">
                     <span className="font-mono text-xl font-bold text-primary">{totalRiders}</span>
                     <span className="text-[10px] font-mono text-outline uppercase">riders</span>
                   </div>
                 )}
                 {matchedRiders !== undefined && (
-                  <div className="flex items-baseline gap-1.5">
+                  <div data-testid="race-profile-matched-count" className="flex items-baseline gap-1.5">
                     <span className="font-mono text-xl font-bold text-secondary">
                       {matchedRiders}
                     </span>
