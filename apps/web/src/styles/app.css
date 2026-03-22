@@ -77,7 +77,59 @@
   --radius-xl: calc(var(--radius) + 0.375rem);
 }
 
+/* ============================================================
+   Light Theme — "The Wind Tunnel"
+   ============================================================ */
 :root {
+  /* Surface hierarchy */
+  --surface-dim: #f7f9fb;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f2f4f6;
+  --surface-container: #eceef0;
+  --surface-container-high: #e4e6e9;
+  --surface-container-highest: #d8dade;
+  --surface-bright: #ffffff;
+
+  /* On-surface text */
+  --on-surface: #191c1e;
+  --on-surface-variant: #44474a;
+  --on-primary-container: #6b7280;
+  --on-background: #191c1e;
+
+  /* Primary / Secondary / Tertiary */
+  --primary: #1a1a2e;
+  --primary-foreground: #ffffff;
+  --primary-container: #e0e4f0;
+  --primary-fixed: #3b4a6b;
+  --primary-fixed-dim: #2d3a54;
+  --secondary: #497cff;
+  --secondary-foreground: #ffffff;
+  --secondary-container: #dce4ff;
+  --tertiary: #c9930a;
+  --tertiary-container: #fef3c7;
+
+  /* Functional */
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --error: #dc2626;
+  --error-container: #fef2f2;
+  --outline: #9ca3af;
+  --outline-variant: #c6c6cd;
+
+  /* Category colors */
+  --color-gc: #497cff;
+  --color-stage: #16a34a;
+  --color-mountain: #ea580c;
+  --color-sprint: #dc2626;
+
+  /* Border radius */
+  --radius: 0.125rem;
+}
+
+/* ============================================================
+   Dark Theme — "The Technical Peloton"
+   ============================================================ */
+.dark {
   /* Surface hierarchy */
   --surface-dim: #0b1326;
   --surface-container-lowest: #060e20;
@@ -118,9 +170,6 @@
   --color-stage: #22c55e;
   --color-mountain: #f97316;
   --color-sprint: #ef4444;
-
-  /* Border radius */
-  --radius: 0.125rem;
 }
 
 @layer base {
