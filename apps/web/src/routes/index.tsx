@@ -22,6 +22,7 @@ import { LoadingSpinner } from '@/shared/ui/loading-spinner';
 import { ErrorAlert } from '@/shared/ui/error-alert';
 import { useOptimize } from '@/features/optimizer/hooks/use-optimize';
 import { OptimizerPanel } from '@/features/optimizer/components/optimizer-panel';
+import { TeamSummary } from '@/features/team-builder/components/team-summary';
 import { TrendingUp, Settings, ChevronDown } from 'lucide-react';
 import * as Collapsible from '@radix-ui/react-collapsible';
 
@@ -140,6 +141,14 @@ function HomePageContent() {
     void navigate({ search: { tab: 'roster' } });
   }, [optimizeState, teamBuilder, dispatch, navigate]);
 
+  // Handle full reset from Roster tab
+  const handleFullReset = useCallback(() => {
+    teamBuilder.clearAll();
+    resetOptimize();
+    dispatch({ type: 'RESET' });
+    void navigate({ search: { tab: 'setup' } });
+  }, [teamBuilder, resetOptimize, dispatch, navigate]);
+
   // Handle team complete (manual path)
   const handleReviewTeam = useCallback(() => {
     dispatch({ type: 'TEAM_COMPLETE' });
@@ -231,7 +240,13 @@ function HomePageContent() {
             onApplyToRoster={handleApplyToRoster}
           />
         )}
-        {tab === 'roster' && <RosterTab />}
+        {tab === 'roster' && (
+          <RosterTab
+            teamBuilder={teamBuilder}
+            budget={budget}
+            onReset={handleFullReset}
+          />
+        )}
       </div>
     </>
   );
@@ -501,10 +516,29 @@ function OptimizationTab({ optimizeState, budget, onApplyToRoster }: Optimizatio
   );
 }
 
-function RosterTab() {
+interface RosterTabProps {
+  teamBuilder: ReturnType<typeof useTeamBuilder>;
+  budget: number;
+  onReset: () => void;
+}
+
+function RosterTab({ teamBuilder, budget, onReset }: RosterTabProps) {
+  if (teamBuilder.selectedRiders.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-24 text-on-surface-variant font-mono text-sm uppercase tracking-widest">
+        No team selected.
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-center justify-center py-24 text-on-surface-variant font-mono text-sm uppercase tracking-widest">
-      Roster — Coming in WP07
-    </div>
+    <TeamSummary
+      riders={teamBuilder.selectedRiders}
+      totalCost={teamBuilder.totalCost}
+      totalScore={teamBuilder.totalScore}
+      mlTotalScore={teamBuilder.mlTotalScore}
+      budget={budget}
+      onReset={onReset}
+    />
   );
 }
