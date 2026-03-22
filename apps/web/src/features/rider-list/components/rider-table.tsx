@@ -156,7 +156,7 @@ function createColumns(
     },
     {
       accessorKey: 'pointsPerHillio',
-      header: 'Pts/H',
+      header: 'Value',
       enableSorting: true,
       cell: ({ getValue, row }) => {
         if (row.original.unmatched)

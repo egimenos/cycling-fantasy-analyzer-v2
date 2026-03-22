@@ -133,7 +133,7 @@ export function TeamSummary({
                   </div>
                   <div>
                     <div className="text-[10px] text-on-primary-container font-mono uppercase">
-                      Pts/H
+                      Value
                     </div>
                     <div className="font-mono text-green-400 font-bold">
                       {rider.pointsPerHillio?.toFixed(1) ?? '—'}
