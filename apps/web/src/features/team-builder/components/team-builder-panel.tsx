@@ -42,7 +42,7 @@ export function TeamBuilderPanel({
   const displayScore = mlTotalScore ?? totalScore;
 
   return (
-    <div className="bg-surface-container-high p-6 rounded-sm border border-outline-variant/10 flex flex-col gap-6 sticky top-24">
+    <div className="bg-surface-container-high p-6 rounded-sm border border-outline-variant/10 flex flex-col gap-6 sticky top-24 max-h-[calc(100vh-8rem)] overflow-hidden">
       {/* Header */}
       <header className="space-y-1">
         <div className="flex items-center justify-between">
@@ -70,7 +70,7 @@ export function TeamBuilderPanel({
           </span>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 overflow-y-auto max-h-[40vh] pr-1">
           {/* Selected rider cards */}
           {selectedRiders.map((rider) => {
             const isLocked = lockedIds?.has(rider.rawName) ?? false;
