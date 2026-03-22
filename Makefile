@@ -24,8 +24,14 @@ dev: db-up ml-up ## Start all services (DB + ML + API + Web)
 test: ## Run all tests
 	pnpm --filter @cycling-analyzer/api run test
 
-test-e2e: ## Run Playwright e2e tests
+test-e2e: ## Run Playwright e2e tests (headless)
 	cd apps/web && pnpm test:e2e
+
+test-e2e-headed: ## Run e2e tests with visible browser
+	cd apps/web && pnpm exec playwright test --headed
+
+test-e2e-ui: ## Open Playwright UI for interactive debugging
+	cd apps/web && pnpm exec playwright test --ui
 
 lint: ## Run linter
 	pnpm run lint
