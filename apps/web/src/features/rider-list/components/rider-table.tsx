@@ -47,6 +47,7 @@ function createColumns(
     {
       id: 'select',
       header: '',
+      size: 40,
       enableSorting: false,
       cell: ({ row }) => {
         const name = row.original.rawName;
@@ -70,6 +71,7 @@ function createColumns(
     {
       id: 'rank',
       header: '#',
+      size: 50,
       cell: ({ row }) => (
         <span className="font-mono font-bold text-primary">
           {String(row.index + 1).padStart(2, '0')}
@@ -88,7 +90,7 @@ function createColumns(
         return (
           <span
             className={cn(
-              'max-w-[200px] truncate font-headline font-bold',
+              'max-w-[160px] truncate font-headline font-bold text-sm',
               isExcluded && 'line-through opacity-50',
             )}
             title={name}
@@ -180,6 +182,7 @@ function createColumns(
     {
       id: 'actions',
       header: '',
+      size: 80,
       enableSorting: false,
       cell: ({ row }) => {
         const name = row.original.rawName;
