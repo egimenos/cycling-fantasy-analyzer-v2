@@ -50,7 +50,10 @@ export function TeamSummary({
   return (
     <div className="space-y-10">
       {/* Success Banner */}
-      <div className="bg-green-500/10 dark:bg-green-900/20 border-l-4 border-green-500 p-6 rounded-sm flex flex-col md:flex-row justify-between items-center gap-4">
+      <div
+        data-testid="roster-complete-banner"
+        className="bg-green-500/10 dark:bg-green-900/20 border-l-4 border-green-500 p-6 rounded-sm flex flex-col md:flex-row justify-between items-center gap-4"
+      >
         <div className="flex items-center gap-4">
           <div className="bg-green-500 text-white p-2 rounded-full">
             <CheckCircle className="h-5 w-5" />
@@ -66,6 +69,7 @@ export function TeamSummary({
         </div>
         <div className="flex gap-3">
           <button
+            data-testid="roster-reset-btn"
             onClick={onReset}
             className="bg-surface-container-high hover:bg-surface-container-highest transition-colors px-6 py-2 rounded-sm text-sm font-bold flex items-center gap-2"
           >
@@ -73,6 +77,7 @@ export function TeamSummary({
             Reset
           </button>
           <button
+            data-testid="roster-copy-btn"
             onClick={() => void handleCopy()}
             className="bg-primary-fixed text-primary-foreground px-6 py-2 rounded-sm text-sm font-bold flex items-center gap-2 hover:brightness-110 transition-all"
           >
@@ -92,10 +97,11 @@ export function TeamSummary({
             </h2>
           </div>
 
-          <div className="space-y-2">
+          <div data-testid="roster-rider-list" className="space-y-2">
             {riders.map((rider, index) => (
               <div
                 key={rider.rawName}
+                data-testid={`roster-rider-${rider.rawName}`}
                 className="bg-surface-container-high p-4 flex items-center gap-4 group hover:bg-surface-container-highest transition-all"
               >
                 <div className="w-12 h-12 rounded-sm bg-surface-container-highest flex items-center justify-center flex-shrink-0">
@@ -107,7 +113,10 @@ export function TeamSummary({
                       {rider.rawName}
                     </span>
                     {index === 0 && (
-                      <span className="bg-tertiary/20 text-tertiary text-[10px] px-1.5 font-bold rounded-sm border border-tertiary/30 flex-shrink-0">
+                      <span
+                        data-testid="roster-captain-badge"
+                        className="bg-tertiary/20 text-tertiary text-[10px] px-1.5 font-bold rounded-sm border border-tertiary/30 flex-shrink-0"
+                      >
                         CAPTAIN
                       </span>
                     )}
@@ -156,7 +165,10 @@ export function TeamSummary({
                 Total Proj. Score
               </label>
               <div className="flex items-baseline gap-2">
-                <span className="font-headline text-5xl font-black text-on-surface tracking-tighter">
+                <span
+                  data-testid="roster-total-score"
+                  className="font-headline text-5xl font-black text-on-surface tracking-tighter"
+                >
                   {formatNumber(displayScore)}
                 </span>
                 <span className="font-mono text-tertiary text-lg font-bold">PTS</span>
@@ -167,7 +179,7 @@ export function TeamSummary({
             <div className="space-y-2">
               <div className="flex justify-between text-[10px] font-mono uppercase tracking-widest">
                 <span className="text-on-primary-container">Total Expenditure</span>
-                <span className="text-on-surface font-bold">
+                <span data-testid="roster-total-cost" className="text-on-surface font-bold">
                   {formatNumber(totalCost)} / {formatNumber(budget)}
                 </span>
               </div>
@@ -185,7 +197,10 @@ export function TeamSummary({
                 <span className="font-mono text-[9px] uppercase text-on-primary-container block mb-1">
                   Remaining
                 </span>
-                <span className="font-mono text-xl font-bold text-on-surface">
+                <span
+                  data-testid="roster-remaining"
+                  className="font-mono text-xl font-bold text-on-surface"
+                >
                   {formatNumber(remaining)}
                 </span>
               </div>
@@ -193,7 +208,10 @@ export function TeamSummary({
                 <span className="font-mono text-[9px] uppercase text-on-primary-container block mb-1">
                   Avg/Rider
                 </span>
-                <span className="font-mono text-xl font-bold text-on-surface">
+                <span
+                  data-testid="roster-avg-rider"
+                  className="font-mono text-xl font-bold text-on-surface"
+                >
                   {formatNumber(avgCost)}
                 </span>
               </div>
