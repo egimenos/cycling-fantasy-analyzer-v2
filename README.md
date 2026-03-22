@@ -67,6 +67,20 @@ A `Makefile` provides shortcuts for all common operations. Run `make help` to se
 | `make build`     | Build all packages and apps              |
 | `make test`      | Run unit tests across all packages       |
 | `make lint`      | Run ESLint across all packages           |
+
+### E2E Tests (Playwright)
+
+```bash
+cd apps/web
+pnpm test:e2e                                    # Run all e2e tests
+pnpm exec playwright test specs/setup.spec.ts    # Run a specific spec
+pnpm exec playwright test --headed               # Run in headed mode (see browser)
+pnpm exec playwright test --ui                   # Open Playwright UI
+```
+
+**Prerequisites**: Docker running (DB + ML service), dev server auto-starts via config.
+
+**Structure**: `tests/e2e/pages/` (Page Objects), `tests/e2e/specs/` (test files), `tests/e2e/fixtures/` (data + Playwright fixtures), `tests/e2e/helpers/` (utilities).
 | `make typecheck` | TypeScript type check (no emit)          |
 
 ### Database
