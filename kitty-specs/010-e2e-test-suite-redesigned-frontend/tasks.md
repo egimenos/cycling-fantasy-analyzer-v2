@@ -98,13 +98,13 @@
 
 ### Included Subtasks
 
-- [ ] T014 Create `apps/web/tests/e2e/pages/nav.page.ts` (NavPage: tab navigation + theme toggle locators, actions, assertions)
-- [ ] T015 Create `apps/web/tests/e2e/pages/setup.page.ts` (SetupPage: inputs, buttons, validation feedback)
-- [ ] T016 Create `apps/web/tests/e2e/pages/dashboard.page.ts` (DashboardPage: rider table, filters, lock/exclude, team builder)
-- [ ] T017 Create `apps/web/tests/e2e/pages/optimization.page.ts` (OptimizationPage: results display, apply to roster)
-- [ ] T018 Create `apps/web/tests/e2e/pages/roster.page.ts` (RosterPage: roster list, metrics, copy, reset)
-- [ ] T019 Create `apps/web/tests/e2e/helpers/wait-helpers.ts` (shared timeout constants, API wait utilities)
-- [ ] T020 Create `apps/web/tests/e2e/fixtures/test-fixtures.ts` (test.extend composing all page objects + data fixture loading)
+- [x] T014 Create `apps/web/tests/e2e/pages/nav.page.ts` (NavPage: tab navigation + theme toggle locators, actions, assertions)
+- [x] T015 Create `apps/web/tests/e2e/pages/setup.page.ts` (SetupPage: inputs, buttons, validation feedback)
+- [x] T016 Create `apps/web/tests/e2e/pages/dashboard.page.ts` (DashboardPage: rider table, filters, lock/exclude, team builder)
+- [x] T017 Create `apps/web/tests/e2e/pages/optimization.page.ts` (OptimizationPage: results display, apply to roster)
+- [x] T018 Create `apps/web/tests/e2e/pages/roster.page.ts` (RosterPage: roster list, metrics, copy, reset)
+- [x] T019 Create `apps/web/tests/e2e/helpers/wait-helpers.ts` (shared timeout constants, API wait utilities)
+- [x] T020 Create `apps/web/tests/e2e/fixtures/test-fixtures.ts` (test.extend composing all page objects + data fixture loading)
 
 ### Implementation Notes
 
