@@ -1,6 +1,7 @@
 import type { OptimizeResponse } from '@cycling-analyzer/shared-types';
 import { OptimalTeamCard } from './optimal-team-card';
 import { ScoreBreakdown } from './score-breakdown';
+import { computeMlTotal } from '@/features/team-builder/hooks/use-team-builder';
 import { formatNumber } from '@/shared/lib/utils';
 
 interface OptimizerPanelProps {
@@ -11,6 +12,8 @@ interface OptimizerPanelProps {
 
 export function OptimizerPanel({ data, budget, onApplyToRoster }: OptimizerPanelProps) {
   const { optimalTeam } = data;
+  const mlTotal = computeMlTotal(optimalTeam.riders);
+  const projectedTotal = mlTotal ?? optimalTeam.totalProjectedPts;
   const efficiency = budget > 0 ? ((optimalTeam.totalCostHillios / budget) * 100).toFixed(1) : '0';
 
   return (
@@ -31,7 +34,7 @@ export function OptimizerPanel({ data, budget, onApplyToRoster }: OptimizerPanel
               Projected Total
             </div>
             <div className="text-4xl font-mono font-bold text-secondary tracking-tighter">
-              {formatNumber(optimalTeam.totalProjectedPts)}
+              {formatNumber(projectedTotal)}
             </div>
           </div>
           <div className="h-12 w-px bg-outline-variant/20" />

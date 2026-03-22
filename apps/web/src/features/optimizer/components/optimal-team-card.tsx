@@ -1,5 +1,9 @@
-import type { TeamSelection } from '@cycling-analyzer/shared-types';
+import type { AnalyzedRider, TeamSelection } from '@cycling-analyzer/shared-types';
 import { Bike } from 'lucide-react';
+
+function getEffectiveScore(rider: AnalyzedRider): number | null {
+  return rider.mlPredictedScore ?? rider.totalProjectedPts;
+}
 
 interface OptimalTeamCardProps {
   team: TeamSelection;
@@ -10,6 +14,7 @@ export function OptimalTeamCard({ team }: OptimalTeamCardProps) {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-1">
       {team.riders.map((rider, index) => {
         const isTopThree = index < 3;
+        const score = getEffectiveScore(rider);
         return (
           <div
             key={rider.rawName}
@@ -29,7 +34,7 @@ export function OptimalTeamCard({ team }: OptimalTeamCardProps) {
                   {rider.rawTeam}
                 </span>
                 <span className="font-mono text-sm text-on-surface flex-shrink-0 ml-2">
-                  {rider.totalProjectedPts?.toFixed(0) ?? '—'} pts
+                  {score?.toFixed(0) ?? '—'} pts
                 </span>
               </div>
             </div>
