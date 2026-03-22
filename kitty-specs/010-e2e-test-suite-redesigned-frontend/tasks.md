@@ -259,11 +259,11 @@
 
 ### Included Subtasks
 
-- [ ] T034 Create `apps/web/tests/e2e/specs/navigation.spec.ts` — tab state machine (initial lock state, progressive unlock after analyze, unlock after optimize, invalidation on lock change re-locks downstream)
-- [ ] T035 Create `apps/web/tests/e2e/specs/theme.spec.ts` — theme toggle (switch dark→light, light→dark, localStorage persistence, persistence across reload)
-- [ ] T036 Create `apps/web/tests/e2e/specs/full-workflow.spec.ts` — complete happy path (setup → dashboard → lock rider → optimize → roster → copy → reset → verify initial state)
-- [ ] T037 Add full-workflow spec: error handling edge cases (invalid input shows disabled button, mixed valid/invalid shows counts, budget-exceeded rider has disabled checkbox)
-- [ ] T038 [P] Update `README.md` with e2e test documentation (run commands, structure overview, prerequisites)
+- [x] T034 Create `apps/web/tests/e2e/specs/navigation.spec.ts` — tab state machine (initial lock state, progressive unlock after analyze, unlock after optimize, invalidation on lock change re-locks downstream)
+- [x] T035 Create `apps/web/tests/e2e/specs/theme.spec.ts` — theme toggle (switch dark→light, light→dark, localStorage persistence, persistence across reload)
+- [x] T036 Create `apps/web/tests/e2e/specs/full-workflow.spec.ts` — complete happy path (setup → dashboard → lock rider → optimize → roster → copy → reset → verify initial state)
+- [x] T037 Add full-workflow spec: error handling edge cases (invalid input shows disabled button, mixed valid/invalid shows counts, budget-exceeded rider has disabled checkbox)
+- [x] T038 [P] Update `README.md` with e2e test documentation (run commands, structure overview, prerequisites)
 
 ### Implementation Notes
 

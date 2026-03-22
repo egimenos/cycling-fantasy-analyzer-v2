@@ -1,10 +1,13 @@
 ---
 work_package_id: WP07
 title: Navigation + Theme + Full Workflow
-lane: planned
+lane: 'done'
 dependencies:
   - WP03
   - WP01
+base_branch: 010-e2e-test-suite-redesigned-frontend-WP07-merge-base
+base_commit: b965f8fc31a008508d0ca17ad96f63841b6b87aa
+created_at: '2026-03-22T18:57:46.613172+00:00'
 subtasks:
   - T034
   - T035
@@ -13,10 +16,10 @@ subtasks:
   - T038
 phase: Phase 3 - Integration
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '81429'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-22T18:05:31Z'
     lane: planned
@@ -284,3 +287,5 @@ _[This section is empty initially.]_
 ## Activity Log
 
 - 2026-03-22T18:05:31Z – system – lane=planned – Prompt created.
+- 2026-03-22T18:57:47Z – claude-opus – shell_pid=81429 – lane=doing – Assigned agent via workflow command
+- 2026-03-22T18:59:11Z – claude-opus – shell_pid=81429 – lane=done – All 5 subtasks: navigation state machine, theme toggle, full workflow, error cases, README update
