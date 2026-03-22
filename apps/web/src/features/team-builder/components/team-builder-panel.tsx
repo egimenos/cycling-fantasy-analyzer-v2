@@ -13,6 +13,9 @@ interface TeamBuilderPanelProps {
   isTeamComplete: boolean;
   onRemoveRider: (riderName: string) => void;
   onClearAll: () => void;
+  onOptimize?: () => void;
+  isOptimizing?: boolean;
+  onReviewTeam?: () => void;
 }
 
 const MAX_RIDERS = 9;
@@ -27,6 +30,9 @@ export function TeamBuilderPanel({
   isTeamComplete,
   onRemoveRider,
   onClearAll,
+  onOptimize,
+  isOptimizing = false,
+  onReviewTeam,
 }: TeamBuilderPanelProps) {
   const emptySlots = MAX_RIDERS - selectedRiders.length;
   const usagePercent = budget > 0 ? (totalCost / budget) * 100 : 0;
@@ -142,6 +148,26 @@ export function TeamBuilderPanel({
           <p className="text-[10px] text-outline font-mono text-center">
             {emptySlots} more rider{emptySlots !== 1 ? 's' : ''} needed
           </p>
+        )}
+
+        {/* CTAs */}
+        {isTeamComplete && onReviewTeam ? (
+          <button
+            onClick={onReviewTeam}
+            className="w-full py-3 bg-green-500/20 text-green-400 border border-green-500/30 font-headline font-bold uppercase tracking-wider text-sm rounded-sm hover:bg-green-500/30 transition-colors"
+          >
+            Review Team &rarr;
+          </button>
+        ) : (
+          onOptimize && (
+            <button
+              onClick={onOptimize}
+              disabled={isOptimizing}
+              className="w-full py-4 bg-gradient-to-br from-primary-fixed-dim to-primary-container text-on-surface font-headline font-extrabold uppercase tracking-widest text-sm rounded-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-black/40 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              {isOptimizing ? 'Optimizing...' : 'Get Optimal Team'}
+            </button>
+          )
         )}
       </div>
     </div>
