@@ -1,8 +1,11 @@
 ---
 work_package_id: WP06
 title: Optimization + Roster Specs
-lane: planned
+lane: 'done'
 dependencies: [WP03]
+base_branch: 010-e2e-test-suite-redesigned-frontend-WP03
+base_commit: b965f8fc31a008508d0ca17ad96f63841b6b87aa
+created_at: '2026-03-22T18:38:04.673893+00:00'
 subtasks:
   - T030
   - T031
@@ -10,10 +13,10 @@ subtasks:
   - T033
 phase: Phase 2 - Core Specs
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '76724'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-22T18:05:31Z'
     lane: planned
@@ -226,3 +229,5 @@ _[This section is empty initially.]_
 ## Activity Log
 
 - 2026-03-22T18:05:31Z – system – lane=planned – Prompt created.
+- 2026-03-22T18:38:05Z – claude-opus – shell_pid=76724 – lane=doing – Assigned agent via workflow command
+- 2026-03-22T18:57:29Z – claude-opus – shell_pid=76724 – lane=done – 10 tests: optimization display, locked riders, apply, roster metrics, copy, reset

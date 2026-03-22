@@ -1,8 +1,11 @@
 ---
 work_package_id: WP04
 title: Setup Tab Specs
-lane: planned
+lane: 'done'
 dependencies: [WP03]
+base_branch: 010-e2e-test-suite-redesigned-frontend-WP03
+base_commit: b965f8fc31a008508d0ca17ad96f63841b6b87aa
+created_at: '2026-03-22T18:35:51.790803+00:00'
 subtasks:
   - T021
   - T022
@@ -10,10 +13,10 @@ subtasks:
   - T024
 phase: Phase 2 - Core Specs
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '73700'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-22T18:05:31Z'
     lane: planned
@@ -175,3 +178,6 @@ _[This section is empty initially.]_
 ## Activity Log
 
 - 2026-03-22T18:05:31Z – system – lane=planned – Prompt created.
+- 2026-03-22T18:35:52Z – claude-opus – shell_pid=73700 – lane=doing – Assigned agent via workflow command
+- 2026-03-22T18:36:45Z – claude-opus – shell_pid=73700 – lane=for_review – 7 tests: analysis flow, PCS auto-detect, game import, 4 validation edge cases
+- 2026-03-22T18:37:01Z – claude-opus – shell_pid=73700 – lane=done – Review passed: 7 tests covering all US1 scenarios, proper timeouts, uses fixtures correctly

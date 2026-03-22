@@ -141,10 +141,10 @@
 
 ### Included Subtasks
 
-- [ ] T021 Create `apps/web/tests/e2e/specs/setup.spec.ts` — valid price list analysis flow (paste riders, set budget, click analyze, verify dashboard unlocks with rider table)
-- [ ] T022 Add setup spec: race URL auto-detect tests (enter PCS URL, verify race profile summary with race type, stages, rider counts)
-- [ ] T023 Add setup spec: game URL import tests (enter game URL, click Fetch, verify textarea populated with rider data)
-- [ ] T024 Add setup spec: validation and edge case tests (disabled analyze button with no riders, valid/invalid line counts, mixed valid+invalid input)
+- [x] T021 Create `apps/web/tests/e2e/specs/setup.spec.ts` — valid price list analysis flow (paste riders, set budget, click analyze, verify dashboard unlocks with rider table)
+- [x] T022 Add setup spec: race URL auto-detect tests (enter PCS URL, verify race profile summary with race type, stages, rider counts)
+- [x] T023 Add setup spec: game URL import tests (enter game URL, click Fetch, verify textarea populated with rider data)
+- [x] T024 Add setup spec: validation and edge case tests (disabled analyze button with no riders, valid/invalid line counts, mixed valid+invalid input)
 
 ### Implementation Notes
 
@@ -179,11 +179,11 @@
 
 ### Included Subtasks
 
-- [ ] T025 Create `apps/web/tests/e2e/specs/dashboard.spec.ts` — rider table display test (all columns visible: Rank, Name, Team, Price, Score, Value, Match, Actions)
-- [ ] T026 Add dashboard spec: rider selection and team builder sidebar tests (checkbox toggle, budget tracking, projected score update)
-- [ ] T027 Add dashboard spec: lock/exclude rider interaction tests (lock icon display, exclude greying, checkbox disable behavior)
-- [ ] T028 Add dashboard spec: filter button tests (All, Selected, Locked, Excluded, Unmatched — verify correct filtering and counts)
-- [ ] T029 Add dashboard spec: team completion flow (select 9 riders within budget, verify "Review Team" button appears, budget meter state)
+- [x] T025 Create `apps/web/tests/e2e/specs/dashboard.spec.ts` — rider table display test (all columns visible: Rank, Name, Team, Price, Score, Value, Match, Actions)
+- [x] T026 Add dashboard spec: rider selection and team builder sidebar tests (checkbox toggle, budget tracking, projected score update)
+- [x] T027 Add dashboard spec: lock/exclude rider interaction tests (lock icon display, exclude greying, checkbox disable behavior)
+- [x] T028 Add dashboard spec: filter button tests (All, Selected, Locked, Excluded, Unmatched — verify correct filtering and counts)
+- [x] T029 Add dashboard spec: team completion flow (select 9 riders within budget, verify "Review Team" button appears, budget meter state)
 
 ### Implementation Notes
 
@@ -219,10 +219,10 @@
 
 ### Included Subtasks
 
-- [ ] T030 Create `apps/web/tests/e2e/specs/optimization.spec.ts` — optimization results display (projected total, budget efficiency, rider cards grid, score breakdown categories)
-- [ ] T031 Add optimization spec: locked riders inclusion + apply to roster transition test
-- [ ] T032 Create `apps/web/tests/e2e/specs/roster.spec.ts` — roster display tests (9 riders listed, captain badge on first, metrics sidebar: total score, expenditure, remaining, avg/rider)
-- [ ] T033 Add roster spec: copy to clipboard + reset tests (button text change to "Copied!", reset returns to Setup)
+- [x] T030 Create `apps/web/tests/e2e/specs/optimization.spec.ts` — optimization results display (projected total, budget efficiency, rider cards grid, score breakdown categories)
+- [x] T031 Add optimization spec: locked riders inclusion + apply to roster transition test
+- [x] T032 Create `apps/web/tests/e2e/specs/roster.spec.ts` — roster display tests (9 riders listed, captain badge on first, metrics sidebar: total score, expenditure, remaining, avg/rider)
+- [x] T033 Add roster spec: copy to clipboard + reset tests (button text change to "Copied!", reset returns to Setup)
 
 ### Implementation Notes
 
