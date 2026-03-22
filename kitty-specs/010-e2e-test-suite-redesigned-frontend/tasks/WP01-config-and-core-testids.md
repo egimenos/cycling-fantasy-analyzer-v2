@@ -1,7 +1,7 @@
 ---
 work_package_id: WP01
 title: Playwright Config + Core Flow data-testid
-lane: 'doing'
+lane: 'done'
 dependencies: []
 base_branch: main
 base_commit: 583c13d0d2ad0365495f8044de356b6125d4fa85
@@ -18,8 +18,8 @@ phase: Phase 0 - Foundation
 assignee: ''
 agent: 'claude-opus'
 shell_pid: '67862'
-review_status: ''
-reviewed_by: ''
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-22T18:05:31Z'
     lane: planned
@@ -187,3 +187,4 @@ _[This section is empty initially. Reviewers will populate it if the work is ret
 - 2026-03-22T18:19:34Z – claude-opus – shell_pid=50430 – lane=doing – Assigned agent via workflow command
 - 2026-03-22T18:25:11Z – claude-opus – shell_pid=50430 – lane=for_review – All 7 subtasks complete: config updated, data-testid on 7 components, shared UI extended with rest props
 - 2026-03-22T18:29:47Z – claude-opus – shell_pid=67862 – lane=doing – Started review via workflow command
+- 2026-03-22T18:30:39Z – claude-opus – shell_pid=67862 – lane=done – Review passed: all 7 subtasks verified, testids correctly placed, shared UI properly extended with rest props, zero functional changes
