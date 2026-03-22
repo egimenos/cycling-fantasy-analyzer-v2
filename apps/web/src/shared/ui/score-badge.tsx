@@ -8,7 +8,7 @@ interface ScoreBadgeProps {
 export function ScoreBadge({ score, maxScore = 100 }: ScoreBadgeProps) {
   if (score === null) {
     return (
-      <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+      <span className="inline-flex items-center rounded-sm bg-surface-container-high px-2 py-0.5 text-xs font-medium font-mono text-on-primary-container">
         ---
       </span>
     );
@@ -18,15 +18,15 @@ export function ScoreBadge({ score, maxScore = 100 }: ScoreBadgeProps) {
 
   const colorClass =
     ratio >= 0.75
-      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+      ? 'border-green-500/30 bg-green-500/10 text-green-400'
       : ratio >= 0.25
-        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+        ? 'border-tertiary/30 bg-tertiary/10 text-tertiary'
+        : 'border-error/30 bg-error-container/20 text-error';
 
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold',
+        'inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-semibold font-mono',
         colorClass,
       )}
     >
