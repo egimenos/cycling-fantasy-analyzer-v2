@@ -263,6 +263,7 @@
 - [ ] T035 Create `apps/web/tests/e2e/specs/theme.spec.ts` — theme toggle (switch dark→light, light→dark, localStorage persistence, persistence across reload)
 - [ ] T036 Create `apps/web/tests/e2e/specs/full-workflow.spec.ts` — complete happy path (setup → dashboard → lock rider → optimize → roster → copy → reset → verify initial state)
 - [ ] T037 Add full-workflow spec: error handling edge cases (invalid input shows disabled button, mixed valid/invalid shows counts, budget-exceeded rider has disabled checkbox)
+- [ ] T038 [P] Update `README.md` with e2e test documentation (run commands, structure overview, prerequisites)
 
 ### Implementation Notes
 
@@ -350,3 +351,4 @@ WP02 ──┘           ├──→ WP05 (Dashboard specs)    ├──→ WP0
 | T035       | Theme spec: toggle + persistence                         | WP07         | P3       | Yes       |
 | T036       | Full workflow spec: happy path                           | WP07         | P1       | No        |
 | T037       | Full workflow spec: error edge cases                     | WP07         | P3       | No        |
+| T038       | Update README with e2e test docs                         | WP07         | P3       | Yes       |

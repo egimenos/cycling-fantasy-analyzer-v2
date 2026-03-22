@@ -4,6 +4,7 @@ title: Page Object Model + Custom Fixtures + Helpers
 lane: planned
 dependencies:
   - WP01
+  - WP02
 subtasks:
   - T014
   - T015

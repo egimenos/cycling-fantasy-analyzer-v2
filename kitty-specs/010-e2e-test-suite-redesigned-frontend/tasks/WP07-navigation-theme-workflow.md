@@ -10,6 +10,7 @@ subtasks:
   - T035
   - T036
   - T037
+  - T038
 phase: Phase 3 - Integration
 assignee: ''
 agent: ''
@@ -248,6 +249,23 @@ _[This section is empty initially.]_
      - Verify at least one rider checkbox is disabled
      ```
 - **Notes**: Error handling tests are fast (mostly frontend validation). The budget test (test 3) uses a very low budget (100) to ensure some riders exceed it. The `analyzeValidRiders` helper should accept a budget parameter.
+
+### Subtask T038 – Update README with e2e test documentation
+
+- **Purpose**: Constitution requires README update when setup/configuration changes. This feature changes playwright.config.ts and introduces a new test directory structure.
+- **File**: `README.md` (project root)
+- **Parallel?**: Yes
+- **Steps**:
+  1. Find the existing testing section in the README (or the section that documents `make` commands / `pnpm` scripts).
+  2. Add or update an "E2E Tests" subsection documenting:
+     - How to run: `cd apps/web && pnpm test:e2e`
+     - How to run a specific spec: `pnpm exec playwright test specs/setup.spec.ts`
+     - How to run in headed mode: `pnpm exec playwright test --headed`
+     - How to open Playwright UI: `pnpm exec playwright test --ui`
+     - Prerequisites: Docker running (DB + ML), dev server auto-starts via config
+  3. Briefly describe the test structure: `pages/` (Page Objects), `specs/` (test files), `fixtures/` (data + Playwright fixtures), `helpers/` (utilities).
+  4. Keep it concise — 15-20 lines max.
+- **Notes**: Do not rewrite the entire README. Only add/update the e2e testing section.
 
 ## Risks & Mitigations
 
