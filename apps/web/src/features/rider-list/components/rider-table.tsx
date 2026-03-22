@@ -351,13 +351,32 @@ function ExpandedRowContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boo
   );
 }
 
-type RiderFilter = 'all' | 'locked' | 'excluded' | 'unmatched';
+type RiderFilter = 'all' | 'selected' | 'locked' | 'excluded' | 'unmatched';
 
-const FILTER_OPTIONS: { value: RiderFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'locked', label: 'Locked' },
-  { value: 'excluded', label: 'Excluded' },
-  { value: 'unmatched', label: 'Unmatched' },
+interface FilterOption {
+  value: RiderFilter;
+  label: string;
+  activeClass: string;
+}
+
+const FILTER_OPTIONS: FilterOption[] = [
+  { value: 'all', label: 'All', activeClass: 'bg-primary/15 text-primary border-primary/40' },
+  {
+    value: 'selected',
+    label: 'Selected',
+    activeClass: 'bg-secondary/15 text-secondary border-secondary/40',
+  },
+  {
+    value: 'locked',
+    label: 'Locked',
+    activeClass: 'bg-green-500/15 text-green-400 border-green-500/40',
+  },
+  { value: 'excluded', label: 'Excluded', activeClass: 'bg-error/15 text-error border-error/40' },
+  {
+    value: 'unmatched',
+    label: 'Unmatched',
+    activeClass: 'bg-tertiary/15 text-tertiary border-tertiary/40',
+  },
 ];
 
 export function RiderTable({
@@ -380,6 +399,8 @@ export function RiderTable({
 
   const filteredRiders = data.riders.filter((rider) => {
     switch (filter) {
+      case 'selected':
+        return selectedNames.has(rider.rawName);
       case 'locked':
         return lockedIds.has(rider.rawName);
       case 'excluded':
@@ -393,6 +414,7 @@ export function RiderTable({
 
   const filterCounts: Record<RiderFilter, number> = {
     all: data.riders.length,
+    selected: selectedNames.size,
     locked: lockedIds.size,
     excluded: excludedIds.size,
     unmatched: data.unmatchedCount,
@@ -413,7 +435,7 @@ export function RiderTable({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <div className="flex flex-wrap gap-2">
-          {FILTER_OPTIONS.map(({ value, label }) => {
+          {FILTER_OPTIONS.map(({ value, label, activeClass }) => {
             const count = filterCounts[value];
             if (value !== 'all' && count === 0) return null;
             const isActive = filter === value;
@@ -424,7 +446,7 @@ export function RiderTable({
                 className={cn(
                   'px-3 py-1 rounded-sm text-[10px] font-mono uppercase tracking-wider border transition-colors',
                   isActive
-                    ? 'bg-primary/10 text-primary border-primary/30'
+                    ? activeClass
                     : 'bg-transparent text-outline border-outline-variant/20 hover:text-on-surface hover:border-outline-variant/40',
                 )}
               >
