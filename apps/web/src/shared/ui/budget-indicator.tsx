@@ -7,7 +7,7 @@ interface BudgetIndicatorProps {
   unit?: string;
 }
 
-export function BudgetIndicator({ spent, total, unit = 'H' }: BudgetIndicatorProps) {
+export function BudgetIndicator({ spent, total, unit = '' }: BudgetIndicatorProps) {
   const percentage = total > 0 ? (spent / total) * 100 : 0;
   const isOverBudget = spent > total;
 

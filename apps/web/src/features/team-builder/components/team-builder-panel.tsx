@@ -89,7 +89,8 @@ export function TeamBuilderPanel({
                 <div className="flex-grow min-w-0">
                   <p className="text-xs font-bold font-headline truncate">{rider.rawName}</p>
                   <p className="text-[10px] text-outline font-mono">
-                    {rider.priceHillios}H{rider.rawTeam && ` · ${rider.rawTeam}`}
+                    {rider.priceHillios}
+                    {rider.rawTeam && ` · ${rider.rawTeam}`}
                   </p>
                 </div>
                 {!isLocked && (
@@ -122,7 +123,7 @@ export function TeamBuilderPanel({
         <div className="flex items-center justify-between text-[10px] font-mono text-outline uppercase">
           <span>Remaining Budget</span>
           <span className="text-on-surface font-bold">
-            {budgetRemaining.toFixed(1)} / {budget} H
+            {budgetRemaining.toFixed(1)} / {budget}
           </span>
         </div>
         <div className="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">

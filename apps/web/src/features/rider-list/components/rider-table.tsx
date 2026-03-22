@@ -113,7 +113,7 @@ function createColumns(
     },
     {
       accessorKey: 'priceHillios',
-      header: 'Price (H)',
+      header: 'Price',
       enableSorting: true,
       cell: ({ getValue, row }) => {
         const name = row.original.rawName;

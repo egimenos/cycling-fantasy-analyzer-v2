@@ -32,7 +32,7 @@ export function OptimalTeamCard({ team }: OptimalTeamCardProps) {
               </div>
               <div className="flex justify-between items-baseline mt-1">
                 <span className="font-mono text-xs text-on-primary-container">
-                  {formatNumber(rider.priceHillios)}H
+                  {formatNumber(rider.priceHillios)}
                 </span>
                 <span className="font-mono text-sm font-bold text-on-surface flex-shrink-0">
                   {score?.toFixed(0) ?? '—'} pts

@@ -36,9 +36,9 @@ export function TeamSummary({
     const separator = '='.repeat(45);
     const lines = riders.map(
       (r, i) =>
-        `${i + 1}. ${r.rawName} (${r.rawTeam}) - ${formatNumber(r.priceHillios)}H - Score: ${getEffectiveScore(r)?.toFixed(1) ?? '---'}`,
+        `${i + 1}. ${r.rawName} (${r.rawTeam}) - ${formatNumber(r.priceHillios)} - Score: ${getEffectiveScore(r)?.toFixed(1) ?? '---'}`,
     );
-    const footer = `Total Cost: ${formatNumber(totalCost)}H / ${formatNumber(budget)}H | Projected Score: ${formatNumber(displayScore)}`;
+    const footer = `Total Cost: ${formatNumber(totalCost)} / ${formatNumber(budget)} | Projected Score: ${formatNumber(displayScore)}`;
     const text = [header, separator, ...lines, separator, footer].join('\n');
 
     await navigator.clipboard.writeText(text);
@@ -120,7 +120,7 @@ export function TeamSummary({
                       Cost
                     </div>
                     <div className="font-mono text-primary font-bold">
-                      {formatNumber(rider.priceHillios)}H
+                      {formatNumber(rider.priceHillios)}
                     </div>
                   </div>
                   <div>
@@ -186,7 +186,7 @@ export function TeamSummary({
                   Remaining
                 </span>
                 <span className="font-mono text-xl font-bold text-on-surface">
-                  {formatNumber(remaining)}H
+                  {formatNumber(remaining)}
                 </span>
               </div>
               <div className="bg-surface-container-high p-4 rounded-sm">
@@ -194,7 +194,7 @@ export function TeamSummary({
                   Avg/Rider
                 </span>
                 <span className="font-mono text-xl font-bold text-on-surface">
-                  {formatNumber(avgCost)}H
+                  {formatNumber(avgCost)}
                 </span>
               </div>
             </div>
