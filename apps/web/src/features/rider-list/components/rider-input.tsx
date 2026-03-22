@@ -99,7 +99,7 @@ export function RiderInput({
     <div className="flex flex-col gap-6">
       <header className="mb-2">
         <span className="text-secondary font-mono text-xs tracking-widest uppercase mb-1 block">
-          Optimization Engine
+          Analysis Engine
         </span>
         <h1 className="text-3xl font-headline font-extrabold text-on-surface tracking-tight">
           Roster Setup
@@ -232,7 +232,7 @@ export function RiderInput({
           ) : (
             <>
               <BarChart3 className="h-4 w-4" />
-              Run Optimization Engine
+              Analyze Riders
             </>
           )}
         </button>
