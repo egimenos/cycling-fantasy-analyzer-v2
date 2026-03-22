@@ -432,9 +432,9 @@ export function RiderTable({
   );
 
   return (
-    <div className="space-y-3">
+    <div data-testid="dashboard-rider-table" className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-        <div className="flex flex-wrap gap-2">
+        <div data-testid="dashboard-filter-bar" className="flex flex-wrap gap-2">
           {FILTER_OPTIONS.map(({ value, label, activeClass }) => {
             const count = filterCounts[value];
             if (value !== 'all' && count === 0) return null;
@@ -442,6 +442,7 @@ export function RiderTable({
             return (
               <button
                 key={value}
+                data-testid={`dashboard-filter-${value}`}
                 onClick={() => setFilter(isActive && value !== 'all' ? 'all' : value)}
                 className={cn(
                   'px-3 py-1 rounded-sm text-[10px] font-mono uppercase tracking-wider border transition-colors',
@@ -456,7 +457,7 @@ export function RiderTable({
             );
           })}
         </div>
-        <span className="text-xs font-mono text-outline">
+        <span data-testid="dashboard-rider-count" className="text-xs font-mono text-outline">
           Showing {filteredRiders.length} of {data.riders.length}
         </span>
       </div>

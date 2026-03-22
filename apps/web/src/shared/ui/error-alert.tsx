@@ -2,14 +2,14 @@ import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { Button } from '@/shared/ui/button';
 
-interface ErrorAlertProps {
+interface ErrorAlertProps extends React.ComponentPropsWithoutRef<'div'> {
   message: string;
   onRetry?: () => void;
 }
 
-export function ErrorAlert({ message, onRetry }: ErrorAlertProps) {
+export function ErrorAlert({ message, onRetry, ...rest }: ErrorAlertProps) {
   return (
-    <Alert variant="destructive">
+    <Alert variant="destructive" {...rest}>
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>Error</AlertTitle>
       <AlertDescription className="flex items-center justify-between gap-4">

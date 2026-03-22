@@ -21,6 +21,7 @@ export function FlowTabs({ activeTab, onTabChange }: FlowTabsProps) {
         return (
           <button
             key={step}
+            data-testid={`flow-tab-${step}`}
             onClick={() => unlocked && onTabChange(step)}
             disabled={!unlocked}
             className={cn(

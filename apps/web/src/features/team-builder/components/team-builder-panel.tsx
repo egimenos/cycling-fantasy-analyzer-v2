@@ -42,13 +42,17 @@ export function TeamBuilderPanel({
   const displayScore = mlTotalScore ?? totalScore;
 
   return (
-    <div className="bg-surface-container-high p-6 rounded-sm border border-outline-variant/10 flex flex-col gap-6 sticky top-24 max-h-[calc(100vh-8rem)] overflow-hidden">
+    <div
+      data-testid="dashboard-team-builder"
+      className="bg-surface-container-high p-6 rounded-sm border border-outline-variant/10 flex flex-col gap-6 sticky top-24 max-h-[calc(100vh-8rem)] overflow-hidden"
+    >
       {/* Header */}
       <header className="space-y-1">
         <div className="flex items-center justify-between">
           <h3 className="font-headline font-extrabold text-xl tracking-tight">TEAM BUILDER</h3>
           {selectedRiders.length > 0 && (
             <button
+              data-testid="dashboard-clear-all-btn"
               onClick={onClearAll}
               className="text-[10px] font-mono text-outline uppercase hover:text-error transition-colors"
             >
@@ -65,7 +69,10 @@ export function TeamBuilderPanel({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-mono text-outline uppercase">Active Roster</span>
-          <span className="font-mono font-bold text-secondary text-sm">
+          <span
+            data-testid="dashboard-roster-count"
+            className="font-mono font-bold text-secondary text-sm"
+          >
             {selectedRiders.length} / {MAX_RIDERS} riders
           </span>
         </div>
@@ -122,7 +129,7 @@ export function TeamBuilderPanel({
       <div className="space-y-3 pt-4 border-t border-outline-variant/10">
         <div className="flex items-center justify-between text-[10px] font-mono text-outline uppercase">
           <span>Remaining Budget</span>
-          <span className="text-on-surface font-bold">
+          <span data-testid="dashboard-budget-remaining" className="text-on-surface font-bold">
             {budgetRemaining.toFixed(1)} / {budget}
           </span>
         </div>
@@ -149,7 +156,10 @@ export function TeamBuilderPanel({
             Projected Score
             {mlTotalScore !== null && <MlBadge />}
           </span>
-          <span className="font-mono font-bold text-2xl text-secondary">
+          <span
+            data-testid="dashboard-projected-score"
+            className="font-mono font-bold text-2xl text-secondary"
+          >
             {displayScore > 0
               ? displayScore.toLocaleString(undefined, { maximumFractionDigits: 0 })
               : '—'}
@@ -165,6 +175,7 @@ export function TeamBuilderPanel({
         {/* CTAs */}
         {isTeamComplete && onReviewTeam ? (
           <button
+            data-testid="dashboard-review-btn"
             onClick={onReviewTeam}
             className="w-full py-3 bg-green-500/20 text-green-400 border border-green-500/30 font-headline font-bold uppercase tracking-wider text-sm rounded-sm hover:bg-green-500/30 transition-colors"
           >
@@ -173,6 +184,7 @@ export function TeamBuilderPanel({
         ) : (
           onOptimize && (
             <button
+              data-testid="dashboard-optimize-btn"
               onClick={onOptimize}
               disabled={isOptimizing}
               className="w-full py-4 bg-gradient-to-br from-primary-fixed-dim to-primary-container text-on-surface font-headline font-extrabold uppercase tracking-widest text-sm rounded-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-black/40 disabled:opacity-50 disabled:pointer-events-none"

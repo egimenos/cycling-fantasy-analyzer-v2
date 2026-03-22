@@ -1,12 +1,12 @@
-interface EmptyStateProps {
+interface EmptyStateProps extends React.ComponentPropsWithoutRef<'div'> {
   title: string;
   description?: string;
   icon?: React.ReactNode;
 }
 
-export function EmptyState({ title, description, icon }: EmptyStateProps) {
+export function EmptyState({ title, description, icon, ...rest }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+    <div className="flex flex-col items-center justify-center gap-2 py-16 text-center" {...rest}>
       {icon ? (
         <div className="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center text-primary text-3xl">
           {icon}

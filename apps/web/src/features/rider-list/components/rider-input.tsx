@@ -120,6 +120,7 @@ export function RiderInput({
           <div className="relative group">
             <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline group-focus-within:text-primary" />
             <Input
+              data-testid="setup-race-url-input"
               value={raceUrl}
               onChange={(e) => setRaceUrl(e.target.value)}
               placeholder="Paste race startlist URL to auto-detect riders..."
@@ -155,6 +156,7 @@ export function RiderInput({
             <div className="relative flex-1 group">
               <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline group-focus-within:text-primary" />
               <Input
+                data-testid="setup-game-url-input"
                 value={gameUrl}
                 onChange={(e) => setGameUrl(e.target.value)}
                 placeholder="Fantasy platform price URL"
@@ -162,6 +164,7 @@ export function RiderInput({
               />
             </div>
             <Button
+              data-testid="setup-fetch-btn"
               variant="secondary"
               onClick={handleImport}
               disabled={!gameUrl || importStatus === 'loading'}
@@ -186,6 +189,7 @@ export function RiderInput({
             Rider List Manual Input
           </label>
           <Textarea
+            data-testid="setup-riders-textarea"
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder={`Tadej Pogacar, UAD, 500\nJonas Vingegaard, TVL, 480`}
@@ -195,9 +199,15 @@ export function RiderInput({
           <div className="flex gap-3 text-[10px] text-outline font-mono uppercase tracking-tighter">
             <span>Format: Name, Team, Price (One per line)</span>
             {parsedRiders.length > 0 && (
-              <span className="text-secondary">{parsedRiders.length} valid</span>
+              <span data-testid="setup-valid-count" className="text-secondary">
+                {parsedRiders.length} valid
+              </span>
             )}
-            {invalidCount > 0 && <span className="text-tertiary">{invalidCount} invalid</span>}
+            {invalidCount > 0 && (
+              <span data-testid="setup-invalid-count" className="text-tertiary">
+                {invalidCount} invalid
+              </span>
+            )}
           </div>
         </div>
 
@@ -209,6 +219,7 @@ export function RiderInput({
           <div className="relative group max-w-full">
             <BarChart3 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline" />
             <Input
+              data-testid="setup-budget-input"
               type="number"
               min={1}
               value={budget}
@@ -220,6 +231,7 @@ export function RiderInput({
 
         {/* Analyze CTA */}
         <button
+          data-testid="setup-analyze-btn"
           onClick={handleSubmit}
           disabled={parsedRiders.length === 0 || isLoading}
           className="mt-4 w-full bg-primary text-primary-foreground py-4 rounded-sm font-headline font-extrabold uppercase tracking-widest text-sm flex items-center justify-center gap-3 transition-all hover:bg-primary-fixed-dim hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-primary/10 disabled:opacity-50 disabled:pointer-events-none"

@@ -296,7 +296,7 @@ function SetupTab({
   profileState,
 }: SetupTabProps) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pt-2">
+    <div data-testid="tab-content-setup" className="grid grid-cols-1 lg:grid-cols-12 gap-12 pt-2">
       <div className="lg:col-span-5 flex flex-col gap-6">
         <RiderInput
           onAnalyze={onAnalyze}
@@ -436,7 +436,7 @@ function DashboardTab({
   const [configOpen, setConfigOpen] = useState(false);
 
   return (
-    <div className="space-y-6">
+    <div data-testid="tab-content-dashboard" className="space-y-6">
       {/* Race Profile Bar */}
       {profileState.status === 'success' && (
         <RaceProfileSummary
@@ -520,14 +520,19 @@ interface OptimizationTabProps {
 function OptimizationTab({ optimizeState, budget, onApplyToRoster }: OptimizationTabProps) {
   if (optimizeState.status !== 'success') {
     return (
-      <div className="flex items-center justify-center py-24 text-on-surface-variant font-mono text-sm uppercase tracking-widest">
+      <div
+        data-testid="tab-content-optimization"
+        className="flex items-center justify-center py-24 text-on-surface-variant font-mono text-sm uppercase tracking-widest"
+      >
         No optimization results available.
       </div>
     );
   }
 
   return (
-    <OptimizerPanel data={optimizeState.data} budget={budget} onApplyToRoster={onApplyToRoster} />
+    <div data-testid="tab-content-optimization">
+      <OptimizerPanel data={optimizeState.data} budget={budget} onApplyToRoster={onApplyToRoster} />
+    </div>
   );
 }
 
@@ -540,20 +545,25 @@ interface RosterTabProps {
 function RosterTab({ teamBuilder, budget, onReset }: RosterTabProps) {
   if (teamBuilder.selectedRiders.length === 0) {
     return (
-      <div className="flex items-center justify-center py-24 text-on-surface-variant font-mono text-sm uppercase tracking-widest">
+      <div
+        data-testid="tab-content-roster"
+        className="flex items-center justify-center py-24 text-on-surface-variant font-mono text-sm uppercase tracking-widest"
+      >
         No team selected.
       </div>
     );
   }
 
   return (
-    <TeamSummary
-      riders={teamBuilder.selectedRiders}
-      totalCost={teamBuilder.totalCost}
-      totalScore={teamBuilder.totalScore}
-      mlTotalScore={teamBuilder.mlTotalScore}
-      budget={budget}
-      onReset={onReset}
-    />
+    <div data-testid="tab-content-roster">
+      <TeamSummary
+        riders={teamBuilder.selectedRiders}
+        totalCost={teamBuilder.totalCost}
+        totalScore={teamBuilder.totalScore}
+        mlTotalScore={teamBuilder.mlTotalScore}
+        budget={budget}
+        onReset={onReset}
+      />
+    </div>
   );
 }

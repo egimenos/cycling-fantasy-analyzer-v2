@@ -81,10 +81,16 @@ export function RiderListPage() {
     <div className="space-y-6">
       <RiderInput onAnalyze={handleAnalyze} isLoading={analyzeState.status === 'loading'} />
 
-      {analyzeState.status === 'loading' && <LoadingSpinner message="Analyzing riders..." />}
+      {analyzeState.status === 'loading' && (
+        <LoadingSpinner data-testid="setup-analyzing-spinner" message="Analyzing riders..." />
+      )}
 
       {analyzeState.status === 'error' && (
-        <ErrorAlert message={analyzeState.error} onRetry={retryAnalyze} />
+        <ErrorAlert
+          data-testid="setup-analysis-error"
+          message={analyzeState.error}
+          onRetry={retryAnalyze}
+        />
       )}
 
       {analyzeState.status === 'success' && (
@@ -126,6 +132,7 @@ export function RiderListPage() {
 
       {analyzeState.status === 'idle' && (
         <EmptyState
+          data-testid="setup-empty-state"
           title="Enter riders to get started"
           description="Paste your rider list above (one per line: Name, Team, Price) and click Analyze."
         />
