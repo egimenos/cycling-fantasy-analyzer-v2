@@ -51,7 +51,7 @@ test.describe('Setup Tab', () => {
     await setupPage.goto();
 
     await setupPage.setGameUrl(
-      'https://www.grandesminivueltas.com/partida/ver/tour-de-france-2025',
+      'https://grandesminivueltas.com/index.php/2026/03/07/paris-niza-2026/',
     );
     await setupPage.clickFetch();
 
