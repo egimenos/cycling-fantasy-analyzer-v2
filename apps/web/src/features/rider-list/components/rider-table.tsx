@@ -115,9 +115,19 @@ function createColumns(
       accessorKey: 'priceHillios',
       header: 'Price (H)',
       enableSorting: true,
-      cell: ({ getValue }) => (
-        <span className="text-right font-mono font-bold">{formatNumber(getValue<number>())}</span>
-      ),
+      cell: ({ getValue, row }) => {
+        const name = row.original.rawName;
+        const isSelected = selectedNames.has(name) || lockedIds.has(name);
+        const affordable = isSelected || canSelect(name);
+        return (
+          <span
+            className={cn('text-right font-mono font-bold', !affordable && 'text-error/60')}
+            title={!affordable ? 'Exceeds remaining budget' : undefined}
+          >
+            {formatNumber(getValue<number>())}
+          </span>
+        );
+      },
     },
     {
       id: 'effectiveScore',
