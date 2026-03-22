@@ -64,10 +64,11 @@
   --color-mountain: var(--color-mountain);
   --color-sprint: var(--color-sprint);
 
-  /* Typography */
-  --font-family-headline: 'Manrope', sans-serif;
-  --font-family-body: 'Inter', sans-serif;
-  --font-family-mono: 'JetBrains Mono', monospace;
+  /* Typography — Tailwind 4 generates font-* utilities from --font-* */
+  --font-headline: 'Manrope', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'Inter', sans-serif;
 
   /* Border radius — sharp technical corners */
   --radius-sm: calc(var(--radius) - 0.0625rem);
