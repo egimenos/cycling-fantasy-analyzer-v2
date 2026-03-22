@@ -60,12 +60,12 @@
 
 ### Included Subtasks
 
-- [ ] T008 [P] Add data-testid to `apps/web/src/routes/__root.tsx` (navbar, theme toggle)
-- [ ] T009 [P] Add data-testid to `apps/web/src/features/optimizer/components/optimizer-panel.tsx` (5 displays/buttons)
-- [ ] T010 [P] Add data-testid to `apps/web/src/features/optimizer/components/optimal-team-card.tsx` and `score-breakdown.tsx`
-- [ ] T011 [P] Add data-testid to `apps/web/src/features/team-builder/components/team-summary.tsx` (10 displays/buttons)
-- [ ] T012 [P] Add data-testid to `apps/web/src/features/rider-list/components/race-profile-summary.tsx` (4 displays)
-- [ ] T013 Delete `apps/web/tests/e2e/full-workflow.spec.ts` and create directories: `pages/`, `specs/`, `helpers/`
+- [x] T008 [P] Add data-testid to `apps/web/src/routes/__root.tsx` (navbar, theme toggle)
+- [x] T009 [P] Add data-testid to `apps/web/src/features/optimizer/components/optimizer-panel.tsx` (5 displays/buttons)
+- [x] T010 [P] Add data-testid to `apps/web/src/features/optimizer/components/optimal-team-card.tsx` and `score-breakdown.tsx`
+- [x] T011 [P] Add data-testid to `apps/web/src/features/team-builder/components/team-summary.tsx` (10 displays/buttons)
+- [x] T012 [P] Add data-testid to `apps/web/src/features/rider-list/components/race-profile-summary.tsx` (4 displays)
+- [x] T013 Delete `apps/web/tests/e2e/full-workflow.spec.ts` and create directories: `pages/`, `specs/`, `helpers/`
 
 ### Implementation Notes
 
