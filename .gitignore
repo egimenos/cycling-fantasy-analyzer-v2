@@ -55,3 +55,4 @@ ml/models/model_version.txt
 __pycache__/
 *.pyc
 ml/.coverage
+redesign/
