@@ -204,7 +204,7 @@ export function RiderInput({
         {/* Budget */}
         <div className="flex flex-col gap-2">
           <label className="text-xs font-body uppercase tracking-wider text-on-primary-container font-semibold">
-            Budget (Hillios)
+            Budget
           </label>
           <div className="relative group max-w-full">
             <BarChart3 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline" />
