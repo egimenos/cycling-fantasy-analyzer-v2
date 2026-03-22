@@ -11,10 +11,17 @@ import {
 } from '@/features/flow/hooks/use-flow-state';
 import { FlowTabs } from '@/features/flow/components/flow-tabs';
 import { RiderInput } from '@/features/rider-list/components/rider-input';
+import { RiderTable } from '@/features/rider-list/components/rider-table';
+import { RaceProfileSummary } from '@/features/rider-list/components/race-profile-summary';
+import { TeamBuilderPanel } from '@/features/team-builder/components/team-builder-panel';
 import { useAnalyze } from '@/features/rider-list/hooks/use-analyze';
+import { useLockExclude } from '@/features/rider-list/hooks/use-lock-exclude';
+import { useTeamBuilder } from '@/features/team-builder/hooks/use-team-builder';
+import { useRaceProfile } from '@/features/rider-list/hooks/use-race-profile';
 import { LoadingSpinner } from '@/shared/ui/loading-spinner';
 import { ErrorAlert } from '@/shared/ui/error-alert';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Settings, ChevronDown } from 'lucide-react';
+import * as Collapsible from '@radix-ui/react-collapsible';
 
 const VALID_TABS: readonly string[] = ['setup', 'dashboard', 'optimization', 'roster'];
 
@@ -40,8 +47,65 @@ function HomePage() {
 function HomePageContent() {
   const { tab } = Route.useSearch();
   const navigate = Route.useNavigate();
-  const { isUnlocked } = useFlowState();
+  const { isUnlocked, dispatch } = useFlowState();
 
+  // Shared state across tabs
+  const { state: analyzeState, analyze, retry: retryAnalyze } = useAnalyze();
+  const { lockedIds, excludedIds, toggleLock, toggleExclude } = useLockExclude();
+  const [budget, setBudget] = useState(2000);
+  const [raceUrl, setRaceUrl] = useState('');
+  const riders = analyzeState.status === 'success' ? analyzeState.data.riders : [];
+  const teamBuilder = useTeamBuilder(budget, riders);
+  const profileState = useRaceProfile(raceUrl);
+
+  // Sync lock -> auto-select in team builder
+  useEffect(() => {
+    for (const name of lockedIds) {
+      if (!teamBuilder.isSelected(name)) {
+        teamBuilder.addRider(name);
+      }
+    }
+  }, [lockedIds, teamBuilder]);
+
+  // Sync exclude -> auto-remove from team builder
+  useEffect(() => {
+    for (const name of excludedIds) {
+      if (teamBuilder.isSelected(name)) {
+        teamBuilder.removeRider(name);
+      }
+    }
+  }, [excludedIds, teamBuilder]);
+
+  const handleToggleSelect = useCallback(
+    (name: string) => {
+      if (lockedIds.has(name)) return;
+      if (teamBuilder.isSelected(name)) {
+        teamBuilder.removeRider(name);
+      } else {
+        teamBuilder.addRider(name);
+      }
+    },
+    [lockedIds, teamBuilder],
+  );
+
+  // Lock/exclude with flow invalidation (T024)
+  const handleToggleLock = useCallback(
+    (name: string) => {
+      toggleLock(name);
+      dispatch({ type: 'INVALIDATE_FROM', step: 'optimization' });
+    },
+    [toggleLock, dispatch],
+  );
+
+  const handleToggleExclude = useCallback(
+    (name: string) => {
+      toggleExclude(name);
+      dispatch({ type: 'INVALIDATE_FROM', step: 'optimization' });
+    },
+    [toggleExclude, dispatch],
+  );
+
+  // Tab navigation
   const handleTabChange = (newTab: FlowStep): void => {
     if (isUnlocked(newTab)) {
       void navigate({ search: { tab: newTab } });
@@ -56,32 +120,13 @@ function HomePageContent() {
     }
   }, [tab, isUnlocked, navigate]);
 
-  return (
-    <>
-      <FlowTabs activeTab={tab} onTabChange={handleTabChange} />
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        {tab === 'setup' && <SetupTab />}
-        {tab === 'dashboard' && <DashboardTab />}
-        {tab === 'optimization' && <OptimizationTab />}
-        {tab === 'roster' && <RosterTab />}
-      </div>
-    </>
-  );
-}
-
-function SetupTab() {
-  const { state: analyzeState, analyze, retry: retryAnalyze } = useAnalyze();
-  const { dispatch } = useFlowState();
-  const navigate = Route.useNavigate();
-  const [budget, setBudget] = useState(2000);
-
   // When analysis succeeds, unlock dashboard and navigate
   useEffect(() => {
-    if (analyzeState.status === 'success') {
+    if (analyzeState.status === 'success' && !isUnlocked('dashboard')) {
       dispatch({ type: 'ANALYZE_SUCCESS' });
       void navigate({ search: { tab: 'dashboard' } });
     }
-  }, [analyzeState.status, dispatch, navigate]);
+  }, [analyzeState.status, dispatch, navigate, isUnlocked]);
 
   const handleAnalyze = useCallback(
     (
@@ -93,6 +138,7 @@ function SetupTab() {
       year?: number,
     ) => {
       setBudget(newBudget);
+      teamBuilder.clearAll();
       dispatch({ type: 'RESET' });
       void analyze({
         riders: parsedRiders,
@@ -103,23 +149,71 @@ function SetupTab() {
         year,
       });
     },
-    [analyze, dispatch],
+    [analyze, teamBuilder, dispatch],
   );
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pt-2">
-      {/* Left: Input Controls */}
-      <div className="lg:col-span-5 flex flex-col gap-6">
-        <RiderInput
-          onAnalyze={handleAnalyze}
-          isLoading={analyzeState.status === 'loading'}
-        />
-        {analyzeState.status === 'error' && (
-          <ErrorAlert message={analyzeState.error} onRetry={retryAnalyze} />
+    <>
+      <FlowTabs activeTab={tab} onTabChange={handleTabChange} />
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        {tab === 'setup' && (
+          <SetupTab
+            onAnalyze={handleAnalyze}
+            isLoading={analyzeState.status === 'loading'}
+            error={analyzeState.status === 'error' ? analyzeState.error : undefined}
+            onRetry={retryAnalyze}
+            budget={budget}
+          />
         )}
+        {tab === 'dashboard' && analyzeState.status === 'success' && (
+          <DashboardTab
+            data={analyzeState.data}
+            lockedIds={lockedIds}
+            excludedIds={excludedIds}
+            selectedNames={teamBuilder.selectedNames}
+            onToggleLock={handleToggleLock}
+            onToggleExclude={handleToggleExclude}
+            onToggleSelect={handleToggleSelect}
+            canSelect={teamBuilder.canSelect}
+            teamBuilder={teamBuilder}
+            budget={budget}
+            profileState={profileState}
+          />
+        )}
+        {tab === 'optimization' && <OptimizationTab />}
+        {tab === 'roster' && <RosterTab />}
+      </div>
+    </>
+  );
+}
+
+// ============================================================
+// Setup Tab
+// ============================================================
+
+interface SetupTabProps {
+  onAnalyze: (
+    riders: PriceListEntryDto[],
+    raceType: RaceType,
+    budget: number,
+    profileSummary?: ProfileSummary,
+    raceSlug?: string,
+    year?: number,
+  ) => void;
+  isLoading: boolean;
+  error?: string;
+  onRetry?: () => void;
+  budget: number;
+}
+
+function SetupTab({ onAnalyze, isLoading, error, onRetry, budget }: SetupTabProps) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pt-2">
+      <div className="lg:col-span-5 flex flex-col gap-6">
+        <RiderInput onAnalyze={onAnalyze} isLoading={isLoading} />
+        {error && <ErrorAlert message={error} onRetry={onRetry} />}
       </div>
 
-      {/* Right: Preview */}
       <div className="lg:col-span-7 flex flex-col">
         <div className="flex justify-between items-end mb-4 px-2">
           <div className="flex flex-col">
@@ -127,12 +221,12 @@ function SetupTab() {
               Real-time Preview
             </span>
             <h2 className="text-xl font-headline font-bold text-on-surface-variant">
-              {analyzeState.status === 'loading' ? 'Analyzing...' : 'Analysis Pending'}
+              {isLoading ? 'Analyzing...' : 'Analysis Pending'}
             </h2>
           </div>
         </div>
 
-        {analyzeState.status === 'loading' ? (
+        {isLoading ? (
           <div className="flex-1 min-h-[500px] rounded-sm bg-surface-container-low/30 border border-dashed border-outline-variant/20 flex items-center justify-center">
             <LoadingSpinner message="Analyzing riders..." />
           </div>
@@ -146,11 +240,9 @@ function SetupTab() {
                 No Roster Detected
               </h3>
               <p className="text-on-surface-variant font-body leading-relaxed mb-8">
-                Input your budget and rider list to see the optimized lineup preview
-                here. Our engine uses historical performance data to find the best
-                value for your budget.
+                Input your budget and rider list to see the optimized lineup preview here. Our
+                engine uses historical performance data to find the best value for your budget.
               </p>
-              {/* Skeleton placeholder rows */}
               <div className="w-full flex flex-col gap-3 opacity-30">
                 <div className="flex justify-between items-center py-3 border-b border-outline-variant/10">
                   <div className="flex gap-3">
@@ -177,7 +269,6 @@ function SetupTab() {
           </div>
         )}
 
-        {/* Footer Summary Bar */}
         <div className="mt-6 bg-surface-container-high/40 p-6 rounded-sm flex justify-between items-center border border-outline-variant/5">
           <div className="flex gap-12">
             <div className="flex flex-col">
@@ -190,9 +281,7 @@ function SetupTab() {
               <span className="text-[10px] text-outline uppercase font-mono tracking-tighter">
                 Budget Allocation
               </span>
-              <span className="text-xl font-mono font-bold text-outline">
-                0 / {budget}
-              </span>
+              <span className="text-xl font-mono font-bold text-outline">0 / {budget}</span>
             </div>
           </div>
           <div className="flex gap-4 items-center">
@@ -207,13 +296,112 @@ function SetupTab() {
   );
 }
 
-function DashboardTab() {
+// ============================================================
+// Dashboard Tab
+// ============================================================
+
+interface DashboardTabProps {
+  data: import('@cycling-analyzer/shared-types').AnalyzeResponse;
+  lockedIds: Set<string>;
+  excludedIds: Set<string>;
+  selectedNames: Set<string>;
+  onToggleLock: (name: string) => void;
+  onToggleExclude: (name: string) => void;
+  onToggleSelect: (name: string) => void;
+  canSelect: (name: string) => boolean;
+  teamBuilder: ReturnType<typeof useTeamBuilder>;
+  budget: number;
+  profileState: ReturnType<typeof useRaceProfile>;
+}
+
+function DashboardTab({
+  data,
+  lockedIds,
+  excludedIds,
+  selectedNames,
+  onToggleLock,
+  onToggleExclude,
+  onToggleSelect,
+  canSelect,
+  teamBuilder,
+  budget,
+  profileState,
+}: DashboardTabProps) {
+  const [configOpen, setConfigOpen] = useState(false);
+
   return (
-    <div className="flex items-center justify-center py-24 text-on-surface-variant font-mono text-sm uppercase tracking-widest">
-      Dashboard — Coming in WP04
+    <div className="space-y-6">
+      {/* Race Profile Bar */}
+      {profileState.status === 'success' && (
+        <RaceProfileSummary
+          profile={profileState.data}
+          totalRiders={data.riders.length}
+          matchedRiders={data.totalMatched}
+          isAnalyzed
+        />
+      )}
+
+      {/* Collapsible Config */}
+      <Collapsible.Root open={configOpen} onOpenChange={setConfigOpen}>
+        <div className="bg-surface-container-high/40 border border-outline-variant/15 rounded-sm overflow-hidden">
+          <Collapsible.Trigger className="flex items-center justify-between px-6 py-3 w-full cursor-pointer hover:bg-surface-container-high transition-colors">
+            <div className="flex items-center gap-3">
+              <Settings className="h-4 w-4 text-outline" />
+              <span className="text-sm font-bold uppercase tracking-wider">
+                Configuration & Inputs
+              </span>
+              <span className="text-[10px] font-mono text-outline ml-2">
+                BUDGET ({budget}H)
+              </span>
+            </div>
+            <ChevronDown
+              className={`h-4 w-4 text-outline transition-transform ${configOpen ? 'rotate-180' : ''}`}
+            />
+          </Collapsible.Trigger>
+          <Collapsible.Content className="px-6 pb-4 text-sm text-on-surface-variant">
+            <p className="pt-2">
+              Budget: {budget}H | Riders: {data.riders.length} | Matched: {data.totalMatched}
+            </p>
+          </Collapsible.Content>
+        </div>
+      </Collapsible.Root>
+
+      {/* Main Content: Table + Sidebar */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        <section className="lg:w-[70%] flex flex-col gap-4">
+          <RiderTable
+            data={data}
+            lockedIds={lockedIds}
+            excludedIds={excludedIds}
+            selectedNames={selectedNames}
+            onToggleLock={onToggleLock}
+            onToggleExclude={onToggleExclude}
+            onToggleSelect={onToggleSelect}
+            canSelect={canSelect}
+          />
+        </section>
+
+        <aside className="lg:w-[30%]">
+          <TeamBuilderPanel
+            selectedRiders={teamBuilder.selectedRiders}
+            totalCost={teamBuilder.totalCost}
+            totalScore={teamBuilder.totalScore}
+            mlTotalScore={teamBuilder.mlTotalScore}
+            budgetRemaining={teamBuilder.budgetRemaining}
+            budget={budget}
+            isTeamComplete={teamBuilder.isTeamComplete}
+            onRemoveRider={teamBuilder.removeRider}
+            onClearAll={teamBuilder.clearAll}
+          />
+        </aside>
+      </div>
     </div>
   );
 }
+
+// ============================================================
+// Placeholder Tabs
+// ============================================================
 
 function OptimizationTab() {
   return (
