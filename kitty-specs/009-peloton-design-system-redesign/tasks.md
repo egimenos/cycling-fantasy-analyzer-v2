@@ -259,12 +259,12 @@
 
 ### Included Subtasks
 
-- [ ] T035 Restyle `team-summary.tsx` as Final Roster view — success banner ("Team Complete!"), 9-rider list with name, team, cost, projected score, form rating, captain badge for top rider
-- [ ] T036 Build roster metrics sidebar — total projected score with global average comparison, expenditure progress bar, remaining budget, average cost per rider
-- [ ] T037 Implement Copy to Clipboard — format team as readable text, copy via navigator.clipboard API, toast confirmation
-- [ ] T038 Implement Reset button — clear team state, dispatch RESET to flow state, navigate back to Dashboard tab
-- [ ] T039 End-to-end flow integration — verify A→B→D (manual) and A→B→C→D (optimizer) paths, reset/invalidation behavior, tab state preservation on backward navigation
-- [ ] T040 Responsive layout adjustments — ensure all 4 tabs render correctly from 1024px to 1920px, tab bar responsive, sidebar stacks below table on narrower viewports
+- [x] T035 Restyle `team-summary.tsx` as Final Roster view — success banner ("Team Complete!"), 9-rider list with name, team, cost, projected score, form rating, captain badge for top rider
+- [x] T036 Build roster metrics sidebar — total projected score with global average comparison, expenditure progress bar, remaining budget, average cost per rider
+- [x] T037 Implement Copy to Clipboard — format team as readable text, copy via navigator.clipboard API, toast confirmation
+- [x] T038 Implement Reset button — clear team state, dispatch RESET to flow state, navigate back to Dashboard tab
+- [x] T039 End-to-end flow integration — verify A→B→D (manual) and A→B→C→D (optimizer) paths, reset/invalidation behavior, tab state preservation on backward navigation
+- [x] T040 Responsive layout adjustments — ensure all 4 tabs render correctly from 1024px to 1920px, tab bar responsive, sidebar stacks below table on narrower viewports
 
 ### Implementation Notes
 

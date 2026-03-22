@@ -1,7 +1,7 @@
 ---
 work_package_id: WP07
 title: Roster Screen & Final Polish
-lane: planned
+lane: 'done'
 dependencies:
   - WP01
   - WP04
@@ -16,8 +16,8 @@ phase: Phase 2 - Advanced Screens
 assignee: ''
 agent: ''
 shell_pid: ''
-review_status: ''
-reviewed_by: ''
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-22T12:03:57Z'
     lane: planned
@@ -290,3 +290,5 @@ _[Empty initially.]_
 ## Activity Log
 
 - 2026-03-22T12:03:57Z – system – lane=planned – Prompt created.
+- 2026-03-22T12:46:06Z – unknown – lane=for_review – Roster screen complete: success banner, 9-rider list with captain badge, metrics sidebar, copy to clipboard, reset, full flow integration
+- 2026-03-22T12:46:28Z – unknown – lane=done – Review passed: success banner, captain badge, metrics sidebar, clipboard, reset, full flow integration
