@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
+  <!-- Back wheel -->
+  <circle cx="12" cy="26" r="9" stroke="#adc6ff" stroke-width="1.5" opacity="0.8"/>
+  <circle cx="12" cy="26" r="1.5" fill="#adc6ff"/>
+  <!-- Front wheel -->
+  <circle cx="30" cy="26" r="9" stroke="#3b82f6" stroke-width="1.5"/>
+  <circle cx="30" cy="26" r="1.5" fill="#3b82f6"/>
+  <!-- Frame -->
+  <path d="M12 26 L20 12 L30 26 M20 12 L12 26 M20 12 L24 26" stroke="#bcc7de" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Handlebars -->
+  <path d="M20 12 L23 10 L25 11" stroke="#eac34a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Seat -->
+  <path d="M17 13 L20 12" stroke="#eac34a" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Speed lines -->
+  <line x1="1" y1="20" x2="5" y2="20" stroke="#adc6ff" stroke-width="0.8" opacity="0.4"/>
+  <line x1="0" y1="24" x2="3" y2="24" stroke="#adc6ff" stroke-width="0.8" opacity="0.3"/>
+  <line x1="2" y1="28" x2="4" y2="28" stroke="#adc6ff" stroke-width="0.8" opacity="0.2"/>
+</svg>
