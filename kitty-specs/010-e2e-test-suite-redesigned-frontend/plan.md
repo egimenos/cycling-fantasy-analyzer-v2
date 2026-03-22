@@ -1,109 +1,107 @@
-# Implementation Plan: [FEATURE]
+# Implementation Plan: E2E Test Suite for Redesigned Frontend
 
-_Path: [templates/plan-template.md](templates/plan-template.md)_
-
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/kitty-specs/[###-feature-name]/spec.md`
-
-**Note**: This template is filled in by the `/spec-kitty.plan` command. See `src/specify_cli/missions/software-dev/command-templates/plan.md` for the execution workflow.
-
-The planner will not begin until all planning questions have been answered—capture those answers in this document before progressing to later phases.
+**Branch**: `010-e2e-test-suite-redesigned-frontend` | **Date**: 2026-03-22 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `kitty-specs/010-e2e-test-suite-redesigned-frontend/spec.md`
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Rewrite and expand the Playwright e2e test suite for the redesigned cycling analyzer frontend. The existing 5 tests in `full-workflow.spec.ts` are broken due to stale selectors after the UI redesign. This plan introduces a professional Page Object Model architecture with Playwright custom fixtures, adds `data-testid` attributes to frontend components, and expands coverage to all 4 tabs, the navigation state machine, and the theme toggle. Tests run against the real backend and real external services with no API mocking.
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
-
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+**Language/Version**: TypeScript (strict mode), aligned with monorepo tsconfig
+**Primary Dependencies**: `@playwright/test ^1.58.2` (already installed), React 19, Vite 6
+**Storage**: N/A (tests interact with UI, backend handles persistence)
+**Testing**: Playwright (e2e), Vitest + RTL (existing unit tests, unchanged)
+**Target Platform**: Chromium headless (Playwright default browser)
+**Project Type**: Web (monorepo workspace `apps/web`)
+**Performance Goals**: Full suite completes in under 3 minutes
+**Constraints**: No API mocking, no backend changes, English only
+**Scale/Scope**: ~7 spec files, ~5 page objects, ~30 test cases, ~12 component files modified (data-testid only)
 
 ## Constitution Check
 
 _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-[Gates determined based on constitution file]
+| Gate                                    | Status | Notes                                                            |
+| --------------------------------------- | ------ | ---------------------------------------------------------------- |
+| E2E: Playwright, all primary user flows | PASS   | This feature directly fulfills this requirement                  |
+| Language: English only                  | PASS   | All test code and comments in English                            |
+| TypeScript strict mode                  | PASS   | Tests inherit from monorepo tsconfig                             |
+| Frontend: Feature-Sliced Design         | PASS   | No cross-feature imports; data-testid additions are leaf changes |
+| No REST endpoints for scraping          | PASS   | No backend changes at all                                        |
+| Conventional Commits                    | PASS   | Will follow commit conventions                                   |
+| Husky + lint-staged                     | PASS   | Pre-commit hooks apply to test files too                         |
+
+**Post-Phase 1 re-check**: No new violations. The test infrastructure lives entirely within `apps/web/tests/e2e/` and data-testid additions are non-functional changes to existing components.
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```
-kitty-specs/[###-feature]/
-├── plan.md              # This file (/spec-kitty.plan command output)
-├── research.md          # Phase 0 output (/spec-kitty.plan command)
-├── data-model.md        # Phase 1 output (/spec-kitty.plan command)
-├── quickstart.md        # Phase 1 output (/spec-kitty.plan command)
-├── contracts/           # Phase 1 output (/spec-kitty.plan command)
-└── tasks.md             # Phase 2 output (/spec-kitty.tasks command - NOT created by /spec-kitty.plan)
+kitty-specs/010-e2e-test-suite-redesigned-frontend/
+├── plan.md              # This file
+├── spec.md              # Feature specification
+├── research.md          # Phase 0: research findings
+├── data-model.md        # Phase 1: page object and fixture models
+├── quickstart.md        # Phase 1: setup and run instructions
+├── meta.json            # Feature metadata
+├── checklists/
+│   └── requirements.md  # Spec quality checklist
+└── tasks.md             # Phase 2 output (NOT created by plan)
 ```
 
 ### Source Code (repository root)
 
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
-
 ```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
+apps/web/
 ├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
+│   ├── features/
+│   │   ├── flow/components/flow-tabs.tsx              # +data-testid on tab buttons
+│   │   ├── rider-list/components/
+│   │   │   ├── rider-input.tsx                        # +data-testid on inputs/buttons
+│   │   │   ├── rider-table.tsx                        # +data-testid on table/filters/actions
+│   │   │   ├── rider-list-page.tsx                    # +data-testid on state indicators
+│   │   │   └── race-profile-summary.tsx               # +data-testid on displays
+│   │   ├── team-builder/components/
+│   │   │   ├── team-builder-panel.tsx                 # +data-testid on panel elements
+│   │   │   └── team-summary.tsx                       # +data-testid on roster displays
+│   │   └── optimizer/components/
+│   │       ├── optimizer-panel.tsx                     # +data-testid on results
+│   │       ├── optimal-team-card.tsx                   # +data-testid on cards
+│   │       └── score-breakdown.tsx                     # +data-testid on breakdown
+│   └── routes/
+│       ├── __root.tsx                                  # +data-testid on navbar/theme
+│       └── index.tsx                                   # +data-testid on tab containers
+├── tests/e2e/
+│   ├── fixtures/
+│   │   ├── test-fixtures.ts                            # NEW: Playwright custom fixtures
+│   │   ├── valid-price-list.txt                        # (existing)
+│   │   ├── invalid-price-list.txt                      # (existing)
+│   │   └── partial-match-list.txt                      # (existing)
 │   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+│   │   ├── setup.page.ts                               # NEW: SetupPage POM
+│   │   ├── dashboard.page.ts                           # NEW: DashboardPage POM
+│   │   ├── optimization.page.ts                        # NEW: OptimizationPage POM
+│   │   ├── roster.page.ts                              # NEW: RosterPage POM
+│   │   └── nav.page.ts                                 # NEW: NavPage (tabs + theme)
+│   ├── specs/
+│   │   ├── setup.spec.ts                               # NEW: Setup tab tests
+│   │   ├── dashboard.spec.ts                           # NEW: Dashboard tab tests
+│   │   ├── optimization.spec.ts                        # NEW: Optimization tab tests
+│   │   ├── roster.spec.ts                              # NEW: Roster tab tests
+│   │   ├── navigation.spec.ts                          # NEW: Tab state machine tests
+│   │   ├── theme.spec.ts                               # NEW: Theme toggle tests
+│   │   └── full-workflow.spec.ts                       # REWRITE: Full happy path
+│   ├── helpers/
+│   │   └── wait-helpers.ts                             # NEW: Shared utilities
+│   └── full-workflow.spec.ts                           # DELETE: Old broken test file
+└── playwright.config.ts                                # UPDATE: testDir to include specs/
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Tests live within the existing `apps/web/tests/e2e/` directory, extended with `pages/`, `specs/`, `helpers/`, and an enhanced `fixtures/` directory. The old `full-workflow.spec.ts` at root level is replaced by `specs/full-workflow.spec.ts`. Playwright config updated to point testDir at `specs/`.
 
 ## Complexity Tracking
 
-_Fill ONLY if Constitution Check has violations that must be justified_
-
-| Violation                  | Why Needed         | Simpler Alternative Rejected Because |
-| -------------------------- | ------------------ | ------------------------------------ |
-| [e.g., 4th project]        | [current need]     | [why 3 projects insufficient]        |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient]  |
+No constitution violations. All changes are within expected scope.
