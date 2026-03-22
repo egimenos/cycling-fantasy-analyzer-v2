@@ -46,12 +46,14 @@ function HomePageContent() {
   const navigate = Route.useNavigate();
   const { isUnlocked, dispatch } = useFlowState();
 
-  // Shared state across tabs
+  // Shared state across tabs — persists when switching tabs
   const { state: analyzeState, analyze, retry: retryAnalyze } = useAnalyze();
   const { state: optimizeState, optimize, reset: resetOptimize } = useOptimize();
   const { lockedIds, excludedIds, toggleLock, toggleExclude } = useLockExclude();
   const [budget, setBudget] = useState(2000);
-  const [raceUrl] = useState('');
+  const [raceUrl, setRaceUrl] = useState('');
+  const [riderText, setRiderText] = useState('');
+  const [gameUrl, setGameUrl] = useState('');
   const riders = analyzeState.status === 'success' ? analyzeState.data.riders : [];
   const teamBuilder = useTeamBuilder(budget, riders);
   const profileState = useRaceProfile(raceUrl);
@@ -206,6 +208,13 @@ function HomePageContent() {
             error={analyzeState.status === 'error' ? analyzeState.error : undefined}
             onRetry={retryAnalyze}
             budget={budget}
+            riderText={riderText}
+            onRiderTextChange={setRiderText}
+            raceUrl={raceUrl}
+            onRaceUrlChange={setRaceUrl}
+            gameUrl={gameUrl}
+            onGameUrlChange={setGameUrl}
+            onBudgetChange={setBudget}
           />
         )}
         {tab === 'dashboard' && analyzeState.status === 'success' && (
@@ -258,13 +267,44 @@ interface SetupTabProps {
   error?: string;
   onRetry?: () => void;
   budget: number;
+  riderText: string;
+  onRiderTextChange: (text: string) => void;
+  raceUrl: string;
+  onRaceUrlChange: (url: string) => void;
+  gameUrl: string;
+  onGameUrlChange: (url: string) => void;
+  onBudgetChange: (budget: number) => void;
 }
 
-function SetupTab({ onAnalyze, isLoading, error, onRetry, budget }: SetupTabProps) {
+function SetupTab({
+  onAnalyze,
+  isLoading,
+  error,
+  onRetry,
+  budget,
+  riderText,
+  onRiderTextChange,
+  raceUrl,
+  onRaceUrlChange,
+  gameUrl,
+  onGameUrlChange,
+  onBudgetChange,
+}: SetupTabProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pt-2">
       <div className="lg:col-span-5 flex flex-col gap-6">
-        <RiderInput onAnalyze={onAnalyze} isLoading={isLoading} />
+        <RiderInput
+          onAnalyze={onAnalyze}
+          isLoading={isLoading}
+          text={riderText}
+          onTextChange={onRiderTextChange}
+          raceUrl={raceUrl}
+          onRaceUrlChange={onRaceUrlChange}
+          gameUrl={gameUrl}
+          onGameUrlChange={onGameUrlChange}
+          budget={budget}
+          onBudgetChange={onBudgetChange}
+        />
         {error && <ErrorAlert message={error} onRetry={onRetry} />}
       </div>
 

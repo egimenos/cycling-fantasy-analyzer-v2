@@ -20,6 +20,14 @@ interface RiderInputProps {
     year?: number,
   ) => void;
   isLoading: boolean;
+  text: string;
+  onTextChange: (text: string) => void;
+  raceUrl: string;
+  onRaceUrlChange: (url: string) => void;
+  gameUrl: string;
+  onGameUrlChange: (url: string) => void;
+  budget: number;
+  onBudgetChange: (budget: number) => void;
 }
 
 function parseRiderLines(text: string): PriceListEntryDto[] {
@@ -39,13 +47,20 @@ function parseRiderLines(text: string): PriceListEntryDto[] {
     .filter((entry): entry is PriceListEntryDto => entry !== null);
 }
 
-export function RiderInput({ onAnalyze, isLoading }: RiderInputProps) {
-  const [text, setText] = useState('');
-  const [raceUrl, setRaceUrl] = useState('');
-  const [gameUrl, setGameUrl] = useState('');
+export function RiderInput({
+  onAnalyze,
+  isLoading,
+  text,
+  onTextChange: setText,
+  raceUrl,
+  onRaceUrlChange: setRaceUrl,
+  gameUrl,
+  onGameUrlChange: setGameUrl,
+  budget,
+  onBudgetChange: setBudget,
+}: RiderInputProps) {
   const [importStatus, setImportStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [importError, setImportError] = useState('');
-  const [budget, setBudget] = useState(2000);
 
   const profileState = useRaceProfile(raceUrl);
   const raceType =
