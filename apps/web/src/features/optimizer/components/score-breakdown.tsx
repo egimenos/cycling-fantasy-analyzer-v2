@@ -26,7 +26,7 @@ export function ScoreBreakdown({ breakdown }: ScoreBreakdownProps) {
   const total = Object.values(breakdown).reduce((sum, v) => sum + v, 0);
 
   return (
-    <div className="bg-surface-container-low p-8 rounded-sm">
+    <div data-testid="optimization-score-breakdown" className="bg-surface-container-low p-8 rounded-sm">
       <div className="flex justify-between items-end mb-4">
         <span className="text-xs font-mono uppercase tracking-widest text-on-surface-variant">
           Point Distribution Analysis

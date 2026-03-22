@@ -18,6 +18,7 @@ export function OptimalTeamCard({ team }: OptimalTeamCardProps) {
         return (
           <div
             key={rider.rawName}
+            data-testid={`optimization-rider-card-${rider.rawName}`}
             className="bg-surface-container-high p-5 flex items-center gap-4 group hover:bg-surface-bright transition-colors relative overflow-hidden"
           >
             <div className="w-14 h-14 rounded-sm bg-surface-container-highest flex-shrink-0 flex items-center justify-center">
