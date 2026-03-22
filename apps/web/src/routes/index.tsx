@@ -92,17 +92,19 @@ function HomePageContent() {
   const handleToggleLock = useCallback(
     (name: string) => {
       toggleLock(name);
+      resetOptimize();
       dispatch({ type: 'INVALIDATE_FROM', step: 'optimization' });
     },
-    [toggleLock, dispatch],
+    [toggleLock, resetOptimize, dispatch],
   );
 
   const handleToggleExclude = useCallback(
     (name: string) => {
       toggleExclude(name);
+      resetOptimize();
       dispatch({ type: 'INVALIDATE_FROM', step: 'optimization' });
     },
-    [toggleExclude, dispatch],
+    [toggleExclude, resetOptimize, dispatch],
   );
 
   // Handle optimize
