@@ -6,7 +6,7 @@ import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
 import { Loader2, Download, Globe, Link, BarChart3 } from 'lucide-react';
-import { useRaceProfile } from '../hooks/use-race-profile';
+import type { useRaceProfile } from '../hooks/use-race-profile';
 import { RaceProfileSummary } from './race-profile-summary';
 import { importPriceList } from '@/shared/lib/api-client';
 
@@ -28,6 +28,7 @@ interface RiderInputProps {
   onGameUrlChange: (url: string) => void;
   budget: number;
   onBudgetChange: (budget: number) => void;
+  profileState: ReturnType<typeof useRaceProfile>;
 }
 
 function parseRiderLines(text: string): PriceListEntryDto[] {
@@ -58,11 +59,11 @@ export function RiderInput({
   onGameUrlChange: setGameUrl,
   budget,
   onBudgetChange: setBudget,
+  profileState,
 }: RiderInputProps) {
   const [importStatus, setImportStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [importError, setImportError] = useState('');
 
-  const profileState = useRaceProfile(raceUrl);
   const raceType =
     profileState.status === 'success' ? profileState.data.raceType : RaceType.GRAND_TOUR;
 

@@ -215,6 +215,7 @@ function HomePageContent() {
             gameUrl={gameUrl}
             onGameUrlChange={setGameUrl}
             onBudgetChange={setBudget}
+            profileState={profileState}
           />
         )}
         {tab === 'dashboard' && analyzeState.status === 'success' && (
@@ -274,6 +275,7 @@ interface SetupTabProps {
   gameUrl: string;
   onGameUrlChange: (url: string) => void;
   onBudgetChange: (budget: number) => void;
+  profileState: ReturnType<typeof useRaceProfile>;
 }
 
 function SetupTab({
@@ -289,6 +291,7 @@ function SetupTab({
   gameUrl,
   onGameUrlChange,
   onBudgetChange,
+  profileState,
 }: SetupTabProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pt-2">
@@ -304,6 +307,7 @@ function SetupTab({
           onGameUrlChange={onGameUrlChange}
           budget={budget}
           onBudgetChange={onBudgetChange}
+          profileState={profileState}
         />
         {error && <ErrorAlert message={error} onRetry={onRetry} />}
       </div>
