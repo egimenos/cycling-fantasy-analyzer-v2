@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { ColumnDef, Row } from '@tanstack/react-table';
 import type { AnalyzedRider, AnalyzeResponse } from '@cycling-analyzer/shared-types';
 import { DataTable } from '@/shared/ui/data-table';
@@ -339,6 +340,15 @@ function ExpandedRowContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boo
   );
 }
 
+type RiderFilter = 'all' | 'locked' | 'excluded' | 'unmatched';
+
+const FILTER_OPTIONS: { value: RiderFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'locked', label: 'Locked' },
+  { value: 'excluded', label: 'Excluded' },
+  { value: 'unmatched', label: 'Unmatched' },
+];
+
 export function RiderTable({
   data,
   lockedIds,
@@ -349,11 +359,33 @@ export function RiderTable({
   onToggleSelect,
   canSelect,
 }: RiderTableProps) {
+  const [filter, setFilter] = useState<RiderFilter>('all');
+
   if (data.riders.length === 0) {
     return <EmptyState title="No riders" description="Submit riders to see analysis results." />;
   }
 
   const hasML = data.riders.some((r) => r.scoringMethod === 'hybrid');
+
+  const filteredRiders = data.riders.filter((rider) => {
+    switch (filter) {
+      case 'locked':
+        return lockedIds.has(rider.rawName);
+      case 'excluded':
+        return excludedIds.has(rider.rawName);
+      case 'unmatched':
+        return rider.unmatched;
+      default:
+        return true;
+    }
+  });
+
+  const filterCounts: Record<RiderFilter, number> = {
+    all: data.riders.length,
+    locked: lockedIds.size,
+    excluded: excludedIds.size,
+    unmatched: data.unmatchedCount,
+  };
 
   const columns = createColumns(
     lockedIds,
@@ -368,17 +400,36 @@ export function RiderTable({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-3 text-xs font-mono text-outline px-1">
-        <span>
-          Showing {data.riders.length} rider{data.riders.length !== 1 ? 's' : ''}
-        </span>
-        <span>
-          ({data.totalMatched} matched, {data.unmatchedCount} unmatched)
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+        <div className="flex flex-wrap gap-2">
+          {FILTER_OPTIONS.map(({ value, label }) => {
+            const count = filterCounts[value];
+            if (value !== 'all' && count === 0) return null;
+            const isActive = filter === value;
+            return (
+              <button
+                key={value}
+                onClick={() => setFilter(isActive && value !== 'all' ? 'all' : value)}
+                className={cn(
+                  'px-3 py-1 rounded-sm text-[10px] font-mono uppercase tracking-wider border transition-colors',
+                  isActive
+                    ? 'bg-primary/10 text-primary border-primary/30'
+                    : 'bg-transparent text-outline border-outline-variant/20 hover:text-on-surface hover:border-outline-variant/40',
+                )}
+              >
+                {label}
+                <span className="ml-1.5 font-bold">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+        <span className="text-xs font-mono text-outline">
+          Showing {filteredRiders.length} of {data.riders.length}
         </span>
       </div>
       <DataTable<AnalyzedRider>
         columns={columns}
-        data={data.riders}
+        data={filteredRiders}
         initialSorting={[{ id: 'effectiveScore', desc: true }]}
         renderExpandedRow={(row: Row<AnalyzedRider>) => (
           <ExpandedRowContent rider={row.original} hasML={hasML} />
