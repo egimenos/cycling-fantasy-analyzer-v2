@@ -6,4 +6,6 @@ export interface MlScoreRepositoryPort {
   findByRace(raceSlug: string, year: number, modelVersion: string): Promise<MlScore[]>;
   findLatestModelVersion(): Promise<string | null>;
   saveMany(scores: Omit<MlScore, 'id' | 'createdAt'>[]): Promise<void>;
+  deleteByRace(raceSlug: string, year: number): Promise<number>;
+  deleteAll(): Promise<number>;
 }

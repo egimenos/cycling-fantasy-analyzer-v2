@@ -9,7 +9,7 @@ import {
 export class MlScoringAdapter implements MlScoringPort {
   private readonly logger = new Logger(MlScoringAdapter.name);
   private readonly baseUrl: string;
-  private readonly timeout = 5000;
+  private readonly timeout = 30_000;
 
   constructor() {
     this.baseUrl = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';

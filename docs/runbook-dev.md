@@ -287,6 +287,16 @@ The cache auto-invalidates in two cases:
 - **Model retrained**: new `model_version` → old cached predictions are stale → re-predicted on next request
 - **Startlist changed**: ML service compares cached rider IDs with current startlist → mismatch → re-predicts
 
+To manually clear the cache:
+
+```bash
+# Clear all cached ML predictions
+make clear-ml-cache
+
+# Clear cache for a specific race
+make clear-ml-cache RACE=tour-de-france YEAR=2026
+```
+
 ### Troubleshooting
 
 ```bash
@@ -367,6 +377,7 @@ All commands available via `make help`. Most common:
 | Stop ML service    | `make ml-down`                                    |
 | ML service logs    | `make ml-logs`                                    |
 | Restart ML service | `make ml-restart`                                 |
+| Clear ML cache     | `make clear-ml-cache`                             |
 | DB GUI             | `make db-studio`                                  |
 | psql shell         | `make db-psql`                                    |
 | Tests              | `make test`                                       |

@@ -51,6 +51,21 @@ export class MlScoreRepositoryAdapter implements MlScoreRepositoryPort {
       .onConflictDoNothing();
   }
 
+  async deleteByRace(raceSlug: string, year: number): Promise<number> {
+    const result = await this.db
+      .delete(mlScores)
+      .where(and(eq(mlScores.raceSlug, raceSlug), eq(mlScores.year, year)))
+      .returning({ id: mlScores.id });
+
+    return result.length;
+  }
+
+  async deleteAll(): Promise<number> {
+    const result = await this.db.delete(mlScores).returning({ id: mlScores.id });
+
+    return result.length;
+  }
+
   private toDomain(row: typeof mlScores.$inferSelect): MlScore {
     return {
       id: row.id,

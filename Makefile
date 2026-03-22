@@ -1,7 +1,8 @@
 .PHONY: help install build dev test lint typecheck \
        db-up db-down db-generate db-migrate db-studio db-push db-psql \
        seed scrape benchmark benchmark-suite \
-       retrain ml-up ml-down ml-logs ml-restart
+       retrain ml-up ml-down ml-logs ml-restart \
+       clear-ml-cache
 
 # ── Defaults ──────────────────────────────────────────────
 help: ## Show this help
@@ -84,3 +85,18 @@ ml-logs: ## View ML service logs
 
 ml-restart: ## Restart ML service (reload model)
 	docker compose restart ml-service
+
+# ── Cache ────────────────────────────────────────────────
+PSQL = docker compose exec -T postgres psql -U cycling -d cycling_analyzer
+
+clear-ml-cache: ## Clear ML prediction cache (optional: RACE=slug YEAR=2026)
+ifdef RACE
+ifndef YEAR
+	$(error YEAR is required when RACE is specified)
+endif
+	@$(PSQL) -c "DELETE FROM ml_scores WHERE race_slug = '$(RACE)' AND year = $(YEAR);" \
+		&& echo "ML cache cleared for $(RACE)/$(YEAR)"
+else
+	@$(PSQL) -c "DELETE FROM ml_scores;" \
+		&& echo "All ML cache cleared"
+endif
