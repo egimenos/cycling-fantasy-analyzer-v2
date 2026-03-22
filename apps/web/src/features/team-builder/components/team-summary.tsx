@@ -2,6 +2,10 @@ import type { AnalyzedRider } from '@cycling-analyzer/shared-types';
 import { formatNumber } from '@/shared/lib/utils';
 import { CheckCircle, Copy, RotateCcw, Bike } from 'lucide-react';
 import { useState } from 'react';
+
+function getEffectiveScore(rider: AnalyzedRider): number | null {
+  return rider.mlPredictedScore ?? rider.totalProjectedPts;
+}
 import { toast } from 'sonner';
 
 interface TeamSummaryProps {
@@ -32,7 +36,7 @@ export function TeamSummary({
     const separator = '='.repeat(45);
     const lines = riders.map(
       (r, i) =>
-        `${i + 1}. ${r.rawName} (${r.rawTeam}) - ${formatNumber(r.priceHillios)}H - Score: ${r.totalProjectedPts?.toFixed(1) ?? '---'}`,
+        `${i + 1}. ${r.rawName} (${r.rawTeam}) - ${formatNumber(r.priceHillios)}H - Score: ${getEffectiveScore(r)?.toFixed(1) ?? '---'}`,
     );
     const footer = `Total Cost: ${formatNumber(totalCost)}H / ${formatNumber(budget)}H | Projected Score: ${formatNumber(displayScore)}`;
     const text = [header, separator, ...lines, separator, footer].join('\n');
@@ -124,7 +128,7 @@ export function TeamSummary({
                       Proj
                     </div>
                     <div className="font-mono text-tertiary font-bold">
-                      {rider.totalProjectedPts?.toFixed(0) ?? '—'}
+                      {getEffectiveScore(rider)?.toFixed(0) ?? '—'}
                     </div>
                   </div>
                   <div>
