@@ -20,13 +20,13 @@
 
 ### Included Subtasks
 
-- [ ] T001 Update `apps/web/playwright.config.ts` testDir to `./tests/e2e/specs`
-- [ ] T002 [P] Add data-testid to `apps/web/src/features/flow/components/flow-tabs.tsx` (4 tab buttons)
-- [ ] T003 [P] Add data-testid to `apps/web/src/features/rider-list/components/rider-input.tsx` (7 inputs/buttons + validation counters)
-- [ ] T004 [P] Add data-testid to `apps/web/src/features/rider-list/components/rider-table.tsx` (5 filter buttons + table container)
-- [ ] T005 [P] Add data-testid to `apps/web/src/features/rider-list/components/rider-list-page.tsx` (3 state indicators)
-- [ ] T006 [P] Add data-testid to `apps/web/src/features/team-builder/components/team-builder-panel.tsx` (7 displays/buttons)
-- [ ] T007 [P] Add data-testid to `apps/web/src/routes/index.tsx` (4 tab content containers)
+- [x] T001 Update `apps/web/playwright.config.ts` testDir to `./tests/e2e/specs`
+- [x] T002 [P] Add data-testid to `apps/web/src/features/flow/components/flow-tabs.tsx` (4 tab buttons)
+- [x] T003 [P] Add data-testid to `apps/web/src/features/rider-list/components/rider-input.tsx` (7 inputs/buttons + validation counters)
+- [x] T004 [P] Add data-testid to `apps/web/src/features/rider-list/components/rider-table.tsx` (5 filter buttons + table container)
+- [x] T005 [P] Add data-testid to `apps/web/src/features/rider-list/components/rider-list-page.tsx` (3 state indicators)
+- [x] T006 [P] Add data-testid to `apps/web/src/features/team-builder/components/team-builder-panel.tsx` (7 displays/buttons)
+- [x] T007 [P] Add data-testid to `apps/web/src/routes/index.tsx` (4 tab content containers)
 
 ### Implementation Notes
 
