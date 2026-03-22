@@ -21,6 +21,7 @@ export interface MlScoringPort {
     year: number,
     profileSummary?: RaceProfileSummary,
     riderIds?: string[],
+    raceType?: string,
   ): Promise<MlPrediction[] | null>;
   getModelVersion(): Promise<string | null>;
   isHealthy(): Promise<boolean>;

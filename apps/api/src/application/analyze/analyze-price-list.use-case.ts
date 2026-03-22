@@ -330,6 +330,7 @@ export class AnalyzePriceListUseCase {
       input.year,
       profileForMl,
       riderIds,
+      input.raceType,
     );
     if (!predictions) {
       this.logger.warn(

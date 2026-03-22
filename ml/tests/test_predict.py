@@ -111,6 +111,39 @@ class TestPredictRace:
 
     @patch('src.predict.extract_features_for_race')
     @patch('src.predict.get_race_info')
+    def test_predict_race_not_found_with_hint_uses_fallback(self, mock_race_info, mock_extract):
+        """Future race not in DB should use race_type_hint and today as race_date."""
+        import pandas as pd
+        from src.features import FEATURE_COLS
+
+        mock_race_info.return_value = None
+
+        data = {col: [0.0, 1.0] for col in FEATURE_COLS}
+        data['rider_id'] = ['r1', 'r2']
+        mock_extract.return_value = pd.DataFrame(data)
+
+        mock_model = MagicMock()
+        mock_model.predict.return_value = np.array([80.0, 65.0])
+
+        empty_startlists = pd.DataFrame(columns=['race_slug', 'year', 'rider_id', 'team_name'])
+
+        result = predict_race(
+            race_slug='volta-a-catalunya',
+            year=2026,
+            models={'mini_tour': mock_model},
+            results_df=MagicMock(),
+            startlists_df=empty_startlists,
+            db_url='postgresql://fake',
+            rider_ids=['r1', 'r2'],
+            race_type_hint='mini_tour',
+        )
+
+        assert len(result) == 2
+        assert result[0]['rider_id'] == 'r1'
+        assert result[0]['predicted_score'] == 80.0
+
+    @patch('src.predict.extract_features_for_race')
+    @patch('src.predict.get_race_info')
     def test_predict_race_no_model_for_type(self, mock_race_info, mock_extract):
         """Race type without a loaded model should return empty list."""
         mock_race_info.return_value = {

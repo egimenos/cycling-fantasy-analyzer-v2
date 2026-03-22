@@ -90,6 +90,7 @@ class PredictRequest(BaseModel):
     year: int
     profile_summary: ProfileSummary | None = None
     rider_ids: list[str] | None = None  # If provided, use these instead of DB startlist
+    race_type: str | None = None  # Hint for future races not yet in DB
 
 
 # ── Model hot-reload (T018) ─────────────────────────────────────────
@@ -307,6 +308,7 @@ def predict(req: PredictRequest, request: Request):
         db_url=DB_URL,
         race_profile=race_profile,
         rider_ids=req.rider_ids,
+        race_type_hint=req.race_type,
     )
 
     if not predictions:

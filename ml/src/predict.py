@@ -11,6 +11,8 @@ import logging
 import os
 from typing import Optional
 
+from datetime import date
+
 import joblib
 import pandas as pd
 
@@ -73,6 +75,7 @@ def predict_race(
     db_url: str,
     race_profile: dict | None = None,
     rider_ids: list[str] | None = None,
+    race_type_hint: str | None = None,
 ) -> list[dict]:
     """Generate predicted scores for riders in a race.
 
@@ -92,19 +95,29 @@ def predict_race(
             target_itt_pct from PCS scrape. If None, computed from DB.
         rider_ids: Optional list of rider UUIDs from frontend matching.
             If provided, used instead of DB startlist.
+        race_type_hint: Optional race type from the caller (e.g. 'mini_tour').
+            Used as fallback when the race is not yet in race_results (future races).
 
     Returns:
         List of {'rider_id': str, 'predicted_score': float} dicts.
         Empty list if race not found, is a classic, or has no startlist/riders.
     """
-    # 1. Get race info
+    # 1. Get race info (fallback to hint for future races not yet in DB)
     race_info = get_race_info(db_url, race_slug, year)
     if race_info is None:
-        logger.warning("Race not found: %s/%d", race_slug, year)
-        return []
-
-    race_type = race_info['race_type']
-    race_date = race_info['race_date']
+        if race_type_hint and rider_ids:
+            logger.info(
+                "Race %s/%d not in DB — using race_type_hint=%s and today as race_date",
+                race_slug, year, race_type_hint,
+            )
+            race_type = race_type_hint
+            race_date = date.today()
+        else:
+            logger.warning("Race not found: %s/%d (no race_type_hint provided)", race_slug, year)
+            return []
+    else:
+        race_type = race_info['race_type']
+        race_date = race_info['race_date']
 
     # 2. Classics not supported
     if race_type == 'classic':

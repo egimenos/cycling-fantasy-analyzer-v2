@@ -30,6 +30,7 @@ services:
         condition: service_healthy
     volumes:
       - ./ml/models:/app/models
+      - ./ml/src:/app/src
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
       interval: 30s
