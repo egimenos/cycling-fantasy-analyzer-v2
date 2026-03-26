@@ -164,19 +164,32 @@ def parse_price_table(html: str) -> list[dict]:
 
     for row in rows:
         cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
-        if len(cells) < 4:
-            continue
 
         # Strip HTML tags from cells
         def strip_tags(s):
             return re.sub(r'<[^>]+>', '', s).strip()
 
-        name = strip_tags(cells[1])
-        team = strip_tags(cells[2])
-        price_text = re.sub(r'[^0-9]', '', strip_tags(cells[3]))
+        name = None
+        team = ''
+        price_text = None
 
-        if name and team and price_text:
-            price = int(price_text)
+        if len(cells) >= 4:
+            # Format A: Código | Ciclista | Equipo | Precio (4+ cols)
+            name = strip_tags(cells[1])
+            team = strip_tags(cells[2])
+            price_text = re.sub(r'[^0-9]', '', strip_tags(cells[3]))
+        elif len(cells) == 3:
+            # Format B: % elecciones | Corredor | Precio (3 cols, post-race pages)
+            raw_first = strip_tags(cells[0])
+            # Check if first cell is a percentage or number (not a name)
+            if re.match(r'^[\d.,]+%?$', raw_first):
+                name = strip_tags(cells[1])
+                price_text = re.sub(r'[^0-9]', '', strip_tags(cells[2]))
+        else:
+            continue
+
+        if name and price_text:
+            price = int(price_text) if price_text else 0
             if price > 0:
                 entries.append({
                     'name': name,
