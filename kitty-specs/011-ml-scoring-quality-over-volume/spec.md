@@ -78,29 +78,48 @@ The benchmark suite uses expanding-window cross-validation and confidence interv
 
 ### Functional Requirements
 
-- **FR-001**: The feature extraction pipeline MUST normalize point-based features by race-days (distinct stages raced), not by race count
-- **FR-002**: The data loading pipeline MUST apply race-class weighting to points before feature aggregation (UWT=1.0, Pro=0.7, other=0.5)
-- **FR-003**: The feature `pts_same_type_12m` MUST include cross-type signal: GT results weighted at 0.6-0.8 when predicting mini-tour, and vice versa
-- **FR-004**: The riders table MUST have birth_date populated for at least 80% of riders to activate age-based features
-- **FR-005**: Redundant features MUST be pruned (target: 49 down to 35-40 features), removing linear combinations and constant-within-model features
-- **FR-005b**: The feature set MUST include a scoring-table-aware feature that captures a rider's "expected points from position distribution" — applying the target race type's scoring table to the rider's historical GC finish positions, accounting for the non-linear reward structure (1st=150 vs 21st=0 in GT GC)
-- **FR-005c**: The feature set MUST include per-category historical features for scoring categories currently invisible to the model. Specifically: historical regularidad_daily pts (sprinter consistency signal), sprint_intermediate pts (sprint contention signal), mountain_pass pts (climber signal), and gc_daily pts (GC consistency signal). These represent ~15-20% of total points for specialist riders (sprinters, climbers) and have no dedicated predictive features today.
-- **FR-005d**: The feature set MUST include startlist-aware team role features computed from the SPECIFIC race startlist, not from global rider history. Key features: number of stronger teammates in this race (by Elo or pts), whether the rider is the top-ranked in their team for this specific startlist, and number of GC candidates on the same team. Example: McNulty finishes 1st GC when leading UAE alone, but 50th+ when Pogačar/Almeida are on the same startlist — current features cannot distinguish these scenarios.
-- **FR-006**: The system MUST support XGBoost/LightGBM as an alternative model with automated hyperparameter tuning (Optuna)
-- **FR-007**: The system MUST support target decomposition into GC sub-model and Stage sub-model, with combined prediction. The Stage sub-model must capture sprinter value (stage + sprint_intermediate + regularidad_daily) and the GC sub-model must capture climber/GC value (gc + gc_daily + mountain + mountain_pass)
-- **FR-008**: The system MUST support target variable transformations: training on percentile-rank or log-transformed points instead of raw points, to better align the optimization objective with the ranking evaluation metric
-- **FR-009**: An Elo rating system MUST be implementable as a preprocessing step, producing per-rider GC and Stage Elo ratings updated after each race
-- **FR-010**: The benchmark suite MUST support expanding-window cross-validation across multiple train/test splits
-- **FR-011**: The benchmark suite MUST report bootstrap confidence intervals on Spearman rho
-- **FR-011b**: The benchmark suite MUST report fantasy-relevant metrics alongside Spearman rho: precision@15 (how many of the predicted top 15 are in the actual top 15), and NDCG@20 (ranking quality weighted by position, where getting the #1 rider right matters more than getting the #15 right). Spearman rho remains the primary metric but these complement it for practical fantasy team selection.
-- **FR-012**: All model changes MUST be evaluated against the v4b baseline using the benchmark harness before production integration
-- **FR-013**: Production model retraining MUST complete within 10 minutes
-- **FR-014**: Features with missing data MUST use NaN (not fillna(0)) when using LightGBM, plus binary indicator flags (has_same_race_history, has_recent_form) to distinguish "no data" from "zero value". This prevents the model from confusing absence of data with a meaningful zero.
-- **FR-015**: LightGBM MUST be tested with Tweedie/Poisson objective functions as an alternative to MSE, given the heavy-tailed distribution of fantasy points (most riders score 0-20, few score 100+)
-- **FR-016**: The feature `days_since_last` MUST be complemented with a rest-days-optimality feature that captures the non-linear relationship between rest and performance (5-10 days optimal, 1 day = fatigue, 60+ days = lost rhythm)
+Requirements are organized into execution phases. Each phase is benchmarked before proceeding to the next.
 
-- **FR-017**: Historical rider prices MUST be scraped from grandesminivueltas.com (pattern: `{year}/{month}/{day}/{race-slug}-equipos-y-elecciones/`) and stored in the database. Data available from 2023-2026, men's races only (filter out URLs containing womens/femenin/we-/donne/femmes). This enables the ultimate benchmark: comparing the predicted optimal team against the actually optimal team given real prices and budget constraints.
-- **FR-017b**: The benchmark suite MUST include a fantasy-team-optimality metric: given historical prices and a budget of 2000 hillios, what percentage of the actually optimal team's total points does the model's predicted optimal team capture?
+#### Phase 0: Data Infrastructure (parallel with all phases)
+
+- **FR-017**: Historical rider prices MUST be scraped from grandesminivueltas.com (pattern: `{year}/{month}/{day}/{race-slug}-equipos-y-elecciones/`) and stored in the database. Data available from 2023-2026, men's races only (filter out URLs containing womens/femenin/we-/donne/femmes). This enables the ultimate benchmark.
+- **FR-017b**: The benchmark suite MUST include a fantasy-team-optimality metric: given historical prices and a budget of 2000 hillios, what percentage of the actually optimal team's total points does the model's predicted optimal team capture? Secondary metric: rider overlap (which riders we miss, diagnoses WHERE the model fails).
+- **FR-004**: The riders table MUST have birth_date populated for at least 80% of riders to activate age-based features. DONE: 99.95% populated.
+
+#### Phase 1: New Orthogonal Features (highest impact, do first)
+
+- **FR-005d**: The feature set MUST include startlist-aware team role features computed from the SPECIFIC race startlist, not from global rider history. Key features: number of stronger teammates in this race (by rating or pts), whether the rider is the top-ranked in their team for this specific startlist, and number of GC candidates on the same team. Example: McNulty finishes 1st GC when leading UAE alone, but 50th+ when Pogačar/Almeida are on the same startlist — current features cannot distinguish these scenarios.
+- **FR-005b**: The feature set MUST include a scoring-table-aware feature that captures a rider's "expected points from position distribution" — applying the target race type's scoring table to the rider's historical GC finish positions, accounting for the non-linear reward structure (1st=150 vs 21st=0 in GT GC).
+- **FR-005c**: The feature set MUST include per-category historical features for scoring categories currently invisible to the model. Specifically: historical regularidad_daily pts (sprinter consistency signal), sprint_intermediate pts (sprint contention signal), mountain_pass pts (climber signal), and gc_daily pts (GC consistency signal). These represent ~15-20% of total points for specialist riders (sprinters, climbers) and have no dedicated predictive features today.
+- **FR-001**: The feature extraction pipeline MUST add per-raceday intensity features (pts / distinct stages raced) alongside existing raw totals. Keep `pts_total_12m` as volume signal. Note: per-raceday normalizes by stages (not races) so a GT of 21 stages gets fair denominator vs a mini-tour of 5.
+- **FR-016**: The feature `days_since_last` MUST be complemented with a rest-days-optimality feature that captures the non-linear relationship between rest and performance (5-10 days optimal, 1 day = fatigue, 60+ days = lost rhythm).
+- **FR-014**: Features with missing data MUST use NaN (not fillna(0)) when using LightGBM, plus binary indicator flags (has_same_race_history, has_recent_form) to distinguish "no data" from "zero value".
+- **FR-005**: Redundant features MUST be pruned (target: 49 down to 35-40 features), removing linear combinations and constant-within-model features.
+
+#### Phase 2: Model & Target (after Phase 1 is benchmarked)
+
+- **FR-006**: The system MUST support LightGBM as primary model with automated hyperparameter tuning (Optuna, 50-200 trials). XGBoost as secondary option.
+- **FR-008**: The system MUST support target variable transformations: test both log1p(actual_pts) and percentile-rank. log1p preserves magnitude while compressing the heavy tail; percentile-rank aligns directly with Spearman rho but loses "how much better" signal. Test both, likely log1p wins.
+- **FR-015**: LightGBM MUST be tested with Tweedie/Poisson objective functions as an alternative to MSE, given the heavy-tailed distribution of fantasy points.
+- **FR-009**: A Glicko-2 rating system (not basic Elo) MUST be implementable as a preprocessing step, producing per-rider GC and Stage ratings with explicit uncertainty. Glicko-2 is preferred over basic Elo because it handles cold-start riders (few races = high uncertainty, model can weight accordingly). K-factor scaled by race prestige (GT > mini-tour > Pro).
+
+#### Phase 3: Revisit What Failed With RF (now with LightGBM)
+
+- **FR-002**: The data loading pipeline MUST apply race-class weighting to points before feature aggregation (UWT=1.0, Pro=0.7, other=0.5). Previously tested with RF only (v7, no improvement) — retest with LightGBM + Phase 1-2 improvements which may unlock additive effects.
+- **FR-003**: The feature `pts_same_type_12m` MUST include cross-type signal: GT results weighted at 0.6-0.8 when predicting mini-tour, and vice versa. Same rationale — retest with new model.
+
+#### Phase 4: Experimental (only if Phases 1-3 show headroom)
+
+- **FR-007**: Target decomposition into GC sub-model and Stage sub-model. EXPERIMENTAL — risk of sparse target (only 15-20 riders score GC pts per race, 85% have 0). The sum of two suboptimal models may be worse than one good model. Test as experiment, do not block other phases on this.
+- **FR-018**: LambdaMART (XGBRanker) to optimize ranking directly instead of point prediction. Built into XGBoost, zero new dependencies.
+
+#### Evaluation (applies to all phases)
+
+- **FR-010**: The benchmark suite MUST support expanding-window cross-validation across multiple train/test splits.
+- **FR-011**: The benchmark suite MUST report bootstrap confidence intervals on Spearman rho.
+- **FR-011b**: The benchmark suite MUST report fantasy-relevant metrics alongside Spearman rho: precision@15 and NDCG@20. Spearman rho remains primary but these complement it for practical fantasy team selection.
+- **FR-012**: All model changes MUST be evaluated against the v4b baseline using the benchmark harness before production integration.
+- **FR-013**: Production model retraining MUST complete within 10 minutes.
 
 ### Key Entities
 
