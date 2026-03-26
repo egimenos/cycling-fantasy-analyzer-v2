@@ -129,16 +129,106 @@ Requirements are organized into execution phases. Each phase is benchmarked befo
 - **FeatureVector**: Per-rider-per-race feature set (intensity-based, class-weighted, cross-type aware)
 - **Model**: Per-race-type (mini_tour, grand_tour), optionally decomposed into GC and Stage sub-models
 
+## Benchmark Protocol
+
+Every model change MUST be evaluated using this exact protocol. No exceptions. Quality over speed.
+
+### 1. Training/Test Split: Expanding Window Cross-Validation
+
+Three folds, each using all prior years as training and the next year as test:
+
+| Fold   | Train     | Test |
+| ------ | --------- | ---- |
+| Fold 1 | 2019-2022 | 2023 |
+| Fold 2 | 2019-2023 | 2024 |
+| Fold 3 | 2019-2024 | 2025 |
+
+Report metrics **per fold** and **averaged across folds** (weighted by number of test races in each fold). This provides ~3x more test data than a single split and reveals whether improvements are consistent across years.
+
+### 2. Scope: Stage Races Only
+
+- Only evaluate on `mini_tour` and `grand_tour` races (classics = NO-GO, excluded)
+- Report mini_tour and grand_tour metrics separately AND combined
+- Minimum 3 riders per race to compute correlation (skip races with fewer)
+
+### 3. Metrics (all computed per-race, then averaged)
+
+**Primary — Ranking quality:**
+
+- **Spearman rho (ρ)**: Rank correlation between predicted and actual points, per race. Report mean ± bootstrap 95% CI (1000 resamples).
+
+**Secondary — Fantasy-relevant:**
+
+- **Precision@15**: Of the model's predicted top 15, how many are in the actual top 15? Averaged across races.
+- **NDCG@20**: Normalized Discounted Cumulative Gain at 20. Measures ranking quality with position-weighted importance (getting #1 right matters more than #15).
+
+**Ultimate — Team optimality (requires price data from FR-017):**
+
+- **Team Points Capture %**: Given real prices and 2000 hillios budget, what % of the actually optimal team's total points does the model's predicted optimal team capture?
+- **Team Overlap %**: What fraction of riders in the predicted optimal team match the actual optimal team? Diagnostic for WHERE the model fails (top riders? value picks?).
+
+### 4. Case Studies (qualitative sanity check)
+
+Every benchmark run MUST include these specific rider comparisons to verify the model captures known domain dynamics:
+
+- **Vingegaard vs Almeida** (quality vs volume): Predicted score gap must reflect that Vingegaard is the clearly superior rider
+- **McNulty as leader vs gregario** (team role): Predicted score must be significantly higher when McNulty is the strongest UAE rider on the startlist vs when Pogačar/Almeida are present
+- **Philipsen in a flat race** (sprinter value): Predicted score must reflect stage wins + regularidad potential, not just GC
+
+### 5. Reporting Format
+
+Each benchmark run produces a dated report (`ml/results/benchmark_v8_{phase}_{date}.txt`) with:
+
+```
+Experiment: [name]
+Date: [YYYY-MM-DD]
+Changes vs baseline: [brief description]
+Model: [RF/LightGBM/XGBRanker + key hyperparams]
+Features: [count, key additions/removals]
+
+EXPANDING WINDOW CV RESULTS:
+                    Fold 1 (2023)   Fold 2 (2024)   Fold 3 (2025)   Average
+Mini tour ρ:        X.XXXX          X.XXXX          X.XXXX          X.XXXX ± [CI]
+Grand tour ρ:       X.XXXX          X.XXXX          X.XXXX          X.XXXX ± [CI]
+Precision@15:       X.XX            X.XX            X.XX            X.XX
+NDCG@20:            X.XX            X.XX            X.XX            X.XX
+Team Capture %:     XX.X%           XX.X%           XX.X%           XX.X%
+Team Overlap %:     XX.X%           XX.X%           XX.X%           XX.X%
+
+CASE STUDIES:
+  Vingegaard vs Almeida: V=XXX.X A=XXX.X gap=XXX.X (target: V >> A)
+  McNulty leader vs gregario: leader=XXX.X greg=XXX.X
+  Philipsen flat race: pred=XXX.X actual=XXX.X
+
+DELTA VS V4B BASELINE:
+  Mini tour ρ: +X.XXXX
+  Grand tour ρ: +X.XXXX
+  Team Capture %: +X.X%
+```
+
+### 6. Baseline
+
+The v4b Random Forest (49 features) MUST be benchmarked first with this exact protocol to establish the baseline all improvements are measured against. Previous benchmark numbers (ρ=0.479/0.572) used a single split — the expanding window baseline may differ.
+
+### 7. Rules
+
+- **No cherry-picking**: Report ALL metrics, not just the ones that improved
+- **No hyperparameter tuning on test data**: Tune on train set only (inner CV or separate validation fold)
+- **Document failures**: If a change makes things worse, document it and why. Failed experiments are valuable.
+- **One change at a time**: When testing Phase 1 features, add them incrementally (not all at once) to understand which ones contribute. Ablation study.
+- **Reproducibility**: Fix random seeds. Every result must be reproducible by rerunning the script.
+
 ## Success Criteria
 
 ### Measurable Outcomes
 
-- **SC-001**: Mini-tour Spearman rho on holdout data improves over v4b baseline (current: 0.479 on 2022-24/2025 split)
-- **SC-002**: Grand-tour Spearman rho on holdout data improves over v4b baseline (current: 0.572 on 2022-24/2025 split)
+- **SC-001**: Mini-tour Spearman rho on expanding-window CV improves over v4b baseline
+- **SC-002**: Grand-tour Spearman rho on expanding-window CV improves over v4b baseline
 - **SC-003**: In the Vingegaard vs Almeida case study, the score gap increases to reflect the domain-obvious quality difference
 - **SC-004**: Model retraining completes within 10 minutes on production hardware
-- **SC-005**: At least 80% of riders have birth_date populated, activating age-based features
-- **SC-006**: Each phase is independently benchmarked, with results documented, before deciding on production integration
+- **SC-005**: At least 80% of riders have birth_date populated, activating age-based features. DONE: 99.95%.
+- **SC-006**: Each phase is independently benchmarked using the full protocol above, with dated reports, before deciding on production integration
+- **SC-007**: Team Points Capture % improves over v4b baseline (requires FR-017 price data)
 
 ## Assumptions
 
