@@ -1,7 +1,14 @@
 """
-Feature extraction module — single source of truth for the 36-feature set.
+Feature extraction module — single source of truth for the feature set.
 
-Refactored from research_v3.py extract_all_features().
+v8 cleanup: 49 → 38 features. Removed broken/redundant features:
+  - pts_total_alltime, pts_per_career_year (volume bias, broken with partial data)
+  - race_type_enc (constant within per-type models)
+  - is_young, is_veteran (redundant with continuous age)
+  - stage_pts_12m (duplicate of pts_stage_12m)
+  - same_race_editions (replaced by has_same_race flag)
+  - top5_rate, podium_rate (correlated with top10_rate, win_rate)
+
 Two entry points:
   - extract_features_for_race()  — features for ONE race (on-demand prediction)
   - extract_all_training_features() — features for ALL races (training, includes target)
@@ -14,24 +21,27 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
-# ── Feature columns (must match research_v3.py lines 317-334 exactly) ──
-
 FEATURE_COLS = [
-    # V2 features
+    # V2: Points by category (12-month window)
     'pts_gc_12m', 'pts_stage_12m', 'pts_mountain_12m', 'pts_sprint_12m',
     'pts_total_12m', 'pts_total_6m', 'pts_total_3m',
     'pts_same_type_12m', 'race_count_12m', 'race_count_6m',
-    'top10_rate', 'top5_rate', 'win_rate', 'podium_rate',
+    # V2: GC performance rates
+    'top10_rate', 'win_rate',
+    # V2: Race quality
     'best_race_pts_12m', 'median_race_pts_12m',
-    'days_since_last', 'same_race_best', 'same_race_mean', 'same_race_editions',
-    'pts_total_alltime', 'race_type_enc', 'pts_trend_3m',
-    'stage_pts_12m', 'gc_pts_same_type',
+    # V2: Race familiarity
+    'days_since_last',
+    'same_race_best', 'same_race_mean', 'has_same_race',
+    # V2: Trend
+    'pts_trend_3m',
+    'gc_pts_same_type',
     # V3: Micro-form
     'pts_30d', 'pts_14d', 'race_count_30d',
     'last_race_pts', 'last_3_mean_pts', 'last_3_max_pts',
-    # V3: Age
-    'age', 'is_young', 'is_veteran', 'pts_per_career_year',
-    # V3: Team leader
+    # V3: Age (birth_date required)
+    'age',
+    # V3: Team (startlist-based)
     'team_rank', 'is_leader', 'team_size', 'pct_of_team', 'team_total_pts',
     # V4: Rider profile specialization
     'pct_pts_p1p2', 'pct_pts_p4p5', 'pct_pts_p3',
@@ -40,10 +50,16 @@ FEATURE_COLS = [
     'target_flat_pct', 'target_mountain_pct', 'target_itt_pct',
 ]
 
-assert len(FEATURE_COLS) == 49, f"Expected 49 feature cols, got {len(FEATURE_COLS)}"  # noqa: S101
+# Removed in v8 cleanup:
+# - pts_total_alltime: volume bias, penalizes young riders
+# - pts_per_career_year: broken (divides by full career but only has data since 2019)
+# - race_type_enc: constant within per-type models
+# - is_young, is_veteran: redundant with continuous age
+# - stage_pts_12m: exact duplicate of pts_stage_12m
+# - same_race_editions: redundant with has_same_race flag
+# - top5_rate, podium_rate: highly correlated with top10_rate and win_rate
 
-# Race type encoding lookup
-_RACE_TYPE_ENC = {'classic': 0, 'mini_tour': 1, 'grand_tour': 2}
+assert len(FEATURE_COLS) == 41, f"Expected 41 feature cols, got {len(FEATURE_COLS)}"  # noqa: S101
 
 
 # ── Per-rider feature computation ────────────────────────────────────
@@ -63,9 +79,9 @@ def _compute_rider_features(
     d14,
     rider_team_info: dict,
 ) -> dict:
-    """Compute the 36 features for a single rider.
+    """Compute the 38 features for a single rider.
 
-    This is the shared inner loop extracted from research_v3.py lines 176-293.
+    v8 cleanup: removed broken/redundant features, added has_same_race flag.
 
     Args:
         rider_id: The rider's database ID.
@@ -105,9 +121,7 @@ def _compute_rider_features(
     gc_12m = rh_12m[(rh_12m['category'] == 'gc') & (rh_12m['position'].notna())]
     n_gc = len(gc_12m)
     feats['top10_rate'] = (gc_12m['position'] <= 10).sum() / n_gc if n_gc > 0 else 0.0
-    feats['top5_rate'] = (gc_12m['position'] <= 5).sum() / n_gc if n_gc > 0 else 0.0
     feats['win_rate'] = (gc_12m['position'] == 1).sum() / n_gc if n_gc > 0 else 0.0
-    feats['podium_rate'] = (gc_12m['position'] <= 3).sum() / n_gc if n_gc > 0 else 0.0
 
     if len(rh_12m) > 0:
         race_pts = rh_12m.groupby(['race_slug', 'year'])['pts'].sum()
@@ -127,25 +141,19 @@ def _compute_rider_features(
         sr_pts = same_race.groupby('year')['pts'].sum()
         feats['same_race_best'] = sr_pts.max()
         feats['same_race_mean'] = sr_pts.mean()
-        feats['same_race_editions'] = len(sr_pts)
+        feats['has_same_race'] = 1
     else:
         feats['same_race_best'] = 0.0
         feats['same_race_mean'] = 0.0
-        feats['same_race_editions'] = 0
-
-    feats['pts_total_alltime'] = rh['pts'].sum()
-
-    feats['race_type_enc'] = _RACE_TYPE_ENC.get(race_type, 0)
+        feats['has_same_race'] = 0
 
     feats['pts_trend_3m'] = feats['pts_total_3m'] - (feats['pts_total_6m'] - feats['pts_total_3m'])
 
     if race_type in ('mini_tour', 'grand_tour'):
-        feats['stage_pts_12m'] = rh_12m[rh_12m['category'] == 'stage']['pts'].sum()
         feats['gc_pts_same_type'] = rh_12m[
             (rh_12m['category'] == 'gc') & (rh_12m['race_type'] == race_type)
         ]['pts'].sum()
     else:
-        feats['stage_pts_12m'] = 0.0
         feats['gc_pts_same_type'] = 0.0
 
     # ── V3 NEW: Feature 1 — Micro-form ──────────────────────────
@@ -169,7 +177,7 @@ def _compute_rider_features(
         feats['last_3_mean_pts'] = 0.0
         feats['last_3_max_pts'] = 0.0
 
-    # ── V3 NEW: Feature 2 — Age & trajectory ────────────────────
+    # ── V3: Age (only continuous age, no derived features) ────────
     rider_rows = results_df[results_df['rider_id'] == rider_id]
     rider_row = rider_rows.iloc[0] if len(rider_rows) > 0 else None
     birth_date_val = rider_row['rider_birth_date'] if rider_row is not None else None
@@ -178,15 +186,8 @@ def _compute_rider_features(
         bd = birth_date_val.date() if hasattr(birth_date_val, 'date') else birth_date_val
         age_days = (race_date_py - bd).days
         feats['age'] = age_days / 365.25
-        feats['is_young'] = 1 if feats['age'] < 25 else 0
-        feats['is_veteran'] = 1 if feats['age'] > 33 else 0
-        career_years = max(1, feats['age'] - 18)
-        feats['pts_per_career_year'] = feats['pts_total_alltime'] / career_years
     else:
         feats['age'] = 28.0  # default median age
-        feats['is_young'] = 0
-        feats['is_veteran'] = 0
-        feats['pts_per_career_year'] = 0.0
 
     # ── V3: Feature 3 — Team leader signal ───────────────────────
     ti = rider_team_info.get(rider_id, {})
