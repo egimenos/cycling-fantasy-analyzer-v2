@@ -44,6 +44,12 @@ from .logbook import (
 _PHASE_B = (E01_MISSINGNESS_COLS + E02_INTENSITY_COLS
             + E03_REST_BUCKET_COLS + E04_PRESTIGE_COLS)
 
+# Volume features superseded by E02 intensity + E04 prestige
+_VOLUME_NOISE = {
+    'pts_total_12m', 'pts_total_6m', 'pts_total_3m', 'pts_gc_12m',
+    'pts_stage_12m', 'pts_mountain_12m', 'pts_sprint_12m', 'pts_same_type_12m',
+}
+
 FEATURE_SETS = {
     'baseline': list(FEATURE_COLS),
     'startlist': list(FEATURE_COLS) + STARTLIST_FEATURE_COLS,
@@ -55,6 +61,8 @@ FEATURE_SETS = {
     'e04': list(FEATURE_COLS) + E04_PRESTIGE_COLS,
     'phase_b': list(FEATURE_COLS) + _PHASE_B,
     'phase_b_all': list(FEATURE_COLS) + STARTLIST_FEATURE_COLS + GLICKO_FEATURES + _PHASE_B,
+    # Pruned: phase_b minus volume noise (E06 ablation result)
+    'pruned': [c for c in list(FEATURE_COLS) + _PHASE_B if c not in _VOLUME_NOISE],
 }
 
 # ── Model params ──────────────────────────────────────────────────────
