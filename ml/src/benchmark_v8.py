@@ -66,14 +66,21 @@ def find_optimal_team(
 
     Selects exactly team_size riders within budget maximizing total score.
     Returns list of selected rider_ids.
+
+    Prices are scaled down by PRICE_SCALE to reduce DP state space.
+    With PRICE_SCALE=5: budget 2000→400, O(n×400×9) instead of O(n×2000×9).
     """
+    PRICE_SCALE = 5  # Scale factor — prices rounded up to preserve feasibility
+
     # Filter to riders that have both score and price
     valid = [r for r in rider_ids if r in scores and r in prices and prices[r] > 0]
     if len(valid) < team_size:
         return valid[:team_size] if valid else []
 
     n = len(valid)
-    B = budget
+    # Scale prices: ceil division to be conservative (never undercount cost)
+    scaled_prices = {r: (prices[r] + PRICE_SCALE - 1) // PRICE_SCALE for r in valid}
+    B = budget // PRICE_SCALE
     K = team_size
 
     # DP: dp[b][k] = max score with budget b and k riders
@@ -85,7 +92,7 @@ def find_optimal_team(
     decisions = []
 
     for i in range(n):
-        price = prices[valid[i]]
+        price = scaled_prices[valid[i]]
         score = scores[valid[i]]
         nxt = np.full(size, -1.0)
         dec = np.zeros(size, dtype=bool)
@@ -131,7 +138,7 @@ def find_optimal_team(
         idx = rem_b * (K + 1) + rem_k
         if decisions[i][idx]:
             selected.append(valid[i])
-            rem_b -= prices[valid[i]]
+            rem_b -= scaled_prices[valid[i]]
             rem_k -= 1
 
     return selected
