@@ -153,35 +153,61 @@ def extract_race_info_from_url(url: str) -> dict | None:
 def parse_price_table(html: str) -> list[dict]:
     """Parse the price table from a grandesminivueltas page.
 
+    Handles multiple table formats by detecting headers:
+      Format A (pre-race): Código | Ciclista | Equipo | Precio
+      Format B (post-race): % | Corredor | Precio | Elecc.
+      Format C (3-col): % elecciones | Corredor | Precio
+
     Returns list of {name, team, price} dicts.
-    Mirrors the logic from price-list.parser.ts.
     """
     entries = []
 
-    # Simple regex-based table parsing (no external dependency)
-    # Find all table rows
+    def strip_tags(s):
+        return re.sub(r'<[^>]+>', '', s).strip()
+
     rows = re.findall(r'<tr[^>]*>(.*?)</tr>', html, re.DOTALL | re.IGNORECASE)
+
+    # Detect format from header row
+    format_type = None
+    for row in rows:
+        # Check both th and td for headers
+        header_cells = re.findall(r'<t[hd][^>]*>(.*?)</t[hd]>', row, re.DOTALL | re.IGNORECASE)
+        if len(header_cells) < 3:
+            continue
+        header_text = [strip_tags(c).lower() for c in header_cells]
+        header_joined = ' '.join(header_text)
+
+        if 'precio' in header_text and 'elecc' in header_joined:
+            # Format B: %, Corredor, Precio, Elecc. — price is in column 2
+            format_type = 'B'
+            break
+        elif 'equipo' in header_joined or 'código' in header_joined or 'codigo' in header_joined:
+            # Format A: Código, Ciclista, Equipo, Precio — price is in column 3
+            format_type = 'A'
+            break
 
     for row in rows:
         cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
-
-        # Strip HTML tags from cells
-        def strip_tags(s):
-            return re.sub(r'<[^>]+>', '', s).strip()
 
         name = None
         team = ''
         price_text = None
 
         if len(cells) >= 4:
-            # Format A: Código | Ciclista | Equipo | Precio (4+ cols)
-            name = strip_tags(cells[1])
-            team = strip_tags(cells[2])
-            price_text = re.sub(r'[^0-9]', '', strip_tags(cells[3]))
-        elif len(cells) == 3:
-            # Format B: % elecciones | Corredor | Precio (3 cols, post-race pages)
             raw_first = strip_tags(cells[0])
-            # Check if first cell is a percentage or number (not a name)
+            # If first cell is a percentage/number, it's Format B regardless of header detection
+            if format_type == 'B' or re.match(r'^[\d.,]+%?$', raw_first):
+                # Format B: % | Corredor | Precio | Elecc.
+                name = strip_tags(cells[1])
+                price_text = re.sub(r'[^0-9]', '', strip_tags(cells[2]))
+            else:
+                # Format A: Código | Ciclista | Equipo | Precio
+                name = strip_tags(cells[1])
+                team = strip_tags(cells[2])
+                price_text = re.sub(r'[^0-9]', '', strip_tags(cells[3]))
+        elif len(cells) == 3:
+            # Format C: % | Corredor | Precio (no Elecc column)
+            raw_first = strip_tags(cells[0])
             if re.match(r'^[\d.,]+%?$', raw_first):
                 name = strip_tags(cells[1])
                 price_text = re.sub(r'[^0-9]', '', strip_tags(cells[2]))
