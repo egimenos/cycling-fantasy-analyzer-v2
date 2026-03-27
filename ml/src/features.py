@@ -26,9 +26,8 @@ FEATURE_COLS = [
     'pts_gc_12m', 'pts_stage_12m', 'pts_mountain_12m', 'pts_sprint_12m',
     'pts_total_12m', 'pts_total_6m', 'pts_total_3m',
     'pts_same_type_12m', 'race_count_12m', 'race_count_6m',
-    # V2: Per-category "invisible" points (FR-005c)
-    'pts_gc_daily_12m', 'pts_mountain_pass_12m',
-    'pts_sprint_intermediate_12m', 'pts_regularidad_daily_12m',
+    # V2: Scoring-table-aware (FR-005b)
+    'expected_gc_pts',
     # V2: GC performance rates
     'top10_rate', 'win_rate',
     # V2: Race quality
@@ -62,7 +61,7 @@ FEATURE_COLS = [
 # - same_race_editions: redundant with has_same_race flag
 # - top5_rate, podium_rate: highly correlated with top10_rate and win_rate
 
-assert len(FEATURE_COLS) == 45, f"Expected 45 feature cols, got {len(FEATURE_COLS)}"  # noqa: S101
+assert len(FEATURE_COLS) == 42, f"Expected 42 feature cols, got {len(FEATURE_COLS)}"  # noqa: S101
 
 
 # ── Per-rider feature computation ────────────────────────────────────
@@ -108,6 +107,28 @@ def _compute_rider_features(
     rh_14d = rh[rh['race_date'] >= d14]
 
     feats = {}
+
+    # ── Scoring-table-aware expected GC points (FR-005b) ────────
+    # Apply the target race type's GC scoring table to the rider's
+    # historical GC finish positions. Captures the non-linear reward
+    # structure: 1st=150 vs 21st=0 in GT.
+    _GC_TABLES = {
+        'mini_tour': {1: 100, 2: 80, 3: 65, 4: 55, 5: 45, 6: 40, 7: 35, 8: 30, 9: 25, 10: 20,
+                      11: 18, 12: 16, 13: 14, 14: 12, 15: 10},
+        'grand_tour': {1: 150, 2: 125, 3: 100, 4: 80, 5: 60, 6: 50, 7: 45, 8: 40, 9: 35, 10: 30,
+                       11: 28, 12: 26, 13: 24, 14: 22, 15: 20, 16: 18, 17: 16, 18: 14, 19: 12, 20: 10},
+    }
+    gc_finishes = rh_12m[
+        (rh_12m['category'] == 'gc') &
+        (rh_12m['position'].notna()) &
+        (rh_12m['position'] > 0)
+    ]['position'].values
+    gc_table = _GC_TABLES.get(race_type, _GC_TABLES['mini_tour'])
+    if len(gc_finishes) > 0:
+        expected = np.mean([gc_table.get(int(p), 0) for p in gc_finishes])
+        feats['expected_gc_pts'] = expected
+    else:
+        feats['expected_gc_pts'] = 0.0
 
     # ── V2 features ──────────────────────────────────────────────
     for cat in ['gc', 'stage', 'mountain', 'sprint']:
