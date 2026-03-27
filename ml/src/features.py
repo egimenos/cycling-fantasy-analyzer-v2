@@ -26,8 +26,6 @@ FEATURE_COLS = [
     'pts_gc_12m', 'pts_stage_12m', 'pts_mountain_12m', 'pts_sprint_12m',
     'pts_total_12m', 'pts_total_6m', 'pts_total_3m',
     'pts_same_type_12m', 'race_count_12m', 'race_count_6m',
-    # V2: Scoring-table-aware (FR-005b)
-    'expected_gc_pts',
     # V2: GC performance rates
     'top10_rate', 'win_rate',
     # V2: Race quality
@@ -61,7 +59,7 @@ FEATURE_COLS = [
 # - same_race_editions: redundant with has_same_race flag
 # - top5_rate, podium_rate: highly correlated with top10_rate and win_rate
 
-assert len(FEATURE_COLS) == 42, f"Expected 42 feature cols, got {len(FEATURE_COLS)}"  # noqa: S101
+assert len(FEATURE_COLS) == 41, f"Expected 41 feature cols, got {len(FEATURE_COLS)}"  # noqa: S101
 
 
 # ── Per-rider feature computation ────────────────────────────────────
