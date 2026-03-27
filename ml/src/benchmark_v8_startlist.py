@@ -1,4 +1,6 @@
 """
+DEPRECATED: use benchmark_canonical.py instead.
+
 Benchmark v8 — Startlist-Aware Features Test
 
 Tests two configurations:

@@ -61,6 +61,42 @@ FEATURE_COLS = [
 
 assert len(FEATURE_COLS) == 41, f"Expected 41 feature cols, got {len(FEATURE_COLS)}"  # noqa: S101
 
+# E01: Missingness indicators (Phase B)
+E01_MISSINGNESS_COLS = [
+    'has_recent_form',      # raced in last 30 days (distinguishes "no data" from "bad form")
+    'has_gc_history',       # has GC results in 12m
+    'has_stage_history',    # has stage results in 12m
+]
+
+# E03: Non-linear rest buckets (Phase B)
+E03_REST_BUCKET_COLS = [
+    'rest_1_10d',           # came off a race recently
+    'rest_11_21d',          # normal prep window
+    'rest_22_45d',          # planned rest / block training
+    'rest_46_plus',         # long break (injury, off-season, GT taper)
+]
+
+# E02: Intensity features — quality over volume (Phase B)
+E02_INTENSITY_COLS = [
+    'pts_per_race_12m',             # total pts / races raced (productivity per start)
+    'gc_pts_per_gc_race_12m',       # GC pts / GC races (GC specialist quality)
+    'stage_pts_per_stage_day_12m',  # stage pts / stage days (daily scoring rate)
+    'top10_gc_per_gc_race_12m',     # top-10 GC finishes / GC races (consistency at top)
+]
+
+# E04: Race prestige features — not all races are equal (Phase B)
+E04_PRESTIGE_COLS = [
+    'prestige_pts_12m',     # class-weighted points (UWT=1.0, Pro=0.7)
+    'gt_pts_12m',           # points from grand tours only
+    'gt_gc_pts_12m',        # GC points from grand tours only
+    'gt_race_count_12m',    # how many GTs raced in 12m
+    'best_gt_pts_12m',      # best single GT performance
+    'gt_pts_per_race_12m',  # average pts per GT
+    'gt_gc_top10_rate',     # % of GT GCs finishing top 10
+    'uwt_pts_12m',          # UWT-only points (filters Pro noise)
+    'uwt_pts_per_race_12m', # productivity in UWT races only
+]
+
 
 # ── Per-rider feature computation ────────────────────────────────────
 
@@ -183,9 +219,15 @@ def _compute_rider_features(
         feats['gc_pts_same_type'] = 0.0
 
     # ── V3 NEW: Feature 1 — Micro-form ──────────────────────────
-    feats['pts_30d'] = rh_30d['pts'].sum()
-    feats['pts_14d'] = rh_14d['pts'].sum()
-    feats['race_count_30d'] = rh_30d[['race_slug', 'year']].drop_duplicates().shape[0]
+    # NaN semantics: when a rider hasn't raced in a window, the feature
+    # is NaN (unknown), not 0 (raced, scored nothing).  RF sees 0 via
+    # fillna(0); LightGBM can learn a native missing-value split.
+    n_races_30d = rh_30d[['race_slug', 'year']].drop_duplicates().shape[0]
+    n_races_14d = rh_14d[['race_slug', 'year']].drop_duplicates().shape[0]
+    feats['race_count_30d'] = n_races_30d
+
+    feats['pts_30d'] = rh_30d['pts'].sum() if n_races_30d > 0 else float('nan')
+    feats['pts_14d'] = rh_14d['pts'].sum() if n_races_14d > 0 else float('nan')
 
     # Last 3 races performance (most recent)
     if len(rh_12m) > 0:
@@ -195,13 +237,78 @@ def _compute_rider_features(
         ).sort_values('date', ascending=False)
 
         last_3 = recent_race_pts.head(3)['pts'].values
-        feats['last_race_pts'] = last_3[0] if len(last_3) >= 1 else 0.0
-        feats['last_3_mean_pts'] = np.mean(last_3) if len(last_3) >= 1 else 0.0
-        feats['last_3_max_pts'] = np.max(last_3) if len(last_3) >= 1 else 0.0
+        feats['last_race_pts'] = last_3[0] if len(last_3) >= 1 else float('nan')
+        feats['last_3_mean_pts'] = np.mean(last_3) if len(last_3) >= 1 else float('nan')
+        feats['last_3_max_pts'] = np.max(last_3) if len(last_3) >= 1 else float('nan')
     else:
-        feats['last_race_pts'] = 0.0
-        feats['last_3_mean_pts'] = 0.0
-        feats['last_3_max_pts'] = 0.0
+        feats['last_race_pts'] = float('nan')
+        feats['last_3_mean_pts'] = float('nan')
+        feats['last_3_max_pts'] = float('nan')
+
+    # ── E01: Missingness indicators ──────────────────────────────
+    # Binary signals: "has data" vs "no data" — lets the model
+    # distinguish "chose not to race" from "raced and scored poorly".
+    feats['has_recent_form'] = 1 if n_races_30d > 0 else 0
+    feats['has_gc_history'] = 1 if n_gc > 0 else 0
+    feats['has_stage_history'] = 1 if (rh_12m['category'] == 'stage').any() else 0
+
+    # ── E03: Non-linear rest buckets ─────────────────────────────
+    # days_since_last is unlikely to be linear:
+    #   - 1-10d  = came off a race (possibly fatigued)
+    #   - 11-21d = normal prep window
+    #   - 22-45d = planned rest / block training
+    #   - 46+    = long break (injury? off-season? GT taper?)
+    dsl = feats['days_since_last']
+    feats['rest_1_10d'] = 1 if dsl <= 10 else 0
+    feats['rest_11_21d'] = 1 if 11 <= dsl <= 21 else 0
+    feats['rest_22_45d'] = 1 if 22 <= dsl <= 45 else 0
+    feats['rest_46_plus'] = 1 if dsl > 45 else 0
+
+    # ── E02: Intensity features (quality over volume) ────────────
+    # "Points per opportunity" — separates a rider who scores 300
+    # in 3 races (elite) from one who scores 300 in 10 (volume).
+    n_races = feats['race_count_12m']
+    n_gc = len(gc_12m)
+    n_stage_days = len(rh_12m[rh_12m['category'] == 'stage'])
+
+    feats['pts_per_race_12m'] = feats['pts_total_12m'] / n_races if n_races > 0 else float('nan')
+    feats['gc_pts_per_gc_race_12m'] = feats['pts_gc_12m'] / n_gc if n_gc > 0 else float('nan')
+    feats['stage_pts_per_stage_day_12m'] = feats['pts_stage_12m'] / n_stage_days if n_stage_days > 0 else float('nan')
+    feats['top10_gc_per_gc_race_12m'] = (gc_12m['position'] <= 10).sum() / n_gc if n_gc > 0 else float('nan')
+
+    # ── E04: Race prestige features ──────────────────────────────
+    # Not all races are equal: Tour de France >> Luxembourg.
+    # Separate GT signal from mini-tour signal, and weight by class.
+    _CLASS_WEIGHT = {'UWT': 1.0, 'Pro': 0.7, '1': 0.5}
+
+    # Prestige-weighted total points (UWT pts count more than Pro)
+    if len(rh_12m) > 0 and 'race_class' in rh_12m.columns:
+        weights = rh_12m['race_class'].map(_CLASS_WEIGHT).fillna(0.5)
+        feats['prestige_pts_12m'] = (rh_12m['pts'] * weights).sum()
+    else:
+        feats['prestige_pts_12m'] = 0.0
+
+    # Grand Tour specific history (the strongest signal for GT prediction)
+    rh_gt = rh_12m[rh_12m['race_type'] == 'grand_tour']
+    feats['gt_pts_12m'] = rh_gt['pts'].sum()
+    gc_gt = rh_gt[(rh_gt['category'] == 'gc') & (rh_gt['position'].notna()) & (rh_gt['position'] > 0)]
+    feats['gt_gc_pts_12m'] = rh_gt[rh_gt['category'] == 'gc']['pts'].sum()
+    n_gt_races = rh_gt[['race_slug', 'year']].drop_duplicates().shape[0]
+    feats['gt_race_count_12m'] = n_gt_races
+    if n_gt_races > 0:
+        gt_race_pts = rh_gt.groupby(['race_slug', 'year'])['pts'].sum()
+        feats['best_gt_pts_12m'] = gt_race_pts.max()
+        feats['gt_pts_per_race_12m'] = gt_race_pts.mean()
+    else:
+        feats['best_gt_pts_12m'] = float('nan')
+        feats['gt_pts_per_race_12m'] = float('nan')
+    feats['gt_gc_top10_rate'] = (gc_gt['position'] <= 10).sum() / len(gc_gt) if len(gc_gt) > 0 else float('nan')
+
+    # UWT-only aggregation (filters out noise from Pro/1-class races)
+    rh_uwt = rh_12m[rh_12m['race_class'] == 'UWT'] if 'race_class' in rh_12m.columns else rh_12m.iloc[0:0]
+    feats['uwt_pts_12m'] = rh_uwt['pts'].sum()
+    n_uwt = rh_uwt[['race_slug', 'year']].drop_duplicates().shape[0]
+    feats['uwt_pts_per_race_12m'] = feats['uwt_pts_12m'] / n_uwt if n_uwt > 0 else float('nan')
 
     # ── V3: Age (only continuous age, no derived features) ────────
     rider_rows = results_df[results_df['rider_id'] == rider_id]

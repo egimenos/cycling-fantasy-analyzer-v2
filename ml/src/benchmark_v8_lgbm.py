@@ -1,4 +1,6 @@
 """
+DEPRECATED: use benchmark_canonical.py instead.
+
 Benchmark v8 — LightGBM Model Swap
 
 Tests LightGBM vs RF baseline on clean features (41) and with

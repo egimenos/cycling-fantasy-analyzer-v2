@@ -1,4 +1,6 @@
 """
+DEPRECATED: use benchmark_canonical.py instead.
+
 Benchmark v8 — Glicko-2 Feature Test
 
 Adds 4 Glicko-2 features to the v4b baseline and measures impact:

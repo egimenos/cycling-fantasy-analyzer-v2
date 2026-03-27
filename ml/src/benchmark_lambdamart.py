@@ -1,4 +1,6 @@
 """
+DEPRECATED: use benchmark_canonical.py instead.
+
 Benchmark: LambdaMART (XGBRanker) — optimizes ranking directly.
 
 Instead of minimizing MSE on predicted points, LambdaMART optimizes

@@ -1,4 +1,6 @@
 """
+DEPRECATED: use benchmark_canonical.py instead.
+
 Fast benchmark using cached features.
 
 Loads pre-extracted features from parquet cache (built by cache_features.py).
