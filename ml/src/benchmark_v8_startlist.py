@@ -158,6 +158,12 @@ def extract_features_with_startlist(
 
             rider_actual = actual[actual['rider_id'] == rider_id]
             feats['actual_pts'] = rider_actual['pts'].sum()
+            # Per-category targets for decomposed prediction (E07)
+            ra_cat = rider_actual.groupby('category')['pts'].sum()
+            feats['actual_gc_pts'] = ra_cat.get('gc', 0) + ra_cat.get('gc_daily', 0)
+            feats['actual_stage_pts'] = ra_cat.get('stage', 0)
+            feats['actual_mountain_pts'] = ra_cat.get('mountain', 0) + ra_cat.get('mountain_pass', 0)
+            feats['actual_sprint_pts'] = ra_cat.get('sprint', 0) + ra_cat.get('sprint_intermediate', 0) + ra_cat.get('regularidad_daily', 0)
             feats['rider_id'] = rider_id
             feats['race_slug'] = race_slug
             feats['race_year'] = race_year

@@ -245,6 +245,146 @@ def evaluate_fold(
     return fold_result
 
 
+# ── Decomposed evaluation (E07) ──────────────────────────────────────
+
+# Category groups for decomposed prediction
+CATEGORY_TARGETS = {
+    'gc':       'actual_gc_pts',        # gc + gc_daily
+    'stage':    'actual_stage_pts',      # stage
+    'mountain': 'actual_mountain_pts',   # mountain + mountain_pass
+    'sprint':   'actual_sprint_pts',     # sprint + sprint_intermediate + regularidad
+}
+
+
+def evaluate_fold_decomposed(
+    fold_num: int,
+    feature_cols: list[str],
+    model_type: str,
+    transform_name: str,
+    prices_df: pd.DataFrame,
+    rider_names: dict[str, str],
+) -> dict:
+    """Evaluate one fold using per-category sub-models.
+
+    Trains 4 models (gc, stage, mountain, sprint), sums predictions
+    to get total predicted points.  This prevents classic specialists
+    from being overvalued — they score ~0 in gc/mountain sub-models.
+    """
+    train_fn, inverse_fn = TRANSFORMS[transform_name]
+    train_df, test_df = load_train_test(fold_num)
+    available = [c for c in feature_cols if c in train_df.columns]
+
+    fold_result = {
+        'fold': fold_num,
+        'test_year': FOLDS[fold_num]['test_year'],
+        'race_types': {},
+    }
+
+    for rt in ['mini_tour', 'grand_tour']:
+        tr = train_df[train_df['race_type'] == rt]
+        te = test_df[test_df['race_type'] == rt]
+        if len(tr) == 0 or len(te) == 0:
+            continue
+
+        if model_type == 'lgbm':
+            X_train = tr[available].values
+            X_test = te[available].values
+        else:
+            X_train = tr[available].fillna(0).values
+            X_test = te[available].fillna(0).values
+
+        # Train one sub-model per category, sum predictions
+        te = te.copy()
+        te['predicted'] = 0.0
+
+        for cat_name, target_col in CATEGORY_TARGETS.items():
+            if target_col not in tr.columns:
+                continue
+            model, _ = _make_model(model_type)
+            y_raw = tr[target_col].values
+            y_train = train_fn(y_raw)
+            model.fit(X_train, y_train)
+            cat_preds = inverse_fn(model.predict(X_test))
+            cat_preds = np.clip(cat_preds, 0, None)
+            te[f'pred_{cat_name}'] = cat_preds
+            te['predicted'] += cat_preds
+
+        race_details = []
+        rhos, p15s, ndcgs, captures, overlaps = [], [], [], [], []
+
+        for (slug, year), g in te.groupby(['race_slug', 'race_year']):
+            if len(g) < 3:
+                continue
+
+            pred = g['predicted'].values
+            actual = g['actual_pts'].values
+
+            rho = spearman_rho(pred, actual)
+            if np.isnan(rho):
+                continue
+
+            p15 = precision_at_k(pred, actual, 15)
+            ndcg = ndcg_at_k(pred, actual, 20)
+
+            rhos.append(rho)
+            p15s.append(p15)
+            ndcgs.append(ndcg)
+
+            # Team selection
+            rp = prices_df[
+                (prices_df['race_slug'] == slug) & (prices_df['year'] == year)
+            ]
+            predicted_team = None
+            actual_team = None
+            tc = None
+            to = None
+
+            if len(rp) > 0:
+                pm = dict(zip(rp['rider_id'], rp['price_hillios']))
+                ids = g['rider_id'].tolist()
+                am = dict(zip(g['rider_id'], g['actual_pts']))
+                prm = dict(zip(g['rider_id'], g['predicted']))
+
+                actual_team = find_optimal_team(ids, am, pm)
+                predicted_team = find_optimal_team(ids, prm, pm)
+
+                if actual_team and predicted_team:
+                    ap = sum(am.get(r, 0) for r in actual_team)
+                    pp = sum(am.get(r, 0) for r in predicted_team)
+                    if ap > 0:
+                        tc = pp / ap
+                        captures.append(tc)
+                    to = len(set(actual_team) & set(predicted_team)) / len(actual_team)
+                    overlaps.append(to)
+
+            detail = build_race_detail(
+                race_slug=slug, year=year, race_type=rt,
+                riders_df=g, prices_df=prices_df, rider_names=rider_names,
+                predicted_team=predicted_team, actual_team=actual_team,
+                rho=rho, p_at_15=p15, ndcg_at_20=ndcg,
+                team_capture=tc, team_overlap=to,
+            )
+            race_details.append(detail)
+
+        agg = {
+            'n_races': len(rhos),
+            'rho_mean': float(np.mean(rhos)) if rhos else None,
+            'rho_ci': list(bootstrap_ci(rhos)) if len(rhos) >= 2 else [None, None],
+            'p15_mean': float(np.mean(p15s)) if p15s else None,
+            'ndcg_mean': float(np.mean(ndcgs)) if ndcgs else None,
+            'team_capture_mean': float(np.mean(captures)) if captures else None,
+            'team_overlap_mean': float(np.mean(overlaps)) if overlaps else None,
+            'n_priced_races': len(captures),
+        }
+
+        fold_result['race_types'][rt] = {
+            'aggregate': agg,
+            'races': race_details,
+        }
+
+    return fold_result
+
+
 # ── Single experiment ─────────────────────────────────────────────────
 
 def run_experiment(
@@ -254,12 +394,14 @@ def run_experiment(
     prices_df: pd.DataFrame,
     rider_names: dict[str, str],
     quiet: bool = False,
+    decompose: bool = False,
 ) -> dict:
     """Run a complete 3-fold experiment and save logbook."""
     feature_cols = FEATURE_SETS[feature_set_name]
     _, model_params = _make_model(model_type)
 
-    label = f"{model_type.upper()} / {feature_set_name} / {transform_name} ({len(feature_cols)} features)"
+    mode = "decomposed" if decompose else "single"
+    label = f"{model_type.upper()} / {feature_set_name} / {transform_name} / {mode} ({len(feature_cols)} features)"
     if not quiet:
         print(f"\n{'='*65}")
         print(f"  {label}")
@@ -278,7 +420,8 @@ def run_experiment(
     for fold_num in [1, 2, 3]:
         if not quiet:
             print(f"  Fold {fold_num} (test {FOLDS[fold_num]['test_year']})...", end=' ', flush=True)
-        result = evaluate_fold(
+        eval_fn = evaluate_fold_decomposed if decompose else evaluate_fold
+        result = eval_fn(
             fold_num, feature_cols, model_type, transform_name,
             prices_df, rider_names,
         )
@@ -293,7 +436,11 @@ def run_experiment(
                     print(f"{rt[:4]} rho={rho:.4f}{tc_str}", end='  ')
             print()
 
-    path = save_logbook_entry(metadata, fold_details)
+    label_suffix = '_decomposed' if decompose else None
+    if decompose:
+        metadata['decomposed'] = True
+        metadata['category_targets'] = list(CATEGORY_TARGETS.keys())
+    path = save_logbook_entry(metadata, fold_details, label=label_suffix)
     if not quiet:
         print(f"  Logbook saved: {path}")
 
@@ -454,6 +601,8 @@ def main():
     parser.add_argument('--models', nargs='+', choices=['rf', 'lgbm'],
                         default=['rf', 'lgbm'],
                         help='Models to include in --all-combos')
+    parser.add_argument('--decompose', action='store_true',
+                        help='Use per-category decomposed prediction (E07)')
     parser.add_argument('--quiet', action='store_true',
                         help='Minimal output (useful for --all-combos)')
     args = parser.parse_args()
@@ -498,6 +647,7 @@ def main():
         result = run_experiment(
             args.model, args.features, args.transform,
             prices_df, rider_names,
+            decompose=args.decompose,
         )
         print_experiment_report(result)
 
