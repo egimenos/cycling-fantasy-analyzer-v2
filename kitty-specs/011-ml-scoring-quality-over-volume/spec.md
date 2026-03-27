@@ -206,11 +206,28 @@ DELTA VS V4B BASELINE:
   Team Capture %: +X.X%
 ```
 
-### 6. Baseline
+### 6. Execution Strategy
 
-The v4b Random Forest (49 features) MUST be benchmarked first with this exact protocol to establish the baseline all improvements are measured against. Previous benchmark numbers (ρ=0.479/0.572) used a single split — the expanding window baseline may differ.
+Feature extraction is the bottleneck (~90% of benchmark time). To enable fast iteration:
 
-### 7. Rules
+1. **Cache features once**: Run `python -m src.cache_features` to extract ALL features (superset: baseline 41 + startlist 5 + Glicko 4 = 50 columns) for all years (2019-2025) and save to `ml/cache/*.parquet`. One-time cost ~20 min.
+
+2. **Fast benchmark**: Run `python -m src.benchmark_fast --model rf --features baseline` to load from cache and evaluate in ~2 min. Supports:
+   - `--model rf|lgbm` (Random Forest or Optuna-tuned LightGBM)
+   - `--features baseline|startlist|glicko|all` (41/46/45/50 features)
+   - `--all-combos` (runs rf×baseline, rf×all, lgbm×baseline, lgbm×all)
+
+3. **Knapsack optimization**: DP prices scaled by factor of 5 (budget 2000→400) reducing state space 5×. Single race: 0.2s instead of minutes.
+
+4. **When to rebuild cache**: After changing `features.py`, `startlist_features.py`, or `glicko2.py`. Delete `ml/cache/` and rerun `cache_features`.
+
+5. **Price data**: Rider prices scraped from grandesminivueltas.com, range 50-700 hillios (multiples of 25). Budget = 2000. Team size = 9.
+
+### 7. Baseline
+
+The clean RF baseline (41 features, broken features removed) MUST be benchmarked first with correct prices to establish the reference. Previous baseline numbers used incorrect prices (elections stored as prices) and are INVALID.
+
+### 8. Rules
 
 - **No cherry-picking**: Report ALL metrics, not just the ones that improved
 - **No hyperparameter tuning on test data**: Tune on train set only (inner CV or separate validation fold)
@@ -245,9 +262,24 @@ The v4b Random Forest (49 features) MUST be benchmarked first with this exact pr
 - **Classics remain unpredictable**: NO-GO decision stands. One-day races are too stochastic/tactical.
 - **Price-awareness gap**: The ML model predicts points, not value (points/price). A cheap emerging talent at 50 hillios scoring 80 pts is better value than a star at 600 hillios scoring 1000 pts, but the model doesn't optimize for this. Value optimization happens in the separate optimizer layer.
 
-## Research Artifacts (Pre-existing)
+## Research Artifacts
 
-- `ml/src/research_v6.py`: Proved adding correlated features (pts_per_race, pts_uwt, pts_gt) does not improve RF rho
-- `ml/src/research_v7.py`: Proved race-class weighting and cross-type signal alone don't improve rho; XGBoost with default params is worse than RF
-- `ml/src/research_v6.py` also contains `compute_pts_vectorized()` — 100x faster data loading than the original `apply()` approach
-- `ml/src/scrape_birth_dates.py`: Standalone script to populate rider birth_dates from PCS (in progress)
+- `ml/src/research_v6.py`: Proved adding correlated features does not improve RF rho. Contains `compute_pts_vectorized()` (100x faster)
+- `ml/src/research_v7.py`: Proved race-class weighting and cross-type signal alone don't improve rho; XGBoost default params worse than RF
+- `ml/src/glicko2.py`: Glicko-2 rating system. Pogacar=2676, Vingegaard=2553. Best used indirectly (for startlist roles) not as direct feature.
+- `ml/src/startlist_features.py`: Startlist-aware team role features. McNulty case: Giro gap=-287 vs Luxembourg gap=-59.
+- `ml/src/scrape_prices.py`: Historical price scraper. 77 races, 11,712 prices (50-700 hillios, 2023-2026).
+- `ml/src/cache_features.py`: Feature extraction cache (parquet). Build once, reuse for all benchmarks.
+- `ml/src/benchmark_fast.py`: Fast benchmark runner using cache. ~2 min per full 3-fold evaluation.
+- `ml/src/benchmark_v8.py`: Full benchmark with team optimality (knapsack optimized 5x).
+- `ml/src/scrape_birth_dates.py`: Birth date scraper. 4034/4036 riders populated (99.95%).
+
+## Key Findings (2026-03-26/27 sessions)
+
+- `pts_per_career_year` was BROKEN (imp=0.38, dividing by full career with only 2019+ data). Removed.
+- Feature cleanup 49→41: team capture improved +2.5% despite rho dropping slightly
+- Glicko-2 direct: +0.011 rho mini but -4.3% GT team capture (overvalues veterans)
+- Startlist features: strongest_teammate_gap enters Top 5 importance
+- LightGBM Optuna-tuned: +0.040 rho on mini tours (0.470→0.510) — biggest improvement
+- Price parser bug: was saving elections count as price. Fixed and rescraped.
+- ALL previous team capture numbers are INVALID (wrong prices). Must rerun baseline.
