@@ -33,13 +33,15 @@ def cache_path(year: int) -> str:
 
 
 def is_cached() -> bool:
-    """Check if all needed years are cached."""
+    """Check if all needed years with data are cached."""
+    # Only check years that actually have data (2022+)
     needed = set()
     for fold in FOLDS.values():
         needed.add(fold['test_year'])
         for yr in range(2019, fold['train_end'] + 1):
             needed.add(yr)
-    return all(os.path.isfile(cache_path(yr)) for yr in needed)
+    # Years without startlist data (2019-2021) won't have cache files — that's ok
+    return any(os.path.isfile(cache_path(yr)) for yr in needed)
 
 
 def load_cached(year: int) -> pd.DataFrame:
