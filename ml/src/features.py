@@ -84,6 +84,17 @@ E02_INTENSITY_COLS = [
     'top10_gc_per_gc_race_12m',     # top-10 GC finishes / GC races (consistency at top)
 ]
 
+# Stage-race decontaminated features (fix for classic specialist leakage)
+SR_GC_COLS = [
+    'sr_gc_top10_rate',       # top-10 rate in stage race GCs only
+    'sr_gc_win_rate',         # win rate in stage race GCs only
+    'sr_gc_pts_per_race',     # GC pts per stage race
+    'sr_best_race_pts_12m',   # best stage race performance (not classic)
+    'sr_median_race_pts_12m', # median stage race (filters classic noise)
+    'sr_pts_per_race_12m',    # productivity in stage races only
+    'sr_race_pct',            # % of races that are stage races (rider type)
+]
+
 # E04: Race prestige features — not all races are equal (Phase B)
 E04_PRESTIGE_COLS = [
     'prestige_pts_12m',     # class-weighted points (UWT=1.0, Pro=0.7)
@@ -155,7 +166,8 @@ def _compute_rider_features(
     gc_finishes = rh_12m[
         (rh_12m['category'] == 'gc') &
         (rh_12m['position'].notna()) &
-        (rh_12m['position'] > 0)
+        (rh_12m['position'] > 0) &
+        (rh_12m['race_type'].isin(['mini_tour', 'grand_tour']))
     ]['position'].values
     gc_table = _GC_TABLES.get(race_type, _GC_TABLES['mini_tour'])
     if len(gc_finishes) > 0:
@@ -184,6 +196,38 @@ def _compute_rider_features(
     n_gc = len(gc_12m)
     feats['top10_rate'] = (gc_12m['position'] <= 10).sum() / n_gc if n_gc > 0 else 0.0
     feats['win_rate'] = (gc_12m['position'] == 1).sum() / n_gc if n_gc > 0 else 0.0
+
+    # Stage-race-only GC results (excludes classics where "gc" = final result)
+    # This prevents classics specialists (VdP, Pogačar's Flanders) from
+    # inflating GC metrics used for stage race prediction.
+    gc_sr = rh_12m[
+        (rh_12m['category'] == 'gc') &
+        (rh_12m['position'].notna()) &
+        (rh_12m['race_type'].isin(['mini_tour', 'grand_tour']))
+    ]
+    n_gc_sr = len(gc_sr)
+    feats['sr_gc_top10_rate'] = (gc_sr['position'] <= 10).sum() / n_gc_sr if n_gc_sr > 0 else float('nan')
+    feats['sr_gc_win_rate'] = (gc_sr['position'] == 1).sum() / n_gc_sr if n_gc_sr > 0 else float('nan')
+    feats['sr_gc_pts_per_race'] = gc_sr['pts'].sum() / n_gc_sr if n_gc_sr > 0 else float('nan')
+
+    # Stage-race filtered versions of general quality features.
+    # Without these, classic specialists (VdP, Alaphilippe) get inflated
+    # quality scores from one-day race wins that don't transfer to GTs.
+    rh_sr = rh_12m[rh_12m['race_type'].isin(['mini_tour', 'grand_tour'])]
+    if len(rh_sr) > 0:
+        sr_race_pts = rh_sr.groupby(['race_slug', 'year'])['pts'].sum()
+        n_sr_races = len(sr_race_pts)
+        feats['sr_best_race_pts_12m'] = sr_race_pts.max()
+        feats['sr_median_race_pts_12m'] = sr_race_pts.median()
+        feats['sr_pts_per_race_12m'] = sr_race_pts.mean()
+    else:
+        feats['sr_best_race_pts_12m'] = float('nan')
+        feats['sr_median_race_pts_12m'] = float('nan')
+        feats['sr_pts_per_race_12m'] = float('nan')
+
+    # What fraction of racing is stage races vs classics — rider type signal
+    total_races = feats['race_count_12m']
+    feats['sr_race_pct'] = len(rh_sr[['race_slug', 'year']].drop_duplicates()) / total_races if total_races > 0 else float('nan')
 
     if len(rh_12m) > 0:
         race_pts = rh_12m.groupby(['race_slug', 'year'])['pts'].sum()
@@ -272,7 +316,8 @@ def _compute_rider_features(
     n_stage_days = len(rh_12m[rh_12m['category'] == 'stage'])
 
     feats['pts_per_race_12m'] = feats['pts_total_12m'] / n_races if n_races > 0 else float('nan')
-    feats['gc_pts_per_gc_race_12m'] = feats['pts_gc_12m'] / n_gc if n_gc > 0 else float('nan')
+    # Use stage-race GC only (n_gc_sr) — classics "gc" results are a different signal
+    feats['gc_pts_per_gc_race_12m'] = gc_sr['pts'].sum() / n_gc_sr if n_gc_sr > 0 else float('nan')
     feats['stage_pts_per_stage_day_12m'] = feats['pts_stage_12m'] / n_stage_days if n_stage_days > 0 else float('nan')
     feats['top10_gc_per_gc_race_12m'] = (gc_12m['position'] <= 10).sum() / n_gc if n_gc > 0 else float('nan')
 

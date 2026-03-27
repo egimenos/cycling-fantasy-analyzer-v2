@@ -25,7 +25,7 @@ from sklearn.ensemble import RandomForestRegressor
 
 from .features import (
     FEATURE_COLS, E01_MISSINGNESS_COLS, E02_INTENSITY_COLS,
-    E03_REST_BUCKET_COLS, E04_PRESTIGE_COLS,
+    E03_REST_BUCKET_COLS, E04_PRESTIGE_COLS, SR_GC_COLS,
 )
 from .startlist_features import STARTLIST_FEATURE_COLS
 from .cache_features import (
@@ -42,12 +42,16 @@ from .logbook import (
 # ── Feature sets ──────────────────────────────────────────────────────
 
 _PHASE_B = (E01_MISSINGNESS_COLS + E02_INTENSITY_COLS
-            + E03_REST_BUCKET_COLS + E04_PRESTIGE_COLS)
+            + E03_REST_BUCKET_COLS + E04_PRESTIGE_COLS + SR_GC_COLS)
 
-# Volume features superseded by E02 intensity + E04 prestige
+# Features superseded by E02/E04/SR_GC decontaminated variants
 _VOLUME_NOISE = {
     'pts_total_12m', 'pts_total_6m', 'pts_total_3m', 'pts_gc_12m',
     'pts_stage_12m', 'pts_mountain_12m', 'pts_sprint_12m', 'pts_same_type_12m',
+    # General quality metrics contaminated by classics (replaced by sr_* variants)
+    'best_race_pts_12m', 'median_race_pts_12m',
+    # top10_rate/win_rate mix classic + stage race GC (replaced by sr_gc_*)
+    'top10_rate', 'win_rate',
 }
 
 FEATURE_SETS = {

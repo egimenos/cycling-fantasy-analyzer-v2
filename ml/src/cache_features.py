@@ -22,7 +22,7 @@ import psycopg2
 
 from .features import (
     FEATURE_COLS, E01_MISSINGNESS_COLS, E02_INTENSITY_COLS,
-    E03_REST_BUCKET_COLS, E04_PRESTIGE_COLS,
+    E03_REST_BUCKET_COLS, E04_PRESTIGE_COLS, SR_GC_COLS,
 )
 from .startlist_features import STARTLIST_FEATURE_COLS
 from .research_v6 import load_data_fast
@@ -62,7 +62,7 @@ def compute_schema_hash() -> str:
     all_cols = sorted(
         set(FEATURE_COLS) | set(STARTLIST_FEATURE_COLS) | set(GLICKO_FEATURES)
         | set(E01_MISSINGNESS_COLS) | set(E02_INTENSITY_COLS)
-        | set(E03_REST_BUCKET_COLS) | set(E04_PRESTIGE_COLS)
+        | set(E03_REST_BUCKET_COLS) | set(E04_PRESTIGE_COLS) | set(SR_GC_COLS)
     )
     return hashlib.sha256('\n'.join(all_cols).encode()).hexdigest()[:16]
 
