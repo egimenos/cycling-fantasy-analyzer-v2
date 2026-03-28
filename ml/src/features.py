@@ -32,7 +32,7 @@ FEATURE_COLS = [
     'best_race_pts_12m', 'median_race_pts_12m',
     # V2: Race familiarity
     'days_since_last',
-    'same_race_best', 'same_race_mean', 'has_same_race',
+    'same_race_best', 'same_race_mean', 'has_same_race', 'same_race_gc_best',
     # V2: Trend
     'pts_trend_3m',
     'gc_pts_same_type',
@@ -59,7 +59,7 @@ FEATURE_COLS = [
 # - same_race_editions: redundant with has_same_race flag
 # - top5_rate, podium_rate: highly correlated with top10_rate and win_rate
 
-assert len(FEATURE_COLS) == 41, f"Expected 41 feature cols, got {len(FEATURE_COLS)}"  # noqa: S101
+assert len(FEATURE_COLS) == 42, f"Expected 42 feature cols, got {len(FEATURE_COLS)}"  # noqa: S101
 
 # E01: Missingness indicators (Phase B)
 E01_MISSINGNESS_COLS = [
@@ -267,10 +267,18 @@ def _compute_rider_features(
         feats['same_race_best'] = sr_pts.max()
         feats['same_race_mean'] = sr_pts.mean()
         feats['has_same_race'] = 1
+        # GC-only version: only gc + gc_daily categories
+        sr_gc = same_race[same_race['category'].isin(['gc', 'gc_daily'])]
+        if len(sr_gc) > 0:
+            sr_gc_pts = sr_gc.groupby('year')['pts'].sum()
+            feats['same_race_gc_best'] = sr_gc_pts.max()
+        else:
+            feats['same_race_gc_best'] = 0.0
     else:
         feats['same_race_best'] = 0.0
         feats['same_race_mean'] = 0.0
         feats['has_same_race'] = 0
+        feats['same_race_gc_best'] = 0.0
 
     feats['pts_trend_3m'] = feats['pts_total_3m'] - (feats['pts_total_6m'] - feats['pts_total_3m'])
 

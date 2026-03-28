@@ -45,7 +45,7 @@ from .benchmark_v8 import (
 from .benchmark_v8_glicko import load_glicko_ratings
 
 # Config A: baseline + startlist features (Glicko internal only)
-GLICKO_DIRECT_FEATURES = ['gc_mu', 'gc_rd', 'stage_mu', 'stage_rd']
+GLICKO_DIRECT_FEATURES = ['gc_mu', 'gc_rd', 'stage_mu', 'stage_rd', 'gc_mu_delta_12m']
 
 CONFIGS = {
     'a': {
@@ -62,19 +62,34 @@ CONFIGS = {
 
 
 def get_rider_rating_before_race(ratings_df, rider_id, race_date):
-    """Get most recent Glicko-2 rating before race_date."""
+    """Get most recent Glicko-2 rating before race_date, plus 12-month delta."""
     rider_ratings = ratings_df[
         (ratings_df['rider_id'] == rider_id) &
         (ratings_df['race_date'] < race_date)
     ]
     if len(rider_ratings) == 0:
-        return {'gc_mu': 1500.0, 'gc_rd': 350.0, 'stage_mu': 1500.0, 'stage_rd': 350.0}
+        return {
+            'gc_mu': 1500.0, 'gc_rd': 350.0,
+            'stage_mu': 1500.0, 'stage_rd': 350.0,
+            'gc_mu_delta_12m': 0.0,
+        }
     latest = rider_ratings.iloc[-1]
+
+    # 12-month delta: current gc_mu minus gc_mu ~12 months ago
+    cutoff = race_date - pd.Timedelta(days=365)
+    older = rider_ratings[rider_ratings['race_date'] <= cutoff]
+    if len(older) > 0:
+        gc_mu_12m_ago = older.iloc[-1]['gc_mu']
+    else:
+        gc_mu_12m_ago = 1500.0  # no history that far back → delta from initial
+    gc_mu_delta = latest['gc_mu'] - gc_mu_12m_ago
+
     return {
         'gc_mu': latest['gc_mu'],
         'gc_rd': latest['gc_rd'],
         'stage_mu': latest['stage_mu'],
         'stage_rd': latest['stage_rd'],
+        'gc_mu_delta_12m': gc_mu_delta,
     }
 
 

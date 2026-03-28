@@ -44,14 +44,23 @@ TAU = 0.5
 EPSILON = 0.000001
 
 # Race prestige multiplier for K-factor equivalent
-# Higher prestige races have more impact on rating changes
+# Higher prestige races have more impact on rating changes.
+# Values aligned with UCI World Ranking points ratios (baseline: UWT mini = 1.0).
+# Source: https://www.procyclingstats.com/info.php?s=point-scales
 RACE_PRESTIGE = {
-    ('grand_tour', 'UWT'): 1.5,
-    ('mini_tour', 'UWT'): 1.0,
-    ('mini_tour', 'Pro'): 0.7,
-    ('classic', 'UWT'): 0.8,
-    ('classic', 'Pro'): 0.5,
+    ('mini_tour', 'UWT'): 1.0,    # Dauphiné, Suisse, Tirreno, etc. (baseline)
+    ('mini_tour', 'Pro'): 0.4,    # Luxembourg, Burgos, etc.
+    ('classic', 'UWT'): 0.8,      # Monuments (not used for GC/stage ratings)
+    ('classic', 'Pro'): 0.3,      # Smaller classics (not used for GC/stage ratings)
 }
+
+# Grand Tours get slug-specific prestige (Tour > Giro/Vuelta per UCI points)
+GT_PRESTIGE = {
+    'tour-de-france': 2.6,        # 1300 UCI pts → 1300/500 = 2.6x
+    'giro-d-italia': 2.2,         # 1100 UCI pts → 1100/500 = 2.2x
+    'vuelta-a-espana': 2.2,       # 1100 UCI pts → 1100/500 = 2.2x
+}
+GT_PRESTIGE_DEFAULT = 2.2         # Fallback for any unknown GT
 
 # How many pairwise comparisons to sample per rider per race
 # (full pairwise on 150+ riders is O(n²), we sample for speed)
@@ -313,7 +322,10 @@ def compute_all_ratings(results_df: pd.DataFrame) -> pd.DataFrame:
         race_class = race['race_class']
         race_date = race['race_date']
 
-        prestige = RACE_PRESTIGE.get((race_type, race_class), 0.5)
+        if race_type == 'grand_tour':
+            prestige = GT_PRESTIGE.get(slug, GT_PRESTIGE_DEFAULT)
+        else:
+            prestige = RACE_PRESTIGE.get((race_type, race_class), 0.5)
 
         race_results = results_df[
             (results_df['race_slug'] == slug) &

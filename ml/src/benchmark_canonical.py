@@ -394,13 +394,27 @@ from .points import (
     get_points, estimate_gc_daily_pts,
 )
 
-# Focused feature set for GC gate + position regressor (GT only).
-# Hierarchical: GT direct > stage race GC > race history > context.
-# Excludes micro-form, classic noise, and generic volume that distract
-# the gate from the core question: "is this rider a real GC contender?"
+# Minimal GC feature set (spec 012, Phase 2).
+# Only features with direct GC signal — no stage_mu, no micro-form, no volume.
+# The hypothesis: fewer, cleaner features → less Skjelmose/Ciccone inflation.
+# Minimal GC feature set (spec 012, Phase 2).
+# Only features with direct GC signal — no stage_mu, no micro-form, no volume.
+# same_race_gc_best replaces same_race_best to avoid target contamination
+# (same_race_best included stage/sprint/mountain pts, inflating Alaphilippe etc.)
+GC_GATE_FEATURES_MINIMAL = [
+    'gc_mu',                    # Glicko-2 GC strength (recalibrated UCI weights)
+    'gc_mu_delta_12m',          # Trend: improving or declining
+    'same_race_gc_best',        # Best GC pts (gc+gc_daily) in this specific race
+    'strongest_teammate_gap',   # Team dynamics: negative = gregario, positive = leader
+    'age',                      # Secondary context
+    'gc_pts_same_type',         # GC points in same race type (GT vs mini)
+]
+
+# Extended GC feature set (original Phase B + gc_mu_delta_12m).
+# More features, potentially more signal but also more noise.
 GC_GATE_FEATURES = [
     # Glicko-2 level (measures RELATIVE strength vs same rivals)
-    'gc_mu', 'stage_mu',
+    'gc_mu', 'gc_mu_delta_12m',
     # GT direct (primary signal)
     'gt_pts_12m', 'gt_gc_pts_12m', 'best_gt_pts_12m',
     'gt_pts_per_race_12m', 'gt_gc_top10_rate', 'gt_race_count_12m',
@@ -413,7 +427,7 @@ GC_GATE_FEATURES = [
     'gc_pts_same_type',
     # Context
     'age', 'sr_race_pct',
-    'is_leader', 'team_rank',
+    'strongest_teammate_gap', 'is_leader', 'team_rank',
 ]
 
 # Regressors shared by decomposed and ordinal modes
@@ -431,6 +445,7 @@ def evaluate_fold_ordinal(
     transform_name: str,
     prices_df: pd.DataFrame,
     rider_names: dict[str, str],
+    gc_feature_set: str = 'extended',
 ) -> dict:
     """Evaluate one fold using hierarchical gate + position prediction.
 
@@ -471,7 +486,8 @@ def evaluate_fold_ordinal(
             # For GT: use focused GC feature set (avoids micro-form noise)
             # For mini tours: use full pruned set
             if rt == 'grand_tour':
-                gc_avail = [c for c in GC_GATE_FEATURES if c in tr.columns]
+                gc_feats = GC_GATE_FEATURES_MINIMAL if gc_feature_set == 'minimal' else GC_GATE_FEATURES
+                gc_avail = [c for c in gc_feats if c in tr.columns]
                 X_gc_train = tr[gc_avail].values
                 X_gc_test = te[gc_avail].values
             else:
@@ -695,13 +711,15 @@ def run_experiment(
     quiet: bool = False,
     decompose: bool = False,
     ordinal: bool = False,
+    gc_feature_set: str = 'extended',
 ) -> dict:
     """Run a complete 3-fold experiment and save logbook."""
     feature_cols = FEATURE_SETS[feature_set_name]
     _, model_params = _make_model(model_type)
 
     mode = "ordinal" if ordinal else ("decomposed" if decompose else "single")
-    label = f"{model_type.upper()} / {feature_set_name} / {transform_name} / {mode} ({len(feature_cols)} features)"
+    gc_label = f" gc={gc_feature_set}" if ordinal else ""
+    label = f"{model_type.upper()} / {feature_set_name} / {transform_name} / {mode}{gc_label} ({len(feature_cols)} features)"
     if not quiet:
         print(f"\n{'='*65}")
         print(f"  {label}")
@@ -726,10 +744,14 @@ def run_experiment(
             eval_fn = evaluate_fold_decomposed
         else:
             eval_fn = evaluate_fold
-        result = eval_fn(
-            fold_num, feature_cols, model_type, transform_name,
-            prices_df, rider_names,
+        kwargs = dict(
+            fold_num=fold_num, feature_cols=feature_cols,
+            model_type=model_type, transform_name=transform_name,
+            prices_df=prices_df, rider_names=rider_names,
         )
+        if ordinal:
+            kwargs['gc_feature_set'] = gc_feature_set
+        result = eval_fn(**kwargs)
         fold_details.append(result)
         if not quiet:
             for rt in ['mini_tour', 'grand_tour']:
@@ -746,6 +768,10 @@ def run_experiment(
         metadata['ordinal'] = True
         metadata['regressors'] = list(ORDINAL_REGRESSORS.keys())
         metadata['gc_approach'] = 'hierarchical: gate(top20) + position(1-20) + gc_daily_heuristic'
+        metadata['gc_feature_set'] = gc_feature_set
+        if gc_feature_set == 'minimal':
+            metadata['gc_features_used'] = GC_GATE_FEATURES_MINIMAL
+            label_suffix = '_ordinal_gc_minimal'
     elif decompose:
         label_suffix = '_decomposed'
         metadata['decomposed'] = True
@@ -919,6 +945,8 @@ def main():
                         help='Use ordinal bucket classification for GC/mountain/sprint (E07b)')
     parser.add_argument('--quiet', action='store_true',
                         help='Minimal output (useful for --all-combos)')
+    parser.add_argument('--gc-features', choices=['minimal', 'extended'], default='extended',
+                        help='GC gate feature set for --ordinal mode (minimal=6 curated, extended=20+)')
     args = parser.parse_args()
 
     # Validate cache
@@ -963,6 +991,7 @@ def main():
             prices_df, rider_names,
             decompose=args.decompose,
             ordinal=args.ordinal,
+            gc_feature_set=args.gc_features,
         )
         print_experiment_report(result)
 

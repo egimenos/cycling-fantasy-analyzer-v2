@@ -29,6 +29,95 @@ The fantasy game awards points across 8 categories. We group them into 5 scoring
 | **Sprint**     | sprint + sprint_intermediate + regularidad_daily | Final sprint classification + daily intermediates | 0-200             |
 | **Total**      | Sum of above                                     |                                                   | 0-950             |
 
+## Prediction-to-Points Mapping
+
+Each scoring source follows the same principle: the model predicts something **learnable** (positions, counts, rates), and a deterministic conversion translates that prediction into fantasy points using the known scoring tables from `ml/src/points.py`.
+
+### GC (gc + gc_daily combined)
+
+| Step                   | What                                       | Detail                                                                                                |
+| ---------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| **Model output**       | Predicted GC final position (1-20+)        | Binary gate (top-20 y/n) → position regressor for top-20 riders                                       |
+| **gc points**          | `GC_GRAND_TOUR[pos]` lookup                | 150, 125, 100, 80, 60, 50, 45, 40, 35, 30, 28...10. Pos 21+ = 0                                       |
+| **gc_daily points**    | Heuristic: `pts_per_stage[pos] × n_stages` | Empirical averages per position (pos 1 = 12.0/stage, pos 2 = 8.0, ...). See `estimate_gc_daily_pts()` |
+| **Total GC pts**       | gc + gc_daily                              | Single combined prediction per rider                                                                  |
+| **Race inputs needed** | `race_type`, `n_stages`                    | Mini tour uses `GC_MINI_TOUR` table and `_GC_DAILY_PTS_PER_STAGE_MINI`                                |
+
+gc_daily is NOT a separate model — it derives from the same predicted GC position. The heuristic is an approximation; a future refinement could incorporate `target_mountain_pct` to adjust the effective number of GC-discriminating stages.
+
+### Stage
+
+| Step                   | What                                                                   | Detail                                                                                                                                                                               |
+| ---------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Model output**       | Predicted count of top-10 stage finishes                               | Count regression (continuous, e.g. 3.2)                                                                                                                                              |
+| **Conversion**         | Linear approximation: `stage_pts ≈ 22 × count + 3`                     | Empirically derived from historical data. Average pts per top-10 finish ≈ 22 (weighted towards higher finishes since riders who score multiple top-10s tend to include wins/podiums) |
+| **Race inputs needed** | `target_flat_pct`, `target_mountain_pct`, `target_itt_pct`, `n_stages` | Race profile affects which rider archetypes score                                                                                                                                    |
+
+Note: the `STAGE_POINTS` table (pos 1=40 down to pos 20=1) exists but is not used directly — predicting individual stage positions across 21 stages is impractical. The count model is a practical simplification.
+
+### Mountain (mountain_final + mountain_pass)
+
+**Mountain final classification:**
+
+| Step                   | What                                                          | Detail                                                       |
+| ---------------------- | ------------------------------------------------------------- | ------------------------------------------------------------ |
+| **Model output**       | Classification position bucket (1st / 2nd-3rd / 4th-5th / 6+) | Ordinal classifier, same gate pattern as GC                  |
+| **Conversion**         | `FINAL_CLASS_GT[pos]` lookup                                  | 50, 35, 25, 15, 10. Pos 6+ = 0                               |
+| **Race inputs needed** | `race_type`                                                   | Mini tour: `FINAL_CLASS_MINI` (40, 25, 15), only top-3 score |
+
+**Mountain pass (per-climb points):**
+
+| Step                   | What                                                               | Detail                                                                                          |
+| ---------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| **Model output**       | Capture rate: predicted fraction of available mountain pass points | Regression (0.0 - 1.0)                                                                          |
+| **Supply calculation** | Total pts available = Σ (pts per climb category × n_climbs)        | HC: max 41 pts/climb, Cat1: 21, Cat2: 9, Cat3: 5, Cat4: 1. Summed across all climbs in the race |
+| **Conversion**         | `mountain_pass_pts = capture_rate × total_supply`                  |                                                                                                 |
+| **Race inputs needed** | Climb inventory: count of HC, Cat1, Cat2, Cat3, Cat4 climbs        | Must be known or estimated from race profile before prediction                                  |
+
+### Sprint (sprint_final + sprint_intermediate + regularidad_daily)
+
+**Sprint final classification:**
+
+| Step                   | What                                                    | Detail                        |
+| ---------------------- | ------------------------------------------------------- | ----------------------------- |
+| **Model output**       | Classification position bucket (same as mountain final) | Ordinal classifier            |
+| **Conversion**         | `FINAL_CLASS_GT[pos]` / `FINAL_CLASS_MINI[pos]`         | Same tables as mountain final |
+| **Race inputs needed** | `race_type`                                             |                               |
+
+**Sprint intermediate + regularidad_daily (combined):**
+
+| Step                   | What                                                                                                         | Detail                 |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------- |
+| **Model output**       | Capture rate: predicted fraction of available sprint/regularity points                                       | Regression (0.0 - 1.0) |
+| **Supply calculation** | Sprint: 12 pts/stage (single) or 6 pts/stage (multi) × n_sprint_stages. Regularidad: 12 pts/stage × n_stages | Depends on race format |
+| **Conversion**         | `sprint_inter_pts = capture_rate × total_supply`                                                             |                        |
+| **Race inputs needed** | `n_intermediate_sprints` per stage (or total), `n_stages`                                                    |                        |
+
+### Final Aggregation
+
+```
+predicted_total = gc_pts + gc_daily_pts + stage_pts + mountain_final_pts
+                + mountain_pass_pts + sprint_final_pts + sprint_inter_pts
+```
+
+Each sub-prediction is independent. The total is a simple sum, not a learned combination. This ensures that errors in one source don't contaminate others and that each sub-model can be evaluated and improved independently.
+
+### Race-Level Inputs Summary
+
+Every prediction requires these race-level inputs, known before the race starts:
+
+| Input                               | Source                                 | Used by                       |
+| ----------------------------------- | -------------------------------------- | ----------------------------- |
+| `race_type`                         | Race metadata (grand_tour / mini_tour) | All models                    |
+| `n_stages`                          | Race calendar                          | GC daily, stage, sprint inter |
+| `target_flat_pct`                   | Stage profile from PCS                 | Stage model                   |
+| `target_mountain_pct`               | Stage profile from PCS                 | Stage model                   |
+| `target_itt_pct`                    | Stage profile from PCS                 | Stage model                   |
+| Climb inventory (HC, Cat1-4 counts) | Route data from PCS                    | Mountain pass supply          |
+| `n_intermediate_sprints`            | Race format                            | Sprint inter supply           |
+
+For training, these are derived from historical results. For prediction, they must be scraped or estimated from the upcoming race route.
+
 ## Research Phases
 
 ### Phase 1: Recalibrate Glicko-2
