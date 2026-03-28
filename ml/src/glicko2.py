@@ -228,6 +228,12 @@ def update_rating(
 
 # ── Race Processing ──────────────────────────────────────────────────
 
+# Neighborhood size for GC comparisons: compare against the K riders
+# above and K below in the final GC classification.  This avoids the
+# fundamental Glicko-in-cycling problem where beating 140 gregarios who
+# never competed for GC inflates gc_mu for any top-20 finisher.
+GC_NEIGHBORHOOD_K = 15
+
 def process_gc_race(
     gc_results: list[tuple[str, int]],
     ratings: dict,
@@ -235,6 +241,11 @@ def process_gc_race(
     rng: np.random.RandomState,
 ) -> dict:
     """Update GC ratings based on final GC standings.
+
+    Uses neighborhood comparisons: each rider is compared only against
+    the K nearest riders above and below in the GC classification.
+    This means the 8th place finisher compares against pos 1-7 (losses)
+    and pos 9-23 (wins) — all real GC competitors, no sprinters/gregarios.
 
     Args:
         gc_results: List of (rider_id, position) sorted by position.
@@ -245,26 +256,29 @@ def process_gc_race(
     Returns:
         Updated ratings dict.
     """
+    # Sort by position to ensure correct ordering
+    gc_results = sorted(gc_results, key=lambda x: x[1])
     riders = [r for r, _ in gc_results]
     positions = {r: p for r, p in gc_results}
+    idx_of = {r: i for i, (r, _) in enumerate(gc_results)}
 
     for rider_id in riders:
         if rider_id not in ratings:
             ratings[rider_id] = {'mu': INITIAL_MU, 'rd': INITIAL_RD, 'sigma': INITIAL_SIGMA}
 
+        my_idx = idx_of[rider_id]
         my_pos = positions[rider_id]
         my_rating = ratings[rider_id]
 
-        # Sample opponents
-        other_riders = [r for r in riders if r != rider_id]
-        if len(other_riders) > MAX_OPPONENTS:
-            other_riders = list(rng.choice(other_riders, MAX_OPPONENTS, replace=False))
+        # Neighborhood: K above + K below in classification
+        lo = max(0, my_idx - GC_NEIGHBORHOOD_K)
+        hi = min(len(gc_results), my_idx + GC_NEIGHBORHOOD_K + 1)
+        neighbor_ids = [gc_results[i][0] for i in range(lo, hi) if gc_results[i][0] != rider_id]
 
         opponents = []
-        for opp_id in other_riders:
+        for opp_id in neighbor_ids:
             opp_r = ratings.get(opp_id, {'mu': INITIAL_MU, 'rd': INITIAL_RD})
             opp_pos = positions[opp_id]
-            # Score: 1.0 if I beat them, 0.0 if they beat me
             score = 1.0 if my_pos < opp_pos else (0.5 if my_pos == opp_pos else 0.0)
             opponents.append((opp_r['mu'], opp_r['rd'], score))
 
