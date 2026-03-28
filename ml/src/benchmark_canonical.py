@@ -385,6 +385,187 @@ def evaluate_fold_decomposed(
     return fold_result
 
 
+# ── Ordinal evaluation (E07b) ────────────────────────────────────────
+
+from .points import (
+    gc_position_to_bucket, gc_bucket_expected_pts, N_GC_BUCKETS,
+    classification_position_to_bucket, classification_bucket_expected_pts,
+    n_classification_buckets, compute_expected_pts,
+)
+
+# 7 sub-models: 3 classifiers + 4 regressors
+ORDINAL_CLASSIFIERS = {
+    'gc_bucket': {
+        'position_col': 'gc_final_position',
+        'bucket_fn': lambda p, rt: gc_position_to_bucket(p),
+        'expected_fn': gc_bucket_expected_pts,
+        'n_buckets_fn': lambda rt: N_GC_BUCKETS,
+    },
+    'mountain_bucket': {
+        'position_col': 'mountain_final_position',
+        'bucket_fn': classification_position_to_bucket,
+        'expected_fn': classification_bucket_expected_pts,
+        'n_buckets_fn': n_classification_buckets,
+    },
+    'sprint_bucket': {
+        'position_col': 'sprint_final_position',
+        'bucket_fn': classification_position_to_bucket,
+        'expected_fn': classification_bucket_expected_pts,
+        'n_buckets_fn': n_classification_buckets,
+    },
+}
+
+ORDINAL_REGRESSORS = {
+    'gc_daily':     'actual_gc_daily_pts',
+    'stage':        'actual_stage_pts',
+    'mountain_pass': 'actual_mountain_pass_pts',
+    'sprint_inter': 'actual_sprint_inter_pts',
+}
+
+
+def evaluate_fold_ordinal(
+    fold_num: int,
+    feature_cols: list[str],
+    model_type: str,
+    transform_name: str,
+    prices_df: pd.DataFrame,
+    rider_names: dict[str, str],
+) -> dict:
+    """Evaluate one fold using ordinal bucket classification + regression.
+
+    3 classifiers (GC, mountain final, sprint final) predict position
+    buckets and convert to expected pts via scoring tables.
+    4 regressors predict the remaining category points directly.
+    """
+    import lightgbm as lgb
+
+    train_fn, inverse_fn = TRANSFORMS[transform_name]
+    train_df, test_df = load_train_test(fold_num)
+    available = [c for c in feature_cols if c in train_df.columns]
+
+    fold_result = {
+        'fold': fold_num,
+        'test_year': FOLDS[fold_num]['test_year'],
+        'race_types': {},
+    }
+
+    for rt in ['mini_tour', 'grand_tour']:
+        tr = train_df[train_df['race_type'] == rt]
+        te = test_df[test_df['race_type'] == rt]
+        if len(tr) == 0 or len(te) == 0:
+            continue
+
+        X_train = tr[available].values
+        X_test = te[available].values
+        te = te.copy()
+        te['predicted'] = 0.0
+
+        # ── Classifiers (GC, mountain final, sprint final) ────────
+        for cat_name, cfg in ORDINAL_CLASSIFIERS.items():
+            pos_col = cfg['position_col']
+            if pos_col not in tr.columns:
+                continue
+
+            n_buckets = cfg['n_buckets_fn'](rt)
+            bucket_fn = cfg['bucket_fn']
+            y_buckets = tr[pos_col].apply(lambda p: bucket_fn(p, rt)).values
+
+            clf = lgb.LGBMClassifier(
+                objective='multiclass', num_class=n_buckets,
+                verbose=-1, n_jobs=-1, random_state=RANDOM_SEED,
+                n_estimators=256, max_depth=8, learning_rate=0.0204,
+                num_leaves=71, subsample=0.957, colsample_bytree=0.535,
+                min_child_samples=48,
+            )
+            clf.fit(X_train, y_buckets)
+            probs = clf.predict_proba(X_test)
+
+            expected = cfg['expected_fn'](rt)
+            cat_pts = np.array([
+                compute_expected_pts(probs[i], expected)
+                for i in range(len(probs))
+            ])
+            te[f'pred_{cat_name}'] = cat_pts
+            te['predicted'] += cat_pts
+
+        # ── Regressors (gc_daily, stage, mountain_pass, sprint_inter)
+        for cat_name, target_col in ORDINAL_REGRESSORS.items():
+            if target_col not in tr.columns:
+                continue
+            model, _ = _make_model(model_type)
+            y_raw = tr[target_col].values
+            y_train = train_fn(y_raw)
+            model.fit(X_train, y_train)
+            cat_preds = inverse_fn(model.predict(X_test))
+            cat_preds = np.clip(cat_preds, 0, None)
+            te[f'pred_{cat_name}'] = cat_preds
+            te['predicted'] += cat_preds
+
+        # ── Per-race metrics (same as other evaluate functions) ───
+        race_details = []
+        rhos, p15s, ndcgs, captures, overlaps = [], [], [], [], []
+
+        for (slug, year), g in te.groupby(['race_slug', 'race_year']):
+            if len(g) < 3:
+                continue
+            pred = g['predicted'].values
+            actual = g['actual_pts'].values
+            rho = spearman_rho(pred, actual)
+            if np.isnan(rho):
+                continue
+            p15 = precision_at_k(pred, actual, 15)
+            ndcg = ndcg_at_k(pred, actual, 20)
+            rhos.append(rho)
+            p15s.append(p15)
+            ndcgs.append(ndcg)
+
+            rp = prices_df[
+                (prices_df['race_slug'] == slug) & (prices_df['year'] == year)
+            ]
+            predicted_team, actual_team, tc, to = None, None, None, None
+            if len(rp) > 0:
+                pm = dict(zip(rp['rider_id'], rp['price_hillios']))
+                ids = g['rider_id'].tolist()
+                am = dict(zip(g['rider_id'], g['actual_pts']))
+                prm = dict(zip(g['rider_id'], g['predicted']))
+                actual_team = find_optimal_team(ids, am, pm)
+                predicted_team = find_optimal_team(ids, prm, pm)
+                if actual_team and predicted_team:
+                    ap = sum(am.get(r, 0) for r in actual_team)
+                    pp = sum(am.get(r, 0) for r in predicted_team)
+                    if ap > 0:
+                        tc = pp / ap
+                        captures.append(tc)
+                    to = len(set(actual_team) & set(predicted_team)) / len(actual_team)
+                    overlaps.append(to)
+
+            detail = build_race_detail(
+                race_slug=slug, year=year, race_type=rt,
+                riders_df=g, prices_df=prices_df, rider_names=rider_names,
+                predicted_team=predicted_team, actual_team=actual_team,
+                rho=rho, p_at_15=p15, ndcg_at_20=ndcg,
+                team_capture=tc, team_overlap=to,
+            )
+            race_details.append(detail)
+
+        agg = {
+            'n_races': len(rhos),
+            'rho_mean': float(np.mean(rhos)) if rhos else None,
+            'rho_ci': list(bootstrap_ci(rhos)) if len(rhos) >= 2 else [None, None],
+            'p15_mean': float(np.mean(p15s)) if p15s else None,
+            'ndcg_mean': float(np.mean(ndcgs)) if ndcgs else None,
+            'team_capture_mean': float(np.mean(captures)) if captures else None,
+            'team_overlap_mean': float(np.mean(overlaps)) if overlaps else None,
+            'n_priced_races': len(captures),
+        }
+        fold_result['race_types'][rt] = {
+            'aggregate': agg,
+            'races': race_details,
+        }
+
+    return fold_result
+
+
 # ── Single experiment ─────────────────────────────────────────────────
 
 def run_experiment(
@@ -395,12 +576,13 @@ def run_experiment(
     rider_names: dict[str, str],
     quiet: bool = False,
     decompose: bool = False,
+    ordinal: bool = False,
 ) -> dict:
     """Run a complete 3-fold experiment and save logbook."""
     feature_cols = FEATURE_SETS[feature_set_name]
     _, model_params = _make_model(model_type)
 
-    mode = "decomposed" if decompose else "single"
+    mode = "ordinal" if ordinal else ("decomposed" if decompose else "single")
     label = f"{model_type.upper()} / {feature_set_name} / {transform_name} / {mode} ({len(feature_cols)} features)"
     if not quiet:
         print(f"\n{'='*65}")
@@ -420,7 +602,12 @@ def run_experiment(
     for fold_num in [1, 2, 3]:
         if not quiet:
             print(f"  Fold {fold_num} (test {FOLDS[fold_num]['test_year']})...", end=' ', flush=True)
-        eval_fn = evaluate_fold_decomposed if decompose else evaluate_fold
+        if ordinal:
+            eval_fn = evaluate_fold_ordinal
+        elif decompose:
+            eval_fn = evaluate_fold_decomposed
+        else:
+            eval_fn = evaluate_fold
         result = eval_fn(
             fold_num, feature_cols, model_type, transform_name,
             prices_df, rider_names,
@@ -436,10 +623,17 @@ def run_experiment(
                     print(f"{rt[:4]} rho={rho:.4f}{tc_str}", end='  ')
             print()
 
-    label_suffix = '_decomposed' if decompose else None
-    if decompose:
+    if ordinal:
+        label_suffix = '_ordinal'
+        metadata['ordinal'] = True
+        metadata['classifiers'] = list(ORDINAL_CLASSIFIERS.keys())
+        metadata['regressors'] = list(ORDINAL_REGRESSORS.keys())
+    elif decompose:
+        label_suffix = '_decomposed'
         metadata['decomposed'] = True
         metadata['category_targets'] = list(CATEGORY_TARGETS.keys())
+    else:
+        label_suffix = None
     path = save_logbook_entry(metadata, fold_details, label=label_suffix)
     if not quiet:
         print(f"  Logbook saved: {path}")
@@ -603,6 +797,8 @@ def main():
                         help='Models to include in --all-combos')
     parser.add_argument('--decompose', action='store_true',
                         help='Use per-category decomposed prediction (E07)')
+    parser.add_argument('--ordinal', action='store_true',
+                        help='Use ordinal bucket classification for GC/mountain/sprint (E07b)')
     parser.add_argument('--quiet', action='store_true',
                         help='Minimal output (useful for --all-combos)')
     args = parser.parse_args()
@@ -648,6 +844,7 @@ def main():
             args.model, args.features, args.transform,
             prices_df, rider_names,
             decompose=args.decompose,
+            ordinal=args.ordinal,
         )
         print_experiment_report(result)
 

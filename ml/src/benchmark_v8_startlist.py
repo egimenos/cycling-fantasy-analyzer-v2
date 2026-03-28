@@ -158,12 +158,30 @@ def extract_features_with_startlist(
 
             rider_actual = actual[actual['rider_id'] == rider_id]
             feats['actual_pts'] = rider_actual['pts'].sum()
-            # Per-category targets for decomposed prediction (E07)
+
+            # Per-category targets (decomposed, E07)
             ra_cat = rider_actual.groupby('category')['pts'].sum()
             feats['actual_gc_pts'] = ra_cat.get('gc', 0) + ra_cat.get('gc_daily', 0)
             feats['actual_stage_pts'] = ra_cat.get('stage', 0)
             feats['actual_mountain_pts'] = ra_cat.get('mountain', 0) + ra_cat.get('mountain_pass', 0)
             feats['actual_sprint_pts'] = ra_cat.get('sprint', 0) + ra_cat.get('sprint_intermediate', 0) + ra_cat.get('regularidad_daily', 0)
+
+            # Granular targets + positions (ordinal, E07b)
+            feats['actual_gc_only_pts'] = ra_cat.get('gc', 0)
+            feats['actual_gc_daily_pts'] = ra_cat.get('gc_daily', 0)
+            feats['actual_mountain_final_pts'] = ra_cat.get('mountain', 0)
+            feats['actual_mountain_pass_pts'] = ra_cat.get('mountain_pass', 0)
+            feats['actual_sprint_final_pts'] = ra_cat.get('sprint', 0)
+            feats['actual_sprint_inter_pts'] = ra_cat.get('sprint_intermediate', 0) + ra_cat.get('regularidad_daily', 0)
+
+            # Classification final positions (for ordinal bucket models)
+            gc_rows = rider_actual[rider_actual['category'] == 'gc']
+            feats['gc_final_position'] = float(gc_rows.iloc[0]['position']) if len(gc_rows) > 0 and gc_rows.iloc[0]['position'] is not None else float('nan')
+            mtn_rows = rider_actual[rider_actual['category'] == 'mountain']
+            feats['mountain_final_position'] = float(mtn_rows.iloc[0]['position']) if len(mtn_rows) > 0 and mtn_rows.iloc[0]['position'] is not None else float('nan')
+            spr_rows = rider_actual[rider_actual['category'] == 'sprint']
+            feats['sprint_final_position'] = float(spr_rows.iloc[0]['position']) if len(spr_rows) > 0 and spr_rows.iloc[0]['position'] is not None else float('nan')
+
             feats['rider_id'] = rider_id
             feats['race_slug'] = race_slug
             feats['race_year'] = race_year

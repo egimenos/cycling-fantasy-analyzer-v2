@@ -57,12 +57,21 @@ def _cacheable_years() -> set[int]:
     return {yr for yr in _needed_years() if yr >= MIN_CACHE_YEAR}
 
 
+ORDINAL_TARGET_COLS = [
+    'gc_final_position', 'mountain_final_position', 'sprint_final_position',
+    'actual_gc_only_pts', 'actual_gc_daily_pts',
+    'actual_mountain_final_pts', 'actual_mountain_pass_pts',
+    'actual_sprint_final_pts', 'actual_sprint_inter_pts',
+]
+
+
 def compute_schema_hash() -> str:
     """Deterministic hash of the cached feature column superset."""
     all_cols = sorted(
         set(FEATURE_COLS) | set(STARTLIST_FEATURE_COLS) | set(GLICKO_FEATURES)
         | set(E01_MISSINGNESS_COLS) | set(E02_INTENSITY_COLS)
         | set(E03_REST_BUCKET_COLS) | set(E04_PRESTIGE_COLS) | set(SR_GC_COLS)
+        | set(ORDINAL_TARGET_COLS)
     )
     return hashlib.sha256('\n'.join(all_cols).encode()).hexdigest()[:16]
 

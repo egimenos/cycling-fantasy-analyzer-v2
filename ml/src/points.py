@@ -105,3 +105,105 @@ def get_points(
         return float(REGULARIDAD_DAILY.get(position, 0))
 
     return 0.0
+
+
+# ── Ordinal bucket definitions (E07) ─────────────────────────────────
+# Predict position buckets via classification, then convert to expected
+# fantasy points using the scoring tables above.
+
+def gc_position_to_bucket(position) -> int:
+    """Map a GC final position to a bucket index (0-5).
+
+    Buckets are designed around the scoring table breakpoints.
+    NaN/None/DNF → bucket 5 (0 points).
+    """
+    if position is None or (isinstance(position, float) and np.isnan(position)):
+        return 5
+    p = int(position)
+    if p == 1:
+        return 0
+    if p <= 3:
+        return 1
+    if p <= 5:
+        return 2
+    if p <= 10:
+        return 3
+    if p <= 20:
+        return 4
+    return 5
+
+
+GC_BUCKET_LABELS = ['1st', '2nd-3rd', '4th-5th', '6th-10th', '11th-20th', '21st+']
+N_GC_BUCKETS = 6
+
+_GC_BUCKET_EXPECTED = {
+    'grand_tour': [
+        150.0,                                              # bucket 0: pos 1
+        (125 + 100) / 2,                                    # bucket 1: pos 2-3
+        (80 + 60) / 2,                                      # bucket 2: pos 4-5
+        sum(GC_GRAND_TOUR[p] for p in range(6, 11)) / 5,   # bucket 3: pos 6-10
+        sum(GC_GRAND_TOUR[p] for p in range(11, 21)) / 10, # bucket 4: pos 11-20
+        0.0,                                                # bucket 5: pos 21+
+    ],
+    'mini_tour': [
+        100.0,
+        (80 + 65) / 2,
+        (55 + 45) / 2,
+        sum(GC_MINI_TOUR[p] for p in range(6, 11)) / 5,
+        sum(GC_MINI_TOUR[p] for p in range(11, 16)) / 5,
+        0.0,
+    ],
+}
+
+
+def gc_bucket_expected_pts(race_type: str) -> list[float]:
+    """Expected fantasy points per GC bucket for a race type."""
+    return _GC_BUCKET_EXPECTED.get(race_type, _GC_BUCKET_EXPECTED['mini_tour'])
+
+
+def classification_position_to_bucket(position, race_type: str) -> int:
+    """Map a mountain/sprint final classification position to a bucket.
+
+    GT: 4 buckets (1, 2-3, 4-5, 6+)
+    Mini: 3 buckets (1, 2-3, 4+)
+    """
+    if position is None or (isinstance(position, float) and np.isnan(position)):
+        return 3 if race_type == 'grand_tour' else 2
+    p = int(position)
+    if p == 1:
+        return 0
+    if p <= 3:
+        return 1
+    if race_type == 'grand_tour' and p <= 5:
+        return 2
+    return 3 if race_type == 'grand_tour' else 2
+
+
+_CLASS_BUCKET_EXPECTED = {
+    'grand_tour': [
+        50.0,                   # bucket 0: pos 1
+        (35 + 25) / 2,         # bucket 1: pos 2-3
+        (15 + 10) / 2,         # bucket 2: pos 4-5
+        0.0,                   # bucket 3: pos 6+
+    ],
+    'mini_tour': [
+        40.0,                  # bucket 0: pos 1
+        (25 + 15) / 2,        # bucket 1: pos 2-3
+        0.0,                  # bucket 2: pos 4+
+    ],
+}
+
+
+def classification_bucket_expected_pts(race_type: str) -> list[float]:
+    """Expected pts per mountain/sprint classification bucket."""
+    return _CLASS_BUCKET_EXPECTED.get(race_type, _CLASS_BUCKET_EXPECTED['mini_tour'])
+
+
+def n_classification_buckets(race_type: str) -> int:
+    """Number of buckets for mountain/sprint classification."""
+    return 4 if race_type == 'grand_tour' else 3
+
+
+def compute_expected_pts(probabilities, expected_per_bucket: list[float]) -> float:
+    """Dot product of bucket probabilities × expected points per bucket."""
+    return float(np.dot(probabilities[:len(expected_per_bucket)], expected_per_bucket))
