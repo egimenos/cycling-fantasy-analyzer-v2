@@ -219,6 +219,15 @@ def update_rating(
     new_mu = new_mu_g2 * scale + 1500
     new_rd = new_rd_g2 * scale
 
+    # Cap delta per update: prevents provisional riders (high RD) from
+    # jumping +3000 in a single race.  A GT win might move +400 max,
+    # a mini tour win +250.  Prestige already scales the update, so
+    # the cap is on the final delta after prestige is applied.
+    MAX_DELTA_MU = 400.0
+    delta_mu = new_mu - mu
+    if abs(delta_mu) > MAX_DELTA_MU:
+        new_mu = mu + MAX_DELTA_MU * (1.0 if delta_mu > 0 else -1.0)
+
     # Clamp RD
     new_rd = min(new_rd, INITIAL_RD)
     new_rd = max(new_rd, 30.0)
@@ -228,11 +237,13 @@ def update_rating(
 
 # ── Race Processing ──────────────────────────────────────────────────
 
-# Neighborhood size for GC comparisons: compare against the K riders
-# above and K below in the final GC classification.  This avoids the
-# fundamental Glicko-in-cycling problem where beating 140 gregarios who
-# never competed for GC inflates gc_mu for any top-20 finisher.
-GC_NEIGHBORHOOD_K = 15
+# Quality-weighted GC comparison pool.
+# Use top-N finishers as the pool, then sample opponents weighted by gc_mu.
+# This incorporates strength of schedule: competing in strong fields (GT)
+# produces comparisons against strong opponents, while weak fields (Pologne)
+# produce comparisons against weak opponents → less rating movement.
+GC_POOL_MAX = 50          # Consider top-50 GC finishers as potential opponents
+GC_SAMPLE_SIZE = 25       # Sample this many opponents per rider
 
 def process_gc_race(
     gc_results: list[tuple[str, int]],
@@ -242,10 +253,12 @@ def process_gc_race(
 ) -> dict:
     """Update GC ratings based on final GC standings.
 
-    Uses neighborhood comparisons: each rider is compared only against
-    the K nearest riders above and below in the GC classification.
-    This means the 8th place finisher compares against pos 1-7 (losses)
-    and pos 9-23 (wins) — all real GC competitors, no sprinters/gregarios.
+    Quality-weighted approach:
+    1. Pool = top GC_POOL_MAX finishers (excludes deep gregarios)
+    2. For each rider, sample GC_SAMPLE_SIZE opponents from pool,
+       weighted by opponent gc_mu (stronger opponents more likely sampled)
+    3. This means results in strong fields generate comparisons against
+       strong riders → more informative. Weak fields → less movement.
 
     Args:
         gc_results: List of (rider_id, position) sorted by position.
@@ -256,29 +269,40 @@ def process_gc_race(
     Returns:
         Updated ratings dict.
     """
-    # Sort by position to ensure correct ordering
     gc_results = sorted(gc_results, key=lambda x: x[1])
-    riders = [r for r, _ in gc_results]
+    # Limit pool to top-N finishers
+    pool = gc_results[:min(len(gc_results), GC_POOL_MAX)]
+    riders = [r for r, _ in pool]
     positions = {r: p for r, p in gc_results}
-    idx_of = {r: i for i, (r, _) in enumerate(gc_results)}
 
     for rider_id in riders:
         if rider_id not in ratings:
             ratings[rider_id] = {'mu': INITIAL_MU, 'rd': INITIAL_RD, 'sigma': INITIAL_SIGMA}
 
-        my_idx = idx_of[rider_id]
         my_pos = positions[rider_id]
         my_rating = ratings[rider_id]
 
-        # Neighborhood: K above + K below in classification
-        lo = max(0, my_idx - GC_NEIGHBORHOOD_K)
-        hi = min(len(gc_results), my_idx + GC_NEIGHBORHOOD_K + 1)
-        neighbor_ids = [gc_results[i][0] for i in range(lo, hi) if gc_results[i][0] != rider_id]
+        # Candidate opponents: everyone in the pool except me
+        candidates = [(r, p) for r, p in pool if r != rider_id]
+        if len(candidates) == 0:
+            continue
+
+        # Weight by opponent gc_mu (higher mu → more likely to be sampled)
+        # Shift to avoid negative weights: use (mu - min_mu + 100) as weight
+        cand_mus = np.array([
+            ratings.get(r, {'mu': INITIAL_MU})['mu'] for r, _ in candidates
+        ])
+        weights = cand_mus - cand_mus.min() + 100.0
+        weights = weights / weights.sum()
+
+        # Sample opponents
+        n_sample = min(GC_SAMPLE_SIZE, len(candidates))
+        sampled_idx = rng.choice(len(candidates), size=n_sample, replace=False, p=weights)
 
         opponents = []
-        for opp_id in neighbor_ids:
+        for idx in sampled_idx:
+            opp_id, opp_pos = candidates[idx]
             opp_r = ratings.get(opp_id, {'mu': INITIAL_MU, 'rd': INITIAL_RD})
-            opp_pos = positions[opp_id]
             score = 1.0 if my_pos < opp_pos else (0.5 if my_pos == opp_pos else 0.0)
             opponents.append((opp_r['mu'], opp_r['rd'], score))
 
