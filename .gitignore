@@ -57,3 +57,7 @@ __pycache__/
 ml/.coverage
 redesign/
 ml/cache/
+ml/logbook/
+ml/results/
+apps/web/test-results/
+docs-local/
