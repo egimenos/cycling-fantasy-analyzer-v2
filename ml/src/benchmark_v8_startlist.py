@@ -128,6 +128,17 @@ def extract_features_with_startlist(
         rider_team_info = _compute_team_info(sl, sl_riders, hist, d365)
         rp = compute_race_profile(results_df, race_slug, race_year)
 
+        # Race-level supply metrics (E07c)
+        stage_count = actual[
+            (actual['category'] == 'stage') & (actual['stage_number'].notna())
+        ]['stage_number'].nunique()
+
+        # Mountain pass and sprint intermediate point supply for this race
+        mtn_pass_results = actual[actual['category'] == 'mountain_pass']
+        mtn_pass_supply = mtn_pass_results['pts'].sum()  # total pts awarded across all riders
+        spr_inter_results = actual[actual['category'].isin(['sprint_intermediate', 'regularidad_daily'])]
+        spr_inter_supply = spr_inter_results['pts'].sum()
+
         # Build Glicko rating lookup for startlist features
         rating_lookup = build_rating_lookup(ratings_df, race_date)
 
@@ -181,6 +192,18 @@ def extract_features_with_startlist(
             feats['mountain_final_position'] = float(mtn_rows.iloc[0]['position']) if len(mtn_rows) > 0 and mtn_rows.iloc[0]['position'] is not None else float('nan')
             spr_rows = rider_actual[rider_actual['category'] == 'sprint']
             feats['sprint_final_position'] = float(spr_rows.iloc[0]['position']) if len(spr_rows) > 0 and spr_rows.iloc[0]['position'] is not None else float('nan')
+
+            feats['target_stage_count'] = stage_count
+            feats['target_mtn_pass_supply'] = mtn_pass_supply
+            feats['target_spr_inter_supply'] = spr_inter_supply
+
+            # Stage top-10 count for count model (E07d)
+            rider_stages = rider_actual[rider_actual['category'] == 'stage']
+            feats['stage_top10_count'] = (rider_stages['position'] <= 10).sum() if len(rider_stages) > 0 else 0
+
+            # Capture rates (fraction of available supply this rider captured)
+            feats['mtn_pass_capture'] = feats['actual_mountain_pass_pts'] / mtn_pass_supply if mtn_pass_supply > 0 else 0.0
+            feats['spr_inter_capture'] = feats['actual_sprint_inter_pts'] / spr_inter_supply if spr_inter_supply > 0 else 0.0
 
             feats['rider_id'] = rider_id
             feats['race_slug'] = race_slug

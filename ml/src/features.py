@@ -93,6 +93,12 @@ SR_GC_COLS = [
     'sr_median_race_pts_12m', # median stage race (filters classic noise)
     'sr_pts_per_race_12m',    # productivity in stage races only
     'sr_race_pct',            # % of races that are stage races (rider type)
+    # Mini vs UWT GC rates — top-10 in Luxembourg != top-10 in Tour
+    'mini_gc_top10_rate',     # top-10 rate in mini tour GCs
+    'mini_gc_win_rate',       # win rate in mini tour GCs
+    'mini_gc_pts_per_race',   # GC pts per mini tour
+    'uwt_gc_top10_rate',      # top-10 rate in UWT GCs only (high signal)
+    'uwt_gc_win_rate',        # win rate in UWT GCs only
 ]
 
 # E04: Race prestige features — not all races are equal (Phase B)
@@ -209,6 +215,19 @@ def _compute_rider_features(
     feats['sr_gc_top10_rate'] = (gc_sr['position'] <= 10).sum() / n_gc_sr if n_gc_sr > 0 else float('nan')
     feats['sr_gc_win_rate'] = (gc_sr['position'] == 1).sum() / n_gc_sr if n_gc_sr > 0 else float('nan')
     feats['sr_gc_pts_per_race'] = gc_sr['pts'].sum() / n_gc_sr if n_gc_sr > 0 else float('nan')
+
+    # Split mini tour vs GT GC rates — top-10 in Luxembourg != top-10 in Tour
+    gc_mini = gc_sr[gc_sr['race_type'] == 'mini_tour']
+    n_gc_mini = len(gc_mini)
+    feats['mini_gc_top10_rate'] = (gc_mini['position'] <= 10).sum() / n_gc_mini if n_gc_mini > 0 else float('nan')
+    feats['mini_gc_win_rate'] = (gc_mini['position'] == 1).sum() / n_gc_mini if n_gc_mini > 0 else float('nan')
+    feats['mini_gc_pts_per_race'] = gc_mini['pts'].sum() / n_gc_mini if n_gc_mini > 0 else float('nan')
+
+    # UWT-only GC rate (filters out Pro-class mini tours like Luxembourg)
+    gc_uwt = gc_sr[gc_sr['race_class'] == 'UWT'] if 'race_class' in gc_sr.columns else gc_sr.iloc[0:0]
+    n_gc_uwt = len(gc_uwt)
+    feats['uwt_gc_top10_rate'] = (gc_uwt['position'] <= 10).sum() / n_gc_uwt if n_gc_uwt > 0 else float('nan')
+    feats['uwt_gc_win_rate'] = (gc_uwt['position'] == 1).sum() / n_gc_uwt if n_gc_uwt > 0 else float('nan')
 
     # Stage-race filtered versions of general quality features.
     # Without these, classic specialists (VdP, Alaphilippe) get inflated

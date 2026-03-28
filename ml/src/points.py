@@ -207,3 +207,37 @@ def n_classification_buckets(race_type: str) -> int:
 def compute_expected_pts(probabilities, expected_per_bucket: list[float]) -> float:
     """Dot product of bucket probabilities × expected points per bucket."""
     return float(np.dot(probabilities[:len(expected_per_bucket)], expected_per_bucket))
+
+
+# ── GC daily heuristic (E07c) ────────────────────────────────────────
+# Average daily GC points per stage, derived from historical data:
+#   GT pos 1-3:  mean gc_daily=180 over ~21 stages → ~8.6 pts/day
+#   GT pos 4-10: mean gc_daily=53  → ~2.5 pts/day
+#   GT pos 11+:  negligible
+#
+# The GC_DAILY scoring table (pos 1=15, 2=10, 3=8 ... 10=1) gives
+# the per-stage score.  A rider doesn't hold the same position every
+# day, so we use empirical averages per GC position bucket.
+
+_GC_DAILY_PTS_PER_STAGE = {
+    # Empirical average daily score by final GC position (GT)
+    1: 12.0, 2: 8.0, 3: 6.0,
+    4: 3.5, 5: 3.0, 6: 2.5, 7: 2.0, 8: 1.5, 9: 1.0, 10: 0.5,
+}
+
+_GC_DAILY_PTS_PER_STAGE_MINI = {
+    1: 8.0, 2: 5.0, 3: 3.5,
+    4: 2.0, 5: 1.5, 6: 1.0, 7: 0.5, 8: 0.3, 9: 0.2, 10: 0.1,
+}
+
+
+def estimate_gc_daily_pts(gc_position: float, n_stages: int, race_type: str) -> float:
+    """Heuristic: expected gc_daily points from GC position and stage count.
+
+    Conservative: only awards for predicted top-10 GC.
+    """
+    if gc_position is None or np.isnan(gc_position) or gc_position > 10:
+        return 0.0
+    pos = max(1, min(10, round(gc_position)))
+    table = _GC_DAILY_PTS_PER_STAGE if race_type == 'grand_tour' else _GC_DAILY_PTS_PER_STAGE_MINI
+    return table.get(pos, 0.0) * n_stages

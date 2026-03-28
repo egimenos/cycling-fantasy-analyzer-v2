@@ -391,32 +391,33 @@ from .points import (
     gc_position_to_bucket, gc_bucket_expected_pts, N_GC_BUCKETS,
     classification_position_to_bucket, classification_bucket_expected_pts,
     n_classification_buckets, compute_expected_pts,
+    get_points, estimate_gc_daily_pts,
 )
 
-# 7 sub-models: 3 classifiers + 4 regressors
-ORDINAL_CLASSIFIERS = {
-    'gc_bucket': {
-        'position_col': 'gc_final_position',
-        'bucket_fn': lambda p, rt: gc_position_to_bucket(p),
-        'expected_fn': gc_bucket_expected_pts,
-        'n_buckets_fn': lambda rt: N_GC_BUCKETS,
-    },
-    'mountain_bucket': {
-        'position_col': 'mountain_final_position',
-        'bucket_fn': classification_position_to_bucket,
-        'expected_fn': classification_bucket_expected_pts,
-        'n_buckets_fn': n_classification_buckets,
-    },
-    'sprint_bucket': {
-        'position_col': 'sprint_final_position',
-        'bucket_fn': classification_position_to_bucket,
-        'expected_fn': classification_bucket_expected_pts,
-        'n_buckets_fn': n_classification_buckets,
-    },
-}
+# Focused feature set for GC gate + position regressor (GT only).
+# Hierarchical: GT direct > stage race GC > race history > context.
+# Excludes micro-form, classic noise, and generic volume that distract
+# the gate from the core question: "is this rider a real GC contender?"
+GC_GATE_FEATURES = [
+    # Glicko-2 level (measures RELATIVE strength vs same rivals)
+    'gc_mu', 'stage_mu',
+    # GT direct (primary signal)
+    'gt_pts_12m', 'gt_gc_pts_12m', 'best_gt_pts_12m',
+    'gt_pts_per_race_12m', 'gt_gc_top10_rate', 'gt_race_count_12m',
+    # UWT GC rates (filters Luxembourg/Denmark noise)
+    'uwt_gc_top10_rate', 'uwt_gc_win_rate',
+    # Mini tour GC (secondary, lower weight than GT/UWT)
+    'mini_gc_top10_rate', 'mini_gc_win_rate',
+    # Race history
+    'same_race_best', 'same_race_mean', 'has_same_race',
+    'gc_pts_same_type',
+    # Context
+    'age', 'sr_race_pct',
+    'is_leader', 'team_rank',
+]
 
+# Regressors shared by decomposed and ordinal modes
 ORDINAL_REGRESSORS = {
-    'gc_daily':     'actual_gc_daily_pts',
     'stage':        'actual_stage_pts',
     'mountain_pass': 'actual_mountain_pass_pts',
     'sprint_inter': 'actual_sprint_inter_pts',
@@ -431,11 +432,13 @@ def evaluate_fold_ordinal(
     prices_df: pd.DataFrame,
     rider_names: dict[str, str],
 ) -> dict:
-    """Evaluate one fold using ordinal bucket classification + regression.
+    """Evaluate one fold using hierarchical gate + position prediction.
 
-    3 classifiers (GC, mountain final, sprint final) predict position
-    buckets and convert to expected pts via scoring tables.
-    4 regressors predict the remaining category points directly.
+    E07c approach:
+      GC:  binary gate (top20 y/n) → position regressor (1-20) → scoring table
+      GC daily: heuristic from predicted GC position × stage count
+      Mountain/Sprint final: binary gate (top5 y/n) → position → scoring table
+      Stage/mountain_pass/sprint_inter: regression (most continuous targets)
     """
     import lightgbm as lgb
 
@@ -460,48 +463,163 @@ def evaluate_fold_ordinal(
         te = te.copy()
         te['predicted'] = 0.0
 
-        # ── Classifiers (GC, mountain final, sprint final) ────────
-        for cat_name, cfg in ORDINAL_CLASSIFIERS.items():
-            pos_col = cfg['position_col']
+        # ── GC: gate (top20) + position regressor ────────────────
+        if 'gc_final_position' in tr.columns:
+            gc_pos = tr['gc_final_position']
+            y_gate = (gc_pos.fillna(999) <= 20).astype(int).values
+
+            # For GT: use focused GC feature set (avoids micro-form noise)
+            # For mini tours: use full pruned set
+            if rt == 'grand_tour':
+                gc_avail = [c for c in GC_GATE_FEATURES if c in tr.columns]
+                X_gc_train = tr[gc_avail].values
+                X_gc_test = te[gc_avail].values
+            else:
+                gc_avail = available
+                X_gc_train = X_train
+                X_gc_test = X_test
+
+            # Step 1: binary gate
+            gate = lgb.LGBMClassifier(
+                objective='binary', verbose=-1, n_jobs=-1,
+                random_state=RANDOM_SEED,
+                n_estimators=256, max_depth=6, learning_rate=0.02,
+                num_leaves=31, subsample=0.9, colsample_bytree=0.7,
+                min_child_samples=20,
+            )
+            gate.fit(X_gc_train, y_gate)
+            p_top20 = gate.predict_proba(X_gc_test)[:, 1]
+
+            # Step 2: position regressor (trained only on top-20 riders)
+            top20_mask = y_gate == 1
+            if top20_mask.sum() >= 10:
+                pos_reg = lgb.LGBMRegressor(
+                    verbose=-1, n_jobs=-1, random_state=RANDOM_SEED,
+                    n_estimators=256, max_depth=5, learning_rate=0.02,
+                    num_leaves=15, subsample=0.9, colsample_bytree=0.8,
+                    min_child_samples=5,
+                )
+                pos_reg.fit(
+                    X_gc_train[top20_mask],
+                    gc_pos.values[top20_mask],
+                )
+                raw_pos = pos_reg.predict(X_gc_test)
+                pred_pos = np.clip(raw_pos, 1, 20)
+            else:
+                pred_pos = np.full(len(X_gc_test), 10.0)
+
+            # Step 3: convert to GC points via scoring table
+            gc_pts = np.array([
+                get_points('gc', round(pos), rt) * prob
+                for pos, prob in zip(pred_pos, p_top20)
+            ])
+            te['pred_gc'] = gc_pts
+            te['pred_gc_position'] = pred_pos
+            te['pred_gc_p_top20'] = p_top20
+            te['predicted'] += gc_pts
+
+            # Step 4: gc_daily heuristic
+            n_stages = te['target_stage_count'].values if 'target_stage_count' in te.columns else np.full(len(te), 21)
+            gc_daily_pts = np.array([
+                estimate_gc_daily_pts(pos, int(ns), rt) * prob
+                for pos, ns, prob in zip(pred_pos, n_stages, p_top20)
+            ])
+            te['pred_gc_daily'] = gc_daily_pts
+            te['predicted'] += gc_daily_pts
+
+        # ── Mountain/Sprint final: gate + position ────────────────
+        for cls_name, pos_col, category in [
+            ('mtn_final', 'mountain_final_position', 'mountain'),
+            ('spr_final', 'sprint_final_position', 'sprint'),
+        ]:
             if pos_col not in tr.columns:
                 continue
+            max_scoring = 5 if rt == 'grand_tour' else 3
+            cls_pos = tr[pos_col]
+            y_gate_cls = (cls_pos.fillna(999) <= max_scoring).astype(int).values
 
-            n_buckets = cfg['n_buckets_fn'](rt)
-            bucket_fn = cfg['bucket_fn']
-            y_buckets = tr[pos_col].apply(lambda p: bucket_fn(p, rt)).values
-
-            clf = lgb.LGBMClassifier(
-                objective='multiclass', num_class=n_buckets,
-                verbose=-1, n_jobs=-1, random_state=RANDOM_SEED,
-                n_estimators=256, max_depth=8, learning_rate=0.0204,
-                num_leaves=71, subsample=0.957, colsample_bytree=0.535,
-                min_child_samples=48,
-            )
-            clf.fit(X_train, y_buckets)
-            probs = clf.predict_proba(X_test)
-
-            expected = cfg['expected_fn'](rt)
-            cat_pts = np.array([
-                compute_expected_pts(probs[i], expected)
-                for i in range(len(probs))
-            ])
-            te[f'pred_{cat_name}'] = cat_pts
-            te['predicted'] += cat_pts
-
-        # ── Regressors (gc_daily, stage, mountain_pass, sprint_inter)
-        for cat_name, target_col in ORDINAL_REGRESSORS.items():
-            if target_col not in tr.columns:
+            if y_gate_cls.sum() < 5:
+                te[f'pred_{cls_name}'] = 0.0
                 continue
-            model, _ = _make_model(model_type)
-            y_raw = tr[target_col].values
-            y_train = train_fn(y_raw)
-            model.fit(X_train, y_train)
-            cat_preds = inverse_fn(model.predict(X_test))
-            cat_preds = np.clip(cat_preds, 0, None)
-            te[f'pred_{cat_name}'] = cat_preds
-            te['predicted'] += cat_preds
 
-        # ── Per-race metrics (same as other evaluate functions) ───
+            gate_cls = lgb.LGBMClassifier(
+                objective='binary', verbose=-1, n_jobs=-1,
+                random_state=RANDOM_SEED,
+                n_estimators=128, max_depth=6, learning_rate=0.03,
+                num_leaves=31, subsample=0.9, colsample_bytree=0.7,
+                min_child_samples=20,
+            )
+            gate_cls.fit(X_train, y_gate_cls)
+            p_scoring = gate_cls.predict_proba(X_test)[:, 1]
+
+            top_mask = y_gate_cls == 1
+            if top_mask.sum() >= 5:
+                pos_reg_cls = lgb.LGBMRegressor(
+                    verbose=-1, n_jobs=-1, random_state=RANDOM_SEED,
+                    n_estimators=128, max_depth=4, learning_rate=0.03,
+                    num_leaves=15, min_child_samples=5,
+                )
+                pos_reg_cls.fit(X_train[top_mask], cls_pos.values[top_mask])
+                raw_cls_pos = pos_reg_cls.predict(X_test)
+                pred_cls_pos = np.clip(raw_cls_pos, 1, max_scoring)
+            else:
+                pred_cls_pos = np.full(len(X_test), 3.0)
+
+            cls_pts = np.array([
+                get_points(category, round(pos), rt) * prob
+                for pos, prob in zip(pred_cls_pos, p_scoring)
+            ])
+            te[f'pred_{cls_name}'] = cls_pts
+            te['predicted'] += cls_pts
+
+        # ── Stage: count model (predict top-10 finishes → pts) ────
+        if 'stage_top10_count' in tr.columns:
+            stage_model, _ = _make_model(model_type)
+            stage_model.fit(X_train, tr['stage_top10_count'].values)
+            pred_top10 = np.clip(stage_model.predict(X_test), 0, None)
+            # ~22 pts per top-10 finish + ~3 pts base (from data analysis)
+            stage_pts = pred_top10 * 22.0 + 3.0
+            te['pred_stage'] = stage_pts
+            te['pred_stage_top10'] = pred_top10
+            te['predicted'] += stage_pts
+        else:
+            # Fallback to regression
+            model, _ = _make_model(model_type)
+            model.fit(X_train, tr['actual_stage_pts'].values)
+            te['pred_stage'] = np.clip(model.predict(X_test), 0, None)
+            te['predicted'] += te['pred_stage']
+
+        # ── Mountain pass: capture rate model ─────────────────────
+        if 'mtn_pass_capture' in tr.columns and 'target_mtn_pass_supply' in te.columns:
+            mtn_model, _ = _make_model(model_type)
+            mtn_model.fit(X_train, tr['mtn_pass_capture'].values)
+            pred_capture = np.clip(mtn_model.predict(X_test), 0, 1)
+            mtn_supply = te['target_mtn_pass_supply'].values
+            mtn_pts = pred_capture * mtn_supply
+            te['pred_mountain_pass'] = mtn_pts
+            te['predicted'] += mtn_pts
+        else:
+            model, _ = _make_model(model_type)
+            model.fit(X_train, tr['actual_mountain_pass_pts'].values)
+            te['pred_mountain_pass'] = np.clip(model.predict(X_test), 0, None)
+            te['predicted'] += te['pred_mountain_pass']
+
+        # ── Sprint inter + regularidad: capture rate model ────────
+        if 'spr_inter_capture' in tr.columns and 'target_spr_inter_supply' in te.columns:
+            spr_model, _ = _make_model(model_type)
+            spr_model.fit(X_train, tr['spr_inter_capture'].values)
+            pred_capture = np.clip(spr_model.predict(X_test), 0, 1)
+            spr_supply = te['target_spr_inter_supply'].values
+            spr_pts = pred_capture * spr_supply
+            te['pred_sprint_inter'] = spr_pts
+            te['predicted'] += spr_pts
+        else:
+            model, _ = _make_model(model_type)
+            model.fit(X_train, tr['actual_sprint_inter_pts'].values)
+            te['pred_sprint_inter'] = np.clip(model.predict(X_test), 0, None)
+            te['predicted'] += te['pred_sprint_inter']
+
+        # ── Per-race metrics ──────────────────────────────────────
         race_details = []
         rhos, p15s, ndcgs, captures, overlaps = [], [], [], [], []
 
@@ -626,8 +744,8 @@ def run_experiment(
     if ordinal:
         label_suffix = '_ordinal'
         metadata['ordinal'] = True
-        metadata['classifiers'] = list(ORDINAL_CLASSIFIERS.keys())
         metadata['regressors'] = list(ORDINAL_REGRESSORS.keys())
+        metadata['gc_approach'] = 'hierarchical: gate(top20) + position(1-20) + gc_daily_heuristic'
     elif decompose:
         label_suffix = '_decomposed'
         metadata['decomposed'] = True
