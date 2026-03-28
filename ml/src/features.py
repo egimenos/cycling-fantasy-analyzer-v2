@@ -36,6 +36,7 @@ FEATURE_COLS = [
     # V2: Trend
     'pts_trend_3m',
     'gc_pts_same_type',
+    'recent_gc_form_score',
     # V3: Micro-form
     'pts_30d', 'pts_14d', 'race_count_30d',
     'last_race_pts', 'last_3_mean_pts', 'last_3_max_pts',
@@ -59,7 +60,7 @@ FEATURE_COLS = [
 # - same_race_editions: redundant with has_same_race flag
 # - top5_rate, podium_rate: highly correlated with top10_rate and win_rate
 
-assert len(FEATURE_COLS) == 42, f"Expected 42 feature cols, got {len(FEATURE_COLS)}"  # noqa: S101
+assert len(FEATURE_COLS) == 43, f"Expected 43 feature cols, got {len(FEATURE_COLS)}"  # noqa: S101
 
 # E01: Missingness indicators (Phase B)
 E01_MISSINGNESS_COLS = [
@@ -288,6 +289,33 @@ def _compute_rider_features(
         ]['pts'].sum()
     else:
         feats['gc_pts_same_type'] = 0.0
+
+    # ── Recent GC form score (012) ───────────────────────────────
+    # Single scalar tie-breaker for GC position ranking.
+    # Rewards recent top GC finishes, weighted by race quality + recency.
+    gc_hist = rh_12m[
+        (rh_12m['category'] == 'gc') &
+        (rh_12m['race_type'].isin(['grand_tour', 'mini_tour'])) &
+        (rh_12m['position'].notna()) & (rh_12m['position'] > 0)
+    ]
+    if len(gc_hist) > 0:
+        d180 = race_date - pd.Timedelta(days=182)
+        form_score = 0.0
+        for _, gr in gc_hist.iterrows():
+            pos = int(gr['position'])
+            rt = gr['race_type']
+            rc = gr.get('race_class', 'UWT')
+            if rt == 'grand_tour':
+                pts = 5.0 if pos <= 3 else (2.0 if pos <= 10 else 0.0)
+            elif rc == 'UWT':
+                pts = 3.0 if pos <= 3 else (1.0 if pos <= 10 else 0.0)
+            else:
+                pts = 0.5 if pos <= 5 else 0.0
+            recency = 1.0 if gr['race_date'] >= d180 else 0.5
+            form_score += pts * recency
+        feats['recent_gc_form_score'] = form_score
+    else:
+        feats['recent_gc_form_score'] = 0.0
 
     # ── V3 NEW: Feature 1 — Micro-form ──────────────────────────
     # NaN semantics: when a rider hasn't raced in a window, the feature

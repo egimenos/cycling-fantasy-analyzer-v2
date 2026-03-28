@@ -478,70 +478,106 @@ def evaluate_fold_ordinal(
         te = te.copy()
         te['predicted'] = 0.0
 
-        # ── GC: gate (top20) + position regressor ────────────────
+        # ── GC: gate + conservative mu + capped form (012 frozen) ──
         if 'gc_final_position' in tr.columns:
             gc_pos = tr['gc_final_position']
             y_gate = (gc_pos.fillna(999) <= 20).astype(int).values
 
-            # For GT: use focused GC feature set (avoids micro-form noise)
-            # For mini tours: use full pruned set
-            if rt == 'grand_tour':
-                gc_feats = GC_GATE_FEATURES_MINIMAL if gc_feature_set == 'minimal' else GC_GATE_FEATURES
-                gc_avail = [c for c in gc_feats if c in tr.columns]
-                X_gc_train = tr[gc_avail].values
-                X_gc_test = te[gc_avail].values
-            else:
-                gc_avail = available
-                X_gc_train = X_train
-                X_gc_test = X_test
+            if rt == 'grand_tour' and gc_feature_set == 'minimal':
+                # 012 frozen pipeline: LogReg gate + heuristic score
+                from sklearn.linear_model import LogisticRegression, Ridge
+                from sklearn.preprocessing import StandardScaler
 
-            # Step 1: binary gate
-            gate = lgb.LGBMClassifier(
-                objective='binary', verbose=-1, n_jobs=-1,
-                random_state=RANDOM_SEED,
-                n_estimators=256, max_depth=6, learning_rate=0.02,
-                num_leaves=31, subsample=0.9, colsample_bytree=0.7,
-                min_child_samples=20,
-            )
-            gate.fit(X_gc_train, y_gate)
-            p_top20 = gate.predict_proba(X_gc_test)[:, 1]
+                gc_avail = [c for c in GC_GATE_FEATURES_MINIMAL if c in tr.columns]
 
-            # Step 2: position regressor (trained only on top-20 riders)
-            top20_mask = y_gate == 1
-            if top20_mask.sum() >= 10:
-                pos_reg = lgb.LGBMRegressor(
-                    verbose=-1, n_jobs=-1, random_state=RANDOM_SEED,
-                    n_estimators=256, max_depth=5, learning_rate=0.02,
-                    num_leaves=15, subsample=0.9, colsample_bytree=0.8,
-                    min_child_samples=5,
+                # Step 1: LogReg gate
+                _sg = StandardScaler()
+                _gate = LogisticRegression(
+                    C=0.1, class_weight='balanced', max_iter=1000,
+                    random_state=RANDOM_SEED,
                 )
-                pos_reg.fit(
-                    X_gc_train[top20_mask],
-                    gc_pos.values[top20_mask],
-                )
-                raw_pos = pos_reg.predict(X_gc_test)
-                pred_pos = np.clip(raw_pos, 1, 20)
+                _gate.fit(_sg.fit_transform(tr[gc_avail].values), y_gate)
+                p_top20 = _gate.predict_proba(_sg.transform(te[gc_avail].values))[:, 1]
+
+                # Step 2: heuristic score = conservative_mu + capped form
+                CONSERVATIVE_LAMBDA = 1.0
+                FORM_MULTIPLIER = 10.0
+                FORM_CAP = 100.0
+                cons_mu = te['gc_mu'].values - CONSERVATIVE_LAMBDA * te['gc_rd'].values
+                form = te['recent_gc_form_score'].values if 'recent_gc_form_score' in te.columns else np.zeros(len(te))
+                form_bonus = np.minimum(form * FORM_MULTIPLIER, FORM_CAP)
+                gc_score = cons_mu + form_bonus
+
+                # Step 3: rank within race, convert to points via scoring table
+                te['pred_gc_score'] = gc_score
+                te['pred_gc_p_top20'] = p_top20
+
+                gc_pts_total = np.zeros(len(te))
+                gc_daily_total = np.zeros(len(te))
+                n_stages = te['target_stage_count'].values if 'target_stage_count' in te.columns else np.full(len(te), 21)
+
+                for (slug, year), idx in te.groupby(['race_slug', 'race_year']).groups.items():
+                    g = te.loc[idx]
+                    scoreable = g[g['pred_gc_p_top20'] >= 0.40].sort_values('pred_gc_score', ascending=False)
+                    for rank, (ridx, _) in enumerate(scoreable.iterrows(), 1):
+                        gc_pts_total[te.index.get_loc(ridx)] = get_points('gc', rank, rt)
+                        ns = int(te.loc[ridx, 'target_stage_count']) if 'target_stage_count' in te.columns else 21
+                        gc_daily_total[te.index.get_loc(ridx)] = estimate_gc_daily_pts(rank, ns, rt) * te.loc[ridx, 'pred_gc_p_top20']
+
+                te['pred_gc'] = gc_pts_total
+                te['pred_gc_daily'] = gc_daily_total
+                te['predicted'] += gc_pts_total + gc_daily_total
+
             else:
-                pred_pos = np.full(len(X_gc_test), 10.0)
+                # Original LGBM approach for mini tours or extended feature set
+                if rt == 'grand_tour':
+                    gc_feats = GC_GATE_FEATURES
+                    gc_avail = [c for c in gc_feats if c in tr.columns]
+                    X_gc_train = tr[gc_avail].values
+                    X_gc_test = te[gc_avail].values
+                else:
+                    gc_avail = available
+                    X_gc_train = X_train
+                    X_gc_test = X_test
 
-            # Step 3: convert to GC points via scoring table
-            gc_pts = np.array([
-                get_points('gc', round(pos), rt) * prob
-                for pos, prob in zip(pred_pos, p_top20)
-            ])
-            te['pred_gc'] = gc_pts
-            te['pred_gc_position'] = pred_pos
-            te['pred_gc_p_top20'] = p_top20
-            te['predicted'] += gc_pts
+                gate = lgb.LGBMClassifier(
+                    objective='binary', verbose=-1, n_jobs=-1,
+                    random_state=RANDOM_SEED,
+                    n_estimators=256, max_depth=6, learning_rate=0.02,
+                    num_leaves=31, subsample=0.9, colsample_bytree=0.7,
+                    min_child_samples=20,
+                )
+                gate.fit(X_gc_train, y_gate)
+                p_top20 = gate.predict_proba(X_gc_test)[:, 1]
 
-            # Step 4: gc_daily heuristic
-            n_stages = te['target_stage_count'].values if 'target_stage_count' in te.columns else np.full(len(te), 21)
-            gc_daily_pts = np.array([
-                estimate_gc_daily_pts(pos, int(ns), rt) * prob
-                for pos, ns, prob in zip(pred_pos, n_stages, p_top20)
-            ])
-            te['pred_gc_daily'] = gc_daily_pts
-            te['predicted'] += gc_daily_pts
+                top20_mask = y_gate == 1
+                if top20_mask.sum() >= 10:
+                    pos_reg = lgb.LGBMRegressor(
+                        verbose=-1, n_jobs=-1, random_state=RANDOM_SEED,
+                        n_estimators=256, max_depth=5, learning_rate=0.02,
+                        num_leaves=15, subsample=0.9, colsample_bytree=0.8,
+                        min_child_samples=5,
+                    )
+                    pos_reg.fit(X_gc_train[top20_mask], gc_pos.values[top20_mask])
+                    pred_pos = np.clip(pos_reg.predict(X_gc_test), 1, 20)
+                else:
+                    pred_pos = np.full(len(X_gc_test), 10.0)
+
+                gc_pts = np.array([
+                    get_points('gc', round(pos), rt) * prob
+                    for pos, prob in zip(pred_pos, p_top20)
+                ])
+                te['pred_gc'] = gc_pts
+                te['pred_gc_p_top20'] = p_top20
+                te['predicted'] += gc_pts
+
+                n_stages = te['target_stage_count'].values if 'target_stage_count' in te.columns else np.full(len(te), 21)
+                gc_daily_pts = np.array([
+                    estimate_gc_daily_pts(pos, int(ns), rt) * prob
+                    for pos, ns, prob in zip(pred_pos, n_stages, p_top20)
+                ])
+                te['pred_gc_daily'] = gc_daily_pts
+                te['predicted'] += gc_daily_pts
 
         # ── Mountain/Sprint final: gate + position ────────────────
         for cls_name, pos_col, category in [
