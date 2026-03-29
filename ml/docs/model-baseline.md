@@ -30,7 +30,7 @@ Location: `ml/models/`
 
 - **ML service**: FastAPI (Python 3.11) running as Docker sidecar on port 8000
 - **Hot-reload**: model_version.txt triggers reload of all artifacts on next request
-- **Retraining**: `make retrain` runs full pipeline (~10 min). See `ml/docs/retraining-runbook.md`
+- **Retraining**: `make retrain` runs full pipeline (~10 min). See `docs/runbooks/retraining-runbook.md`
 - **API contract**: POST `/predict` returns `{predicted_score, breakdown: {gc, stage, mountain, sprint}}`
 - **ADR**: `docs/adr/2026-03-29-source-by-source-ml-model.md`
 

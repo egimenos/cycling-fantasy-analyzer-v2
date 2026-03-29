@@ -7,7 +7,7 @@
 **Input**: Integrate frozen source-by-source ML models into production pipeline with per-source breakdown
 
 **Model Baseline Reference**: [`ml/docs/model-baseline.md`](../../ml/docs/model-baseline.md)
-**Retraining Runbook**: [`ml/docs/retraining-runbook.md`](../../ml/docs/retraining-runbook.md)
+**Retraining Runbook**: [`docs/runbooks/retraining-runbook.md`](../../docs/runbooks/retraining-runbook.md)
 
 ## User Scenarios & Testing
 
