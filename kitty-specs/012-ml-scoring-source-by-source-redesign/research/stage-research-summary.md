@@ -92,8 +92,45 @@ Shared: `stage_mu`, `stage_rd`, `age`, profile specialization features.
 - stages_ridden = dnf==false (clean binary, no edge cases)
 - 97.6% parcours_type coverage, 0 TTTs, 32 unclassifiable stages (negligible)
 
+## Secondary Sources (mountain + sprint) — frozen 2026-03-29
+
+### Architecture
+
+| Sub-model          | Architecture                        | GT ρ_full | GT ρ_nz   |
+| ------------------ | ----------------------------------- | --------- | --------- |
+| mountain_final     | LogReg gate + P(score) × avg_pts    | 0.186     | 0.400     |
+| mountain_pass      | Ridge capture rate × supply         | 0.410     | 0.335     |
+| sprint_final       | **Heuristic contender + soft rank** | **0.312** | **0.480** |
+| sprint_inter + reg | Ridge capture rate × supply         | 0.229     | 0.187     |
+
+### Sprint final heuristic (green jersey)
+
+Heuristic contender score replaced LogReg gate (+0.091 GT ρ_full, +0.169 ρ_nz).
+Combines three components weighted by route:
+
+1. **Sprinter score**: flat_strength, flat_top10s, stage_wins_flat, flat_top10_rate
+2. **All-round accumulator**: hilly_pts, pts_stage, pct_p3, stage_mu
+3. **Survival bonus**: GT completion rate (0.5 default if no history)
+
+Route modifier: `target_flat_pct` blends sprinter vs allround weight.
+Soft rank mapping: top-ranked riders get points via decay table (not hard top-5).
+
+### Mountain final: kept LogReg gate
+
+Heuristic attempted but degraded ρ_nz (0.400 → 0.143). GC component overwhelms
+KOM hunter signal. LogReg gate preserved for better within-scoreable ordering.
+Would need separate GC-climber vs KOM-hunter scoring to improve — deferred.
+
+### Key findings
+
+- Classification history features (same_race_best, gt_top5_count) don't help.
+  Redundant with existing pts/rate features.
+- mountain_pass is the strongest secondary sub-model (GT ρ=0.41).
+- Finals have ~60 GT scoreables total in training — sample-thin ceiling.
+- Sprint final responds well to domain-structured heuristics; mountain doesn't (yet).
+
 ## Next Steps
 
-1. **Integrate with GC source**: combine stage + GC predictions for total fantasy score
-2. **Mountain/Sprint secondary sources**: capture rate models
-3. **Discrete mapping + team selection**: translate to fantasy points, evaluate team capture
+1. **Integrate all sources**: GC + stage + mountain + sprint for total fantasy score
+2. **Team selection under budget**: knapsack optimization with combined predictions
+3. **Benchmark vs monolithic model**: compare source-by-source total vs single RF on actual_pts
