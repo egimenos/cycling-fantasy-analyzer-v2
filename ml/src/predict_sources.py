@@ -470,24 +470,21 @@ def _compute_race_supply(
 def _normalize_to_supply(
     predictions: np.ndarray, supply: float, max_per_rider: float,
 ) -> np.ndarray:
-    """Scale predictions so they sum to the real supply, and cap per rider.
+    """Scale predictions so they sum to the real supply, then cap per rider.
 
-    1. Cap each rider at max_per_rider
-    2. Scale so sum of all riders ≈ supply
+    1. Scale so sum(all riders) = supply
+    2. Cap any individual rider at max_per_rider (sanity check)
     Preserves relative ranking.
     """
-    # Cap per rider first
-    capped = np.minimum(predictions, max_per_rider)
+    total = predictions.sum()
+    if total <= 0:
+        return predictions
 
     # Scale to supply
-    total = capped.sum()
-    if total <= 0:
-        return capped
-
     scale = supply / total
-    normalized = capped * scale
+    normalized = predictions * scale
 
-    # Re-cap after scaling (scaling up could exceed max)
+    # Sanity cap: no single rider above theoretical max
     normalized = np.minimum(normalized, max_per_rider)
 
     return np.maximum(normalized, 0.0)
