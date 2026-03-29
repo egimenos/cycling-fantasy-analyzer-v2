@@ -49,10 +49,15 @@ ITT gate: precision ~53-57%, recall ~59-70%.
 ## What Doesn't Work
 
 1. **Hilly is structurally weak** (GT ρ=0.40, ρ_nz=0.44):
-   - Most GTs have 1-2 hilly stages → binary outcome, not continuous
+   - 5 of 9 GTs have only 1 hilly stage → target is a single-event outcome
    - Mixes archetypes: climbers (53%), sprinters (27%), puncheurs (14%)
    - Over-predicts GC riders who don't score (Pogačar TdF 2024: pred=14.4, actual=0)
    - Under-predicts explosive one-offs (Carapaz TdF 2024: pred=2.5, actual=40.0)
+   - **Closed as modeling problem**: gate+magnitude, conditional, and soft gate
+     all tested — none improves on baseline Ridge. The limit is informational
+     (too few stages), not architectural. Keep Ridge, accept ρ~0.40 as ceiling.
+     Treat hilly as useful but inherently noisy; do not over-interpret errors
+     or optimize further. When n_hilly_stages ≤ 2, predictions are low-confidence.
 
 2. **Emergents without history**: del Toro, Lipowitz, Steinhauser —
    same fundamental problem as GC.
@@ -89,7 +94,6 @@ Shared: `stage_mu`, `stage_rd`, `age`, profile specialization features.
 
 ## Next Steps
 
-1. **Hilly reformulation**: gate+magnitude or bucketed outcomes (win/podium/top10/none).
-   Regression is wrong formulation when n_hilly_stages ≤ 2.
-2. **Integrate with GC source**: combine stage + GC predictions for total fantasy score
-3. **Mountain/Sprint secondary sources**: capture rate models
+1. **Integrate with GC source**: combine stage + GC predictions for total fantasy score
+2. **Mountain/Sprint secondary sources**: capture rate models
+3. **Discrete mapping + team selection**: translate to fantasy points, evaluate team capture
