@@ -29,6 +29,8 @@ import pandas as pd
 
 from .points import (
     GC_GRAND_TOUR, GC_MINI_TOUR,
+    GC_DAILY,
+    STAGE_POINTS,
     FINAL_CLASS_GT, FINAL_CLASS_MINI,
     estimate_gc_daily_pts,
 )
@@ -150,18 +152,29 @@ def predict_race_sources(
         race_slug, year, supply_history, completion_rates,
     )
 
-    # ── Aggregate ────────────────────────────────────────────────────
+    # ── Normalize to real supply ────────────────────────────────────
     gc_total = gc_pts + gc_daily_pts
     mtn_total = mtn_final_pts + mtn_pass_pts
     spr_total = spr_final_pts + spr_inter_pts
 
+    # Compute supply per source for this race
+    supplies = _compute_race_supply(
+        race_type, n_stages, race_slug, year, supply_history,
+    )
+
+    gc_total = _normalize_to_supply(gc_total, supplies["gc"], supplies["gc_max_rider"])
+    stage_pts = _normalize_to_supply(stage_pts, supplies["stage"], supplies["stage_max_rider"])
+    mtn_total = _normalize_to_supply(mtn_total, supplies["mountain"], supplies["mountain_max_rider"])
+    spr_total = _normalize_to_supply(spr_total, supplies["sprint"], supplies["sprint_max_rider"])
+
+    # ── Build output ────────────────────────────────────────────────
     predictions = []
     for i in range(n_riders):
-        gc_val = round(float(gc_total[i]), 2)
-        stage_val = round(float(stage_pts[i]), 2)
-        mtn_val = round(float(mtn_total[i]), 2)
-        spr_val = round(float(spr_total[i]), 2)
-        total = round(gc_val + stage_val + mtn_val + spr_val, 2)
+        gc_val = round(float(gc_total[i]), 1)
+        stage_val = round(float(stage_pts[i]), 1)
+        mtn_val = round(float(mtn_total[i]), 1)
+        spr_val = round(float(spr_total[i]), 1)
+        total = round(gc_val + stage_val + mtn_val + spr_val, 1)
 
         predictions.append({
             "rider_id": str(rider_ids[i]),
@@ -396,3 +409,85 @@ def _get_rank_decay(metadata: dict, race_type: str) -> dict[int, float]:
     key = "gt_rank_decay" if race_type == "grand_tour" else "mini_rank_decay"
     raw = metadata.get(key, {})
     return {int(k): v for k, v in raw.items()}
+
+
+# ── Supply normalization ─────────────────────────────────────────────
+
+def _compute_race_supply(
+    race_type: str, n_stages: int,
+    race_slug: str, year: int,
+    supply_history: pd.DataFrame | None,
+) -> dict[str, float]:
+    """Compute the real fantasy point supply per source for a race.
+
+    Returns dict with keys: gc, stage, mountain, sprint (total supply)
+    and gc_max_rider, stage_max_rider, etc. (max any single rider can score).
+    """
+    is_gt = race_type == "grand_tour"
+    gc_table = GC_GRAND_TOUR if is_gt else GC_MINI_TOUR
+    final_table = FINAL_CLASS_GT if is_gt else FINAL_CLASS_MINI
+
+    # GC: final classification + daily
+    gc_final_supply = sum(gc_table.values())
+    gc_daily_supply = sum(GC_DAILY.values()) * n_stages
+    gc_supply = gc_final_supply + gc_daily_supply
+    gc_max_rider = gc_table[1] + GC_DAILY[1] * n_stages  # win GC + lead every day
+
+    # Stage: top-20 score per stage
+    stage_per_stage = sum(STAGE_POINTS.values())
+    stage_supply = stage_per_stage * n_stages
+    # Max rider: even Pogačar can't win all stages. Realistic cap: ~8 top-3 + rest top-10
+    stage_max_rider = STAGE_POINTS[1] * 5 + STAGE_POINTS[2] * 3 + STAGE_POINTS[4] * 5 + STAGE_POINTS[8] * 5
+
+    # Mountain: final + pass
+    mtn_final_supply = sum(final_table.values())
+    est_mtn_pass = 0.0
+    if supply_history is not None:
+        est_mtn_pass, _ = estimate_supply(race_slug, year, supply_history)
+    mtn_supply = mtn_final_supply + est_mtn_pass
+    mtn_max_rider = final_table[1] + est_mtn_pass * 0.35  # KOM jersey + ~35% pass capture
+
+    # Sprint: final + inter + regularidad
+    spr_final_supply = sum(final_table.values())
+    est_spr_inter = 0.0
+    if supply_history is not None:
+        _, est_spr_inter = estimate_supply(race_slug, year, supply_history)
+    spr_supply = spr_final_supply + est_spr_inter
+    spr_max_rider = final_table[1] + est_spr_inter * 0.25  # green jersey + ~25% inter capture
+
+    return {
+        "gc": gc_supply,
+        "gc_max_rider": gc_max_rider,
+        "stage": stage_supply,
+        "stage_max_rider": stage_max_rider,
+        "mountain": max(mtn_supply, 1.0),
+        "mountain_max_rider": max(mtn_max_rider, 1.0),
+        "sprint": max(spr_supply, 1.0),
+        "sprint_max_rider": max(spr_max_rider, 1.0),
+    }
+
+
+def _normalize_to_supply(
+    predictions: np.ndarray, supply: float, max_per_rider: float,
+) -> np.ndarray:
+    """Scale predictions so they sum to the real supply, and cap per rider.
+
+    1. Cap each rider at max_per_rider
+    2. Scale so sum of all riders ≈ supply
+    Preserves relative ranking.
+    """
+    # Cap per rider first
+    capped = np.minimum(predictions, max_per_rider)
+
+    # Scale to supply
+    total = capped.sum()
+    if total <= 0:
+        return capped
+
+    scale = supply / total
+    normalized = capped * scale
+
+    # Re-cap after scaling (scaling up could exceed max)
+    normalized = np.minimum(normalized, max_per_rider)
+
+    return np.maximum(normalized, 0.0)
