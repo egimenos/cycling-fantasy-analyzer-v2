@@ -465,7 +465,7 @@ def _load_completion_rates() -> dict[str, float]:
             ) sub
             GROUP BY rider_id
         """)
-        rates = {str(row[0]): row[1] for row in cur.fetchall()}
+        rates = {str(row[0]): float(row[1]) for row in cur.fetchall()}
         cur.close()
         conn.close()
         return rates
