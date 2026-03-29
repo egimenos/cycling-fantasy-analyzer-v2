@@ -5,8 +5,34 @@
 > Linked from feature specs via kitty-specs for self-healing.
 
 **Last updated**: 2026-03-29
-**Feature**: 012 — ML scoring source-by-source redesign
-**Status**: Research complete, pending production integration (feature 013)
+**Feature**: 012 (research) + 013 (production integration)
+**Status**: Production — integrated into ML service, API, and frontend
+
+## Production Artifacts
+
+Location: `ml/models/`
+
+| Artifact | Type | Size |
+| -------- | ---- | ---- |
+| `gc_gate.joblib` | LogisticRegression | ~1 KB |
+| `stage_flat.joblib` | Ridge | ~1 KB |
+| `stage_hilly.joblib` | Ridge | ~1 KB |
+| `stage_mountain.joblib` | Ridge | ~1 KB |
+| `stage_itt_gate.joblib` | LogisticRegression | ~1.5 KB |
+| `stage_itt_magnitude.joblib` | Ridge | ~1 KB |
+| `mtn_final_gate.joblib` | LogisticRegression | ~1.5 KB |
+| `mtn_pass_capture.joblib` | Ridge | ~1 KB |
+| `spr_inter_capture.joblib` | Ridge | ~1 KB |
+| `metadata.json` | Config (features, weights, thresholds) | ~5 KB |
+| `model_version.txt` | Version string for hot-reload | <1 KB |
+
+## Deployment
+
+- **ML service**: FastAPI (Python 3.11) running as Docker sidecar on port 8000
+- **Hot-reload**: model_version.txt triggers reload of all artifacts on next request
+- **Retraining**: `make retrain` runs full pipeline (~10 min). See `ml/docs/retraining-runbook.md`
+- **API contract**: POST `/predict` returns `{predicted_score, breakdown: {gc, stage, mountain, sprint}}`
+- **ADR**: `docs/adr/2026-03-29-source-by-source-ml-model.md`
 
 ## Architecture Overview
 
