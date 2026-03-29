@@ -31,6 +31,7 @@ services:
     volumes:
       - ./ml/models:/app/models
       - ./ml/src:/app/src
+      - ./ml/cache:/app/cache
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
       interval: 30s
