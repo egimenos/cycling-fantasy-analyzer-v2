@@ -1,0 +1,11 @@
+{
+  "feature_number": "013",
+  "slug": "013-productionize-source-by-source-ml",
+  "feature_slug": "013-productionize-source-by-source-ml",
+  "created_at": "2026-03-29T00:00:00Z",
+  "target_branch": "main",
+  "friendly_name": "Productionize Source-by-Source ML Pipeline",
+  "mission": "software-dev",
+  "source_description": "Integrate frozen source-by-source ML models (feature 012) into production: ML service with per-source breakdown, API integration, frontend display, retraining pipeline",
+  "vcs": "git"
+}
