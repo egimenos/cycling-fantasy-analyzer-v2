@@ -312,10 +312,8 @@ def predict(req: PredictRequest, request: Request):
     maybe_reload_models(state)
     model_version = state.model_version
 
-    # 3. Check cache — DISABLED for debugging
-    # cached = check_cache(DB_URL, req.race_slug, req.year, model_version)
-    # if cached:
-    #     return {"predictions": cached, "model_version": model_version, "cached": True}
+    # 3. No cache in ML service — NestJS handles caching via ml_scores table.
+    #    ML service is stateless: always compute fresh predictions.
 
     # 4. Load data lazily
     if state.data_cache is None:
@@ -420,9 +418,7 @@ def predict(req: PredictRequest, request: Request):
             detail=f"Prediction failed for {req.race_slug}/{req.year}",
         )
 
-    # 6. Write cache and return — DISABLED for debugging
-    # write_cache(DB_URL, predictions, req.race_slug, req.year, model_version)
-
+    # 6. Return (no write_cache — NestJS handles caching via ml_scores table)
     return {"predictions": predictions, "model_version": model_version, "cached": False}
 
 

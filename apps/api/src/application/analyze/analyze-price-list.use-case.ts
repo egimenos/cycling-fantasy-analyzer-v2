@@ -260,15 +260,7 @@ export class AnalyzePriceListUseCase {
         seasonBreakdown: s.seasonBreakdown,
         scoringMethod: mlPredictions ? ('hybrid' as const) : ('rules' as const),
         mlPredictedScore: mlPredictions?.get(s.matchedRider?.id ?? '')?.score ?? null,
-        mlBreakdown: (() => {
-          const bd = mlPredictions?.get(s.matchedRider?.id ?? '')?.breakdown ?? null;
-          if (bd && s.matchedRider?.fullName?.includes('Pogačar')) {
-            this.logger.debug(
-              `DEBUG Pogačar ML breakdown: ${JSON.stringify(bd)}, score: ${mlPredictions?.get(s.matchedRider?.id ?? '')?.score}`,
-            );
-          }
-          return bd;
-        })(),
+        mlBreakdown: mlPredictions?.get(s.matchedRider?.id ?? '')?.breakdown ?? null,
       };
     });
 
@@ -322,10 +314,9 @@ export class AnalyzePriceListUseCase {
       return null;
     }
 
-    // Check cache first — DISABLED for debugging
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (false as boolean) {
-      const cached = await this.mlScoreRepo.findByRace(input.raceSlug!, input.year!, modelVersion);
+    // Check cache first
+    const cached = await this.mlScoreRepo.findByRace(input.raceSlug!, input.year!, modelVersion);
+    if (cached.length > 0) {
       this.logger.debug(
         `ML cache hit for ${input.raceSlug}/${input.year} (model ${modelVersion}, ${cached.length} predictions)`,
       );
@@ -380,6 +371,24 @@ export class AnalyzePriceListUseCase {
     this.logger.log(
       `ML predictions received for ${input.raceSlug}/${input.year}: ${predictions.length} riders`,
     );
+
+    // Write to cache (single cache layer — NestJS owns the cache)
+    await this.mlScoreRepo
+      .saveMany(
+        predictions.map((p) => ({
+          riderId: p.riderId,
+          raceSlug: input.raceSlug!,
+          year: input.year!,
+          predictedScore: p.predictedScore,
+          modelVersion: modelVersion,
+          gcPts: p.breakdown?.gc ?? 0,
+          stagePts: p.breakdown?.stage ?? 0,
+          mountainPts: p.breakdown?.mountain ?? 0,
+          sprintPts: p.breakdown?.sprint ?? 0,
+        })),
+      )
+      .catch((err) => this.logger.warn(`Failed to cache ML predictions: ${err.message}`));
+
     return new Map(
       predictions.map((p) => [
         p.riderId,
