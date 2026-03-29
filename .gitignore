@@ -61,3 +61,6 @@ ml/logbook/
 ml/results/
 apps/web/test-results/
 docs-local/
+.playwright-cli/
+*.har
+ml/models/metadata.json
