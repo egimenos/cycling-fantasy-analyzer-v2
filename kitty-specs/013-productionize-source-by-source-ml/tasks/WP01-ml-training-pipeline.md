@@ -9,6 +9,7 @@ subtasks:
   - T003
   - T004
   - T005
+  - T006
 phase: Phase 1 - Foundation
 assignee: ''
 agent: ''
@@ -23,6 +24,7 @@ history:
     action: Prompt generated via /spec-kitty.tasks
 requirement_refs:
   - FR-006
+  - FR-007
   - FR-008
 ---
 
@@ -162,21 +164,37 @@ requirement_refs:
 
 **Files**: `ml/src/retrain.py` (modify, ~100 lines)
 
-### Subtask T004 – Update retraining runbook
+### Subtask T004 – Write ADR for model architecture switch
+
+**Purpose**: Constitution requires an ADR for scoring model changes. Must ship alongside the code change, not after.
+
+**Steps**:
+
+1. Create `docs/adr/2026-XX-XX-source-by-source-ml-model.md`:
+   - **Status**: Accepted
+   - **Context**: Monolithic RF predicts single total score. Feature 012 research: decomposing into 4 sources with specialized sub-models produces GT ρ=0.571, team capture=59.4%.
+   - **Decision**: Replace single RF with 9 sub-models (7 trained + 2 heuristic) organized by scoring source.
+   - **Consequences**: More artifacts to manage, more complex retraining, but per-source breakdown enables user understanding.
+   - **Alternatives rejected**: Keep RF (no breakdown), multi-output model (can't specialize), neural net (insufficient data).
+
+**Files**: `docs/adr/2026-XX-XX-source-by-source-ml-model.md` (new)
+**Parallel**: Yes, can be done alongside T001-T003.
+
+### Subtask T005 – Update retraining runbook
 
 **Purpose**: Keep runbook in sync with the new training pipeline.
 
 **Steps**:
 
 1. Update `ml/docs/retraining-runbook.md`:
-   - Add Step 7 (was: verify): `python -m src.train_sources` (or note that retrain.py now does it)
+   - Add train_sources step after cache building
    - Update the "Quick Reference" section
    - Update expected artifacts list (9 joblib files + metadata.json)
 
 **Files**: `ml/docs/retraining-runbook.md` (modify)
 **Parallel**: Yes, can be done alongside T001-T003.
 
-### Subtask T005 – Verify training artifacts
+### Subtask T006 – Verify training artifacts
 
 **Purpose**: Ensure the training pipeline produces all expected artifacts.
 

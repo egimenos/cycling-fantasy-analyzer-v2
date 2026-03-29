@@ -4,11 +4,11 @@ title: Database & NestJS Integration
 lane: planned
 dependencies: [WP02]
 subtasks:
-  - T011
-  - T012
   - T013
   - T014
   - T015
+  - T016
+  - T017
 phase: Phase 2 - Integration
 assignee: ''
 agent: ''
@@ -48,7 +48,7 @@ requirement_refs:
 
 ## Subtasks & Detailed Guidance
 
-### Subtask T011 – Database migration
+### Subtask T013 – Database migration
 
 **Purpose**: Add breakdown columns to ml_scores table.
 
@@ -68,7 +68,7 @@ requirement_refs:
 **Files**: New migration file in `apps/api/src/infrastructure/database/migrations/`
 **Parallel**: Yes, can proceed alongside T013-T014.
 
-### Subtask T012 – Update Drizzle ORM schema
+### Subtask T014 – Update Drizzle ORM schema
 
 **Purpose**: Add breakdown columns to the Drizzle schema definition.
 
@@ -87,7 +87,7 @@ requirement_refs:
 **Files**: Schema file in `apps/api/src/infrastructure/database/schema/` (modify)
 **Parallel**: Yes, alongside T011.
 
-### Subtask T013 – Update `MlPrediction` interface
+### Subtask T015 – Update `MlPrediction` interface
 
 **Purpose**: Extend the domain port interface to include breakdown.
 
@@ -115,7 +115,7 @@ requirement_refs:
 **Files**: `apps/api/src/domain/scoring/ml-scoring.port.ts` (modify)
 **Parallel**: Yes, alongside T011-T012.
 
-### Subtask T014 – Update `MlScoringAdapter`
+### Subtask T016 – Update `MlScoringAdapter`
 
 **Purpose**: Parse the new breakdown field from ML service response.
 
@@ -142,7 +142,7 @@ requirement_refs:
 **Files**: `apps/api/src/infrastructure/ml/ml-scoring.adapter.ts` (modify)
 **Parallel**: Yes, alongside T011-T012.
 
-### Subtask T015 – Update downstream consumers
+### Subtask T017 – Update downstream consumers
 
 **Purpose**: Propagate breakdown through use cases that consume MlPrediction.
 

@@ -4,10 +4,10 @@ title: Frontend Breakdown Display
 lane: planned
 dependencies: [WP03]
 subtasks:
-  - T016
-  - T017
   - T018
   - T019
+  - T020
+  - T021
 phase: Phase 3 - Frontend
 assignee: ''
 agent: ''
@@ -45,7 +45,7 @@ requirement_refs:
 
 ## Subtasks & Detailed Guidance
 
-### Subtask T016 – Update shared types
+### Subtask T018 – Update shared types
 
 **Purpose**: Add MlBreakdown type to shared-types package so frontend and API use the same definition.
 
@@ -72,7 +72,7 @@ requirement_refs:
 
 **Files**: `packages/shared-types/src/api.ts` (modify)
 
-### Subtask T017 – Update rider score display component
+### Subtask T019 – Update rider score display component
 
 **Purpose**: Render per-source ML breakdown in rider detail/card.
 
@@ -90,7 +90,7 @@ requirement_refs:
 
 **Files**: Component in `apps/web/src/features/` (modify)
 
-### Subtask T018 – Conditional routing ML vs rules-based
+### Subtask T020 – Conditional routing ML vs rules-based
 
 **Purpose**: Show ML breakdown for stage races, rules-based for classics.
 
@@ -103,7 +103,7 @@ requirement_refs:
 
 **Files**: Component in `apps/web/src/features/` (modify)
 
-### Subtask T019 – Verify visual consistency
+### Subtask T021 – Verify visual consistency
 
 **Purpose**: Ensure breakdown renders correctly across different race types and screen sizes.
 

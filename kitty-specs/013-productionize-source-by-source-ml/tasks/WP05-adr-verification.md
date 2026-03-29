@@ -4,9 +4,10 @@ title: ADR & End-to-End Verification
 lane: planned
 dependencies: [WP04]
 subtasks:
-  - T020
-  - T021
   - T022
+  - T023
+  - T024
+  - T025
 phase: Phase 4 - Polish
 assignee: ''
 agent: ''
@@ -20,17 +21,18 @@ history:
     shell_pid: ''
     action: Prompt generated via /spec-kitty.tasks
 requirement_refs:
-  - FR-007
   - FR-008
+  - FR-010
 ---
 
 # Work Package Prompt: WP05 – ADR & End-to-End Verification
 
 ## Objectives & Success Criteria
 
-- ADR documenting the switch from RF monolithic to source-by-source model
-- model-baseline.md updated with production artifact paths
+- model-baseline.md updated with production artifact paths and deployment info
 - Full pipeline verified: retrain → predict → API → frontend
+- ML-unavailable fallback verified (FR-010)
+- Prediction performance within 30s (SC-003)
 
 ## Context & Constraints
 
@@ -42,30 +44,7 @@ requirement_refs:
 
 ## Subtasks & Detailed Guidance
 
-### Subtask T020 – Write ADR for model architecture switch
-
-**Purpose**: Document the decision to replace the RF monolithic model with source-by-source predictions. Required by project constitution.
-
-**Steps**:
-
-1. Create `docs/adr/2026-XX-XX-source-by-source-ml-model.md` with:
-   - **Status**: Accepted
-   - **Context**: The monolithic RF model predicted a single total score. Feature 012 research showed that decomposing into 4 sources (GC, stage, mountain, sprint) with specialized sub-models produces GT ρ=0.571 and team capture=59.4%. The breakdown also enables better user understanding of predictions.
-   - **Decision**: Replace the single RF model with 9 sub-models (7 trained + 2 heuristic) organized by scoring source. Each source uses the architecture best suited to its data characteristics.
-   - **Consequences**:
-     - More model artifacts to manage (9 files + metadata.json vs 2 joblib files)
-     - Retraining pipeline is more complex (6 cache-building steps + training)
-     - Predictions include per-source breakdown (new capability)
-     - Hot-reload must reload all artifacts atomically
-   - **Alternatives rejected**:
-     - Keep RF monolithic: poor interpretability, can't show breakdown
-     - Single multi-output model: doesn't allow per-source architecture specialization
-     - Neural network: insufficient training data for GTs (~2000 rider×race observations)
-
-**Files**: `docs/adr/2026-XX-XX-source-by-source-ml-model.md` (new)
-**Parallel**: Yes, can be done alongside T021.
-
-### Subtask T021 – Update model-baseline.md
+### Subtask T022 – Update model-baseline.md
 
 **Purpose**: Update the frozen baseline document with production-specific information.
 
@@ -80,7 +59,7 @@ requirement_refs:
 **Files**: `ml/docs/model-baseline.md` (modify)
 **Parallel**: Yes, alongside T020.
 
-### Subtask T022 – End-to-end verification
+### Subtask T023 – End-to-end verification
 
 **Purpose**: Verify the complete pipeline works from retraining to frontend display.
 
@@ -111,6 +90,32 @@ requirement_refs:
 - Verify ADR follows project convention (format, location)
 - Verify model-baseline.md is accurate and complete
 - Verify E2E test covers all 4 sources and both race types
+
+### Subtask T024 – Verify ML-unavailable fallback
+
+**Purpose**: FR-010 requires graceful fallback when ML service is down.
+
+**Steps**:
+
+1. Stop the ML service container (`make ml-down` or `docker stop cycling-ml-service`)
+2. Hit the NestJS API for a stage race prediction
+3. Verify the API returns either rules-based scoring or a clear "predictions unavailable" response
+4. Restart the ML service and verify predictions resume
+
+**Files**: No new code — verification
+
+### Subtask T025 – Performance check
+
+**Purpose**: SC-003 requires GT predictions in <30 seconds.
+
+**Steps**:
+
+1. POST to `/predict` with a full GT startlist (176 riders)
+2. Time the response
+3. If >30s, profile the bottleneck (data loading? feature extraction? model inference?)
+4. Document the result
+
+**Files**: No new code — verification
 
 ## Activity Log
 

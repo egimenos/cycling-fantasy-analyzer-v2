@@ -4,11 +4,12 @@ title: Source-by-Source Prediction Logic
 lane: planned
 dependencies: [WP01]
 subtasks:
-  - T006
   - T007
   - T008
   - T009
   - T010
+  - T011
+  - T012
 phase: Phase 1 - Foundation
 assignee: ''
 agent: ''
@@ -50,7 +51,7 @@ requirement_refs:
 
 ## Subtasks & Detailed Guidance
 
-### Subtask T006 – Create `ml/src/predict_sources.py`
+### Subtask T007 – Create `ml/src/predict_sources.py`
 
 **Purpose**: Core prediction orchestrator. Takes rider features and produces per-rider breakdown.
 
@@ -100,7 +101,7 @@ requirement_refs:
 
 **Files**: `ml/src/predict_sources.py` (new, ~300 lines)
 
-### Subtask T007 – Integrate supply estimation
+### Subtask T008 – Integrate supply estimation
 
 **Purpose**: Load historical supply estimates for mountain_pass and sprint_inter.
 
@@ -114,7 +115,7 @@ requirement_refs:
 **Files**: Part of `ml/src/predict_sources.py`
 **Parallel**: Yes, can be developed alongside T009.
 
-### Subtask T008 – Update `ml/src/app.py` response format
+### Subtask T009 – Update `ml/src/app.py` response format
 
 **Purpose**: Extend the `/predict` endpoint to return breakdown alongside predicted_score.
 
@@ -134,7 +135,7 @@ requirement_refs:
 
 **Files**: `ml/src/app.py` (modify)
 
-### Subtask T009 – Update model loading at startup
+### Subtask T010 – Update model loading at startup
 
 **Purpose**: Load all sub-model artifacts + metadata.json instead of single RF model.
 
@@ -161,7 +162,7 @@ requirement_refs:
 **Files**: `ml/src/predict_sources.py` or `ml/src/predict.py` (model loading), `ml/src/app.py` (startup)
 **Parallel**: Yes, can be developed alongside T007.
 
-### Subtask T010 – Update cache read/write for breakdown
+### Subtask T011 – Update cache read/write for breakdown
 
 **Purpose**: Persist breakdown columns in ml_scores cache table.
 
@@ -176,6 +177,28 @@ requirement_refs:
 For now, handle the case where columns don't exist yet (graceful fallback).
 
 **Files**: `ml/src/app.py` (modify cache functions)
+
+### Subtask T012 – pytest for predict_sources.py
+
+**Purpose**: Constitution requires 100% test coverage for scoring logic. predict_sources.py is the core scoring path.
+
+**Steps**:
+
+1. Create `ml/tests/test_predict_sources.py`
+2. Test each source prediction independently:
+   - GC: verify gate → ranking → points assignment for known rider features
+   - Stage: verify type-split prediction → multiplication by stage count
+   - Mountain: verify gate × avg_pts + capture × supply
+   - Sprint: verify heuristic contender score → soft rank → decay points + capture × supply
+3. Test edge cases:
+   - Rider with zero features → all sources return 0
+   - Race with no supply history → mountain_pass and sprint_inter = 0
+   - Classic race type → empty result
+4. Test that predicted_score == sum(breakdown values)
+5. Use mock/fixture models (small trained models) to avoid full training in tests
+
+**Files**: `ml/tests/test_predict_sources.py` (new)
+**Parallel**: Yes, can proceed alongside T009-T011.
 
 ## Risks & Mitigations
 

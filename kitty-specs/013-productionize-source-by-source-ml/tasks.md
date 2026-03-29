@@ -18,21 +18,23 @@
 **Prompt**: `/tasks/WP01-ml-training-pipeline.md`
 **Estimated size**: ~400 lines
 
-**Requirements Refs**: FR-006, FR-008
+**Requirements Refs**: FR-006, FR-007, FR-008
 
 ### Included Subtasks
 
 - [ ] T001 Create `ml/src/train_sources.py` — train all sub-models from cached features
-- [ ] T002 Generate `ml/models/metadata.json` — feature lists, thresholds, heuristic weights
+- [ ] T002 Generate `ml/models/metadata.json` — feature lists, thresholds, heuristic weights, model metrics
 - [ ] T003 Update `ml/src/retrain.py` — orchestrate full pipeline including stage caches
-- [ ] T004 [P] Update `ml/docs/retraining-runbook.md` — add train_sources step
-- [ ] T005 Verify: training produces correct artifacts and model_version.txt
+- [ ] T004 [P] Write ADR for model architecture switch (RF → source-by-source) in `docs/adr/`
+- [ ] T005 [P] Update `ml/docs/retraining-runbook.md` — add train_sources step
+- [ ] T006 Verify: training produces correct artifacts and model_version.txt
 
 ### Implementation Notes
 
 - Train logic extracted from benchmark_integrated.py into production-ready train_sources.py
-- 7 trained models (joblib): gc_gate, stage_flat, stage_hilly, stage_mountain, stage_itt_gate, stage_itt_magnitude, mtn_final_gate, mtn_pass_capture, spr_inter_capture
+- 9 trained models (joblib): gc_gate, stage_flat, stage_hilly, stage_mountain, stage_itt_gate, stage_itt_magnitude, mtn_final_gate, mtn_pass_capture, spr_inter_capture
 - 2 heuristic configs stored in metadata.json: GC position weights, sprint_final contender weights
+- metadata.json also stores model metrics (ρ_total, team_capture) for version tracking
 - retrain.py becomes: load data → glicko → cache → stage targets → stage features → cls features → train_sources → write version
 
 ### Parallel Opportunities
@@ -61,11 +63,12 @@
 
 ### Included Subtasks
 
-- [ ] T006 Create `ml/src/predict_sources.py` — orchestrate all sub-model predictions
-- [ ] T007 Integrate supply estimation — historical average for mtn_pass/spr_inter
-- [ ] T008 Update `ml/src/app.py` — extend /predict response with breakdown
-- [ ] T009 Update model loading — load sub-model artifacts + metadata.json at startup
-- [ ] T010 Update cache in app.py — persist and retrieve breakdown columns from ml_scores
+- [ ] T007 Create `ml/src/predict_sources.py` — orchestrate all sub-model predictions
+- [ ] T008 Integrate supply estimation — historical average for mtn_pass/spr_inter
+- [ ] T009 Update `ml/src/app.py` — extend /predict response with breakdown
+- [ ] T010 Update model loading — load sub-model artifacts + metadata.json at startup
+- [ ] T011 Update cache in app.py — persist and retrieve breakdown columns from ml_scores
+- [ ] T012 [P] pytest for predict_sources.py — 100% coverage on scoring logic (constitution)
 
 ### Implementation Notes
 
@@ -76,10 +79,12 @@
 - Sprint: apply heuristic contender score → soft rank → capture × estimated_supply
 - Supply estimation via supply_estimation.py (already committed)
 - Cache: ml_scores table needs 4 extra columns (handled in WP03 migration, but write_cache updated here)
+- Tests: constitution requires 100% coverage for scoring logic. Test each source prediction independently.
 
 ### Parallel Opportunities
 
-- T007 (supply) and T009 (model loading) can proceed in parallel
+- T008 (supply) and T010 (model loading) can proceed in parallel
+- T012 (tests) can proceed alongside T009-T011
 
 ### Dependencies
 
@@ -104,11 +109,11 @@
 
 ### Included Subtasks
 
-- [ ] T011 Database migration — add gc_pts, stage_pts, mountain_pts, sprint_pts to ml_scores
-- [ ] T012 Update Drizzle ORM schema — add breakdown columns
-- [ ] T013 Update `MlPrediction` interface in `ml-scoring.port.ts` — add breakdown type
-- [ ] T014 Update `MlScoringAdapter` — parse breakdown from ML service response
-- [ ] T015 Update downstream consumers — propagate breakdown through analyze use cases
+- [ ] T013 Database migration — add gc_pts, stage_pts, mountain_pts, sprint_pts to ml_scores
+- [ ] T014 Update Drizzle ORM schema — add breakdown columns
+- [ ] T015 Update `MlPrediction` interface in `ml-scoring.port.ts` — add breakdown type
+- [ ] T016 Update `MlScoringAdapter` — parse breakdown from ML service response
+- [ ] T017 Update downstream consumers — propagate breakdown through analyze use cases
 
 ### Implementation Notes
 
@@ -119,7 +124,7 @@
 
 ### Parallel Opportunities
 
-- T011-T012 (DB) and T013-T014 (TypeScript) can proceed in parallel
+- T013-T014 (DB) and T015-T016 (TypeScript) can proceed in parallel
 
 ### Dependencies
 
@@ -143,10 +148,10 @@
 
 ### Included Subtasks
 
-- [ ] T016 Update shared types — add MlBreakdown to shared-types package
-- [ ] T017 Update rider score display component — render per-source ML breakdown
-- [ ] T018 Conditional routing — ML breakdown for stage races, rules-based for classics
-- [ ] T019 Verify visual consistency — breakdown renders for all race types
+- [ ] T018 Update shared types — add MlBreakdown to shared-types package
+- [ ] T019 Update rider score display component — render per-source ML breakdown
+- [ ] T020 Conditional routing — ML breakdown for stage races, rules-based for classics
+- [ ] T021 Verify visual consistency — breakdown renders for all race types
 
 ### Implementation Notes
 
@@ -176,23 +181,25 @@
 **Prompt**: `/tasks/WP05-adr-verification.md`
 **Estimated size**: ~250 lines
 
-**Requirements Refs**: FR-007, FR-008
+**Requirements Refs**: FR-008, FR-010
 
 ### Included Subtasks
 
-- [ ] T020 Write ADR for model architecture switch (RF monolithic → source-by-source)
-- [ ] T021 [P] Update model-baseline.md with production artifact paths
-- [ ] T022 End-to-end verification — retrain → predict → API → frontend
+- [ ] T022 Update model-baseline.md with production artifact paths and metrics
+- [ ] T023 End-to-end verification — retrain → predict → API → frontend
+- [ ] T024 Verify ML-unavailable fallback — stop ML service, confirm API falls back gracefully
+- [ ] T025 Performance check — verify GT prediction completes in <30s (SC-003)
 
 ### Implementation Notes
 
-- ADR format: YYYY-MM-DD-title.md in docs/adr/ (per constitution)
-- ADR content: decision, context (feature 012 research), consequences, alternatives rejected
+- ADR already created in WP01 (T004)
 - E2E verification: run make retrain, then POST /predict, verify breakdown in response
+- Fallback test: stop ML container, hit API, verify rules-based or "unavailable" response
+- Performance: time the /predict call for a 176-rider GT
 
 ### Parallel Opportunities
 
-- T020 (ADR) and T021 (baseline update) can proceed in parallel
+- T022 (docs) can proceed in parallel with T023-T025
 
 ### Dependencies
 
@@ -215,27 +222,30 @@
 
 ## Subtask Index (Reference)
 
-| Subtask ID | Summary                       | Work Package | Priority | Parallel? |
-| ---------- | ----------------------------- | ------------ | -------- | --------- |
-| T001       | Create train_sources.py       | WP01         | P0       | No        |
-| T002       | Generate metadata.json        | WP01         | P0       | No        |
-| T003       | Update retrain.py             | WP01         | P0       | No        |
-| T004       | Update retraining-runbook.md  | WP01         | P0       | Yes       |
-| T005       | Verify training artifacts     | WP01         | P0       | No        |
-| T006       | Create predict_sources.py     | WP02         | P0       | No        |
-| T007       | Integrate supply estimation   | WP02         | P0       | Yes       |
-| T008       | Update app.py response        | WP02         | P0       | No        |
-| T009       | Update model loading          | WP02         | P0       | Yes       |
-| T010       | Update cache read/write       | WP02         | P0       | No        |
-| T011       | DB migration (breakdown cols) | WP03         | P1       | Yes       |
-| T012       | Update Drizzle schema         | WP03         | P1       | Yes       |
-| T013       | Update MlPrediction interface | WP03         | P1       | Yes       |
-| T014       | Update MlScoringAdapter       | WP03         | P1       | Yes       |
-| T015       | Update downstream consumers   | WP03         | P1       | No        |
-| T016       | Update shared types           | WP04         | P2       | No        |
-| T017       | Update rider score component  | WP04         | P2       | No        |
-| T018       | Conditional ML/rules routing  | WP04         | P2       | No        |
-| T019       | Verify visual consistency     | WP04         | P2       | No        |
-| T020       | Write ADR                     | WP05         | P3       | Yes       |
-| T021       | Update model-baseline.md      | WP05         | P3       | Yes       |
-| T022       | E2E verification              | WP05         | P3       | No        |
+| Subtask ID | Summary                        | Work Package | Priority | Parallel? |
+| ---------- | ------------------------------ | ------------ | -------- | --------- |
+| T001       | Create train_sources.py        | WP01         | P0       | No        |
+| T002       | Generate metadata.json         | WP01         | P0       | No        |
+| T003       | Update retrain.py              | WP01         | P0       | No        |
+| T004       | Write ADR (model switch)       | WP01         | P0       | Yes       |
+| T005       | Update retraining-runbook.md   | WP01         | P0       | Yes       |
+| T006       | Verify training artifacts      | WP01         | P0       | No        |
+| T007       | Create predict_sources.py      | WP02         | P0       | No        |
+| T008       | Integrate supply estimation    | WP02         | P0       | Yes       |
+| T009       | Update app.py response         | WP02         | P0       | No        |
+| T010       | Update model loading           | WP02         | P0       | Yes       |
+| T011       | Update cache read/write        | WP02         | P0       | No        |
+| T012       | pytest predict_sources.py      | WP02         | P0       | Yes       |
+| T013       | DB migration (breakdown cols)  | WP03         | P1       | Yes       |
+| T014       | Update Drizzle schema          | WP03         | P1       | Yes       |
+| T015       | Update MlPrediction interface  | WP03         | P1       | Yes       |
+| T016       | Update MlScoringAdapter        | WP03         | P1       | Yes       |
+| T017       | Update downstream consumers    | WP03         | P1       | No        |
+| T018       | Update shared types            | WP04         | P2       | No        |
+| T019       | Update rider score component   | WP04         | P2       | No        |
+| T020       | Conditional ML/rules routing   | WP04         | P2       | No        |
+| T021       | Verify visual consistency      | WP04         | P2       | No        |
+| T022       | Update model-baseline.md       | WP05         | P3       | Yes       |
+| T023       | E2E verification               | WP05         | P3       | No        |
+| T024       | Verify ML-unavailable fallback | WP05         | P3       | No        |
+| T025       | Performance check (<30s)       | WP05         | P3       | No        |

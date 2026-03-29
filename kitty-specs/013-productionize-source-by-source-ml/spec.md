@@ -98,8 +98,8 @@ Trained models are saved as artifacts (joblib/pickle) so the prediction endpoint
 ### Key Entities
 
 - **RiderPrediction**: predicted_total, gc_pts, stage_pts, mountain_pts, sprint_pts, rider_id, race_slug, year
-- **ModelVersion**: version_id, trained_at, metrics (ρ_total, team_capture), artifact_paths
-- **SupplyEstimate**: race_slug, estimated_mtn_supply, estimated_spr_supply, based_on_n_editions
+- **ModelVersion**: version_id, trained_at, metrics (ρ_total, team_capture) — stored in metadata.json alongside model artifacts
+- **SupplyEstimate**: estimated_mtn_supply, estimated_spr_supply — computed on-the-fly from historical race data, not persisted as a separate entity
 
 ## Success Criteria
 

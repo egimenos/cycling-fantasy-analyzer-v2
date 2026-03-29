@@ -50,8 +50,8 @@ kitty-specs/013-productionize-source-by-source-ml/
 ml/
 ├── src/
 │   ├── app.py                    # MODIFY: extend /predict response with breakdown
-│   ├── predict.py                # REWRITE: source-by-source prediction logic
-│   ├── train.py                  # REWRITE: train sub-models instead of single RF
+│   ├── predict.py                # KEEP: old monolithic predict (deprecated, not called by app.py after migration)
+│   ├── train.py                  # KEEP: old RF training (deprecated, not called by retrain.py after migration)
 │   ├── retrain.py                # MODIFY: add stage cache steps (steps 4-6 from runbook)
 │   ├── predict_sources.py        # NEW: source-by-source prediction orchestrator
 │   ├── train_sources.py          # NEW: train all sub-models, save artifacts
