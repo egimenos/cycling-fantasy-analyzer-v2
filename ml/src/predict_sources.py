@@ -162,6 +162,12 @@ def predict_race_sources(
         race_type, n_stages, race_slug, year, supply_history,
     )
 
+    # Sharpen mountain and sprint before normalizing — these sources are
+    # concentrated in few riders but the model predicts diffusely.
+    # Power > 1 amplifies differences; threshold zeros out noise.
+    mtn_total = _sharpen(mtn_total, power=2.0, zero_percentile=60)
+    spr_total = _sharpen(spr_total, power=1.5, zero_percentile=50)
+
     gc_total = _normalize_to_supply(gc_total, supplies["gc"], supplies["gc_max_rider"])
     stage_pts = _normalize_to_supply(stage_pts, supplies["stage"], supplies["stage_max_rider"])
     mtn_total = _normalize_to_supply(mtn_total, supplies["mountain"], supplies["mountain_max_rider"])
@@ -465,6 +471,37 @@ def _compute_race_supply(
         "sprint": max(spr_supply, 1.0),
         "sprint_max_rider": max(spr_max_rider, 1.0),
     }
+
+
+def _sharpen(
+    predictions: np.ndarray, power: float = 2.0, zero_percentile: float = 60,
+) -> np.ndarray:
+    """Sharpen a flat prediction distribution by zeroing noise and amplifying signal.
+
+    The Ridge/LogReg models know the ranking but underestimate concentration.
+    This corrects for mean-regression: a rider predicted at 20 vs 10 becomes
+    400 vs 100 after squaring — much more separated.
+
+    Args:
+        predictions: Raw predictions (non-negative).
+        power: Exponent > 1 amplifies differences. 2.0 = square.
+        zero_percentile: Bottom N% of non-zero predictions set to 0.
+    """
+    result = predictions.copy()
+    nonzero = result[result > 0]
+    if len(nonzero) == 0:
+        return result
+
+    # Zero out bottom percentile (noise, not signal)
+    threshold = np.percentile(nonzero, zero_percentile)
+    result[result <= threshold] = 0.0
+
+    # Power transform on remaining (amplify differences)
+    mask = result > 0
+    if mask.sum() > 0:
+        result[mask] = np.power(result[mask], power)
+
+    return result
 
 
 def _normalize_to_supply(
