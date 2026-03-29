@@ -27,6 +27,13 @@ export interface SeasonBreakdown {
   weight: number;
 }
 
+export interface MlBreakdown {
+  gc: number;
+  stage: number;
+  mountain: number;
+  sprint: number;
+}
+
 export type ScoringMethod = 'rules' | 'hybrid';
 
 export interface AnalyzedRider {
@@ -44,6 +51,7 @@ export interface AnalyzedRider {
   seasonBreakdown: SeasonBreakdown[] | null;
   scoringMethod: ScoringMethod;
   mlPredictedScore: number | null;
+  mlBreakdown: MlBreakdown | null;
 }
 
 export interface AnalyzeRequest {

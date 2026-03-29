@@ -245,35 +245,42 @@ function ExpandedRowContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boo
     );
   }
 
+  // Use ML breakdown for stage races when available, rules-based otherwise
+  const breakdown = rider.mlBreakdown ?? rider.categoryScores;
+  const isML = rider.mlBreakdown !== null;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-      {/* Category Scores */}
-      {rider.categoryScores && (
+      {/* Category Scores — ML or rules-based */}
+      {breakdown && (
         <div className="space-y-4">
-          <h4 className="text-[10px] font-mono text-outline uppercase">Category Scores</h4>
+          <h4 className="text-[10px] font-mono text-outline uppercase">
+            {isML ? 'ML Predicted Breakdown' : 'Category Scores'}
+            {isML && <MlBadge />}
+          </h4>
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-surface-container-high p-3 rounded-sm border-l-2 border-gc">
               <p className="text-[9px] text-outline uppercase font-mono">GC</p>
               <p className="font-mono font-bold text-gc text-lg">
-                {rider.categoryScores.gc.toFixed(1)}
+                {breakdown.gc.toFixed(1)}
               </p>
             </div>
             <div className="bg-surface-container-high p-3 rounded-sm border-l-2 border-stage">
               <p className="text-[9px] text-outline uppercase font-mono">Stage</p>
               <p className="font-mono font-bold text-stage text-lg">
-                {rider.categoryScores.stage.toFixed(1)}
+                {breakdown.stage.toFixed(1)}
               </p>
             </div>
             <div className="bg-surface-container-high p-3 rounded-sm border-l-2 border-mountain">
               <p className="text-[9px] text-outline uppercase font-mono">MTN</p>
               <p className="font-mono font-bold text-mountain text-lg">
-                {rider.categoryScores.mountain.toFixed(1)}
+                {breakdown.mountain.toFixed(1)}
               </p>
             </div>
             <div className="bg-surface-container-high p-3 rounded-sm border-l-2 border-sprint">
               <p className="text-[9px] text-outline uppercase font-mono">SPR</p>
               <p className="font-mono font-bold text-sprint text-lg">
-                {rider.categoryScores.sprint.toFixed(1)}
+                {breakdown.sprint.toFixed(1)}
               </p>
             </div>
           </div>
@@ -281,8 +288,8 @@ function ExpandedRowContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boo
       )}
 
       {/* Season History */}
-      <div className={rider.categoryScores ? 'col-span-3' : 'col-span-4'}>
-        {hasML && rider.mlPredictedScore !== null && (
+      <div className={breakdown ? 'col-span-3' : 'col-span-4'}>
+        {hasML && rider.mlPredictedScore !== null && !isML && (
           <div className="flex items-center gap-2 mb-4">
             <span className="text-xs text-on-surface-variant">ML Predicted:</span>
             <span className="text-sm font-mono font-medium">
