@@ -21,6 +21,10 @@ export const mlScores = pgTable(
     year: integer('year').notNull(),
     predictedScore: real('predicted_score').notNull(),
     modelVersion: varchar('model_version', { length: 50 }).notNull(),
+    gcPts: real('gc_pts').default(0),
+    stagePts: real('stage_pts').default(0),
+    mountainPts: real('mountain_pts').default(0),
+    sprintPts: real('sprint_pts').default(0),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
