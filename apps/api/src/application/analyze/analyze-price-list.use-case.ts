@@ -260,7 +260,15 @@ export class AnalyzePriceListUseCase {
         seasonBreakdown: s.seasonBreakdown,
         scoringMethod: mlPredictions ? ('hybrid' as const) : ('rules' as const),
         mlPredictedScore: mlPredictions?.get(s.matchedRider?.id ?? '')?.score ?? null,
-        mlBreakdown: mlPredictions?.get(s.matchedRider?.id ?? '')?.breakdown ?? null,
+        mlBreakdown: (() => {
+          const bd = mlPredictions?.get(s.matchedRider?.id ?? '')?.breakdown ?? null;
+          if (bd && s.matchedRider?.fullName?.includes('Pogačar')) {
+            this.logger.debug(
+              `DEBUG Pogačar ML breakdown: ${JSON.stringify(bd)}, score: ${mlPredictions?.get(s.matchedRider?.id ?? '')?.score}`,
+            );
+          }
+          return bd;
+        })(),
       };
     });
 
@@ -287,7 +295,8 @@ export class AnalyzePriceListUseCase {
    */
   private async fetchMlPredictions(
     input: AnalyzeInput,
-    riderIds: string[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _riderIds: string[],
   ): Promise<Map<
     string,
     {
@@ -313,9 +322,10 @@ export class AnalyzePriceListUseCase {
       return null;
     }
 
-    // Check cache first
-    const cached = await this.mlScoreRepo.findByRace(input.raceSlug, input.year, modelVersion);
-    if (cached.length > 0) {
+    // Check cache first — DISABLED for debugging
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (false as boolean) {
+      const cached = await this.mlScoreRepo.findByRace(input.raceSlug!, input.year!, modelVersion);
       this.logger.debug(
         `ML cache hit for ${input.raceSlug}/${input.year} (model ${modelVersion}, ${cached.length} predictions)`,
       );
@@ -350,11 +360,14 @@ export class AnalyzePriceListUseCase {
           ttt: input.profileSummary.tttCount ?? 0,
         }
       : undefined;
+    // Don't pass riderIds — let the ML service use its own startlist from DB.
+    // Passing riderIds creates a synthetic startlist with team_name='unknown'
+    // which corrupts team features and produces duplicate/different predictions.
     const predictions = await this.mlScoring.predictRace(
       input.raceSlug,
       input.year,
       profileForMl,
-      riderIds,
+      undefined,
       input.raceType,
     );
     if (!predictions) {
