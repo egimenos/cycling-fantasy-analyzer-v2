@@ -1,8 +1,11 @@
 ---
 work_package_id: WP03
 title: Database & NestJS Integration
-lane: planned
+lane: 'done'
 dependencies: [WP02]
+base_branch: 013-productionize-source-by-source-ml-WP02
+base_commit: 266f1e0269b962962654ccfe8882235fac25b73d
+created_at: '2026-03-29T18:22:25.646847+00:00'
 subtasks:
   - T013
   - T014
@@ -11,10 +14,10 @@ subtasks:
   - T017
 phase: Phase 2 - Integration
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '13923'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-29T18:00:50Z'
     lane: planned
@@ -173,3 +176,6 @@ requirement_refs:
 ## Activity Log
 
 - 2026-03-29T18:00:50Z – system – lane=planned – Prompt created.
+- 2026-03-29T18:22:26Z – claude-opus – shell_pid=13923 – lane=doing – Assigned agent via workflow command
+- 2026-03-29T18:26:09Z – claude-opus – shell_pid=13923 – lane=for_review – Migration, schema, port, adapter, entity, repository — all updated with breakdown
+- 2026-03-29T18:32:55Z – claude-opus – shell_pid=13923 – lane=done – Review passed: all subtasks verified, code matches frozen baseline

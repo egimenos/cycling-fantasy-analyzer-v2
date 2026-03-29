@@ -1,8 +1,11 @@
 ---
 work_package_id: WP04
 title: Frontend Breakdown Display
-lane: planned
+lane: 'done'
 dependencies: [WP03]
+base_branch: 013-productionize-source-by-source-ml-WP03
+base_commit: f9e79740f6690d4948655e5a025bc403974548ca
+created_at: '2026-03-29T18:26:48.012305+00:00'
 subtasks:
   - T018
   - T019
@@ -10,10 +13,10 @@ subtasks:
   - T021
 phase: Phase 3 - Frontend
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '18407'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-29T18:00:50Z'
     lane: planned
@@ -131,3 +134,6 @@ requirement_refs:
 ## Activity Log
 
 - 2026-03-29T18:00:50Z – system – lane=planned – Prompt created.
+- 2026-03-29T18:26:49Z – claude-opus – shell_pid=18407 – lane=doing – Assigned agent via workflow command
+- 2026-03-29T18:30:13Z – claude-opus – shell_pid=18407 – lane=for_review – Shared types + rider table + use case updated: ML breakdown for stage races, rules-based for classics
+- 2026-03-29T18:32:56Z – claude-opus – shell_pid=18407 – lane=done – Review passed: all subtasks verified, code matches frozen baseline

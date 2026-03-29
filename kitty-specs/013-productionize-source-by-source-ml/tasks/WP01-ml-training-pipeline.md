@@ -1,8 +1,11 @@
 ---
 work_package_id: WP01
 title: ML Training Pipeline
-lane: planned
+lane: 'done'
 dependencies: []
+base_branch: main
+base_commit: 6fb9253dfc8efd21e3d3aab352afb8963e607936
+created_at: '2026-03-29T18:15:08.044833+00:00'
 subtasks:
   - T001
   - T002
@@ -12,10 +15,10 @@ subtasks:
   - T006
 phase: Phase 1 - Foundation
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '23941'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-29T18:00:50Z'
     lane: planned
@@ -229,3 +232,7 @@ requirement_refs:
 ## Activity Log
 
 - 2026-03-29T18:00:50Z – system – lane=planned – Prompt created.
+- 2026-03-29T18:15:08Z – claude-opus – shell_pid=7525 – lane=doing – Assigned agent via workflow command
+- 2026-03-29T18:18:19Z – claude-opus – shell_pid=7525 – lane=for_review – All 6 subtasks complete: train_sources.py, metadata.json, retrain.py, ADR, runbook, verified
+- 2026-03-29T18:31:51Z – claude-opus – shell_pid=23941 – lane=doing – Started review via workflow command
+- 2026-03-29T18:32:52Z – claude-opus – shell_pid=23941 – lane=done – Review passed: all subtasks verified, code matches frozen baseline

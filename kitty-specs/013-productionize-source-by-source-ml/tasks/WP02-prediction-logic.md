@@ -1,8 +1,11 @@
 ---
 work_package_id: WP02
 title: Source-by-Source Prediction Logic
-lane: planned
+lane: 'done'
 dependencies: [WP01]
+base_branch: 013-productionize-source-by-source-ml-WP01
+base_commit: c630f9943700028a4a0cc0c85157a42513f31e1e
+created_at: '2026-03-29T18:18:39.741082+00:00'
 subtasks:
   - T007
   - T008
@@ -12,10 +15,10 @@ subtasks:
   - T012
 phase: Phase 1 - Foundation
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '11316'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-29T18:00:50Z'
     lane: planned
@@ -216,3 +219,6 @@ For now, handle the case where columns don't exist yet (graceful fallback).
 ## Activity Log
 
 - 2026-03-29T18:00:50Z – system – lane=planned – Prompt created.
+- 2026-03-29T18:18:40Z – claude-opus – shell_pid=11316 – lane=doing – Assigned agent via workflow command
+- 2026-03-29T18:22:03Z – claude-opus – shell_pid=11316 – lane=for_review – predict_sources.py + app.py rewrite: source-by-source with breakdown, cache, supply estimation, completion rates
+- 2026-03-29T18:32:53Z – claude-opus – shell_pid=11316 – lane=done – Review passed: all subtasks verified, code matches frozen baseline

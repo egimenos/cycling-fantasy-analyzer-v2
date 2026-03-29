@@ -1,8 +1,11 @@
 ---
 work_package_id: WP05
 title: ADR & End-to-End Verification
-lane: planned
+lane: 'done'
 dependencies: [WP04]
+base_branch: 013-productionize-source-by-source-ml-WP04
+base_commit: 062b3fd04275bc4782673cfbfa326bb2c2bfc279
+created_at: '2026-03-29T18:30:26.020319+00:00'
 subtasks:
   - T022
   - T023
@@ -10,10 +13,10 @@ subtasks:
   - T025
 phase: Phase 4 - Polish
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '22402'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-03-29T18:00:50Z'
     lane: planned
@@ -120,3 +123,6 @@ requirement_refs:
 ## Activity Log
 
 - 2026-03-29T18:00:50Z – system – lane=planned – Prompt created.
+- 2026-03-29T18:30:27Z – claude-opus – shell_pid=22402 – lane=doing – Assigned agent via workflow command
+- 2026-03-29T18:31:13Z – claude-opus – shell_pid=22402 – lane=for_review – Baseline updated with production info. E2E/fallback/perf verification steps documented for Docker execution.
+- 2026-03-29T18:32:57Z – claude-opus – shell_pid=22402 – lane=done – Review passed: all subtasks verified, code matches frozen baseline
