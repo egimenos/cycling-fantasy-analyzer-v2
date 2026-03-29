@@ -378,6 +378,9 @@ def predict(req: PredictRequest, request: Request):
             detail=f"No features for {req.race_slug}/{req.year} (no startlist?)",
         )
 
+    # Enrich with Glicko ratings (gc_mu, gc_rd, stage_mu, stage_rd, gc_mu_delta_12m)
+    features_df = _enrich_with_glicko(features_df, race_date)
+
     # Also load stage features for this race's riders
     features_df = _enrich_with_stage_features(features_df)
 
@@ -469,6 +472,83 @@ def _load_completion_rates() -> dict[str, float]:
     except Exception:
         logger.exception("Failed to load completion rates")
         return {}
+
+
+def _enrich_with_glicko(features_df: pd.DataFrame, race_date) -> pd.DataFrame:
+    """Add Glicko-2 ratings for each rider (gc_mu, gc_rd, stage_mu, stage_rd, gc_mu_delta_12m)."""
+    try:
+        conn = psycopg2.connect(DB_URL)
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT rider_id, race_date, gc_mu, gc_rd, stage_mu, stage_rd
+            FROM rider_ratings
+            ORDER BY race_date
+        """)
+        cols = [d[0] for d in cur.description]
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        if not rows:
+            for col in ["gc_mu", "gc_rd", "stage_mu", "stage_rd", "gc_mu_delta_12m"]:
+                if col not in features_df.columns:
+                    features_df[col] = 1500.0 if "mu" in col else (350.0 if "rd" in col else 0.0)
+            return features_df
+
+        ratings_df = pd.DataFrame(rows, columns=cols)
+        ratings_df["race_date"] = pd.to_datetime(ratings_df["race_date"])
+        race_dt = pd.Timestamp(race_date)
+        cutoff_12m = race_dt - pd.Timedelta(days=365)
+
+        glicko_data = []
+        for rider_id in features_df["rider_id"].unique():
+            rider_ratings = ratings_df[
+                (ratings_df["rider_id"] == rider_id) &
+                (ratings_df["race_date"] < race_dt)
+            ]
+            if len(rider_ratings) == 0:
+                glicko_data.append({
+                    "rider_id": rider_id,
+                    "gc_mu": 1500.0, "gc_rd": 350.0,
+                    "stage_mu": 1500.0, "stage_rd": 350.0,
+                    "gc_mu_delta_12m": 0.0,
+                })
+            else:
+                latest = rider_ratings.iloc[-1]
+                older = rider_ratings[rider_ratings["race_date"] <= cutoff_12m]
+                gc_mu_12m_ago = older.iloc[-1]["gc_mu"] if len(older) > 0 else 1500.0
+                glicko_data.append({
+                    "rider_id": rider_id,
+                    "gc_mu": latest["gc_mu"],
+                    "gc_rd": latest["gc_rd"],
+                    "stage_mu": latest["stage_mu"],
+                    "stage_rd": latest["stage_rd"],
+                    "gc_mu_delta_12m": latest["gc_mu"] - gc_mu_12m_ago,
+                })
+
+        glicko_df = pd.DataFrame(glicko_data)
+
+        # Drop existing glicko columns if any, then merge
+        drop_cols = [c for c in ["gc_mu", "gc_rd", "stage_mu", "stage_rd", "gc_mu_delta_12m"]
+                     if c in features_df.columns]
+        if drop_cols:
+            features_df = features_df.drop(columns=drop_cols)
+        features_df = features_df.merge(glicko_df, on="rider_id", how="left")
+
+        # Fill defaults
+        features_df["gc_mu"] = features_df["gc_mu"].fillna(1500.0)
+        features_df["gc_rd"] = features_df["gc_rd"].fillna(350.0)
+        features_df["stage_mu"] = features_df["stage_mu"].fillna(1500.0)
+        features_df["stage_rd"] = features_df["stage_rd"].fillna(350.0)
+        features_df["gc_mu_delta_12m"] = features_df["gc_mu_delta_12m"].fillna(0.0)
+
+        return features_df
+    except Exception:
+        logger.exception("Failed to enrich with Glicko ratings")
+        for col in ["gc_mu", "gc_rd", "stage_mu", "stage_rd", "gc_mu_delta_12m"]:
+            if col not in features_df.columns:
+                features_df[col] = 1500.0 if "mu" in col else (350.0 if "rd" in col else 0.0)
+        return features_df
 
 
 def _enrich_with_stage_features(features_df: pd.DataFrame) -> pd.DataFrame:
