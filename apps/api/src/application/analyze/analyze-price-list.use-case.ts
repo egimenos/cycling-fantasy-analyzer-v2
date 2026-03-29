@@ -64,6 +64,7 @@ export interface AnalyzedRider {
   seasonBreakdown: SeasonBreakdown[] | null;
   scoringMethod: 'rules' | 'hybrid';
   mlPredictedScore: number | null;
+  mlBreakdown: { gc: number; stage: number; mountain: number; sprint: number } | null;
 }
 
 export interface AnalyzeResponse {
@@ -234,6 +235,7 @@ export class AnalyzePriceListUseCase {
           seasonBreakdown: null,
           scoringMethod: 'rules' as const,
           mlPredictedScore: null,
+          mlBreakdown: null,
         };
       }
 
@@ -257,7 +259,8 @@ export class AnalyzePriceListUseCase {
         seasonsUsed: s.riderScore.seasonsUsed,
         seasonBreakdown: s.seasonBreakdown,
         scoringMethod: mlPredictions ? ('hybrid' as const) : ('rules' as const),
-        mlPredictedScore: mlPredictions?.get(s.matchedRider?.id ?? '') ?? null,
+        mlPredictedScore: mlPredictions?.get(s.matchedRider?.id ?? '')?.score ?? null,
+        mlBreakdown: mlPredictions?.get(s.matchedRider?.id ?? '')?.breakdown ?? null,
       };
     });
 
@@ -285,7 +288,13 @@ export class AnalyzePriceListUseCase {
   private async fetchMlPredictions(
     input: AnalyzeInput,
     riderIds: string[],
-  ): Promise<Map<string, number> | null> {
+  ): Promise<Map<
+    string,
+    {
+      score: number;
+      breakdown: { gc: number; stage: number; mountain: number; sprint: number } | null;
+    }
+  > | null> {
     const isStageRace =
       input.raceType === RaceType.GRAND_TOUR || input.raceType === RaceType.MINI_TOUR;
 
@@ -310,7 +319,23 @@ export class AnalyzePriceListUseCase {
       this.logger.debug(
         `ML cache hit for ${input.raceSlug}/${input.year} (model ${modelVersion}, ${cached.length} predictions)`,
       );
-      return new Map(cached.map((s) => [s.riderId, s.predictedScore]));
+      return new Map(
+        cached.map((s) => [
+          s.riderId,
+          {
+            score: s.predictedScore,
+            breakdown:
+              s.gcPts || s.stagePts || s.mountainPts || s.sprintPts
+                ? {
+                    gc: s.gcPts ?? 0,
+                    stage: s.stagePts ?? 0,
+                    mountain: s.mountainPts ?? 0,
+                    sprint: s.sprintPts ?? 0,
+                  }
+                : null,
+          },
+        ]),
+      );
     }
 
     // Cache miss — call ML service (pass race profile for v4 features)
@@ -342,6 +367,14 @@ export class AnalyzePriceListUseCase {
     this.logger.log(
       `ML predictions received for ${input.raceSlug}/${input.year}: ${predictions.length} riders`,
     );
-    return new Map(predictions.map((p) => [p.riderId, p.predictedScore]));
+    return new Map(
+      predictions.map((p) => [
+        p.riderId,
+        {
+          score: p.predictedScore,
+          breakdown: p.breakdown ?? null,
+        },
+      ]),
+    );
   }
 }

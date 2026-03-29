@@ -144,6 +144,10 @@ If metrics drop significantly, investigate which source degraded.
 ## Quick Reference — All Commands in Order
 
 ```bash
+# Option A: Run everything in one command
+make retrain
+
+# Option B: Run steps individually
 # 1. Database
 make seed                                          # or incremental scrape
 
@@ -162,9 +166,22 @@ cd ml && python -m src.stage_features
 # 6. Classification features
 cd ml && python -m src.classification_history_features
 
-# 7. Verify
+# 7. Train source-by-source models
+cd ml && python -m src.train_sources
+
+# 8. Verify
 cd ml && python -m src.benchmark_integrated
 ```
+
+**Expected artifacts after step 7** (in `ml/models/`):
+
+- `gc_gate.joblib`
+- `stage_flat.joblib`, `stage_hilly.joblib`, `stage_mountain.joblib`
+- `stage_itt_gate.joblib`, `stage_itt_magnitude.joblib`
+- `mtn_final_gate.joblib`, `mtn_pass_capture.joblib`
+- `spr_inter_capture.joblib`
+- `metadata.json` (feature lists, thresholds, heuristic weights)
+- `model_version.txt`
 
 ## Troubleshooting
 

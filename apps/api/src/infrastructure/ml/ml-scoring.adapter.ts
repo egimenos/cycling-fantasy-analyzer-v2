@@ -2,8 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
   MlScoringPort,
   MlPrediction,
+  MlBreakdown,
   RaceProfileSummary,
 } from '../../domain/scoring/ml-scoring.port';
+
+const DEFAULT_BREAKDOWN: MlBreakdown = { gc: 0, stage: 0, mountain: 0, sprint: 0 };
 
 @Injectable()
 export class MlScoringAdapter implements MlScoringPort {
@@ -41,11 +44,16 @@ export class MlScoringAdapter implements MlScoringPort {
       });
       if (!response.ok) return null;
       const data = (await response.json()) as {
-        predictions: Array<{ rider_id: string; predicted_score: number }>;
+        predictions: Array<{
+          rider_id: string;
+          predicted_score: number;
+          breakdown?: { gc: number; stage: number; mountain: number; sprint: number };
+        }>;
       };
       return data.predictions.map((p) => ({
         riderId: p.rider_id,
         predictedScore: p.predicted_score,
+        breakdown: p.breakdown ?? DEFAULT_BREAKDOWN,
       }));
     } catch {
       this.logger.warn(`ML service unavailable for predictRace(${raceSlug}, ${year})`);

@@ -1,27 +1,29 @@
 """
 CLI entrypoint for model retraining.
 
-Orchestrates: load data -> extract features -> train models -> save version.
+Orchestrates the full source-by-source pipeline:
+  1. Load data from database
+  2. Compute Glicko-2 ratings
+  3. Build feature cache
+  4. Build stage targets
+  5. Build stage features
+  6. Build classification history features
+  7. Train all sub-models (source-by-source)
+
 Called via: make retrain  (which runs: cd ml && python -m src.retrain)
 """
 
 import os
-from datetime import datetime, timezone
+import time
 
 import pandas as pd
 
 from .data import load_data
 from .features import extract_all_training_features
-from .train import train_models
 
 
 def _synthesize_startlists(results_df: pd.DataFrame) -> pd.DataFrame:
-    """Derive startlists from race_results when startlist_entries is empty.
-
-    Creates one entry per distinct (rider_id, race_slug, year) from results.
-    This fallback keeps the retrain pipeline working even when the
-    startlist_entries table has not been populated yet.
-    """
+    """Derive startlists from race_results when startlist_entries is empty."""
     sl = results_df[['race_slug', 'year', 'rider_id']].drop_duplicates()
     sl = sl.copy()
     sl['team_name'] = (
@@ -40,31 +42,59 @@ def main():
         'postgresql://cycling:cycling@localhost:5432/cycling_analyzer',
     )
     model_dir = os.path.join(os.path.dirname(__file__), '..', 'models')
+    cache_dir = os.path.join(os.path.dirname(__file__), '..', 'cache')
     os.makedirs(model_dir, exist_ok=True)
+    os.makedirs(cache_dir, exist_ok=True)
 
-    print("[1/4] Loading data...")
+    t0 = time.time()
+    print("=" * 60)
+    print("  Source-by-Source Retraining Pipeline")
+    print("=" * 60)
+
+    # Step 1: Load data
+    print("\n[1/7] Loading data from database...")
     results_df, startlists_df = load_data(db_url)
-
     if len(startlists_df) == 0:
         print("  WARNING: startlist_entries is empty — synthesizing from race results")
         startlists_df = _synthesize_startlists(results_df)
         print(f"  Synthesized {len(startlists_df):,} startlist entries")
 
-    print("[2/4] Extracting training features...")
-    dataset = extract_all_training_features(results_df, startlists_df)
+    # Step 2: Compute Glicko-2 ratings
+    print("\n[2/7] Computing Glicko-2 ratings...")
+    from .glicko2 import main as glicko_main
+    glicko_main()
 
-    print("[3/4] Training models...")
-    metrics = train_models(dataset, model_dir)
+    # Step 3: Build feature cache
+    print("\n[3/7] Building feature cache...")
+    from .cache_features import main as cache_main
+    cache_main()
 
-    print("[4/4] Writing model version...")
-    version = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')
-    version_path = os.path.join(model_dir, 'model_version.txt')
-    with open(version_path, 'w') as f:
-        f.write(version)
+    # Step 4: Build stage targets
+    print("\n[4/7] Building stage targets...")
+    from .stage_targets import save_stage_targets
+    save_stage_targets(db_url)
 
-    print(f"Done. Model version: {version}")
-    for key, val in metrics.items():
-        print(f"  {key}: {val}")
+    # Step 5: Build stage features
+    print("\n[5/7] Building stage features...")
+    from .stage_features import save_stage_features
+    save_stage_features(db_url)
+
+    # Step 6: Build classification history features
+    print("\n[6/7] Building classification history features...")
+    from .classification_history_features import save_classification_features
+    save_classification_features(db_url)
+
+    # Step 7: Train all sub-models
+    print("\n[7/7] Training source-by-source models...")
+    from .train_sources import train_all
+    metadata = train_all(model_dir=model_dir, cache_dir=cache_dir)
+
+    elapsed = time.time() - t0
+    print(f"\n{'=' * 60}")
+    print(f"  Retraining complete in {elapsed:.0f}s")
+    print(f"  Model version: {metadata['model_version']}")
+    print(f"  Artifacts: {model_dir}")
+    print(f"{'=' * 60}")
 
 
 if __name__ == '__main__':

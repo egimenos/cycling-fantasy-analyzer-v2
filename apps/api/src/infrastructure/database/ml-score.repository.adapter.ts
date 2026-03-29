@@ -46,6 +46,10 @@ export class MlScoreRepositoryAdapter implements MlScoreRepositoryPort {
           year: score.year,
           predictedScore: score.predictedScore,
           modelVersion: score.modelVersion,
+          gcPts: score.gcPts,
+          stagePts: score.stagePts,
+          mountainPts: score.mountainPts,
+          sprintPts: score.sprintPts,
         })),
       )
       .onConflictDoNothing();
@@ -74,6 +78,10 @@ export class MlScoreRepositoryAdapter implements MlScoreRepositoryPort {
       year: row.year,
       predictedScore: row.predictedScore,
       modelVersion: row.modelVersion,
+      gcPts: row.gcPts ?? 0,
+      stagePts: row.stagePts ?? 0,
+      mountainPts: row.mountainPts ?? 0,
+      sprintPts: row.sprintPts ?? 0,
       createdAt: row.createdAt,
     };
   }
