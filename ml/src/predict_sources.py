@@ -162,16 +162,29 @@ def predict_race_sources(
         race_type, n_stages, race_slug, year, supply_history,
     )
 
-    # Sharpen mountain and sprint before normalizing — these sources are
-    # concentrated in few riders but the model predicts diffusely.
-    # Power > 1 amplifies differences; threshold zeros out noise.
-    mtn_total = _sharpen(mtn_total, power=2.0, zero_percentile=60)
-    spr_total = _sharpen(spr_total, power=1.5, zero_percentile=50)
+    # ── Per-source calibration (each source has different needs) ────
+    #
+    # GC: predictions come from scoring table lookup — already calibrated.
+    #     Do NOT normalize. Sum < supply is expected (gate misses riders 11-20).
+    #
+    # Stage: model predicts per-rider independently → sum inflated.
+    #     Scale to supply (preserves ranking, fixes magnitude).
+    #
+    # Mountain/Sprint: capture rates are diffuse (Ridge regresses to mean).
+    #     Sharpen to concentrate, then scale to supply.
 
-    gc_total = _normalize_to_supply(gc_total, supplies["gc"], supplies["gc_max_rider"])
-    stage_pts = _normalize_to_supply(stage_pts, supplies["stage"], supplies["stage_max_rider"])
-    mtn_total = _normalize_to_supply(mtn_total, supplies["mountain"], supplies["mountain_max_rider"])
-    spr_total = _normalize_to_supply(spr_total, supplies["sprint"], supplies["sprint_max_rider"])
+    # GC: leave as-is (already in fantasy points from table lookup)
+
+    # Stage: scale to supply
+    stage_pts = _scale_to_supply(stage_pts, supplies["stage"])
+
+    # Mountain: sharpen then scale
+    mtn_total = _sharpen(mtn_total, power=2.0, zero_percentile=60)
+    mtn_total = _scale_to_supply(mtn_total, supplies["mountain"])
+
+    # Sprint: sharpen then scale
+    spr_total = _sharpen(spr_total, power=1.5, zero_percentile=50)
+    spr_total = _scale_to_supply(spr_total, supplies["sprint"])
 
     # ── Build output ────────────────────────────────────────────────
     predictions = []
@@ -426,50 +439,32 @@ def _compute_race_supply(
 ) -> dict[str, float]:
     """Compute the real fantasy point supply per source for a race.
 
-    Returns dict with keys: gc, stage, mountain, sprint (total supply)
-    and gc_max_rider, stage_max_rider, etc. (max any single rider can score).
+    Returns dict with keys: gc, stage, mountain, sprint (total supply).
     """
     is_gt = race_type == "grand_tour"
-    gc_table = GC_GRAND_TOUR if is_gt else GC_MINI_TOUR
     final_table = FINAL_CLASS_GT if is_gt else FINAL_CLASS_MINI
 
-    # GC: final classification + daily
-    gc_final_supply = sum(gc_table.values())
-    gc_daily_supply = sum(GC_DAILY.values()) * n_stages
-    gc_supply = gc_final_supply + gc_daily_supply
-    gc_max_rider = gc_table[1] + GC_DAILY[1] * n_stages  # win GC + lead every day
+    # Stage: top-20 score per stage × n_stages
+    stage_supply = sum(STAGE_POINTS.values()) * n_stages
 
-    # Stage: top-20 score per stage
-    stage_per_stage = sum(STAGE_POINTS.values())
-    stage_supply = stage_per_stage * n_stages
-    # Max rider: even Pogačar can't win all stages. Realistic cap: ~8 top-3 + rest top-10
-    stage_max_rider = STAGE_POINTS[1] * 5 + STAGE_POINTS[2] * 3 + STAGE_POINTS[4] * 5 + STAGE_POINTS[8] * 5
-
-    # Mountain: final + pass
+    # Mountain: final classification + estimated pass points
     mtn_final_supply = sum(final_table.values())
     est_mtn_pass = 0.0
     if supply_history is not None:
         est_mtn_pass, _ = estimate_supply(race_slug, year, supply_history)
     mtn_supply = mtn_final_supply + est_mtn_pass
-    mtn_max_rider = final_table[1] + est_mtn_pass * 0.35  # KOM jersey + ~35% pass capture
 
-    # Sprint: final + inter + regularidad
+    # Sprint: final classification + estimated inter + regularidad
     spr_final_supply = sum(final_table.values())
     est_spr_inter = 0.0
     if supply_history is not None:
         _, est_spr_inter = estimate_supply(race_slug, year, supply_history)
     spr_supply = spr_final_supply + est_spr_inter
-    spr_max_rider = final_table[1] + est_spr_inter * 0.25  # green jersey + ~25% inter capture
 
     return {
-        "gc": gc_supply,
-        "gc_max_rider": gc_max_rider,
         "stage": stage_supply,
-        "stage_max_rider": stage_max_rider,
         "mountain": max(mtn_supply, 1.0),
-        "mountain_max_rider": max(mtn_max_rider, 1.0),
         "sprint": max(spr_supply, 1.0),
-        "sprint_max_rider": max(spr_max_rider, 1.0),
     }
 
 
@@ -504,24 +499,13 @@ def _sharpen(
     return result
 
 
-def _normalize_to_supply(
-    predictions: np.ndarray, supply: float, max_per_rider: float,
-) -> np.ndarray:
-    """Scale predictions so they sum to the real supply, then cap per rider.
+def _scale_to_supply(predictions: np.ndarray, supply: float) -> np.ndarray:
+    """Scale predictions so they sum to the real supply.
 
-    1. Scale so sum(all riders) = supply
-    2. Cap any individual rider at max_per_rider (sanity check)
-    Preserves relative ranking.
+    Simple proportional scaling — preserves relative ranking and distribution
+    shape. No per-rider caps (those caused compression artifacts).
     """
     total = predictions.sum()
     if total <= 0:
         return predictions
-
-    # Scale to supply
-    scale = supply / total
-    normalized = predictions * scale
-
-    # Sanity cap: no single rider above theoretical max
-    normalized = np.minimum(normalized, max_per_rider)
-
-    return np.maximum(normalized, 0.0)
+    return np.maximum(predictions * (supply / total), 0.0)
