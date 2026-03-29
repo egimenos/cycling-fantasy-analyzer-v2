@@ -1,7 +1,7 @@
 .PHONY: help install build dev test lint typecheck \
        db-up db-down db-generate db-migrate db-studio db-push db-psql \
        seed scrape benchmark benchmark-suite \
-       retrain ml-up ml-down ml-logs ml-restart \
+       retrain glicko ml-up ml-down ml-logs ml-restart \
        clear-ml-cache
 
 # ── Defaults ──────────────────────────────────────────────
@@ -80,8 +80,11 @@ benchmark-suite: ## Run multi-race benchmark suite (interactive)
 	$(CLI) benchmark --suite
 
 # ── ML Service ────────────────────────────────────────────
-retrain: ## Train ML models (runs in Docker)
+retrain: ## Full retrain pipeline (glicko + cache + train, runs in Docker)
 	docker compose run --rm ml-service python -m src.retrain
+
+glicko: ## Recompute Glicko-2 ratings only (runs in Docker)
+	docker compose run --rm ml-service python -m src.glicko2
 
 ml-up: ## Start ML service (docker-compose)
 	docker compose up -d ml-service
