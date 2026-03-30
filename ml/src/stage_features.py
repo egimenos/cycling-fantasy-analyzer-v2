@@ -41,7 +41,11 @@ WINDOWS = {"12m": 365, "6m": 182}
 
 
 def _load_stage_history(db_url: str) -> pd.DataFrame:
-    """Load all stage results with type classification."""
+    """Load all stage results + classic results with type classification.
+
+    Includes one-day races (classics) so that sprint/climb ability signals
+    from races like Scheldeprijs (flat) or Liège (mountain) are captured.
+    """
     conn = psycopg2.connect(db_url)
     cur = conn.cursor()
     cur.execute("""
@@ -50,9 +54,12 @@ def _load_stage_history(db_url: str) -> pd.DataFrame:
                rr.parcours_type, rr.is_itt, rr.race_date
         FROM race_results rr
         WHERE rr.race_date IS NOT NULL
-          AND rr.category = 'stage'
-          AND rr.race_type IN ('grand_tour', 'mini_tour')
           AND rr.dnf = false
+          AND (
+              (rr.category = 'stage' AND rr.race_type IN ('grand_tour', 'mini_tour'))
+              OR
+              (rr.category = 'gc' AND rr.race_type = 'classic')
+          )
         ORDER BY rr.race_date
     """)
     cols = [desc[0] for desc in cur.description]

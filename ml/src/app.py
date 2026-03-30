@@ -442,13 +442,23 @@ def _load_supply_history() -> pd.DataFrame | None:
 
 
 def _load_completion_rates() -> dict[str, float]:
-    """Load GT completion rates from database."""
+    """Load GT completion rates from database with Bayesian shrinkage.
+
+    Raw completion rates are unreliable for riders with few GTs (e.g.,
+    2/2 = 100% says nothing). Shrink toward a prior so small samples
+    don't dominate the survival bonus in sprint predictions.
+    """
+    # Bayesian prior: equivalent to 3 GTs at 70% completion
+    PRIOR_N = 3
+    PRIOR_RATE = 0.7
+
     try:
         conn = psycopg2.connect(DB_URL)
         cur = conn.cursor()
         cur.execute("""
             SELECT rider_id,
-                   AVG(CASE WHEN last_stage >= total_stages * 0.95 THEN 1.0 ELSE 0.0 END) as rate
+                   AVG(CASE WHEN last_stage >= total_stages * 0.95 THEN 1.0 ELSE 0.0 END) as rate,
+                   COUNT(*) as n_gts
             FROM (
                 SELECT rider_id, race_slug, year,
                        MAX(stage_number) as last_stage,
@@ -463,7 +473,10 @@ def _load_completion_rates() -> dict[str, float]:
             ) sub
             GROUP BY rider_id
         """)
-        rates = {str(row[0]): float(row[1]) for row in cur.fetchall()}
+        rates = {}
+        for row in cur.fetchall():
+            rid, raw_rate, n_gts = str(row[0]), float(row[1]), int(row[2])
+            rates[rid] = (n_gts * raw_rate + PRIOR_N * PRIOR_RATE) / (n_gts + PRIOR_N)
         cur.close()
         conn.close()
         return rates

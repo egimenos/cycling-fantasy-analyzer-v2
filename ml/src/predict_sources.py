@@ -182,9 +182,12 @@ def predict_race_sources(
     mtn_total = _sharpen(mtn_total, power=2.0, zero_percentile=60)
     mtn_total = _scale_to_supply(mtn_total, supplies["mountain"])
 
-    # Sprint: sharpen then scale
+    # Sprint: sharpen, scale, then cap individual riders.
+    # Historical GT data shows the top sprinter captures 12-23% of supply
+    # (mean ~16%, max outlier 23%). Cap at 25% to prevent over-concentration.
     spr_total = _sharpen(spr_total, power=1.5, zero_percentile=50)
     spr_total = _scale_to_supply(spr_total, supplies["sprint"])
+    spr_total = np.minimum(spr_total, supplies["sprint"] * 0.25)
 
     # ── Build output ────────────────────────────────────────────────
     predictions = []
