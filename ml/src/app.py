@@ -327,12 +327,14 @@ def predict(req: PredictRequest, request: Request):
     else:
         results_df, startlists_df, supply_hist, completion = state.data_cache
 
-    # Get race info
+    # Get race info — always use today as cutoff so predictions reflect
+    # the latest available data (treat every race as "future").
     race_info = get_race_info(DB_URL, req.race_slug, req.year)
+    race_date = date.today()
+
     if race_info is None:
-        if req.race_type and req.rider_ids:
+        if req.race_type:
             race_type = req.race_type
-            race_date = date.today()
         else:
             raise HTTPException(
                 status_code=404,
@@ -340,7 +342,7 @@ def predict(req: PredictRequest, request: Request):
             )
     else:
         race_type = race_info['race_type']
-        race_date = race_info['race_date']
+    logger.info("Predicting %s/%d (type=%s) with cutoff=%s", req.race_slug, req.year, race_type, race_date)
 
     if race_type == 'classic':
         raise HTTPException(

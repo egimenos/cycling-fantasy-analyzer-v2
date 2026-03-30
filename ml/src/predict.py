@@ -102,22 +102,27 @@ def predict_race(
         List of {'rider_id': str, 'predicted_score': float} dicts.
         Empty list if race not found, is a classic, or has no startlist/riders.
     """
-    # 1. Get race info (fallback to hint for future races not yet in DB)
+    # 1. Get race info — always use today as cutoff so predictions reflect
+    #    the latest available data (treat every race as "future").
     race_info = get_race_info(db_url, race_slug, year)
+    race_date = date.today()
+
     if race_info is None:
-        if race_type_hint and rider_ids:
+        if race_type_hint:
             logger.info(
-                "Race %s/%d not in DB — using race_type_hint=%s and today as race_date",
-                race_slug, year, race_type_hint,
+                "Race %s/%d not in DB — using race_type_hint=%s, cutoff=%s",
+                race_slug, year, race_type_hint, race_date,
             )
             race_type = race_type_hint
-            race_date = date.today()
         else:
             logger.warning("Race not found: %s/%d (no race_type_hint provided)", race_slug, year)
             return []
     else:
         race_type = race_info['race_type']
-        race_date = race_info['race_date']
+        logger.info(
+            "Race %s/%d found in DB (type=%s) — using today as cutoff: %s",
+            race_slug, year, race_type, race_date,
+        )
 
     # 2. Classics not supported
     if race_type == 'classic':
