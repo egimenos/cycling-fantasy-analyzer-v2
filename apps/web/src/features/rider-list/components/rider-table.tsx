@@ -155,7 +155,11 @@ function createColumns(
       },
     },
     {
-      accessorKey: 'pointsPerHillio',
+      id: 'value',
+      accessorFn: (row) => {
+        const score = getEffectiveScore(row, hasML);
+        return score !== null && row.priceHillios > 0 ? score / row.priceHillios : null;
+      },
       header: 'Value',
       enableSorting: true,
       cell: ({ getValue, row }) => {

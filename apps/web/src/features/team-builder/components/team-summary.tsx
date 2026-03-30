@@ -145,7 +145,12 @@ export function TeamSummary({
                       Value
                     </div>
                     <div className="font-mono text-green-700 dark:text-green-400 font-bold">
-                      {rider.pointsPerHillio?.toFixed(1) ?? '—'}
+                      {(() => {
+                        const score = getEffectiveScore(rider);
+                        return score !== null && rider.priceHillios > 0
+                          ? (score / rider.priceHillios).toFixed(1)
+                          : '—';
+                      })()}
                     </div>
                   </div>
                 </div>
