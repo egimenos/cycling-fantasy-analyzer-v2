@@ -40,6 +40,9 @@ STARTLIST_FEATURE_COLS = [
     'strongest_teammate_gap',
     'team_gc_candidates',
     'team_avg_gc_mu',
+    # Race-level relative features (computed in compute_all_startlist_features)
+    'gc_mu_rank_in_startlist',
+    'gc_mu_gap_to_best',
 ]
 
 
@@ -161,4 +164,21 @@ def compute_all_startlist_features(
         result[rider_id] = compute_startlist_team_features(
             rider_id, team_name, startlist, rating_lookup,
         )
+
+    # Race-level relative features: rank and gap computed once for all riders
+    all_rider_ids = startlist['rider_id'].values
+    all_gc_mus = {
+        rid: rating_lookup.get(rid, {'gc_mu': DEFAULT_GC_MU})['gc_mu']
+        for rid in all_rider_ids
+    }
+    best_gc_mu = max(all_gc_mus.values()) if all_gc_mus else DEFAULT_GC_MU
+    # Rank: 1 = strongest gc_mu on the startlist (descending order)
+    sorted_mus = sorted(all_gc_mus.values(), reverse=True)
+    for rid in all_rider_ids:
+        my_mu = all_gc_mus[rid]
+        # Rank by descending gc_mu; ties get the best (lowest) rank
+        rank = sorted_mus.index(my_mu) + 1
+        result[rid]['gc_mu_rank_in_startlist'] = rank
+        result[rid]['gc_mu_gap_to_best'] = best_gc_mu - my_mu
+
     return result
