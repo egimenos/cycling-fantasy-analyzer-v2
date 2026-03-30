@@ -214,6 +214,74 @@ def build_stage_features(db_url: str | None = None) -> pd.DataFrame:
     return result
 
 
+def compute_stage_features_ondemand(
+    rider_ids: list[str],
+    cutoff_date,
+    db_url: str | None = None,
+) -> pd.DataFrame:
+    """Compute stage features on-demand for a set of riders at a cutoff date.
+
+    Used for future race predictions where the cached parquet has no data.
+    Same computation as build_stage_features but for a single prediction request.
+    """
+    url = db_url or DB_URL
+    history = _load_stage_history(url)
+    history = history.sort_values("race_date").reset_index(drop=True)
+
+    cutoff = pd.Timestamp(cutoff_date)
+
+    target_keys = pd.DataFrame({"rider_id": rider_ids, "race_start": cutoff})
+
+    merged = target_keys.merge(
+        history[["rider_id", "race_date", "stage_type", "stage_pts",
+                 "weighted_pts", "is_top10", "position"]],
+        on="rider_id",
+        suffixes=("", "_hist"),
+    )
+    merged = merged[merged["race_date"] < merged["race_start"]].copy()
+    if merged.empty:
+        result = pd.DataFrame({"rider_id": rider_ids})
+        for window_name in WINDOWS:
+            for st in STAGE_TYPES:
+                for suffix in ["pts", "strength", "top10s", "starts", "top10_rate"]:
+                    result[f"{st}_{suffix}_{window_name}"] = 0.0
+        return result
+
+    merged["days_before"] = (merged["race_start"] - merged["race_date"]).dt.days
+
+    all_features = []
+    for window_name, window_days in WINDOWS.items():
+        windowed = merged[merged["days_before"] <= window_days]
+        for st in STAGE_TYPES:
+            st_data = windowed[windowed["stage_type"] == st]
+            grouped = st_data.groupby("rider_id").agg(
+                pts=("stage_pts", "sum"),
+                weighted_pts=("weighted_pts", "sum"),
+                top10s=("is_top10", "sum"),
+                starts=("position", "count"),
+            ).reset_index()
+            grouped = grouped.rename(columns={
+                "pts": f"{st}_pts_{window_name}",
+                "weighted_pts": f"{st}_strength_{window_name}",
+                "top10s": f"{st}_top10s_{window_name}",
+                "starts": f"{st}_starts_{window_name}",
+            })
+            starts_col = f"{st}_starts_{window_name}"
+            top10_col = f"{st}_top10s_{window_name}"
+            grouped[f"{st}_top10_rate_{window_name}"] = (
+                grouped[top10_col] / grouped[starts_col]
+            ).fillna(0.0)
+            all_features.append(grouped)
+
+    result = pd.DataFrame({"rider_id": rider_ids})
+    for feat_df in all_features:
+        result = result.merge(feat_df, on="rider_id", how="left")
+
+    feat_cols = [c for c in result.columns if c != "rider_id"]
+    result[feat_cols] = result[feat_cols].fillna(0.0)
+    return result
+
+
 def save_stage_features(db_url: str | None = None) -> str:
     """Build and save stage features to parquet."""
     df = build_stage_features(db_url)

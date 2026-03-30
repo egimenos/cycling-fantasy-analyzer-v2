@@ -294,7 +294,7 @@ def _predict_stage(
             continue
 
         X = df[avail].fillna(0).values
-        pred = np.maximum(np.square(model.predict(X)), 0)  # inverse sqrt
+        pred = np.square(np.maximum(model.predict(X), 0))  # clip negatives, then inverse sqrt
         n_stages = stage_counts.get(st, 0)
         total += pred * n_stages
 
@@ -307,7 +307,7 @@ def _predict_stage(
         if avail:
             X = df[avail].fillna(0).values
             gate_pred = itt_gate.predict(X)
-            mag_pred = np.maximum(np.square(itt_mag.predict(X)), 0)
+            mag_pred = np.square(np.maximum(itt_mag.predict(X), 0))
             itt_pts = np.where(gate_pred == 1, mag_pred, 0.0)
             n_itt = stage_counts.get("itt", 0)
             total += itt_pts * n_itt
@@ -348,7 +348,7 @@ def _predict_mountain(
             avail = [f for f in feats if f in df.columns]
             if avail:
                 X = df[avail].fillna(0).values
-                capture = np.maximum(np.square(mtn_cap.predict(X)), 0)
+                capture = np.square(np.maximum(mtn_cap.predict(X), 0))
                 pass_pts = capture * est_mtn
 
     return final_pts, pass_pts
@@ -383,7 +383,7 @@ def _predict_sprint(
             avail = [f for f in feats if f in df.columns]
             if avail:
                 X = df[avail].fillna(0).values
-                capture = np.maximum(np.square(spr_cap.predict(X)), 0)
+                capture = np.square(np.maximum(spr_cap.predict(X), 0))
                 inter_pts = capture * est_spr
 
     return final_pts, inter_pts

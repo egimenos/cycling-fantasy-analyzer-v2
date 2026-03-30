@@ -563,23 +563,23 @@ def _enrich_with_glicko(features_df: pd.DataFrame, race_date) -> pd.DataFrame:
 
 
 def _enrich_with_stage_features(features_df: pd.DataFrame) -> pd.DataFrame:
-    """Add stage-specific features from cached parquet if available."""
-    stage_path = os.path.join(CACHE_DIR, "stage_features.parquet")
-    if not os.path.isfile(stage_path):
-        return features_df
+    """Add stage-specific features, always computed on-demand with cutoff=today.
+
+    Every prediction is treated as a fresh/future race: stage features are
+    computed from the rider's history up to today, not from the training cache.
+    """
+    year_col = "race_year" if "race_year" in features_df.columns else "year"
+    if year_col == "race_year":
+        features_df = features_df.rename(columns={"race_year": "year"})
 
     try:
-        stage_feats = pd.read_parquet(stage_path)
-        year_col = "race_year" if "race_year" in features_df.columns else "year"
-        if year_col == "race_year":
-            features_df = features_df.rename(columns={"race_year": "year"})
-
-        merged = features_df.merge(
-            stage_feats, on=["rider_id", "race_slug", "year"], how="left",
-        )
-        stage_cols = [c for c in stage_feats.columns if c not in ["rider_id", "race_slug", "year"]]
+        from .stage_features import compute_stage_features_ondemand
+        rider_ids = features_df["rider_id"].tolist()
+        ondemand = compute_stage_features_ondemand(rider_ids, date.today(), DB_URL)
+        merged = features_df.merge(ondemand, on="rider_id", how="left")
+        stage_cols = [c for c in ondemand.columns if c != "rider_id"]
         merged[stage_cols] = merged[stage_cols].fillna(0)
         return merged
     except Exception:
-        logger.exception("Failed to enrich with stage features")
+        logger.exception("Failed to compute stage features on-demand")
         return features_df
