@@ -44,9 +44,6 @@ class AnalyzedRiderDto {
   unmatched!: boolean;
 
   @Allow()
-  compositeScore!: number | null;
-
-  @Allow()
   pointsPerHillio!: number | null;
 
   @Allow()

@@ -8,7 +8,6 @@ import {
   getCrossTypeWeight,
   getRaceClassWeight,
   getCategoryAffinity,
-  COMPOSITE_SCORE_WEIGHTS,
 } from './scoring-weights.config';
 import { getTemporalWeight } from './temporal-decay';
 
@@ -29,29 +28,6 @@ export interface RiderScore {
   readonly totalProjectedPts: number;
   readonly seasonsUsed: number;
   readonly qualifyingResultsCount: number;
-}
-
-/**
- * Price-aware composite score extending RiderScore with value metrics.
- * This is the PRIMARY ranking metric displayed to users.
- */
-export interface CompositeRiderScore {
-  readonly riderScore: RiderScore;
-  readonly priceHillios: number;
-  readonly pointsPerHillio: number;
-  readonly normalizedValueScore: number;
-  readonly compositeScore: number;
-}
-
-/**
- * Pool-level statistics used for min-max normalization.
- * Computed across the entire rider pool before individual composite scores.
- */
-export interface PoolStats {
-  readonly minPointsPerHillio: number;
-  readonly maxPointsPerHillio: number;
-  readonly minProjectedPts: number;
-  readonly maxProjectedPts: number;
 }
 
 /**
@@ -307,69 +283,6 @@ export function computeSeasonBreakdown(
 }
 
 /**
- * Computes pool statistics from a set of rider scores + prices.
- * Used to normalize individual scores relative to the pool.
- *
- * Riders with 0 projected points or 0 price are excluded from stats
- * because they would distort the normalization range.
- */
-export function computePoolStats(
-  entries: ReadonlyArray<{ totalProjectedPts: number; priceHillios: number }>,
-): PoolStats {
-  const scoredEntries = entries.filter((e) => e.totalProjectedPts > 0 && e.priceHillios > 0);
-
-  if (scoredEntries.length === 0) {
-    return { minPointsPerHillio: 0, maxPointsPerHillio: 0, minProjectedPts: 0, maxProjectedPts: 0 };
-  }
-
-  const pphValues = scoredEntries.map((e) => e.totalProjectedPts / e.priceHillios);
-  const ptsValues = scoredEntries.map((e) => e.totalProjectedPts);
-
-  return {
-    minPointsPerHillio: Math.min(...pphValues),
-    maxPointsPerHillio: Math.max(...pphValues),
-    minProjectedPts: Math.min(...ptsValues),
-    maxProjectedPts: Math.max(...ptsValues),
-  };
-}
-
-/**
- * Computes the composite value score for a rider within the context of a rider pool.
- *
- * compositeScore = α × normalizedPts + β × normalizedValueScore
- * where α=0.6 (raw performance) and β=0.4 (price efficiency)
- */
-export function computeCompositeScore(
-  riderScore: RiderScore,
-  priceHillios: number,
-  poolStats: PoolStats,
-): CompositeRiderScore {
-  const pointsPerHillio = priceHillios > 0 ? riderScore.totalProjectedPts / priceHillios : 0;
-
-  const pphRange = poolStats.maxPointsPerHillio - poolStats.minPointsPerHillio;
-  const normalizedValueScore =
-    pphRange > 0 ? ((pointsPerHillio - poolStats.minPointsPerHillio) / pphRange) * 100 : 0;
-
-  const ptsRange = poolStats.maxProjectedPts - poolStats.minProjectedPts;
-  const normalizedPts =
-    ptsRange > 0
-      ? ((riderScore.totalProjectedPts - poolStats.minProjectedPts) / ptsRange) * 100
-      : 0;
-
-  const compositeScore =
-    COMPOSITE_SCORE_WEIGHTS.rawPerformance * normalizedPts +
-    COMPOSITE_SCORE_WEIGHTS.priceEfficiency * normalizedValueScore;
-
-  return {
-    riderScore,
-    priceHillios,
-    pointsPerHillio,
-    normalizedValueScore,
-    compositeScore,
-  };
-}
-
-/**
  * Stateless domain service class wrapping pure scoring functions.
  * Provides a DI-compatible interface for NestJS use cases.
  * Delegates entirely to the pure functions — adds no logic.
@@ -400,19 +313,5 @@ export class ScoringService {
     maxSeasons = 3,
   ): SeasonBreakdown[] {
     return computeSeasonBreakdown(results, targetRaceType, currentYear, maxSeasons);
-  }
-
-  computeCompositeScore(
-    riderScore: RiderScore,
-    priceHillios: number,
-    poolStats: PoolStats,
-  ): CompositeRiderScore {
-    return computeCompositeScore(riderScore, priceHillios, poolStats);
-  }
-
-  computePoolStats(
-    entries: ReadonlyArray<{ totalProjectedPts: number; priceHillios: number }>,
-  ): PoolStats {
-    return computePoolStats(entries);
   }
 }

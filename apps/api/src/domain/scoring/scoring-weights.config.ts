@@ -172,17 +172,6 @@ export function getRaceClassWeight(raceClass: RaceClass): number {
 }
 
 /**
- * Composite score weights controlling the balance between raw talent and price efficiency.
- *
- * - rawPerformance (α=0.6): Weight for normalized projected points — ensures elite riders rank high.
- * - priceEfficiency (β=0.4): Weight for normalized points-per-hillio — surfaces mid-tier value picks.
- */
-export const COMPOSITE_SCORE_WEIGHTS = {
-  rawPerformance: 0.6,
-  priceEfficiency: 0.4,
-} as const;
-
-/**
  * Returns the fantasy points awarded for a given position in a specific category and race type.
  *
  * @param category - The result category (gc, stage, mountain, sprint)

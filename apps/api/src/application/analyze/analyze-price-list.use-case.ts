@@ -17,11 +17,7 @@ import {
   MlScoreRepositoryPort,
   ML_SCORE_REPOSITORY_PORT,
 } from '../../domain/ml-score/ml-score.repository.port';
-import {
-  ScoringService,
-  CompositeRiderScore,
-  SeasonBreakdown,
-} from '../../domain/scoring/scoring.service';
+import { ScoringService, SeasonBreakdown } from '../../domain/scoring/scoring.service';
 import { RaceType } from '../../domain/shared/race-type.enum';
 import { ProfileDistribution } from '../../domain/scoring/profile-distribution';
 import { Rider } from '../../domain/rider/rider.entity';
@@ -51,7 +47,6 @@ export interface AnalyzedRider {
   matchedRider: MatchedRiderInfo | null;
   matchConfidence: number;
   unmatched: boolean;
-  compositeScore: number | null;
   pointsPerHillio: number | null;
   totalProjectedPts: number | null;
   categoryScores: {
@@ -143,7 +138,6 @@ export class AnalyzePriceListUseCase {
       matchedRider: MatchedRiderInfo | null;
       matchConfidence: number;
       unmatched: boolean;
-      composite: CompositeRiderScore | null;
       riderScore: ReturnType<ScoringService['computeRiderScore']> | null;
       seasonBreakdown: SeasonBreakdown[] | null;
     }
@@ -155,7 +149,6 @@ export class AnalyzePriceListUseCase {
           matchedRider: null,
           matchConfidence: match.confidence,
           unmatched: true,
-          composite: null,
           riderScore: null,
           seasonBreakdown: null,
         };
@@ -168,7 +161,6 @@ export class AnalyzePriceListUseCase {
           matchedRider: null,
           matchConfidence: match.confidence,
           unmatched: true,
-          composite: null,
           riderScore: null,
           seasonBreakdown: null,
         };
@@ -206,15 +198,6 @@ export class AnalyzePriceListUseCase {
       };
     });
 
-    const poolEntries = scoredEntries
-      .filter((s) => s.riderScore !== null)
-      .map((s) => ({
-        totalProjectedPts: s.riderScore!.totalProjectedPts,
-        priceHillios: s.entry.priceHillios,
-      }));
-
-    const poolStats = this.scoringService.computePoolStats(poolEntries);
-
     // --- ML prediction enrichment for stage races ---
     const mlPredictions = await this.fetchMlPredictions(input, matchedRiderIds);
 
@@ -227,7 +210,6 @@ export class AnalyzePriceListUseCase {
           matchedRider: s.matchedRider,
           matchConfidence: s.matchConfidence,
           unmatched: s.unmatched,
-          compositeScore: null,
           pointsPerHillio: null,
           totalProjectedPts: null,
           categoryScores: null,
@@ -239,11 +221,9 @@ export class AnalyzePriceListUseCase {
         };
       }
 
-      const composite = this.scoringService.computeCompositeScore(
-        s.riderScore,
-        s.entry.priceHillios,
-        poolStats,
-      );
+      const mlScore = mlPredictions?.get(s.matchedRider?.id ?? '')?.score ?? null;
+      const effectiveScore = mlScore ?? s.riderScore.totalProjectedPts;
+      const pointsPerHillio = s.entry.priceHillios > 0 ? effectiveScore / s.entry.priceHillios : 0;
 
       return {
         rawName: s.entry.rawName,
@@ -252,23 +232,24 @@ export class AnalyzePriceListUseCase {
         matchedRider: s.matchedRider,
         matchConfidence: s.matchConfidence,
         unmatched: false,
-        compositeScore: composite.compositeScore,
-        pointsPerHillio: composite.pointsPerHillio,
+        pointsPerHillio,
         totalProjectedPts: s.riderScore.totalProjectedPts,
         categoryScores: { ...s.riderScore.categoryScores },
         seasonsUsed: s.riderScore.seasonsUsed,
         seasonBreakdown: s.seasonBreakdown,
         scoringMethod: mlPredictions ? ('hybrid' as const) : ('rules' as const),
-        mlPredictedScore: mlPredictions?.get(s.matchedRider?.id ?? '')?.score ?? null,
+        mlPredictedScore: mlScore,
         mlBreakdown: mlPredictions?.get(s.matchedRider?.id ?? '')?.breakdown ?? null,
       };
     });
 
     analyzedRiders.sort((a, b) => {
-      if (a.compositeScore === null && b.compositeScore === null) return 0;
-      if (a.compositeScore === null) return 1;
-      if (b.compositeScore === null) return -1;
-      return b.compositeScore - a.compositeScore;
+      const scoreA = a.mlPredictedScore ?? a.totalProjectedPts;
+      const scoreB = b.mlPredictedScore ?? b.totalProjectedPts;
+      if (scoreA === null && scoreB === null) return 0;
+      if (scoreA === null) return 1;
+      if (scoreB === null) return -1;
+      return scoreB - scoreA;
     });
 
     const totalMatched = analyzedRiders.filter((r) => !r.unmatched).length;

@@ -43,7 +43,6 @@ export interface AnalyzedRider {
   matchedRider: MatchedRider | null;
   matchConfidence: number;
   unmatched: boolean;
-  compositeScore: number | null;
   pointsPerHillio: number | null;
   totalProjectedPts: number | null;
   categoryScores: CategoryScores | null;
