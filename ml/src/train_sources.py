@@ -44,14 +44,14 @@ MODEL_DIR = os.environ.get(
 SHARED_FEATURES = ["stage_mu", "stage_rd", "age"]
 PROFILE_FEATURES = [
     "pct_pts_p1p2", "pct_pts_p4p5", "pct_pts_p3",
-    "itt_top10_rate", "stage_wins_flat", "stage_wins_mountain",
+    "itt_top10_rate",
 ]
 
 STAGE_RAW_TEMPLATE = [
-    "{t}_pts_12m", "{t}_pts_6m", "{t}_top10_rate_12m",
-    "{t}_top10_rate_6m", "{t}_top10s_12m", "{t}_starts_12m",
+    "{t}_pts_12m", "{t}_top10_rate_12m",
+    "{t}_starts_12m",
 ]
-STAGE_STRENGTH_TEMPLATE = ["{t}_strength_12m", "{t}_strength_6m"]
+STAGE_STRENGTH_TEMPLATE = ["{t}_strength_12m"]
 
 GC_GATE_FEATURES = [
     "gc_mu", "gc_mu_delta_12m", "same_race_gc_best",
@@ -102,6 +102,9 @@ SPRINT_CONTENDER_WEIGHTS = {
     "survival_floor": 0.3,
     "survival_weight": 0.7,
     "flat_pct_clip": [0.2, 0.8],
+    "pedigree_floor": 1.0,
+    "pedigree_per_finish": 0.10,
+    "pedigree_cap": 2.0,
 }
 
 GT_RANK_DECAY = {

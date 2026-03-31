@@ -323,9 +323,11 @@ def predict(req: PredictRequest, request: Request):
         supply_hist = _load_supply_history()
         # Load GT completion rates for sprint heuristic
         completion = _load_completion_rates()
-        state.data_cache = (results_df, startlists_df, supply_hist, completion)
+        # Load 2-year sprint classification pedigree
+        sprint_ped = _load_sprint_pedigree()
+        state.data_cache = (results_df, startlists_df, supply_hist, completion, sprint_ped)
     else:
-        results_df, startlists_df, supply_hist, completion = state.data_cache
+        results_df, startlists_df, supply_hist, completion, sprint_ped = state.data_cache
 
     # Get race info — always use today as cutoff so predictions reflect
     # the latest available data (treat every race as "future").
@@ -412,6 +414,7 @@ def predict(req: PredictRequest, request: Request):
         stage_counts=stage_counts,
         supply_history=supply_hist,
         completion_rates=completion,
+        sprint_pedigree=sprint_ped,
     )
 
     if not predictions:
@@ -439,6 +442,40 @@ def _load_supply_history() -> pd.DataFrame | None:
     except Exception:
         logger.exception("Failed to load supply history")
     return None
+
+
+def _load_sprint_pedigree() -> dict[str, float]:
+    """Load 2-year sprint classification pedigree per rider.
+
+    Weighted count of sprint classification top finishes: GT top-5
+    finishes count triple (winning a green jersey is elite-level
+    evidence), mini-tour top-3 count single.
+    """
+    try:
+        conn = psycopg2.connect(DB_URL)
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT rider_id,
+                   SUM(CASE WHEN race_type = 'grand_tour' THEN 3 ELSE 1 END) as score
+            FROM race_results
+            WHERE category = 'sprint'
+              AND position > 0
+              AND race_date IS NOT NULL
+              AND race_date >= CURRENT_DATE - INTERVAL '2 years'
+              AND (
+                  (race_type = 'grand_tour' AND position <= 5)
+                  OR (race_type = 'mini_tour' AND position <= 3)
+              )
+            GROUP BY rider_id
+        """)
+        pedigree = {str(row[0]): float(row[1]) for row in cur.fetchall()}
+        cur.close()
+        conn.close()
+        logger.info("Loaded sprint pedigree for %d riders", len(pedigree))
+        return pedigree
+    except Exception:
+        logger.exception("Failed to load sprint pedigree")
+        return {}
 
 
 def _load_completion_rates() -> dict[str, float]:

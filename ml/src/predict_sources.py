@@ -94,6 +94,7 @@ def predict_race_sources(
     stage_counts: dict[str, int],
     supply_history: pd.DataFrame | None = None,
     completion_rates: dict[str, float] | None = None,
+    sprint_pedigree: dict[str, float] | None = None,
 ) -> list[dict]:
     """Generate per-rider predictions with 4-source breakdown.
 
@@ -110,6 +111,8 @@ def predict_race_sources(
             If None, those predictions will be 0.
         completion_rates: Dict rider_id → GT completion rate (0-1).
             For sprint_final heuristic. If None, uses 0.5 default.
+        sprint_pedigree: Dict rider_id → count of sprint classification
+            top finishes in last 2 years (GT top-5 + mini top-3).
 
     Returns:
         List of dicts: {rider_id, predicted_score, breakdown: {gc, stage, mountain, sprint}}
@@ -150,6 +153,7 @@ def predict_race_sources(
     spr_final_pts, spr_inter_pts = _predict_sprint(
         models, metadata, features_df, race_type,
         race_slug, year, supply_history, completion_rates,
+        sprint_pedigree,
     )
 
     # ── Normalize to real supply ────────────────────────────────────
@@ -361,6 +365,7 @@ def _predict_sprint(
     race_type: str, race_slug: str, year: int,
     supply_history: pd.DataFrame | None,
     completion_rates: dict[str, float] | None,
+    sprint_pedigree: dict[str, float] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Sprint final (heuristic contender) + sprint inter (capture rate)."""
     n = len(df)
@@ -371,7 +376,9 @@ def _predict_sprint(
     weights = metadata.get("sprint_contender_weights", {})
     if weights:
         rank_decay = _get_rank_decay(metadata, race_type)
-        final_pts = _sprint_final_heuristic(df, race_type, weights, rank_decay, completion_rates)
+        final_pts = _sprint_final_heuristic(
+            df, race_type, weights, rank_decay, completion_rates, sprint_pedigree,
+        )
 
     # Sprint inter: capture rate × estimated supply
     spr_cap = models.get("spr_inter_capture")
@@ -393,6 +400,7 @@ def _sprint_final_heuristic(
     df: pd.DataFrame, race_type: str,
     weights: dict, rank_decay: dict[int, float],
     completion_rates: dict[str, float] | None,
+    sprint_pedigree: dict[str, float] | None = None,
 ) -> np.ndarray:
     """Compute sprint final pts via heuristic contender score + soft rank."""
     sw = weights.get("sprinter", {})
@@ -419,6 +427,18 @@ def _sprint_final_heuristic(
     else:
         survival = pd.Series(0.5, index=df.index)
     score = score * (floor + surv_w * survival)
+
+    # Sprint pedigree bonus: riders with sprint classification history
+    # get a multiplicative boost.  GT finishes count 3×, mini 1×.
+    # Green jersey winner (score ~8) → ×1.80; zero pedigree → ×1.0.
+    # Capped to prevent runaway effects from prolific mini-tour riders.
+    ped_floor = weights.get("pedigree_floor", 1.0)
+    ped_per = weights.get("pedigree_per_finish", 0.10)
+    ped_cap = weights.get("pedigree_cap", 2.0)
+    if sprint_pedigree:
+        ped_score = df["rider_id"].map(sprint_pedigree).fillna(0)
+        ped_mult = (ped_floor + ped_per * ped_score).clip(upper=ped_cap)
+        score = score * ped_mult
 
     # Soft rank → points
     ranks = score.rank(ascending=False, method="min").astype(int)
