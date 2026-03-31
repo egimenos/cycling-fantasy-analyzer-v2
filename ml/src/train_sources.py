@@ -29,7 +29,7 @@ from datetime import datetime, timezone
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression, Ridge
+from sklearn.linear_model import LogisticRegression, RidgeCV
 
 logger = logging.getLogger(__name__)
 
@@ -247,11 +247,12 @@ def train_all(
         exposure_col = f"n_{st}_stages_ridden"
         target_col = f"{st}_pts_per_stage"
         train_data = df[df[exposure_col] > 0]
-        model = Ridge(alpha=1.0)
+        model = RidgeCV(alphas=[0.01, 0.1, 1.0, 10.0, 100.0])
         y = np.sqrt(train_data[target_col].values)
         artifacts[f"stage_{st}"] = _train_and_save(
             f"stage_{st}", model, train_data[feats], y, model_dir,
         )
+        logger.info("  %s: selected alpha=%.3f", f"stage_{st}", model.alpha_)
         feature_lists[f"stage_{st}"] = feats
 
     # ── 5. Stage ITT Gate ────────────────────────────────────────────
@@ -268,11 +269,12 @@ def train_all(
     # ── 6. Stage ITT Magnitude ───────────────────────────────────────
     print("\n[6/9] Stage ITT Magnitude (Ridge+sqrt)...")
     itt_nonzero = itt_exposed[itt_exposed["itt_pts_per_stage"] > 0]
-    itt_mag = Ridge(alpha=1.0)
+    itt_mag = RidgeCV(alphas=[0.01, 0.1, 1.0, 10.0, 100.0])
     y_itt = np.sqrt(itt_nonzero["itt_pts_per_stage"].values)
     artifacts["stage_itt_magnitude"] = _train_and_save(
         "stage_itt_magnitude", itt_mag, itt_nonzero[itt_feats], y_itt, model_dir,
     )
+    logger.info("  %s: selected alpha=%.3f", "stage_itt_magnitude", itt_mag.alpha_)
     feature_lists["stage_itt_magnitude"] = itt_feats
 
     # ── 7. Mountain Final Gate ───────────────────────────────────────
@@ -289,22 +291,24 @@ def train_all(
     print("\n[8/9] Mountain Pass Capture (Ridge+sqrt)...")
     mp_feats = _available(MTN_PASS_FEATURES, df)
     mp_data = df[df["target_mtn_pass_supply"] > 0]
-    mp_model = Ridge(alpha=1.0)
+    mp_model = RidgeCV(alphas=[0.01, 0.1, 1.0, 10.0, 100.0])
     y_mp = np.sqrt(mp_data["mtn_pass_capture_target"].values)
     artifacts["mtn_pass_capture"] = _train_and_save(
         "mtn_pass_capture", mp_model, mp_data[mp_feats], y_mp, model_dir,
     )
+    logger.info("  %s: selected alpha=%.3f", "mtn_pass_capture", mp_model.alpha_)
     feature_lists["mtn_pass_capture"] = mp_feats
 
     # ── 9. Sprint Inter Capture ──────────────────────────────────────
     print("\n[9/9] Sprint Inter Capture (Ridge+sqrt)...")
     si_feats = _available(SPR_INTER_FEATURES, df)
     si_data = df[df["target_spr_inter_supply"] > 0]
-    si_model = Ridge(alpha=1.0)
+    si_model = RidgeCV(alphas=[0.01, 0.1, 1.0, 10.0, 100.0])
     y_si = np.sqrt(si_data["spr_inter_capture_target"].values)
     artifacts["spr_inter_capture"] = _train_and_save(
         "spr_inter_capture", si_model, si_data[si_feats], y_si, model_dir,
     )
+    logger.info("  %s: selected alpha=%.3f", "spr_inter_capture", si_model.alpha_)
     feature_lists["spr_inter_capture"] = si_feats
 
     # ── Write metadata.json ──────────────────────────────────────────

@@ -84,6 +84,19 @@ def load_source_models(model_dir: str) -> dict[str, Any] | None:
     return models
 
 
+def _validate_features(metadata: dict, df: pd.DataFrame) -> None:
+    """Log warnings when prediction features don't match training features."""
+    feat_lists = metadata.get("feature_lists", {})
+    available = set(df.columns)
+    for model_name, expected_feats in feat_lists.items():
+        missing = [f for f in expected_feats if f not in available]
+        if missing:
+            logger.warning(
+                "Feature mismatch in %s: %d/%d features missing: %s",
+                model_name, len(missing), len(expected_feats), missing,
+            )
+
+
 def predict_race_sources(
     race_slug: str,
     year: int,
@@ -123,6 +136,9 @@ def predict_race_sources(
     metadata = models.get("metadata", {})
     rider_ids = features_df["rider_id"].values
     n_riders = len(features_df)
+
+    # Validate feature alignment between trained models and input
+    _validate_features(metadata, features_df)
 
     # Initialize per-source predictions
     gc_pts = np.zeros(n_riders)
@@ -268,11 +284,19 @@ def _predict_gc(
         contender_scores = scores[contender_indices]
         rank_order = np.argsort(-contender_scores)
 
+        last_table_pts = gc_table.get(max_pos, 0)
         for pos_rank, idx in enumerate(rank_order, 1):
             rider_idx = contender_indices[idx]
             if pos_rank <= max_pos:
                 gc_pts[rider_idx] = gc_table.get(pos_rank, 0)
                 daily_pts[rider_idx] = estimate_gc_daily_pts(pos_rank, n_stages, race_type)
+            else:
+                # Soft decay beyond scoring table: exponential fade instead of cliff
+                positions_beyond = pos_rank - max_pos
+                gc_pts[rider_idx] = last_table_pts * (0.5 ** positions_beyond)
+                daily_pts[rider_idx] = estimate_gc_daily_pts(
+                    max_pos, n_stages, race_type,
+                ) * (0.5 ** positions_beyond)
 
     return gc_pts, daily_pts
 
@@ -493,6 +517,7 @@ def _compute_race_supply(
 
 def _sharpen(
     predictions: np.ndarray, power: float = 2.0, zero_percentile: float = 60,
+    cap_percentile: float = 95,
 ) -> np.ndarray:
     """Sharpen a flat prediction distribution by zeroing noise and amplifying signal.
 
@@ -504,6 +529,8 @@ def _sharpen(
         predictions: Raw predictions (non-negative).
         power: Exponent > 1 amplifies differences. 2.0 = square.
         zero_percentile: Bottom N% of non-zero predictions set to 0.
+        cap_percentile: Cap values at this percentile to prevent outlier
+            domination after power transform + scale_to_supply.
     """
     result = predictions.copy()
     nonzero = result[result > 0]
@@ -514,8 +541,13 @@ def _sharpen(
     threshold = np.percentile(nonzero, zero_percentile)
     result[result <= threshold] = 0.0
 
-    # Power transform on remaining (amplify differences)
+    # Cap outliers before power transform to prevent domination
     mask = result > 0
+    if mask.sum() > 1:
+        cap = np.percentile(result[mask], cap_percentile)
+        result[mask] = np.minimum(result[mask], cap)
+
+    # Power transform on remaining (amplify differences)
     if mask.sum() > 0:
         result[mask] = np.power(result[mask], power)
 
