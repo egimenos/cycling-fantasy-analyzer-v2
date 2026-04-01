@@ -202,12 +202,11 @@ def predict_race_sources(
     mtn_total = _sharpen(mtn_total, power=2.0, zero_percentile=60)
     mtn_total = _scale_to_supply(mtn_total, supplies["mountain"])
 
-    # Sprint: sharpen, scale, then cap individual riders.
-    # Historical GT data shows the top sprinter captures 12-23% of supply
-    # (mean ~16%, max outlier 23%). Cap at 25% to prevent over-concentration.
-    spr_total = _sharpen(spr_total, power=1.5, zero_percentile=50)
+    # Sprint: scale to supply only. No sharpen needed — the heuristic score
+    # distribution + squared concentration already provide good differentiation.
+    # The old sharpen+cap pipeline destroyed signal by capping all top sprinters
+    # to identical values.
     spr_total = _scale_to_supply(spr_total, supplies["sprint"])
-    spr_total = np.minimum(spr_total, supplies["sprint"] * 0.25)
 
     # ── Build output ────────────────────────────────────────────────
     predictions = []
@@ -391,31 +390,33 @@ def _predict_sprint(
     completion_rates: dict[str, float] | None,
     sprint_pedigree: dict[str, float] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Sprint final (heuristic contender) + sprint inter (capture rate)."""
+    """Sprint final (heuristic contender) + sprint inter (score-based distribution).
+
+    Sprint inter uses the heuristic contender scores (squared to concentrate
+    on top riders) to distribute the estimated inter supply proportionally.
+    This replaces the Ridge capture-rate model which produced near-zero
+    undifferentiated predictions.
+    """
     n = len(df)
     final_pts = np.zeros(n)
     inter_pts = np.zeros(n)
+    raw_scores = np.zeros(n)
 
     # Sprint final: heuristic contender score + soft rank
     weights = metadata.get("sprint_contender_weights", {})
     if weights:
         rank_decay = _get_rank_decay(metadata, race_type)
-        final_pts = _sprint_final_heuristic(
+        final_pts, raw_scores = _sprint_final_heuristic(
             df, race_type, weights, rank_decay, completion_rates, sprint_pedigree,
         )
 
-    # Sprint inter: capture rate × estimated supply
-    spr_cap = models.get("spr_inter_capture")
-    if spr_cap is not None and supply_history is not None:
+    # Sprint inter: distribute supply proportionally to heuristic scores.
+    # Squaring concentrates on top riders (top 10 capture ~60% in reality).
+    if supply_history is not None:
         _, est_spr = estimate_supply(race_slug, year, supply_history)
-        if est_spr > 0:
-            feat_lists = metadata.get("feature_lists", {})
-            feats = feat_lists.get("spr_inter_capture", [])
-            avail = [f for f in feats if f in df.columns]
-            if avail:
-                X = df[avail].fillna(0).values
-                capture = np.square(np.maximum(spr_cap.predict(X), 0))
-                inter_pts = capture * est_spr
+        if est_spr > 0 and raw_scores.sum() > 0:
+            concentrated = np.power(raw_scores, 2.0)
+            inter_pts = concentrated / concentrated.sum() * est_spr
 
     return final_pts, inter_pts
 
@@ -425,8 +426,13 @@ def _sprint_final_heuristic(
     weights: dict, rank_decay: dict[int, float],
     completion_rates: dict[str, float] | None,
     sprint_pedigree: dict[str, float] | None = None,
-) -> np.ndarray:
-    """Compute sprint final pts via heuristic contender score + soft rank."""
+) -> tuple[np.ndarray, np.ndarray]:
+    """Compute sprint final pts via heuristic contender score + soft rank.
+
+    Returns:
+        Tuple of (final_pts, raw_scores). raw_scores are the contender
+        scores before rank→decay conversion, used to distribute sprint_inter.
+    """
     sw = weights.get("sprinter", {})
     aw = weights.get("allround", {})
 
@@ -464,10 +470,12 @@ def _sprint_final_heuristic(
         ped_mult = (ped_floor + ped_per * ped_score).clip(upper=ped_cap)
         score = score * ped_mult
 
+    raw_scores = np.maximum(score.values, 0)
+
     # Soft rank → points
     ranks = score.rank(ascending=False, method="min").astype(int)
     pts = ranks.map(rank_decay).fillna(0.0)
-    return pts.values
+    return pts.values, raw_scores
 
 
 def _get_rank_decay(metadata: dict, race_type: str) -> dict[int, float]:

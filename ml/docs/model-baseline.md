@@ -4,7 +4,7 @@
 > Update this document whenever the model architecture, features, or metrics change.
 > Linked from feature specs via kitty-specs for self-healing.
 
-**Last updated**: 2026-03-29
+**Last updated**: 2026-04-01
 **Feature**: 012 (research) + 013 (production integration)
 **Status**: Production — integrated into ML service, API, and frontend
 
@@ -25,6 +25,8 @@ Location: `ml/models/`
 | `spr_inter_capture.joblib`   | Ridge                                  | ~1 KB   |
 | `metadata.json`              | Config (features, weights, thresholds) | ~5 KB   |
 | `model_version.txt`          | Version string for hot-reload          | <1 KB   |
+
+Total: 9 .joblib models + 2 config files = 11 artifacts.
 
 ## Deployment
 
@@ -87,18 +89,18 @@ Predicts points per stage type, multiplied by number of stages of that type.
 stage_total = sum(pred_pts_per_type × n_type_stages_race) for each type
 ```
 
-| Stage Type | Architecture      | Model                         | Transform |
-| ---------- | ----------------- | ----------------------------- | --------- |
-| flat       | Direct regression | Ridge (α=1.0)                 | sqrt      |
-| hilly      | Direct regression | Ridge (α=1.0)                 | sqrt      |
-| mountain   | Direct regression | Ridge (α=1.0)                 | sqrt      |
-| itt        | Gate + magnitude  | LogReg gate + Ridge magnitude | sqrt      |
+| Stage Type | Architecture      | Model                                 | Transform |
+| ---------- | ----------------- | ------------------------------------- | --------- |
+| flat       | Direct regression | RidgeCV (α ∈ [0.01, 0.1, 1, 10, 100]) | sqrt      |
+| hilly      | Direct regression | RidgeCV (α ∈ [0.01, 0.1, 1, 10, 100]) | sqrt      |
+| mountain   | Direct regression | RidgeCV (α ∈ [0.01, 0.1, 1, 10, 100]) | sqrt      |
+| itt        | Gate + magnitude  | LogReg gate + RidgeCV magnitude       | sqrt      |
 
 **Config**: B (strength features in feature set, uniform sample weights)
 
 **Target**: `pts_per_stage_ridden` — fantasy stage points / stages of that type actually finished by the rider (dnf=false)
 
-**Features per type model** (16 per type):
+**Features per type model** (11 per type):
 
 Shared (3):
 
@@ -106,31 +108,26 @@ Shared (3):
 - `stage_rd` — Glicko-2 stage rating deviation
 - `age`
 
-Type-specific (8, where `{t}` = flat/hilly/mountain/itt):
+Type-specific (4, where `{t}` = flat/hilly/mountain/itt):
 
 - `{t}_pts_12m` — total stage pts from that type in 12m
-- `{t}_pts_6m` — same, 6m window
-- `{t}_strength_12m` — class-weighted pts (GT=1.0, UWT=0.7, Pro=0.4)
-- `{t}_strength_6m` — same, 6m window
 - `{t}_top10_rate_12m` — top-10 rate in stages of that type
-- `{t}_top10_rate_6m` — same, 6m window
-- `{t}_top10s_12m` — count of top-10 finishes
 - `{t}_starts_12m` — stages of that type ridden
+- `{t}_strength_12m` — class-weighted pts (GT=1.0, UWT=0.7, Pro=0.4)
 
-Profile (5):
+Profile (4):
 
 - `pct_pts_p1p2` — fraction of stage pts from flat stages
 - `pct_pts_p4p5` — fraction from mountain stages
 - `pct_pts_p3` — fraction from hilly stages
 - `itt_top10_rate` — ITT top-10 rate
-- `stage_wins_flat`, `stage_wins_mountain` — win counts by type
 
 ### Mountain Source (mountain_final + mountain_pass)
 
 | Sub-model      | Architecture                     | Details                           |
 | -------------- | -------------------------------- | --------------------------------- |
 | mountain_final | LogReg gate + P(score) × avg_pts | avg_pts = 27.0 (GT) / 26.7 (mini) |
-| mountain_pass  | Ridge capture rate × supply      | sqrt transform on capture rate    |
+| mountain_pass  | RidgeCV capture rate × supply    | sqrt transform on capture rate    |
 
 **mountain_final features** (15):
 `gc_mu`, `gc_rd`, `stage_mu`, `pct_pts_p4p5`, `stage_wins_mountain`,
@@ -152,7 +149,7 @@ Profile (5):
 | Sub-model        | Architecture                    | Details                                         |
 | ---------------- | ------------------------------- | ----------------------------------------------- |
 | sprint_final     | Heuristic contender + soft rank | Sprinter/allround/survival/route weighted score |
-| sprint_inter+reg | Ridge capture rate × supply     | sqrt transform on capture rate                  |
+| sprint_inter+reg | RidgeCV capture rate × supply   | sqrt transform on capture rate                  |
 
 **sprint_final heuristic**:
 
@@ -161,7 +158,8 @@ sprinter_score = flat_strength_12m×0.3 + flat_top10s_12m×5 + stage_wins_flat×
 allround_score = hilly_pts_12m×0.2 + pts_stage_12m×0.05 + pct_pts_p3×30 + stage_mu×0.005
 route_weight   = target_flat_pct (clipped 0.2-0.8)
 score = route_weight × sprinter + (1-route_weight) × allround
-score *= (0.3 + 0.7 × gt_completion_rate)
+score *= (survival_floor + survival_weight × completion_rate)       # 0.3 + 0.7 × rate
+score *= clip(pedigree_floor + pedigree_per_finish × finishes, cap) # 1.0 + 0.1 × n, cap 2.0
 ```
 
 Ranked per race, mapped to points via soft decay table (pos 1=50, 2=35, ..., 10=0.2).
@@ -179,11 +177,14 @@ Ranked per race, mapped to points via soft decay table (pos 1=50, 2=35, ..., 10=
 
 ### Integrated (all sources combined)
 
+Canonical baseline (2026-03-30, RF baseline 43 features, expanding window CV):
+
 | Metric       | Grand Tour | Mini Tour |
 | ------------ | ---------- | --------- |
-| ρ total      | 0.571      | 0.422     |
-| Team Capture | 59.4%      | 44.6%     |
-| Team Overlap | 24.7%      | 21.2%     |
+| Spearman ρ   | 0.553      | 0.469     |
+| NDCG@20      | 0.756      | 0.619     |
+| Precision@15 | 0.533      | 0.474     |
+| Team Capture | 55.9%      | 47.4%     |
 
 ### Per Source
 

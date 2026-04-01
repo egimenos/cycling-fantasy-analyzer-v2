@@ -28,13 +28,14 @@ import psycopg2
 from scipy import stats
 from sklearn.linear_model import Ridge, LogisticRegression
 
-from .benchmark_v8 import FOLDS, find_optimal_team
+from .benchmark_v8 import FOLDS, find_optimal_team, ndcg_at_k, precision_at_k
 from .points import (
-    FINAL_CLASS_GT, FINAL_CLASS_MINI,
+    FINAL_CLASS_GT, FINAL_CLASS_MINI, STAGE_POINTS,
     estimate_gc_daily_pts,
 )
+from .predict_sources import _sharpen, _scale_to_supply, _compute_race_supply
 from .stage_targets import STAGE_TYPES
-from .supply_estimation import build_supply_history, estimate_supply_for_races
+from .supply_estimation import build_supply_history, estimate_supply_for_races, estimate_supply
 
 warnings.filterwarnings("ignore")
 
@@ -49,12 +50,11 @@ _MINI_FINAL_AVG = sum(FINAL_CLASS_MINI.values()) / len(FINAL_CLASS_MINI)
 # ── Feature sets (copied from frozen benchmarks) ─────────────────────
 
 SHARED = ["stage_mu", "stage_rd", "age"]
-PROFILE = ["pct_pts_p1p2", "pct_pts_p4p5", "pct_pts_p3",
-           "itt_top10_rate", "stage_wins_flat", "stage_wins_mountain"]
+PROFILE = ["pct_pts_p1p2", "pct_pts_p4p5", "pct_pts_p3", "itt_top10_rate"]
 
-STAGE_RAW = ["{t}_pts_12m", "{t}_pts_6m", "{t}_top10_rate_12m",
-             "{t}_top10_rate_6m", "{t}_top10s_12m", "{t}_starts_12m"]
-STAGE_STRENGTH = ["{t}_strength_12m", "{t}_strength_6m"]
+# Production uses 11 features per stage type (no _6m, no top10s, no stage_wins)
+STAGE_RAW = ["{t}_pts_12m", "{t}_top10_rate_12m", "{t}_starts_12m"]
+STAGE_STRENGTH = ["{t}_strength_12m"]
 
 MTN_FINAL_FEATS = [
     "gc_mu", "gc_rd", "stage_mu", "pct_pts_p4p5", "stage_wins_mountain",
@@ -92,6 +92,31 @@ def _stage_feats(stage_type):
     raw = [f.format(t=stage_type) for f in STAGE_RAW]
     strength = [f.format(t=stage_type) for f in STAGE_STRENGTH]
     return SHARED + raw + strength + PROFILE
+
+
+def _load_sprint_pedigree_for_fold(test_year: int) -> dict[str, float]:
+    """Load sprint classification pedigree using only data before test_year."""
+    conn = psycopg2.connect(DB_URL)
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT rider_id,
+               SUM(CASE WHEN race_type = 'grand_tour' THEN 3 ELSE 1 END) as score
+        FROM race_results
+        WHERE category = 'sprint'
+          AND position > 0
+          AND race_date IS NOT NULL
+          AND EXTRACT(YEAR FROM race_date) >= %s
+          AND EXTRACT(YEAR FROM race_date) < %s
+          AND (
+              (race_type = 'grand_tour' AND position <= 5)
+              OR (race_type = 'mini_tour' AND position <= 3)
+          )
+        GROUP BY rider_id
+    """, (test_year - 2, test_year))
+    pedigree = {str(row[0]): float(row[1]) for row in cur.fetchall()}
+    cur.close()
+    conn.close()
+    return pedigree
 
 
 def _load_all_data():
@@ -141,6 +166,7 @@ def _load_all_data():
 
     # Supply estimation
     supply_hist = build_supply_history(cache_dfs_raw)
+    df._supply_history = supply_hist
     race_keys = df[["race_slug", "year"]].drop_duplicates()
     est = estimate_supply_for_races(race_keys, supply_hist)
     df = df.merge(est, on=["race_slug", "year"], how="left")
@@ -181,11 +207,12 @@ def _load_all_data():
     result = df[df["year"] >= 2022].copy()
     result._completion_df = comp_df
     result._prices_df = prices_df
+    result._supply_history = supply_hist
     return result
 
 
-def _green_contender_score(df, completion_rates):
-    """Sprint final heuristic contender score."""
+def _green_contender_score(df, completion_rates, sprint_pedigree=None):
+    """Sprint final heuristic contender score (mirrors predict_sources.py)."""
     sprinter = (
         df.get("flat_strength_12m", 0).fillna(0) * 0.3
         + df.get("flat_top10s_12m", 0).fillna(0) * 5.0
@@ -201,7 +228,15 @@ def _green_contender_score(df, completion_rates):
     flat_pct = df.get("target_flat_pct", 0).fillna(0.4).clip(0.2, 0.8)
     score = flat_pct * sprinter + (1 - flat_pct) * allround
     survival = df["rider_id"].map(completion_rates).fillna(0.5)
-    return score * (0.3 + 0.7 * survival)
+    score = score * (0.3 + 0.7 * survival)
+
+    # Sprint pedigree bonus (mirrors predict_sources.py)
+    if sprint_pedigree:
+        ped_score = df["rider_id"].map(sprint_pedigree).fillna(0)
+        ped_mult = (1.0 + 0.1 * ped_score).clip(upper=2.0)
+        score = score * ped_mult
+
+    return score
 
 
 def _soft_rank_pts(scores, race_type):
@@ -218,6 +253,7 @@ def run_benchmark():
     df = _load_all_data()
     completion_df = df._completion_df
     prices_df = df._prices_df
+    supply_history = df._supply_history
     print(f"Dataset: {len(df):,} rows, prices: {len(prices_df):,}")
 
     all_race_results = []
@@ -265,6 +301,7 @@ def run_benchmark():
 
             contenders = race_df[race_df["_gc_prob"] >= 0.40].copy()
             if len(contenders) > 0:
+                last_table_pts = gc_table.get(max_pos, 0)
                 contenders = contenders.sort_values("_gc_score", ascending=False)
                 for pos_rank, (ridx, row) in enumerate(contenders.iterrows(), 1):
                     if pos_rank <= max_pos:
@@ -272,6 +309,13 @@ def run_benchmark():
                         test.loc[ridx, "pred_gc_daily_pts"] = estimate_gc_daily_pts(
                             pos_rank, n_stages, race_type
                         )
+                    else:
+                        # Soft decay beyond scoring table (mirrors predict_sources.py)
+                        beyond = pos_rank - max_pos
+                        test.loc[ridx, "pred_gc_pts"] = last_table_pts * (0.5 ** beyond)
+                        test.loc[ridx, "pred_gc_daily_pts"] = estimate_gc_daily_pts(
+                            max_pos, n_stages, race_type
+                        ) * (0.5 ** beyond)
 
         test.drop(columns=["_gc_prob", "_gc_score"], inplace=True)
 
@@ -341,32 +385,63 @@ def run_benchmark():
             ]
             completion_rates[rid] = hist["finished"].mean() if len(hist) > 0 else 0.5
 
-        green_score = _green_contender_score(test, completion_rates)
+        # Sprint pedigree: weighted count of sprint classification top finishes
+        # (GT top-5 = 3×, mini top-3 = 1×, last 2 years before test)
+        sprint_pedigree = _load_sprint_pedigree_for_fold(fold["test_year"])
+
+        green_score = _green_contender_score(test, completion_rates, sprint_pedigree)
         test["pred_spr_final"] = 0.0
+        test["pred_spr_inter"] = 0.0
         for (slug, yr), idx in test.groupby(["race_slug", "year"]).groups.items():
             rt = test.loc[idx[0], "race_type"]
             test.loc[idx, "pred_spr_final"] = _soft_rank_pts(green_score.loc[idx], rt)
 
-        # ── SPRINT INTER + REG (capture rate, estimated supply) ──────
-        has_spr = train[train["target_spr_inter_supply"] > 0]
-        avail_si = [f for f in SPR_INTER_FEATS if f in df.columns]
-        reg_si = Ridge(alpha=1.0)
-        reg_si.fit(has_spr[avail_si].fillna(0),
-                    np.sqrt(has_spr["spr_inter_capture_target"].values))
+            # Sprint inter: distribute supply proportionally to heuristic scores²
+            scores = np.maximum(green_score.loc[idx].values, 0)
+            concentrated = np.power(scores, 2.0)
+            est_row = test.loc[idx[0]]
+            est_supply = est_row.get("estimated_spr_supply", 0) if "estimated_spr_supply" in test.columns else 0
+            if concentrated.sum() > 0 and est_supply > 0:
+                test.loc[idx, "pred_spr_inter"] = concentrated / concentrated.sum() * est_supply
 
-        test["pred_spr_inter"] = 0.0
-        has_spr_est = test[test["estimated_spr_supply"] > 0]
-        if len(has_spr_est) > 0:
-            pred_si = np.maximum(np.square(reg_si.predict(has_spr_est[avail_si].fillna(0))), 0)
-            test.loc[has_spr_est.index, "pred_spr_inter"] = pred_si * has_spr_est["estimated_spr_supply"]
-
-        # ── AGGREGATE ────────────────────────────────────────────────
+        # ── AGGREGATE (raw, before calibration) ──────────────────────
         test["pred_gc_source"] = test["pred_gc_pts"] + test["pred_gc_daily_pts"]
-        test["pred_mountain_source"] = test["pred_mtn_final"] + test["pred_mtn_pass"]
-        test["pred_sprint_source"] = test["pred_spr_final"] + test["pred_spr_inter"]
+        test["pred_mountain_raw"] = test["pred_mtn_final"] + test["pred_mtn_pass"]
+        test["pred_sprint_raw"] = test["pred_spr_final"] + test["pred_spr_inter"]
+
+        # ── CALIBRATION: sharpen + scale_to_supply per race ──────────
+        # Mirrors predict_sources.py production pipeline.
+        test["pred_stage_cal"] = 0.0
+        test["pred_mountain_source"] = 0.0
+        test["pred_sprint_source"] = 0.0
+
+        for (slug, yr), idx in test.groupby(["race_slug", "year"]).groups.items():
+            race_type = test.loc[idx[0], "race_type"]
+            n_stages = test.loc[idx[0], "target_stage_count"] if "target_stage_count" in test.columns else 0
+            if n_stages == 0:
+                n_stages = 21 if race_type == "grand_tour" else 7
+
+            supplies = _compute_race_supply(race_type, int(n_stages), slug, yr, supply_history)
+
+            # Stage: scale to supply
+            stage_raw = test.loc[idx, "pred_stage_total"].values.copy()
+            test.loc[idx, "pred_stage_cal"] = _scale_to_supply(stage_raw, supplies["stage"])
+
+            # Mountain: sharpen then scale
+            mtn_raw = test.loc[idx, "pred_mountain_raw"].values.copy()
+            mtn_cal = _sharpen(mtn_raw, power=2.0, zero_percentile=60)
+            mtn_cal = _scale_to_supply(mtn_cal, supplies["mountain"])
+            test.loc[idx, "pred_mountain_source"] = mtn_cal
+
+            # Sprint: scale to supply only (no sharpen — heuristic score² already
+            # provides concentration; old sharpen+cap destroyed differentiation)
+            spr_raw = test.loc[idx, "pred_sprint_raw"].values.copy()
+            spr_cal = _scale_to_supply(spr_raw, supplies["sprint"])
+            test.loc[idx, "pred_sprint_source"] = spr_cal
+
         test["pred_total"] = (
             test["pred_gc_source"]
-            + test["pred_stage_total"]
+            + test["pred_stage_cal"]
             + test["pred_mountain_source"]
             + test["pred_sprint_source"]
         )
@@ -394,7 +469,7 @@ def run_benchmark():
             # ρ per source
             for src, pred_col, actual_col in [
                 ("gc", "pred_gc_source", "actual_gc_source"),
-                ("stage", "pred_stage_total", "actual_stage_pts_typed"),
+                ("stage", "pred_stage_cal", "actual_stage_pts_typed"),
                 ("mountain", "pred_mountain_source", "actual_mountain_source"),
                 ("sprint", "pred_sprint_source", "actual_sprint_source"),
                 ("total", "pred_total", "actual_pts"),
@@ -403,6 +478,12 @@ def run_benchmark():
                 a = race_df[actual_col].values if actual_col in race_df.columns else np.zeros(len(race_df))
                 rho, _ = stats.spearmanr(p, a)
                 result[f"rho_{src}"] = rho if not np.isnan(rho) else np.nan
+
+            # NDCG@20 and Precision@15 on total
+            pred_total = race_df["pred_total"].values
+            actual_total = race_df["actual_pts"].values
+            result["ndcg_20"] = ndcg_at_k(pred_total, actual_total, 20)
+            result["p_at_15"] = precision_at_k(pred_total, actual_total, 15)
 
             # Team capture
             race_prices = prices_df[
@@ -452,6 +533,12 @@ def run_benchmark():
             vals = sub[col].dropna()
             if len(vals) > 0:
                 print(f"    {src:>10}: ρ={vals.mean():.3f} (median={vals.median():.3f})")
+        ndcg_vals = sub["ndcg_20"].dropna()
+        p15_vals = sub["p_at_15"].dropna()
+        if len(ndcg_vals) > 0:
+            print(f"    {'NDCG@20':>10}: {ndcg_vals.mean():.3f} (median={ndcg_vals.median():.3f})")
+        if len(p15_vals) > 0:
+            print(f"    {'P@15':>10}: {p15_vals.mean():.3f} (median={p15_vals.median():.3f})")
 
     print("\n" + "=" * 70)
     print("RESULTS — Team Capture")
