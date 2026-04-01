@@ -73,6 +73,7 @@ export class FetchStartlistUseCase {
           fullName: p.riderName,
           currentTeam: p.teamName || null,
           nationality: null,
+          birthDate: null,
           lastScrapedAt: new Date(),
         });
         ridersToSave.push(rider);

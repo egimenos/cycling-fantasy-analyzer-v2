@@ -8,6 +8,8 @@ import { Badge } from '@/shared/ui/badge';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { formatNumber, cn } from '@/shared/lib/utils';
 import { Lock, Unlock, Ban, ExternalLink } from 'lucide-react';
+import { BpiBadge, FlagChip } from './bpi-badge';
+import { BreakoutDetailPanel } from './breakout-detail-panel';
 
 interface RiderTableProps {
   data: AnalyzeResponse;
@@ -89,17 +91,23 @@ function createColumns(
         const name = getValue<string>();
         const isLocked = lockedIds.has(row.original.rawName);
         const isExcluded = excludedIds.has(row.original.rawName);
+        const flags = row.original.breakout?.flags;
         return (
-          <span
-            className={cn(
-              'max-w-[160px] truncate font-headline font-bold text-sm',
-              isExcluded && 'line-through opacity-50',
-            )}
-            title={name}
-          >
-            {name}
-            {isLocked && <Lock className="inline ml-1.5 h-3 w-3 text-secondary" />}
-          </span>
+          <div className="flex flex-wrap items-center gap-0.5">
+            <span
+              className={cn(
+                'max-w-[160px] truncate font-headline font-bold text-sm',
+                isExcluded && 'line-through opacity-50',
+              )}
+              title={name}
+            >
+              {name}
+              {isLocked && <Lock className="inline ml-1.5 h-3 w-3 text-secondary" />}
+            </span>
+            {flags?.map((flag) => (
+              <FlagChip key={flag} flag={flag} />
+            ))}
+          </div>
         );
       },
     },
@@ -172,6 +180,19 @@ function createColumns(
       },
     },
     {
+      id: 'bpi',
+      accessorFn: (row) => row.breakout?.index ?? null,
+      header: 'BPI',
+      size: 60,
+      enableSorting: true,
+      sortingFn: (rowA, rowB) => {
+        const a = rowA.original.breakout?.index ?? -1;
+        const b = rowB.original.breakout?.index ?? -1;
+        return a - b;
+      },
+      cell: ({ getValue }) => <BpiBadge value={getValue<number | null>()} />,
+    },
+    {
       id: 'matchStatus',
       header: 'Match',
       enableSorting: false,
@@ -240,15 +261,7 @@ function createColumns(
   ];
 }
 
-function ExpandedRowContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boolean }) {
-  if (rider.unmatched) {
-    return (
-      <p className="text-sm text-on-surface-variant">
-        No match found in database for &ldquo;{rider.rawName}&rdquo;.
-      </p>
-    );
-  }
-
+function PerformanceContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boolean }) {
   // Use ML breakdown for stage races when available, rules-based otherwise
   const breakdown = rider.mlBreakdown ?? rider.categoryScores;
   const isML = rider.mlBreakdown !== null;
@@ -354,6 +367,60 @@ function ExpandedRowContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boo
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function ExpandedRowContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boolean }) {
+  const [activeTab, setActiveTab] = useState<'performance' | 'breakout'>('performance');
+
+  if (rider.unmatched) {
+    return (
+      <p className="text-sm text-on-surface-variant">
+        No match found in database for &ldquo;{rider.rawName}&rdquo;.
+      </p>
+    );
+  }
+
+  const showTabs = !rider.unmatched && rider.breakout != null;
+
+  return (
+    <div>
+      {showTabs && (
+        <div className="flex gap-4 border-b border-outline-variant/20 mb-4">
+          <button
+            onClick={() => setActiveTab('performance')}
+            className={cn(
+              'pb-2 text-xs font-mono uppercase tracking-wider cursor-pointer',
+              activeTab === 'performance'
+                ? 'border-b-2 border-primary text-primary font-bold'
+                : 'text-outline hover:text-on-surface',
+            )}
+          >
+            Performance
+          </button>
+          <button
+            onClick={() => setActiveTab('breakout')}
+            className={cn(
+              'pb-2 text-xs font-mono uppercase tracking-wider cursor-pointer',
+              activeTab === 'breakout'
+                ? 'border-b-2 border-primary text-primary font-bold'
+                : 'text-outline hover:text-on-surface',
+            )}
+          >
+            Breakout
+          </button>
+        </div>
+      )}
+
+      {activeTab === 'performance' || !showTabs ? (
+        <PerformanceContent rider={rider} hasML={hasML} />
+      ) : (
+        <BreakoutDetailPanel
+          breakout={rider.breakout!}
+          prediction={rider.mlPredictedScore ?? rider.totalProjectedPts ?? 0}
+        />
+      )}
     </div>
   );
 }

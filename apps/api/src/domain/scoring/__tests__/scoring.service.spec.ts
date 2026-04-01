@@ -8,9 +8,6 @@ import {
   computeCategoryScore,
   computeStageScore,
   computeRiderScore,
-  computePoolStats,
-  computeCompositeScore,
-  RiderScore,
   ScoringService,
 } from '../scoring.service';
 import { createRaceResult } from './fixtures';
@@ -609,140 +606,6 @@ describe('computeRiderScore', () => {
   });
 });
 
-describe('computePoolStats', () => {
-  it('should compute min/max pointsPerHillio and projectedPts across pool', () => {
-    const entries = [
-      { totalProjectedPts: 200, priceHillios: 500 }, // 0.4 pts/H
-      { totalProjectedPts: 100, priceHillios: 100 }, // 1.0 pts/H
-      { totalProjectedPts: 50, priceHillios: 200 }, // 0.25 pts/H
-    ];
-    const stats = computePoolStats(entries);
-    expect(stats.minPointsPerHillio).toBeCloseTo(0.25);
-    expect(stats.maxPointsPerHillio).toBeCloseTo(1.0);
-    expect(stats.minProjectedPts).toBe(50);
-    expect(stats.maxProjectedPts).toBe(200);
-  });
-
-  it('should return zeros for empty pool', () => {
-    const stats = computePoolStats([]);
-    expect(stats.minPointsPerHillio).toBe(0);
-    expect(stats.maxPointsPerHillio).toBe(0);
-    expect(stats.minProjectedPts).toBe(0);
-    expect(stats.maxProjectedPts).toBe(0);
-  });
-
-  it('should exclude riders with 0 projected points', () => {
-    const entries = [
-      { totalProjectedPts: 0, priceHillios: 100 },
-      { totalProjectedPts: 50, priceHillios: 100 }, // 0.5 pts/H
-    ];
-    const stats = computePoolStats(entries);
-    expect(stats.minPointsPerHillio).toBeCloseTo(0.5);
-    expect(stats.maxPointsPerHillio).toBeCloseTo(0.5);
-  });
-
-  it('should exclude riders with 0 price', () => {
-    const entries = [
-      { totalProjectedPts: 100, priceHillios: 0 },
-      { totalProjectedPts: 50, priceHillios: 200 }, // 0.25 pts/H
-    ];
-    const stats = computePoolStats(entries);
-    expect(stats.minPointsPerHillio).toBeCloseTo(0.25);
-    expect(stats.maxPointsPerHillio).toBeCloseTo(0.25);
-  });
-
-  it('should handle single-rider pool', () => {
-    const entries = [{ totalProjectedPts: 100, priceHillios: 200 }]; // 0.5 pts/H
-    const stats = computePoolStats(entries);
-    expect(stats.minPointsPerHillio).toBeCloseTo(0.5);
-    expect(stats.maxPointsPerHillio).toBeCloseTo(0.5);
-    expect(stats.minProjectedPts).toBe(100);
-    expect(stats.maxProjectedPts).toBe(100);
-  });
-});
-
-describe('computeCompositeScore', () => {
-  function makeRiderScore(totalProjectedPts: number): RiderScore {
-    return {
-      riderId: 'rider-1',
-      targetRaceType: RaceType.GRAND_TOUR,
-      currentYear: 2024,
-      categoryScores: { gc: totalProjectedPts, stage: 0, mountain: 0, sprint: 0 },
-      totalProjectedPts,
-      seasonsUsed: 1,
-      qualifyingResultsCount: 1,
-    };
-  }
-
-  it('should rank high-value rider above expensive low-value rider', () => {
-    const poolStats = computePoolStats([
-      { totalProjectedPts: 100, priceHillios: 100 },
-      { totalProjectedPts: 120, priceHillios: 600 },
-      { totalProjectedPts: 50, priceHillios: 200 },
-    ]);
-    const scoreA = computeCompositeScore(makeRiderScore(100), 100, poolStats);
-    const scoreB = computeCompositeScore(makeRiderScore(120), 600, poolStats);
-    expect(scoreA.compositeScore).toBeGreaterThan(scoreB.compositeScore);
-  });
-
-  it('should still rank elite riders high despite high price', () => {
-    const poolStats = computePoolStats([
-      { totalProjectedPts: 250, priceHillios: 700 },
-      { totalProjectedPts: 30, priceHillios: 50 },
-    ]);
-    const pogacar = computeCompositeScore(makeRiderScore(250), 700, poolStats);
-    const cheap = computeCompositeScore(makeRiderScore(30), 50, poolStats);
-    expect(pogacar.compositeScore).toBeGreaterThan(cheap.compositeScore);
-  });
-
-  it('should handle rider with 0 projected points', () => {
-    const poolStats = computePoolStats([{ totalProjectedPts: 100, priceHillios: 200 }]);
-    const score = computeCompositeScore(makeRiderScore(0), 200, poolStats);
-    expect(score.pointsPerHillio).toBe(0);
-    expect(score.compositeScore).toBeLessThanOrEqual(0);
-  });
-
-  it('should handle rider with 0 price (edge case)', () => {
-    const poolStats = computePoolStats([{ totalProjectedPts: 100, priceHillios: 200 }]);
-    const score = computeCompositeScore(makeRiderScore(100), 0, poolStats);
-    expect(score.pointsPerHillio).toBe(0);
-    expect(score.priceHillios).toBe(0);
-  });
-
-  it('should produce correct pointsPerHillio', () => {
-    const poolStats = computePoolStats([{ totalProjectedPts: 100, priceHillios: 200 }]);
-    const score = computeCompositeScore(makeRiderScore(100), 200, poolStats);
-    expect(score.pointsPerHillio).toBeCloseTo(0.5);
-  });
-
-  it('should normalize value score to 0-100 range', () => {
-    const poolStats = computePoolStats([
-      { totalProjectedPts: 100, priceHillios: 100 }, // 1.0 pts/H (max)
-      { totalProjectedPts: 50, priceHillios: 200 }, // 0.25 pts/H (min)
-    ]);
-    const maxValueScore = computeCompositeScore(makeRiderScore(100), 100, poolStats);
-    expect(maxValueScore.normalizedValueScore).toBeCloseTo(100);
-
-    const minValueScore = computeCompositeScore(makeRiderScore(50), 200, poolStats);
-    expect(minValueScore.normalizedValueScore).toBeCloseTo(0);
-  });
-
-  it('should return 0 composite when pool has single rider (no range)', () => {
-    const poolStats = computePoolStats([{ totalProjectedPts: 100, priceHillios: 200 }]);
-    const score = computeCompositeScore(makeRiderScore(100), 200, poolStats);
-    expect(score.normalizedValueScore).toBe(0);
-    expect(score.compositeScore).toBe(0);
-  });
-
-  it('should preserve riderScore reference in output', () => {
-    const riderScore = makeRiderScore(100);
-    const poolStats = computePoolStats([{ totalProjectedPts: 100, priceHillios: 200 }]);
-    const composite = computeCompositeScore(riderScore, 200, poolStats);
-    expect(composite.riderScore).toBe(riderScore);
-    expect(composite.priceHillios).toBe(200);
-  });
-});
-
 describe('ScoringService', () => {
   const service = new ScoringService();
 
@@ -758,30 +621,6 @@ describe('ScoringService', () => {
     const score = service.computeRiderScore('rider-1', results, RaceType.CLASSIC, 2024);
     // Classic GC pos1 = 200
     expect(score.totalProjectedPts).toBe(200);
-  });
-
-  it('should delegate computeCompositeScore to pure function', () => {
-    const riderScore: RiderScore = {
-      riderId: 'rider-1',
-      targetRaceType: RaceType.GRAND_TOUR,
-      currentYear: 2024,
-      categoryScores: { gc: 100, stage: 0, mountain: 0, sprint: 0 },
-      totalProjectedPts: 100,
-      seasonsUsed: 1,
-      qualifyingResultsCount: 1,
-    };
-    const poolStats = service.computePoolStats([
-      { totalProjectedPts: 100, priceHillios: 200 },
-      { totalProjectedPts: 50, priceHillios: 100 },
-    ]);
-    const composite = service.computeCompositeScore(riderScore, 200, poolStats);
-    expect(composite.pointsPerHillio).toBeCloseTo(0.5);
-  });
-
-  it('should delegate computePoolStats to pure function', () => {
-    const stats = service.computePoolStats([{ totalProjectedPts: 100, priceHillios: 200 }]);
-    expect(stats.minPointsPerHillio).toBeCloseTo(0.5);
-    expect(stats.maxPointsPerHillio).toBeCloseTo(0.5);
   });
 });
 

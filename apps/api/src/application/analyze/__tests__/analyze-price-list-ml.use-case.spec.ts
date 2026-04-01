@@ -13,6 +13,8 @@ import { AnalyzePriceListUseCase } from '../analyze-price-list.use-case';
 import { RiderMatcherPort } from '../../../domain/matching/rider-matcher.port';
 import { RiderRepositoryPort } from '../../../domain/rider/rider.repository.port';
 import { RaceResultRepositoryPort } from '../../../domain/race-result/race-result.repository.port';
+import { MlScoringPort } from '../../../domain/scoring/ml-scoring.port';
+import { MlScoreRepositoryPort } from '../../../domain/ml-score/ml-score.repository.port';
 import { ScoringService } from '../../../domain/scoring/scoring.service';
 import { Rider } from '../../../domain/rider/rider.entity';
 import { RaceResult } from '../../../domain/race-result/race-result.entity';
@@ -28,6 +30,7 @@ function createMockRider(
     normalizedName: string;
     currentTeam: string | null;
     nationality: string | null;
+    birthDate: Date | null;
     lastScrapedAt: Date | null;
   }> = {},
 ): Rider {
@@ -38,6 +41,7 @@ function createMockRider(
     normalizedName: overrides.normalizedName ?? 'pogacar tadej',
     currentTeam: overrides.currentTeam ?? 'UAE Team Emirates',
     nationality: overrides.nationality ?? 'SI',
+    birthDate: overrides.birthDate ?? null,
     lastScrapedAt: overrides.lastScrapedAt ?? null,
   });
 }
@@ -88,6 +92,8 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
   let mockMatcher: jest.Mocked<RiderMatcherPort>;
   let mockRiderRepo: jest.Mocked<RiderRepositoryPort>;
   let mockResultRepo: jest.Mocked<RaceResultRepositoryPort>;
+  let mockMlScoring: jest.Mocked<MlScoringPort>;
+  let mockMlScoreRepo: jest.Mocked<MlScoreRepositoryPort>;
   let scoringService: ScoringService;
 
   beforeEach(() => {
@@ -114,6 +120,20 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
       saveMany: jest.fn(),
     };
 
+    mockMlScoring = {
+      predictRace: jest.fn().mockResolvedValue(null),
+      getModelVersion: jest.fn().mockResolvedValue(null),
+      isHealthy: jest.fn().mockResolvedValue(false),
+    };
+
+    mockMlScoreRepo = {
+      findByRace: jest.fn().mockResolvedValue([]),
+      findLatestModelVersion: jest.fn().mockResolvedValue(null),
+      saveMany: jest.fn().mockResolvedValue(undefined),
+      deleteByRace: jest.fn().mockResolvedValue(0),
+      deleteAll: jest.fn().mockResolvedValue(0),
+    };
+
     scoringService = new ScoringService();
 
     useCase = new AnalyzePriceListUseCase(
@@ -121,6 +141,8 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
       mockRiderRepo,
       mockResultRepo,
       scoringService,
+      mockMlScoring,
+      mockMlScoreRepo,
     );
   });
 
@@ -170,7 +192,7 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
     // Use case currently uses rules-based scoring for all race types
     expect(result.riders).toHaveLength(1);
     const rider = result.riders[0];
-    expect(rider.compositeScore).not.toBeNull();
+    expect(rider.totalProjectedPts).not.toBeNull();
     expect(rider.totalProjectedPts).not.toBeNull();
     expect(rider.totalProjectedPts!).toBeGreaterThan(0);
     expect(rider.categoryScores).not.toBeNull();
@@ -199,7 +221,7 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
 
     expect(result.riders).toHaveLength(1);
     const rider = result.riders[0];
-    expect(rider.compositeScore).not.toBeNull();
+    expect(rider.totalProjectedPts).not.toBeNull();
     expect(rider.totalProjectedPts).not.toBeNull();
     expect(rider.categoryScores).not.toBeNull();
   });
@@ -229,7 +251,7 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
 
     // Rules-based scoring produces deterministic results
     const rider = result.riders[0];
-    expect(rider.compositeScore).not.toBeNull();
+    expect(rider.totalProjectedPts).not.toBeNull();
     expect(rider.totalProjectedPts).not.toBeNull();
 
     // Run again with same inputs to verify determinism
