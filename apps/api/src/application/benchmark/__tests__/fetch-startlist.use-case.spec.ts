@@ -163,6 +163,7 @@ describe('FetchStartlistUseCase', () => {
         fullName: 'Tadej Pogacar',
         currentTeam: 'UAE Team Emirates',
         nationality: null,
+        birthDate: null,
         lastScrapedAt: new Date(),
       });
       riderRepo.findByPcsSlugs.mockResolvedValue([existingRider]);

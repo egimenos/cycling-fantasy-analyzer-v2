@@ -19,6 +19,8 @@ function makeRider(name: string, price = 100, score = 50): AnalyzedRider {
     seasonBreakdown: null,
     scoringMethod: 'rules' as const,
     mlPredictedScore: null,
+    mlBreakdown: null,
+    breakout: null,
   };
 }
 

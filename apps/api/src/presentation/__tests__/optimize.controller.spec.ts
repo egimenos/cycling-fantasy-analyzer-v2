@@ -33,6 +33,8 @@ describe('OptimizeController', () => {
     seasonBreakdown: [],
     scoringMethod: 'rules' as const,
     mlPredictedScore: null,
+    mlBreakdown: null,
+    breakout: null,
   };
 
   const domainRider = {

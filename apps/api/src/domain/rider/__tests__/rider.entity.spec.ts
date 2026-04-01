@@ -8,6 +8,7 @@ describe('Rider', () => {
         fullName: 'Tadej Pogačar',
         currentTeam: 'UAE Team Emirates',
         nationality: 'SI',
+        birthDate: null,
         lastScrapedAt: null,
       });
 
@@ -31,6 +32,7 @@ describe('Rider', () => {
         normalizedName: 'jonas vingegaard',
         currentTeam: 'Visma-Lease a Bike',
         nationality: 'DK',
+        birthDate: null,
         lastScrapedAt: new Date('2024-07-01'),
       };
 
@@ -48,6 +50,7 @@ describe('Rider', () => {
         fullName: 'Tadej Pogačar',
         currentTeam: 'UAE Team Emirates',
         nationality: 'SI',
+        birthDate: null,
         lastScrapedAt: null,
       });
 
@@ -65,6 +68,7 @@ describe('Rider', () => {
         fullName: 'Tadej Pogačar',
         currentTeam: null,
         nationality: null,
+        birthDate: null,
         lastScrapedAt: null,
       });
 
@@ -82,6 +86,7 @@ describe('Rider', () => {
         fullName: 'Remco Evenepoel',
         currentTeam: 'Soudal-QuickStep',
         nationality: 'BE',
+        birthDate: null,
         lastScrapedAt: null,
       });
 
@@ -99,6 +104,7 @@ describe('Rider', () => {
         fullName: 'Egan Bernal',
         currentTeam: null,
         nationality: null,
+        birthDate: null,
         lastScrapedAt: null,
       });
       expect(rider.normalizedName).toBe('egan bernal');
@@ -110,6 +116,7 @@ describe('Rider', () => {
         fullName: 'Naïro Quintana',
         currentTeam: null,
         nationality: null,
+        birthDate: null,
         lastScrapedAt: null,
       });
       expect(rider.normalizedName).toBe('nairo quintana');

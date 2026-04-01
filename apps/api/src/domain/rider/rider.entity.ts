@@ -7,6 +7,7 @@ export interface RiderProps {
   readonly normalizedName: string;
   readonly currentTeam: string | null;
   readonly nationality: string | null;
+  readonly birthDate: Date | null;
   readonly lastScrapedAt: Date | null;
 }
 
@@ -47,6 +48,10 @@ export class Rider {
 
   get nationality(): string | null {
     return this.props.nationality;
+  }
+
+  get birthDate(): Date | null {
+    return this.props.birthDate;
   }
 
   get lastScrapedAt(): Date | null {

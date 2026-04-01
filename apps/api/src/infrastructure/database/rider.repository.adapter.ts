@@ -49,6 +49,7 @@ export class RiderRepositoryAdapter implements RiderRepositoryPort {
         normalizedName: props.normalizedName,
         currentTeam: props.currentTeam,
         nationality: props.nationality,
+        birthDate: props.birthDate,
         lastScrapedAt: props.lastScrapedAt,
       })
       .onConflictDoUpdate({
@@ -58,6 +59,7 @@ export class RiderRepositoryAdapter implements RiderRepositoryPort {
           normalizedName: props.normalizedName,
           currentTeam: props.currentTeam,
           nationality: props.nationality,
+          birthDate: props.birthDate,
           lastScrapedAt: props.lastScrapedAt,
         },
       });
@@ -78,6 +80,7 @@ export class RiderRepositoryAdapter implements RiderRepositoryPort {
             normalizedName: props.normalizedName,
             currentTeam: props.currentTeam,
             nationality: props.nationality,
+            birthDate: props.birthDate,
             lastScrapedAt: props.lastScrapedAt,
           })
           .onConflictDoUpdate({
@@ -87,6 +90,7 @@ export class RiderRepositoryAdapter implements RiderRepositoryPort {
               normalizedName: props.normalizedName,
               currentTeam: props.currentTeam,
               nationality: props.nationality,
+              birthDate: props.birthDate,
               lastScrapedAt: props.lastScrapedAt,
             },
           });
@@ -102,6 +106,7 @@ export class RiderRepositoryAdapter implements RiderRepositoryPort {
       normalizedName: row.normalizedName,
       currentTeam: row.currentTeam,
       nationality: row.nationality,
+      birthDate: row.birthDate ?? null,
       lastScrapedAt: row.lastScrapedAt,
     } satisfies RiderProps);
   }

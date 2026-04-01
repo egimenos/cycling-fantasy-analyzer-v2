@@ -20,6 +20,7 @@ function createMockRider(
     normalizedName: string;
     currentTeam: string | null;
     nationality: string | null;
+    birthDate: Date | null;
     lastScrapedAt: Date | null;
   }> = {},
 ): Rider {
@@ -30,6 +31,7 @@ function createMockRider(
     normalizedName: overrides.normalizedName ?? 'pogacar tadej',
     currentTeam: overrides.currentTeam ?? 'UAE Team Emirates',
     nationality: overrides.nationality ?? 'SI',
+    birthDate: overrides.birthDate ?? null,
     lastScrapedAt: overrides.lastScrapedAt ?? null,
   });
 }

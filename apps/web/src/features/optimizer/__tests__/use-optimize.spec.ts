@@ -28,6 +28,8 @@ const sampleRider: AnalyzedRider = {
   seasonBreakdown: null,
   scoringMethod: 'rules' as const,
   mlPredictedScore: null,
+  mlBreakdown: null,
+  breakout: null,
 };
 
 const sampleResponse: OptimizeResponse = {

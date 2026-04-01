@@ -60,6 +60,7 @@ export interface AnalyzedRider {
   scoringMethod: 'rules' | 'hybrid';
   mlPredictedScore: number | null;
   mlBreakdown: { gc: number; stage: number; mountain: number; sprint: number } | null;
+  breakout: null;
 }
 
 export interface AnalyzeResponse {
@@ -218,6 +219,7 @@ export class AnalyzePriceListUseCase {
           scoringMethod: 'rules' as const,
           mlPredictedScore: null,
           mlBreakdown: null,
+          breakout: null,
         };
       }
 
@@ -240,6 +242,7 @@ export class AnalyzePriceListUseCase {
         scoringMethod: mlPredictions ? ('hybrid' as const) : ('rules' as const),
         mlPredictedScore: mlScore,
         mlBreakdown: mlPredictions?.get(s.matchedRider?.id ?? '')?.breakdown ?? null,
+        breakout: null,
       };
     });
 

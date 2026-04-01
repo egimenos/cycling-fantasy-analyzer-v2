@@ -416,6 +416,7 @@ export class TriggerScrapeUseCase {
           fullName: parsed.riderName,
           currentTeam: parsed.teamName || null,
           nationality: null,
+          birthDate: null,
           lastScrapedAt: new Date(),
         });
         newRiders++;
