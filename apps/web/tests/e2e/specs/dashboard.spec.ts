@@ -12,7 +12,7 @@ test.describe('Dashboard Tab', () => {
 
     // Verify column headers
     const headers = dashboardPage.riderTable.locator('th');
-    await expect(headers).toHaveCount(9); // checkbox, #, Name, Team, Price, Score, Value, Match, Actions
+    await expect(headers).toHaveCount(10); // checkbox, #, Name, Team, Price, Score, Value, BPI, Match, Actions
   });
 
   test('should show correct rider count', async ({ dashboardPage }) => {
@@ -20,9 +20,7 @@ test.describe('Dashboard Tab', () => {
   });
 
   // T026 — Rider selection and team builder
-  test('should add rider to team builder when selected via checkbox', async ({
-    dashboardPage,
-  }) => {
+  test('should add rider to team builder when selected via checkbox', async ({ dashboardPage }) => {
     await dashboardPage.selectRider('POGACAR Tadej');
 
     await expect(dashboardPage.rosterCount).toContainText('1');
@@ -125,7 +123,7 @@ test.describe('Dashboard Tab', () => {
   test('should show Review Team button when 9 riders selected', async ({ dashboardPage }) => {
     // Select 9 cheapest riders (from the bottom of the fixture list)
     const cheapRiders = [
-      'O\'CONNOR Ben',
+      "O'CONNOR Ben",
       'TIBERI Antonio',
       'LOPEZ Miguel Angel',
       'PIDCOCK Tom',

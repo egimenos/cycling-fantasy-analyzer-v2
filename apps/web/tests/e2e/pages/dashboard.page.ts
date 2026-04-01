@@ -11,6 +11,8 @@ export class DashboardPage {
   readonly filterLocked: Locator;
   readonly filterExcluded: Locator;
   readonly filterUnmatched: Locator;
+  readonly filterBreakout: Locator;
+  readonly filterValuePicks: Locator;
 
   // Team Builder
   readonly teamBuilder: Locator;
@@ -36,6 +38,8 @@ export class DashboardPage {
     this.filterLocked = page.getByTestId('dashboard-filter-locked');
     this.filterExcluded = page.getByTestId('dashboard-filter-excluded');
     this.filterUnmatched = page.getByTestId('dashboard-filter-unmatched');
+    this.filterBreakout = page.getByTestId('dashboard-filter-breakout');
+    this.filterValuePicks = page.getByTestId('dashboard-filter-valuePicks');
 
     // Team Builder
     this.teamBuilder = page.getByTestId('dashboard-team-builder');
@@ -69,9 +73,24 @@ export class DashboardPage {
   }
 
   async clickFilter(
-    filter: 'all' | 'selected' | 'locked' | 'excluded' | 'unmatched',
+    filter: 'all' | 'selected' | 'locked' | 'excluded' | 'unmatched' | 'breakout' | 'valuePicks',
   ): Promise<void> {
     await this.page.getByTestId(`dashboard-filter-${filter}`).click();
+  }
+
+  // BPI-specific helpers
+  async expandRider(name: string): Promise<void> {
+    await this.riderTable.locator('table tbody tr').filter({ hasText: name }).first().click();
+  }
+
+  async getBpiColumnValues(): Promise<(string | null)[]> {
+    const cells = this.riderTable.locator('table tbody tr td:nth-child(8)');
+    const count = await cells.count();
+    const values: (string | null)[] = [];
+    for (let i = 0; i < count; i++) {
+      values.push(await cells.nth(i).textContent());
+    }
+    return values;
   }
 
   async clickOptimize(): Promise<void> {
