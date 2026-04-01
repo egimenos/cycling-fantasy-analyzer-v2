@@ -36,6 +36,30 @@ export interface MlBreakdown {
 
 export type ScoringMethod = 'rules' | 'hybrid';
 
+export enum BreakoutFlag {
+  EmergingTalent = 'EMERGING_TALENT',
+  HotStreak = 'HOT_STREAK',
+  DeepValue = 'DEEP_VALUE',
+  CeilingPlay = 'CEILING_PLAY',
+  SprintOpportunity = 'SPRINT_OPPORTUNITY',
+  BreakawayHunter = 'BREAKAWAY_HUNTER',
+}
+
+export interface BreakoutSignals {
+  readonly trajectory: number;
+  readonly recency: number;
+  readonly ceiling: number;
+  readonly routeFit: number;
+  readonly variance: number;
+}
+
+export interface BreakoutResult {
+  readonly index: number;
+  readonly upsideP80: number;
+  readonly flags: readonly BreakoutFlag[];
+  readonly signals: BreakoutSignals;
+}
+
 export interface AnalyzedRider {
   rawName: string;
   rawTeam: string;
@@ -51,6 +75,7 @@ export interface AnalyzedRider {
   scoringMethod: ScoringMethod;
   mlPredictedScore: number | null;
   mlBreakdown: MlBreakdown | null;
+  breakout: BreakoutResult | null;
 }
 
 export interface AnalyzeRequest {

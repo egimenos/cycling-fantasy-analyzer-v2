@@ -22,7 +22,7 @@ As a fantasy cycling manager, when I analyze a price list, I want each rider's r
 2. **Given** a matched rider whose 2026 season total is more than 2x their historical average, **When** analyzed, **Then** `breakout.flags` contains `HOT_STREAK`.
 3. **Given** a rider priced at 50 hillios with pts/hillio above the median of the price list, **When** analyzed, **Then** `breakout.flags` contains `DEEP_VALUE`.
 4. **Given** a matched rider with a historical peak season of 300 pts but current ML prediction of 15 pts and age under 30, **When** analyzed, **Then** `breakout.flags` contains `CEILING_PLAY`.
-5. **Given** a rider with >15% of historical points from mountain category and price <= 100, **When** analyzed, **Then** `breakout.flags` contains `BREAKAWAY_HUNTER`.
+5. **Given** a rider with >10% of historical points from mountain category and price <= 100, **When** analyzed, **Then** `breakout.flags` contains `BREAKAWAY_HUNTER`.
 6. **Given** a sprint-profile rider (high stage+sprint %) priced under 125 and a race profile with >35% flat stages, **When** analyzed with profileSummary provided, **Then** `breakout.flags` contains `SPRINT_OPPORTUNITY`.
 7. **Given** an unmatched rider, **When** analyzed, **Then** `breakout` is `null`.
 8. **Given** a veteran rider (age > 33) with a high historical peak but declining recent seasons, **When** analyzed, **Then** the ceiling gap signal contributes 0 to the BPI (age filter prevents false positives).
@@ -109,16 +109,16 @@ As a fantasy manager filling cheap roster slots, I want a one-click "Value Picks
 - **Signal 1 — Trajectory Slope (0-25)**: Linear regression slope of season totals over available years, multiplied by an age factor (1.5 for age < 25, 1.0 for 25-27, 0.5 for 28-31, 0.2 for 32+).
 - **Signal 2 — Recency Burst (0-25)**: Ratio of current season total (weight=1.0) to average of older seasons. Only active when current season total > 20 points.
 - **Signal 3 — Historical Ceiling Gap (0-20)**: Ratio of peak historical season to current prediction (ML or rules). Disabled when rider age > 33.
-- **Signal 4 — Sprint/Route Fit (0-15)**: Dot product of rider category profile with race route profile. Returns 0 when profileSummary is not provided.
+- **Signal 4 — Sprint/Route Fit (0-15)**: Dot product of rider category profile with race route profile (derived from PCS stage profile counts: p1=flat, p2/p3=hilly, p4/p5=mountain, itt/ttt=TT). Returns 0 when profileSummary is not provided.
 - **Signal 5 — Variance/Upside (0-15)**: Coefficient of variation of non-zero season totals. Defaults to 7.5 when fewer than 2 data points.
 
 ### Breakout Flag Conditions
 
-- **EMERGING_TALENT**: age < 25 AND seasonsUsed <= 3 AND trajectory slope > 30 pts/year
+- **EMERGING_TALENT**: age < 25 AND seasonsUsed <= 3 AND raw trajectory slope > 30 pts/year (before age adjustment)
 - **HOT_STREAK**: current season total > 2x average of other seasons
 - **DEEP_VALUE**: price <= 100 hillios AND pointsPerHillio > median of all riders in the list
 - **CEILING_PLAY**: peak historical season > 5x current prediction AND age < 30
-- **SPRINT_OPPORTUNITY**: price <= 125 AND sprint+stage percentage > 15% AND flat stage percentage > 35% (requires profileSummary)
+- **SPRINT_OPPORTUNITY**: price <= 125 AND sprint+stage percentage of rider's total points > 15% AND flat stage percentage > 35% (flat = p1Count / total stage count from profileSummary; requires profileSummary)
 - **BREAKAWAY_HUNTER**: price <= 100 AND mountain percentage of total points > 10%
 
 ### Key Entities

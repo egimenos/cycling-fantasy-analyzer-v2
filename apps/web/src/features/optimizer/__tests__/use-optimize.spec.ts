@@ -20,7 +20,6 @@ const sampleRider: AnalyzedRider = {
   matchedRider: null,
   matchConfidence: 0,
   unmatched: false,
-  compositeScore: 50,
   pointsPerHillio: 0.5,
   totalProjectedPts: 50,
   categoryScores: { gc: 20, stage: 10, mountain: 10, sprint: 5 },
@@ -28,6 +27,8 @@ const sampleRider: AnalyzedRider = {
   seasonBreakdown: null,
   scoringMethod: 'rules' as const,
   mlPredictedScore: null,
+  mlBreakdown: null,
+  breakout: null,
 };
 
 const sampleResponse: OptimizeResponse = {

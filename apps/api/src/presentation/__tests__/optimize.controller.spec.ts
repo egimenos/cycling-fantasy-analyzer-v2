@@ -25,7 +25,6 @@ describe('OptimizeController', () => {
     },
     matchConfidence: 1,
     unmatched: false,
-    compositeScore: 50,
     pointsPerHillio: 0.5,
     totalProjectedPts: 50,
     categoryScores: { gc: 10, stage: 10, mountain: 10, sprint: 10 },
@@ -33,6 +32,8 @@ describe('OptimizeController', () => {
     seasonBreakdown: [],
     scoringMethod: 'rules' as const,
     mlPredictedScore: null,
+    mlBreakdown: null,
+    breakout: null,
   };
 
   const domainRider = {

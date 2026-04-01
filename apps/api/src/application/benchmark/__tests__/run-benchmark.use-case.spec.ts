@@ -62,6 +62,7 @@ function makeRider(id: string, name: string): Rider {
     normalizedName: name.toLowerCase(),
     currentTeam: 'Team A',
     nationality: null,
+    birthDate: null,
     lastScrapedAt: new Date('2025-01-01'),
   });
 }

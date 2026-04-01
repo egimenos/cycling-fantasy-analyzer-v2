@@ -8,6 +8,8 @@ import { Badge } from '@/shared/ui/badge';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { formatNumber, cn } from '@/shared/lib/utils';
 import { Lock, Unlock, Ban, ExternalLink } from 'lucide-react';
+import { BpiBadge, FlagChip } from './bpi-badge';
+import { BreakoutDetailPanel } from './breakout-detail-panel';
 
 interface RiderTableProps {
   data: AnalyzeResponse;
@@ -89,17 +91,23 @@ function createColumns(
         const name = getValue<string>();
         const isLocked = lockedIds.has(row.original.rawName);
         const isExcluded = excludedIds.has(row.original.rawName);
+        const flags = row.original.breakout?.flags;
         return (
-          <span
-            className={cn(
-              'max-w-[160px] truncate font-headline font-bold text-sm',
-              isExcluded && 'line-through opacity-50',
-            )}
-            title={name}
-          >
-            {name}
-            {isLocked && <Lock className="inline ml-1.5 h-3 w-3 text-secondary" />}
-          </span>
+          <div className="flex flex-wrap items-center gap-0.5">
+            <span
+              className={cn(
+                'max-w-[160px] truncate font-headline font-bold text-sm',
+                isExcluded && 'line-through opacity-50',
+              )}
+              title={name}
+            >
+              {name}
+              {isLocked && <Lock className="inline ml-1.5 h-3 w-3 text-secondary" />}
+            </span>
+            {flags?.map((flag) => (
+              <FlagChip key={flag} flag={flag} />
+            ))}
+          </div>
         );
       },
     },
@@ -172,6 +180,19 @@ function createColumns(
       },
     },
     {
+      id: 'bpi',
+      accessorFn: (row) => row.breakout?.index ?? null,
+      header: 'BPI',
+      size: 60,
+      enableSorting: true,
+      sortingFn: (rowA, rowB) => {
+        const a = rowA.original.breakout?.index ?? -1;
+        const b = rowB.original.breakout?.index ?? -1;
+        return a - b;
+      },
+      cell: ({ getValue }) => <BpiBadge value={getValue<number | null>()} />,
+    },
+    {
       id: 'matchStatus',
       header: 'Match',
       enableSorting: false,
@@ -240,15 +261,7 @@ function createColumns(
   ];
 }
 
-function ExpandedRowContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boolean }) {
-  if (rider.unmatched) {
-    return (
-      <p className="text-sm text-on-surface-variant">
-        No match found in database for &ldquo;{rider.rawName}&rdquo;.
-      </p>
-    );
-  }
-
+function PerformanceContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boolean }) {
   // Use ML breakdown for stage races when available, rules-based otherwise
   const breakdown = rider.mlBreakdown ?? rider.categoryScores;
   const isML = rider.mlBreakdown !== null;
@@ -358,7 +371,68 @@ function ExpandedRowContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boo
   );
 }
 
-type RiderFilter = 'all' | 'selected' | 'locked' | 'excluded' | 'unmatched';
+function ExpandedRowContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boolean }) {
+  const [activeTab, setActiveTab] = useState<'performance' | 'breakout'>('performance');
+
+  if (rider.unmatched) {
+    return (
+      <p className="text-sm text-on-surface-variant">
+        No match found in database for &ldquo;{rider.rawName}&rdquo;.
+      </p>
+    );
+  }
+
+  const showTabs = !rider.unmatched && rider.breakout != null;
+
+  return (
+    <div>
+      {showTabs && (
+        <div className="flex gap-4 border-b border-outline-variant/20 mb-4">
+          <button
+            onClick={() => setActiveTab('performance')}
+            className={cn(
+              'pb-2 text-xs font-mono uppercase tracking-wider cursor-pointer',
+              activeTab === 'performance'
+                ? 'border-b-2 border-primary text-primary font-bold'
+                : 'text-outline hover:text-on-surface',
+            )}
+          >
+            Performance
+          </button>
+          <button
+            onClick={() => setActiveTab('breakout')}
+            className={cn(
+              'pb-2 text-xs font-mono uppercase tracking-wider cursor-pointer',
+              activeTab === 'breakout'
+                ? 'border-b-2 border-primary text-primary font-bold'
+                : 'text-outline hover:text-on-surface',
+            )}
+          >
+            Breakout
+          </button>
+        </div>
+      )}
+
+      {activeTab === 'performance' || !showTabs ? (
+        <PerformanceContent rider={rider} hasML={hasML} />
+      ) : (
+        <BreakoutDetailPanel
+          breakout={rider.breakout!}
+          prediction={rider.mlPredictedScore ?? rider.totalProjectedPts ?? 0}
+        />
+      )}
+    </div>
+  );
+}
+
+type RiderFilter =
+  | 'all'
+  | 'selected'
+  | 'locked'
+  | 'excluded'
+  | 'unmatched'
+  | 'breakout'
+  | 'valuePicks';
 
 interface FilterOption {
   value: RiderFilter;
@@ -383,6 +457,16 @@ const FILTER_OPTIONS: FilterOption[] = [
     value: 'unmatched',
     label: 'Unmatched',
     activeClass: 'bg-tertiary/15 text-tertiary border-tertiary/40',
+  },
+  {
+    value: 'breakout',
+    label: 'Breakout',
+    activeClass: 'bg-purple-500/15 text-purple-400 border-purple-500/40',
+  },
+  {
+    value: 'valuePicks',
+    label: 'Value Picks',
+    activeClass: 'bg-green-500/15 text-green-400 border-green-500/40',
   },
 ];
 
@@ -414,6 +498,10 @@ export function RiderTable({
         return excludedIds.has(rider.rawName);
       case 'unmatched':
         return rider.unmatched;
+      case 'breakout':
+        return (rider.breakout?.index ?? 0) >= 50;
+      case 'valuePicks':
+        return (rider.breakout?.index ?? 0) >= 50 && rider.priceHillios <= 125;
       default:
         return true;
     }
@@ -425,6 +513,9 @@ export function RiderTable({
     locked: lockedIds.size,
     excluded: excludedIds.size,
     unmatched: data.unmatchedCount,
+    breakout: data.riders.filter((r) => (r.breakout?.index ?? 0) >= 50).length,
+    valuePicks: data.riders.filter((r) => (r.breakout?.index ?? 0) >= 50 && r.priceHillios <= 125)
+      .length,
   };
 
   const columns = createColumns(
@@ -468,20 +559,38 @@ export function RiderTable({
           Showing {filteredRiders.length} of {data.riders.length}
         </span>
       </div>
-      <DataTable<AnalyzedRider>
-        columns={columns}
-        data={filteredRiders}
-        initialSorting={[{ id: 'effectiveScore', desc: true }]}
-        renderExpandedRow={(row: Row<AnalyzedRider>) => (
-          <ExpandedRowContent rider={row.original} hasML={hasML} />
-        )}
-        getRowClassName={(row: Row<AnalyzedRider>) => {
-          if (excludedIds.has(row.original.rawName)) return 'opacity-40 grayscale';
-          if (lockedIds.has(row.original.rawName)) return 'bg-secondary-container/5';
-          if (row.original.unmatched) return 'opacity-60';
-          return '';
-        }}
-      />
+      {filteredRiders.length === 0 && filter !== 'all' ? (
+        <div className="flex flex-col items-center justify-center py-12 text-outline">
+          <p className="text-sm font-mono">
+            {filter === 'breakout'
+              ? 'No breakout candidates found'
+              : filter === 'valuePicks'
+                ? 'No value picks found for this race'
+                : 'No riders match this filter'}
+          </p>
+          <button
+            className="mt-2 text-xs text-primary hover:underline cursor-pointer"
+            onClick={() => setFilter('all')}
+          >
+            Show all riders
+          </button>
+        </div>
+      ) : (
+        <DataTable<AnalyzedRider>
+          columns={columns}
+          data={filteredRiders}
+          initialSorting={[{ id: 'effectiveScore', desc: true }]}
+          renderExpandedRow={(row: Row<AnalyzedRider>) => (
+            <ExpandedRowContent rider={row.original} hasML={hasML} />
+          )}
+          getRowClassName={(row: Row<AnalyzedRider>) => {
+            if (excludedIds.has(row.original.rawName)) return 'opacity-40 grayscale';
+            if (lockedIds.has(row.original.rawName)) return 'bg-secondary-container/5';
+            if (row.original.unmatched) return 'opacity-60';
+            return '';
+          }}
+        />
+      )}
     </div>
   );
 }

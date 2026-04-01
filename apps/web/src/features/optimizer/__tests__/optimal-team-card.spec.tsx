@@ -11,7 +11,6 @@ function makeRider(name: string, price = 100, score = 50): AnalyzedRider {
     matchedRider: null,
     matchConfidence: 0,
     unmatched: false,
-    compositeScore: score,
     pointsPerHillio: score / price,
     totalProjectedPts: score,
     categoryScores: { gc: 20, stage: 10, mountain: 10, sprint: 5 },

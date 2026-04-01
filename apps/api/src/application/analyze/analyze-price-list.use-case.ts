@@ -22,7 +22,8 @@ import { RaceType } from '../../domain/shared/race-type.enum';
 import { ProfileDistribution } from '../../domain/scoring/profile-distribution';
 import { Rider } from '../../domain/rider/rider.entity';
 import { mapPriceListEntries, PriceListEntry, PriceListEntryDto } from './price-list-entry';
-import type { ProfileSummary } from '@cycling-analyzer/shared-types';
+import type { ProfileSummary, BreakoutResult } from '@cycling-analyzer/shared-types';
+import { computeBreakout, computeMedianPtsPerHillio } from '../../domain/breakout';
 
 export interface AnalyzeInput {
   riders: PriceListEntryDto[];
@@ -60,6 +61,7 @@ export interface AnalyzedRider {
   scoringMethod: 'rules' | 'hybrid';
   mlPredictedScore: number | null;
   mlBreakdown: { gc: number; stage: number; mountain: number; sprint: number } | null;
+  breakout: BreakoutResult | null;
 }
 
 export interface AnalyzeResponse {
@@ -218,6 +220,7 @@ export class AnalyzePriceListUseCase {
           scoringMethod: 'rules' as const,
           mlPredictedScore: null,
           mlBreakdown: null,
+          breakout: null,
         };
       }
 
@@ -240,8 +243,25 @@ export class AnalyzePriceListUseCase {
         scoringMethod: mlPredictions ? ('hybrid' as const) : ('rules' as const),
         mlPredictedScore: mlScore,
         mlBreakdown: mlPredictions?.get(s.matchedRider?.id ?? '')?.breakdown ?? null,
+        breakout: null,
       };
     });
+
+    // --- BPI computation (step 5.5) ---
+    const medianPph = computeMedianPtsPerHillio(analyzedRiders);
+    for (const rider of analyzedRiders) {
+      if (rider.unmatched || !rider.matchedRider) continue;
+      const riderEntity = riderMap.get(rider.matchedRider.id);
+      rider.breakout = computeBreakout({
+        seasonBreakdown: rider.seasonBreakdown ?? [],
+        prediction: rider.mlPredictedScore ?? rider.totalProjectedPts ?? 0,
+        priceHillios: rider.priceHillios,
+        birthDate: riderEntity?.birthDate ?? null,
+        profileSummary: input.profileSummary,
+        medianPtsPerHillio: medianPph,
+        categoryScores: rider.categoryScores,
+      });
+    }
 
     analyzedRiders.sort((a, b) => {
       const scoreA = a.mlPredictedScore ?? a.totalProjectedPts;
