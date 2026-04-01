@@ -378,7 +378,14 @@ function ExpandedRowContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boo
   );
 }
 
-type RiderFilter = 'all' | 'selected' | 'locked' | 'excluded' | 'unmatched';
+type RiderFilter =
+  | 'all'
+  | 'selected'
+  | 'locked'
+  | 'excluded'
+  | 'unmatched'
+  | 'breakout'
+  | 'valuePicks';
 
 interface FilterOption {
   value: RiderFilter;
@@ -403,6 +410,16 @@ const FILTER_OPTIONS: FilterOption[] = [
     value: 'unmatched',
     label: 'Unmatched',
     activeClass: 'bg-tertiary/15 text-tertiary border-tertiary/40',
+  },
+  {
+    value: 'breakout',
+    label: 'Breakout',
+    activeClass: 'bg-purple-500/15 text-purple-400 border-purple-500/40',
+  },
+  {
+    value: 'valuePicks',
+    label: 'Value Picks',
+    activeClass: 'bg-green-500/15 text-green-400 border-green-500/40',
   },
 ];
 
@@ -434,6 +451,10 @@ export function RiderTable({
         return excludedIds.has(rider.rawName);
       case 'unmatched':
         return rider.unmatched;
+      case 'breakout':
+        return (rider.breakout?.index ?? 0) >= 50;
+      case 'valuePicks':
+        return (rider.breakout?.index ?? 0) >= 50 && rider.priceHillios <= 125;
       default:
         return true;
     }
@@ -445,6 +466,9 @@ export function RiderTable({
     locked: lockedIds.size,
     excluded: excludedIds.size,
     unmatched: data.unmatchedCount,
+    breakout: data.riders.filter((r) => (r.breakout?.index ?? 0) >= 50).length,
+    valuePicks: data.riders.filter((r) => (r.breakout?.index ?? 0) >= 50 && r.priceHillios <= 125)
+      .length,
   };
 
   const columns = createColumns(
@@ -488,20 +512,38 @@ export function RiderTable({
           Showing {filteredRiders.length} of {data.riders.length}
         </span>
       </div>
-      <DataTable<AnalyzedRider>
-        columns={columns}
-        data={filteredRiders}
-        initialSorting={[{ id: 'effectiveScore', desc: true }]}
-        renderExpandedRow={(row: Row<AnalyzedRider>) => (
-          <ExpandedRowContent rider={row.original} hasML={hasML} />
-        )}
-        getRowClassName={(row: Row<AnalyzedRider>) => {
-          if (excludedIds.has(row.original.rawName)) return 'opacity-40 grayscale';
-          if (lockedIds.has(row.original.rawName)) return 'bg-secondary-container/5';
-          if (row.original.unmatched) return 'opacity-60';
-          return '';
-        }}
-      />
+      {filteredRiders.length === 0 && filter !== 'all' ? (
+        <div className="flex flex-col items-center justify-center py-12 text-outline">
+          <p className="text-sm font-mono">
+            {filter === 'breakout'
+              ? 'No breakout candidates found'
+              : filter === 'valuePicks'
+                ? 'No value picks found for this race'
+                : 'No riders match this filter'}
+          </p>
+          <button
+            className="mt-2 text-xs text-primary hover:underline cursor-pointer"
+            onClick={() => setFilter('all')}
+          >
+            Show all riders
+          </button>
+        </div>
+      ) : (
+        <DataTable<AnalyzedRider>
+          columns={columns}
+          data={filteredRiders}
+          initialSorting={[{ id: 'effectiveScore', desc: true }]}
+          renderExpandedRow={(row: Row<AnalyzedRider>) => (
+            <ExpandedRowContent rider={row.original} hasML={hasML} />
+          )}
+          getRowClassName={(row: Row<AnalyzedRider>) => {
+            if (excludedIds.has(row.original.rawName)) return 'opacity-40 grayscale';
+            if (lockedIds.has(row.original.rawName)) return 'bg-secondary-container/5';
+            if (row.original.unmatched) return 'opacity-60';
+            return '';
+          }}
+        />
+      )}
     </div>
   );
 }
