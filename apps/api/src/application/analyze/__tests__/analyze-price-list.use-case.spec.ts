@@ -120,6 +120,8 @@ describe('AnalyzePriceListUseCase', () => {
       findByRace: jest.fn().mockResolvedValue([]),
       findLatestModelVersion: jest.fn().mockResolvedValue(null),
       saveMany: jest.fn().mockResolvedValue(undefined),
+      deleteByRace: jest.fn().mockResolvedValue(0),
+      deleteAll: jest.fn().mockResolvedValue(0),
     };
 
     scoringService = new ScoringService();
@@ -134,7 +136,7 @@ describe('AnalyzePriceListUseCase', () => {
     );
   });
 
-  it('should return analyzed riders sorted by compositeScore descending', async () => {
+  it('should return analyzed riders sorted by score descending', async () => {
     const rider1 = createMockRider({
       id: 'r1',
       fullName: 'Pogacar Tadej',
@@ -182,10 +184,10 @@ describe('AnalyzePriceListUseCase', () => {
     expect(result.totalMatched).toBe(2);
     expect(result.unmatchedCount).toBe(0);
     expect(result.riders).toHaveLength(2);
-    expect(result.riders[0].compositeScore).not.toBeNull();
-    expect(result.riders[1].compositeScore).not.toBeNull();
-    expect(result.riders[0].compositeScore!).toBeGreaterThanOrEqual(
-      result.riders[1].compositeScore!,
+    expect(result.riders[0].totalProjectedPts).not.toBeNull();
+    expect(result.riders[1].totalProjectedPts).not.toBeNull();
+    expect(result.riders[0].totalProjectedPts!).toBeGreaterThanOrEqual(
+      result.riders[1].totalProjectedPts!,
     );
   });
 
@@ -219,9 +221,9 @@ describe('AnalyzePriceListUseCase', () => {
     const unmatchedRider = result.riders.find((r) => r.unmatched);
 
     expect(matchedRider).toBeDefined();
-    expect(matchedRider!.compositeScore).not.toBeNull();
+    expect(matchedRider!.totalProjectedPts).not.toBeNull();
     expect(unmatchedRider).toBeDefined();
-    expect(unmatchedRider!.compositeScore).toBeNull();
+    expect(unmatchedRider!.totalProjectedPts).toBeNull();
     expect(unmatchedRider!.categoryScores).toBeNull();
   });
 
@@ -255,7 +257,7 @@ describe('AnalyzePriceListUseCase', () => {
 
     expect(result.totalMatched).toBe(0);
     expect(result.unmatchedCount).toBe(2);
-    expect(result.riders.every((r) => r.compositeScore === null)).toBe(true);
+    expect(result.riders.every((r) => r.totalProjectedPts === null)).toBe(true);
   });
 
   it('should include matchedRider info for matched riders', async () => {

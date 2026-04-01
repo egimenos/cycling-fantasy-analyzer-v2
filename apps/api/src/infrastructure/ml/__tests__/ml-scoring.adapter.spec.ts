@@ -34,8 +34,8 @@ describe('MlScoringAdapter', () => {
       const result = await adapter.predictRace('tour-de-france', 2026);
 
       expect(result).toEqual([
-        { riderId: 'r1', predictedScore: 85.0 },
-        { riderId: 'r2', predictedScore: 72.5 },
+        expect.objectContaining({ riderId: 'r1', predictedScore: 85.0 }),
+        expect.objectContaining({ riderId: 'r2', predictedScore: 72.5 }),
       ]);
       expect(mockFetch).toHaveBeenCalledWith(
         'http://ml-test:8000/predict',

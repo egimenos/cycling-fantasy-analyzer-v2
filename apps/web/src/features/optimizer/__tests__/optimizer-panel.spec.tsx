@@ -22,7 +22,6 @@ function makeRider(name: string, price = 100): AnalyzedRider {
     matchedRider: { id: '1', pcsSlug: 'slug', fullName: name, currentTeam: 'Team' },
     matchConfidence: 0.9,
     unmatched: false,
-    compositeScore: 50,
     pointsPerHillio: 0.5,
     totalProjectedPts: 50,
     categoryScores: { gc: 20, stage: 10, mountain: 10, sprint: 5 },
