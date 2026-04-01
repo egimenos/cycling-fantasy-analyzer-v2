@@ -1,8 +1,11 @@
 ---
 work_package_id: WP04
 title: Frontend — BPI Column & Flag Badges
-lane: planned
+lane: 'done'
 dependencies: [WP03]
+base_branch: 015-breakout-potential-index-WP03
+base_commit: dfcd0625ef9fc477a966de8524394478f011bab8
+created_at: '2026-04-01T18:41:13.621339+00:00'
 subtasks:
   - T017
   - T018
@@ -10,10 +13,10 @@ subtasks:
   - T020
 phase: Phase 2 - Frontend
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '44140'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-04-01T17:57:39Z'
     lane: planned
@@ -227,3 +230,6 @@ spec-kitty implement WP04 --base WP03
 ## Activity Log
 
 - 2026-04-01T17:57:39Z – system – lane=planned – Prompt created.
+- 2026-04-01T18:41:14Z – claude-opus – shell_pid=44140 – lane=doing – Assigned agent via workflow command
+- 2026-04-01T18:42:38Z – claude-opus – shell_pid=44140 – lane=for_review – BPI column + flag badges + sorting. Build passes.
+- 2026-04-01T18:43:13Z – claude-opus – shell_pid=44140 – lane=done – Review passed: BPI column + badges match design tokens, sorting correct, FlagChip avoids ESM enum

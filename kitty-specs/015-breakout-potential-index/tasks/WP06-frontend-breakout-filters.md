@@ -1,18 +1,21 @@
 ---
 work_package_id: WP06
 title: Frontend — Breakout & Value Picks Filters
-lane: planned
+lane: 'done'
 dependencies: [WP04]
+base_branch: 015-breakout-potential-index-WP04
+base_commit: b94cb43934c37b80647547da9dac68ecb795d6ef
+created_at: '2026-04-01T18:43:23.496384+00:00'
 subtasks:
   - T025
   - T026
   - T027
 phase: Phase 2 - Frontend
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '47854'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-04-01T17:57:39Z'
     lane: planned
@@ -187,3 +190,6 @@ spec-kitty implement WP06 --base WP04
 ## Activity Log
 
 - 2026-04-01T17:57:39Z – system – lane=planned – Prompt created.
+- 2026-04-01T18:43:24Z – claude-opus – shell_pid=47854 – lane=doing – Assigned agent via workflow command
+- 2026-04-01T18:46:21Z – claude-opus – shell_pid=47854 – lane=for_review – Breakout + Value Picks filters with empty state. Build clean.
+- 2026-04-01T18:46:52Z – claude-opus – shell_pid=47854 – lane=done – Review passed: filters match spec thresholds, empty state contextual, toggle behavior correct

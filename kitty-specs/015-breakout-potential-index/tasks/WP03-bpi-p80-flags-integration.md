@@ -1,8 +1,11 @@
 ---
 work_package_id: WP03
 title: BPI Domain Service — P80, Flags & Integration
-lane: planned
+lane: 'done'
 dependencies: [WP02]
+base_branch: 015-breakout-potential-index-WP02
+base_commit: ad8001efdb79aa9d49e11d1b09e0512c1ef065df
+created_at: '2026-04-01T18:30:46.748377+00:00'
 subtasks:
   - T011
   - T012
@@ -12,10 +15,10 @@ subtasks:
   - T016
 phase: Phase 1 - Backend
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '30155'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-04-01T17:57:39Z'
     lane: planned
@@ -367,3 +370,6 @@ spec-kitty implement WP03 --base WP02
 ## Activity Log
 
 - 2026-04-01T17:57:39Z – system – lane=planned – Prompt created.
+- 2026-04-01T18:30:47Z – claude-opus – shell_pid=30155 – lane=doing – Assigned agent via workflow command
+- 2026-04-01T18:39:23Z – claude-opus – shell_pid=30155 – lane=for_review – P80, flags, 66 tests (100% line coverage), use case integration. 499/499 tests pass.
+- 2026-04-01T18:41:04Z – claude-opus – shell_pid=30155 – lane=done – Review passed: P80 bootstrap deterministic, all 6 flags match spec, 66 tests 100% coverage, use case integration clean (step 5.5), CoreCategoryScores adaptation correct

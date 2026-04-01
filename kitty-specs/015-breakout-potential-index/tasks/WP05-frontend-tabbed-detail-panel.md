@@ -1,8 +1,11 @@
 ---
 work_package_id: WP05
 title: Frontend — Tabbed Detail Panel
-lane: planned
+lane: 'done'
 dependencies: [WP04]
+base_branch: 015-breakout-potential-index-WP04
+base_commit: b94cb43934c37b80647547da9dac68ecb795d6ef
+created_at: '2026-04-01T18:43:20.800063+00:00'
 subtasks:
   - T021
   - T022
@@ -10,10 +13,10 @@ subtasks:
   - T024
 phase: Phase 2 - Frontend
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '47435'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-04-01T17:57:39Z'
     lane: planned
@@ -322,3 +325,6 @@ spec-kitty implement WP05 --base WP04
 ## Activity Log
 
 - 2026-04-01T17:57:39Z – system – lane=planned – Prompt created.
+- 2026-04-01T18:43:21Z – claude-opus – shell_pid=47435 – lane=doing – Assigned agent via workflow command
+- 2026-04-01T18:46:15Z – claude-opus – shell_pid=47435 – lane=for_review – Tabbed detail panel with signal bars, P80 comparison, flag descriptions. Build clean.
+- 2026-04-01T18:46:50Z – claude-opus – shell_pid=47435 – lane=done – Review passed: signal bars typed, Route Fit N/A, PerformanceContent extracted, tabs correct

@@ -1,18 +1,21 @@
 ---
 work_package_id: WP01
 title: Foundation — Shared Types & Rider Entity
-lane: planned
+lane: 'done'
 dependencies: []
+base_branch: 015-breakout-potential-index
+base_commit: 6f339c0ca2e0d250bb1c1c1f9ec1b84466d8b073
+created_at: '2026-04-01T18:14:17.508026+00:00'
 subtasks:
   - T001
   - T002
   - T003
 phase: Phase 0 - Foundation
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '42200'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-04-01T17:57:39Z'
     lane: planned
@@ -160,3 +163,7 @@ spec-kitty implement WP01
 ## Activity Log
 
 - 2026-04-01T17:57:39Z – system – lane=planned – Prompt created.
+- 2026-04-01T18:14:18Z – claude-opus – shell_pid=17711 – lane=doing – Assigned agent via workflow command
+- 2026-04-01T18:20:47Z – claude-opus – shell_pid=17711 – lane=for_review – Ready for review: shared types + birthDate entity + adapter + all test fixtures updated
+- 2026-04-01T18:40:01Z – claude-opus – shell_pid=42200 – lane=doing – Started review via workflow command
+- 2026-04-01T18:40:19Z – claude-opus – shell_pid=42200 – lane=done – Review passed: types correct (readonly, PascalCase enum), birthDate flows DB→adapter→entity, all fixtures updated, build clean

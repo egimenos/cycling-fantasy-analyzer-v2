@@ -1,8 +1,11 @@
 ---
 work_package_id: WP02
 title: BPI Domain Service — Signal Computation
-lane: planned
+lane: 'done'
 dependencies: [WP01]
+base_branch: 015-breakout-potential-index-WP01
+base_commit: 920179b93b76cbe74433810a228104783af3c980
+created_at: '2026-04-01T18:21:12.049009+00:00'
 subtasks:
   - T004
   - T005
@@ -13,10 +16,10 @@ subtasks:
   - T010
 phase: Phase 0 - Foundation
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '24048'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-04-01T17:57:39Z'
     lane: planned
@@ -311,3 +314,6 @@ spec-kitty implement WP02 --base WP01
 ## Activity Log
 
 - 2026-04-01T17:57:39Z – system – lane=planned – Prompt created.
+- 2026-04-01T18:21:13Z – claude-opus – shell_pid=24048 – lane=doing – Assigned agent via workflow command
+- 2026-04-01T18:22:48Z – claude-opus – shell_pid=24048 – lane=for_review – All 5 signals + composite index implemented as pure functions. Build passes.
+- 2026-04-01T18:40:39Z – claude-opus – shell_pid=24048 – lane=done – Review passed: 5 signals + index correct, pure functions, PCS profile mapping verified, boy scout cleanup clean

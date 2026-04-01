@@ -20,9 +20,9 @@
 
 ### Included Subtasks
 
-- [ ] T001 Add BreakoutFlag enum, BreakoutSignals interface, and BreakoutResult interface to `packages/shared-types/src/api.ts`
-- [ ] T002 Extend RiderProps with `birthDate: Date | null` in `apps/api/src/domain/rider/rider.entity.ts`
-- [ ] T003 Update `RiderRepositoryAdapter.toDomain()` to map `row.birthDate` in `apps/api/src/infrastructure/database/rider.repository.adapter.ts`
+- [x] T001 Add BreakoutFlag enum, BreakoutSignals interface, and BreakoutResult interface to `packages/shared-types/src/api.ts`
+- [x] T002 Extend RiderProps with `birthDate: Date | null` in `apps/api/src/domain/rider/rider.entity.ts`
+- [x] T003 Update `RiderRepositoryAdapter.toDomain()` to map `row.birthDate` in `apps/api/src/infrastructure/database/rider.repository.adapter.ts`
 
 ### Implementation Notes
 
@@ -55,13 +55,13 @@
 
 ### Included Subtasks
 
-- [ ] T004 Create `apps/api/src/domain/breakout/breakout.types.ts` with `ComputeBreakoutInput` interface
-- [ ] T005 Implement `computeTrajectory(seasons, age): number` — linear regression slope × age factor (0-25)
-- [ ] T006 Implement `computeRecencyBurst(seasons): number` — current season vs historical avg (0-25)
-- [ ] T007 Implement `computeCeilingGap(seasons, prediction, age): number` — peak vs prediction, age-gated (0-20)
-- [ ] T008 Implement `computeRouteFit(categoryScores, profileSummary): number` — dot product (0-15)
-- [ ] T009 Implement `computeVariance(seasons): number` — coefficient of variation (0-15)
-- [ ] T010 Implement `computeBpiIndex(signals): number` — sum and clamp 0-100
+- [x] T004 Create `apps/api/src/domain/breakout/breakout.types.ts` with `ComputeBreakoutInput` interface
+- [x] T005 Implement `computeTrajectory(seasons, age): number` — linear regression slope × age factor (0-25)
+- [x] T006 Implement `computeRecencyBurst(seasons): number` — current season vs historical avg (0-25)
+- [x] T007 Implement `computeCeilingGap(seasons, prediction, age): number` — peak vs prediction, age-gated (0-20)
+- [x] T008 Implement `computeRouteFit(categoryScores, profileSummary): number` — dot product (0-15)
+- [x] T009 Implement `computeVariance(seasons): number` — coefficient of variation (0-15)
+- [x] T010 Implement `computeBpiIndex(signals): number` — sum and clamp 0-100
 
 ### Implementation Notes
 
@@ -102,12 +102,12 @@
 
 ### Included Subtasks
 
-- [ ] T011 Implement `computeUpsideP80(seasons, prediction): number` — bootstrap (≥3 seasons) or heuristic (<3)
-- [ ] T012 Implement `evaluateFlags(input): BreakoutFlag[]` — 6 flag conditions per spec
-- [ ] T013 Compose `computeBreakout(input): BreakoutResult` orchestrating signals + P80 + flags
-- [ ] T014 Unit tests for all functions in `apps/api/src/domain/breakout/__tests__/breakout.service.spec.ts` — 100% coverage
-- [ ] T015 Integrate `computeBreakout()` call into `apps/api/src/application/analyze/analyze-price-list.use-case.ts` (step 5.5, post-ML enrichment)
-- [ ] T016 Compute `medianPtsPerHillio` across the rider list for DEEP_VALUE flag evaluation
+- [x] T011 Implement `computeUpsideP80(seasons, prediction): number` — bootstrap (≥3 seasons) or heuristic (<3)
+- [x] T012 Implement `evaluateFlags(input): BreakoutFlag[]` — 6 flag conditions per spec
+- [x] T013 Compose `computeBreakout(input): BreakoutResult` orchestrating signals + P80 + flags
+- [x] T014 Unit tests for all functions in `apps/api/src/domain/breakout/__tests__/breakout.service.spec.ts` — 100% coverage
+- [x] T015 Integrate `computeBreakout()` call into `apps/api/src/application/analyze/analyze-price-list.use-case.ts` (step 5.5, post-ML enrichment)
+- [x] T016 Compute `medianPtsPerHillio` across the rider list for DEEP_VALUE flag evaluation
 
 ### Implementation Notes
 
@@ -151,10 +151,10 @@
 
 ### Included Subtasks
 
-- [ ] T017 [P] Add BPI column definition to the TanStack Table column config in `apps/web/src/features/rider-list/components/rider-table.tsx`
-- [ ] T018 [P] Create `apps/web/src/features/rider-list/components/bpi-badge.tsx` — color-coded badge (green ≥70, amber 40-69, gray <40, dash for null)
-- [ ] T019 [P] Add flag chip badges next to rider names in the name column cell renderer
-- [ ] T020 Make BPI column sortable (integrate with TanStack Table sorting)
+- [x] T017 [P] Add BPI column definition to the TanStack Table column config in `apps/web/src/features/rider-list/components/rider-table.tsx`
+- [x] T018 [P] Create `apps/web/src/features/rider-list/components/bpi-badge.tsx` — color-coded badge (green ≥70, amber 40-69, gray <40, dash for null)
+- [x] T019 [P] Add flag chip badges next to rider names in the name column cell renderer
+- [x] T020 Make BPI column sortable (integrate with TanStack Table sorting)
 
 ### Implementation Notes
 
@@ -190,10 +190,10 @@
 
 ### Included Subtasks
 
-- [ ] T021 Refactor `ExpandedRowContent` into a tabbed layout with state `'performance' | 'breakout'`
-- [ ] T022 Create `apps/web/src/features/rider-list/components/breakout-detail-panel.tsx` with 5 signal bars (label, score/max, visual bar)
-- [ ] T023 Add prediction vs upside P80 comparison section in the breakout tab
-- [ ] T024 Handle missing data: Route Fit shows "N/A" when profileSummary absent, unmatched riders show no breakout tab
+- [x] T021 Refactor `ExpandedRowContent` into a tabbed layout with state `'performance' | 'breakout'`
+- [x] T022 Create `apps/web/src/features/rider-list/components/breakout-detail-panel.tsx` with 5 signal bars (label, score/max, visual bar)
+- [x] T023 Add prediction vs upside P80 comparison section in the breakout tab
+- [x] T024 Handle missing data: Route Fit shows "N/A" when profileSummary absent, unmatched riders show no breakout tab
 
 ### Implementation Notes
 
@@ -229,9 +229,9 @@
 
 ### Included Subtasks
 
-- [ ] T025 [P] Add "Breakout" filter option to `FILTER_OPTIONS` array with filter logic `(rider) => rider.breakout?.index >= 50`
-- [ ] T026 [P] Add "Value Picks" filter option with logic `(rider) => rider.breakout?.index >= 50 && rider.priceHillios <= 125`
-- [ ] T027 Add empty state message when active filter returns zero riders (e.g., "No breakout candidates found" / "No value picks found for this race")
+- [x] T025 [P] Add "Breakout" filter option to `FILTER_OPTIONS` array with filter logic `(rider) => rider.breakout?.index >= 50`
+- [x] T026 [P] Add "Value Picks" filter option with logic `(rider) => rider.breakout?.index >= 50 && rider.priceHillios <= 125`
+- [x] T027 Add empty state message when active filter returns zero riders (e.g., "No breakout candidates found" / "No value picks found for this race")
 
 ### Implementation Notes
 
