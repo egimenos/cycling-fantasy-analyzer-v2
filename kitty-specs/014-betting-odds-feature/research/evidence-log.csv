@@ -1,0 +1,8 @@
+id,date,source,finding,confidence,decision_ref
+E001,2026-03-31,the-odds-api.com/sports-odds-data/sports-apis.html,The Odds API does NOT cover cycling. Only mainstream sports (football/basketball/tennis/etc). Confirmed by checking their sports list page.,high,D1
+E002,2026-03-31,betfair-datascientists.github.io/api/apiPythontutorial/,"Betfair API has cycling as event type 11. Python library betfairlightweight supports listing markets, getting odds, and streaming. Authentication via SSL certs + app key.",high,D1
+E003,2026-03-31,betfair.com/exchange/plus/en/cycling-betting-11,"Betfair Exchange has active cycling markets: Tour Winner (1.231543034), Points Classification (1.231543037), Top 10 (1.215564080), Stage Winners (per-stage).",high,D1+D3
+E004,2026-03-31,support.developer.betfair.com,"Betfair API access is free for development (delayed key, 1-180s delay). Live key costs £499. Delayed key sufficient for pre-race snapshot collection.",high,D7
+E005,2026-03-31,opticodds.com + odds-api.io + oddsjam.com,"OpticOdds, OddsJam, and similar aggregator APIs do not list cycling in their sports coverage.",high,D1
+E006,2026-03-31,github.com/ChamRoshi/Oddschecker-Scraper,"Open-source Oddschecker scraper exists. Uses requests+BeautifulSoup. URL pattern: oddschecker.com/cycling/tour-de-france/winner. Extracts odds from 20+ bookmakers into DataFrame.",medium,D2
+E007,2026-03-31,medium.com/@dusoye/scraping-odds-from-oddschecker,"Oddschecker now requires Selenium (JS-rendered). BeautifulSoup alone no longer works. Site layout changes frequently to discourage scraping.",high,D2

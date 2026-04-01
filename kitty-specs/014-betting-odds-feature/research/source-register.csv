@@ -1,0 +1,11 @@
+id,type,url,title,accessed,notes
+S001,api_docs,https://the-odds-api.com/sports-odds-data/sports-apis.html,The Odds API Sports Coverage,2026-03-31,No cycling support
+S002,tutorial,https://betfair-datascientists.github.io/api/apiPythontutorial/,Betfair API Python Tutorial,2026-03-31,betfairlightweight library usage
+S003,exchange,https://www.betfair.com/exchange/plus/en/cycling-betting-11,Betfair Exchange Cycling,2026-03-31,Active markets for GTs
+S004,support,https://support.developer.betfair.com/hc/en-us/articles/115003864531,Betfair API Costs,2026-03-31,Free delayed key
+S005,github,https://github.com/ChamRoshi/Oddschecker-Scraper,Oddschecker Scraper,2026-03-31,Reference implementation
+S006,article,https://medium.com/@dusoye/scraping-odds-from-oddschecker-using-python-702742dd8106,Scraping Oddschecker Medium,2026-03-31,Selenium now required
+S007,github,https://github.com/betcode-org/betfair,betfairlightweight PyPI,2026-03-31,Python 3.9-3.14 supported
+S008,api_docs,https://developer.betfair.com/exchange-api/,Betfair Exchange API Overview,2026-03-31,Betting API + Accounts API + Stream API
+S009,exchange,https://www.oddschecker.com/cycling/tour-de-france/winner,Oddschecker TdF Winner Odds,2026-03-31,403 on automated access
+S010,api_docs,https://sportbex.com/cycling-api/,Sportbex Cycling API,2026-03-31,Claims cycling odds but docs fail to load (JS-only)
