@@ -1,7 +1,8 @@
 import type { AnalyzedRider } from '@cycling-analyzer/shared-types';
 import { formatNumber } from '@/shared/lib/utils';
-import { CheckCircle, Copy, RotateCcw, Bike } from 'lucide-react';
+import { CheckCircle, Copy, RotateCcw, Bike, Crown } from 'lucide-react';
 import { useState } from 'react';
+import { useAnimatedNumber } from '@/shared/hooks/use-animated-number';
 
 function getEffectiveScore(rider: AnalyzedRider): number | null {
   return rider.mlPredictedScore ?? rider.totalProjectedPts;
@@ -30,6 +31,7 @@ export function TeamSummary({
   const remaining = budget - totalCost;
   const avgCost = riders.length > 0 ? totalCost / riders.length : 0;
   const usagePercent = budget > 0 ? (totalCost / budget) * 100 : 0;
+  const animatedScore = useAnimatedNumber(displayScore, 1000);
 
   const handleCopy = async (): Promise<void> => {
     const header = 'CYCLING FANTASY OPTIMIZER - TEAM ROSTER';
@@ -52,17 +54,17 @@ export function TeamSummary({
       {/* Success Banner */}
       <div
         data-testid="roster-complete-banner"
-        className="bg-green-500/10 dark:bg-green-900/20 border-l-4 border-green-500 p-6 rounded-sm flex flex-col md:flex-row justify-between items-center gap-4"
+        className="bg-stage/10 border-l-4 border-stage p-6 rounded-sm flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-in-up"
       >
         <div className="flex items-center gap-4">
-          <div className="bg-green-500 text-white p-2 rounded-full">
+          <div className="bg-stage text-white p-2 rounded-full">
             <CheckCircle className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="font-headline text-2xl font-extrabold tracking-tight text-green-800 dark:text-green-100">
+            <h1 className="font-headline text-2xl font-extrabold tracking-tight text-on-surface">
               Team Complete!
             </h1>
-            <p className="text-green-700 dark:text-green-200/60 text-sm">
+            <p className="text-on-surface-variant text-sm">
               Your roster is mathematically optimized for the upcoming stage.
             </p>
           </div>
@@ -97,7 +99,7 @@ export function TeamSummary({
             </h2>
           </div>
 
-          <div data-testid="roster-rider-list" className="space-y-2">
+          <div data-testid="roster-rider-list" className="space-y-2 stagger-children">
             {riders.map((rider, index) => (
               <div
                 key={rider.rawName}
@@ -105,7 +107,11 @@ export function TeamSummary({
                 className="bg-surface-container-high p-4 flex items-center gap-4 group hover:bg-surface-container-highest transition-all"
               >
                 <div className="w-12 h-12 rounded-sm bg-surface-container-highest flex items-center justify-center flex-shrink-0">
-                  <Bike className="h-5 w-5 text-on-primary-container" />
+                  {index === 0 ? (
+                    <Crown className="h-5 w-5 text-tertiary" />
+                  ) : (
+                    <Bike className="h-5 w-5 text-on-primary-container" />
+                  )}
                 </div>
                 <div className="flex-grow min-w-0">
                   <div className="flex items-center gap-2">
@@ -144,7 +150,7 @@ export function TeamSummary({
                     <div className="text-[10px] text-on-primary-container font-mono uppercase">
                       Value
                     </div>
-                    <div className="font-mono text-green-700 dark:text-green-400 font-bold">
+                    <div className="font-mono text-stage font-bold">
                       {(() => {
                         const score = getEffectiveScore(rider);
                         return score !== null && rider.priceHillios > 0
@@ -161,7 +167,7 @@ export function TeamSummary({
 
         {/* Right: Metrics Sidebar */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-surface-container-low p-8 rounded-sm space-y-10 border-t-2 border-primary">
+          <div className="bg-surface-container-low p-8 rounded-sm space-y-10 border-t-2 border-secondary animate-slide-in-right">
             <h3 className="font-headline text-xl font-extrabold tracking-tight">Roster Metrics</h3>
 
             {/* Total Projected Score */}
@@ -172,9 +178,9 @@ export function TeamSummary({
               <div className="flex items-baseline gap-2">
                 <span
                   data-testid="roster-total-score"
-                  className="font-headline text-5xl font-black text-on-surface tracking-tighter"
+                  className="font-headline text-5xl font-black text-on-surface tracking-tighter text-glow-secondary"
                 >
-                  {formatNumber(displayScore)}
+                  {formatNumber(Math.round(animatedScore))}
                 </span>
                 <span className="font-mono text-tertiary text-lg font-bold">PTS</span>
               </div>
@@ -190,7 +196,7 @@ export function TeamSummary({
               </div>
               <div className="h-1.5 bg-surface-container-highest w-full rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-primary"
+                  className="h-full bg-secondary animate-bar-fill"
                   style={{ width: `${Math.min(usagePercent, 100)}%` }}
                 />
               </div>

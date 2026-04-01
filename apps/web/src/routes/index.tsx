@@ -204,49 +204,57 @@ function HomePageContent() {
       <FlowTabs activeTab={tab} onTabChange={handleTabChange} />
       <div className="max-w-7xl mx-auto px-6 py-6">
         {tab === 'setup' && (
-          <SetupTab
-            onAnalyze={handleAnalyze}
-            isLoading={analyzeState.status === 'loading'}
-            error={analyzeState.status === 'error' ? analyzeState.error : undefined}
-            onRetry={retryAnalyze}
-            budget={budget}
-            riderText={riderText}
-            onRiderTextChange={setRiderText}
-            raceUrl={raceUrl}
-            onRaceUrlChange={setRaceUrl}
-            gameUrl={gameUrl}
-            onGameUrlChange={setGameUrl}
-            onBudgetChange={setBudget}
-            profileState={profileState}
-          />
+          <div key="setup" className="animate-fade-in-up">
+            <SetupTab
+              onAnalyze={handleAnalyze}
+              isLoading={analyzeState.status === 'loading'}
+              error={analyzeState.status === 'error' ? analyzeState.error : undefined}
+              onRetry={retryAnalyze}
+              budget={budget}
+              riderText={riderText}
+              onRiderTextChange={setRiderText}
+              raceUrl={raceUrl}
+              onRaceUrlChange={setRaceUrl}
+              gameUrl={gameUrl}
+              onGameUrlChange={setGameUrl}
+              onBudgetChange={setBudget}
+              profileState={profileState}
+            />
+          </div>
         )}
         {tab === 'dashboard' && analyzeState.status === 'success' && (
-          <DashboardTab
-            data={analyzeState.data}
-            lockedIds={lockedIds}
-            excludedIds={excludedIds}
-            selectedNames={teamBuilder.selectedNames}
-            onToggleLock={handleToggleLock}
-            onToggleExclude={handleToggleExclude}
-            onToggleSelect={handleToggleSelect}
-            canSelect={teamBuilder.canSelect}
-            teamBuilder={teamBuilder}
-            budget={budget}
-            profileState={profileState}
-            onOptimize={handleOptimize}
-            isOptimizing={optimizeState.status === 'loading'}
-            onReviewTeam={handleReviewTeam}
-          />
+          <div key="dashboard" className="animate-fade-in-up">
+            <DashboardTab
+              data={analyzeState.data}
+              lockedIds={lockedIds}
+              excludedIds={excludedIds}
+              selectedNames={teamBuilder.selectedNames}
+              onToggleLock={handleToggleLock}
+              onToggleExclude={handleToggleExclude}
+              onToggleSelect={handleToggleSelect}
+              canSelect={teamBuilder.canSelect}
+              teamBuilder={teamBuilder}
+              budget={budget}
+              profileState={profileState}
+              onOptimize={handleOptimize}
+              isOptimizing={optimizeState.status === 'loading'}
+              onReviewTeam={handleReviewTeam}
+            />
+          </div>
         )}
         {tab === 'optimization' && (
-          <OptimizationTab
-            optimizeState={optimizeState}
-            budget={budget}
-            onApplyToRoster={handleApplyToRoster}
-          />
+          <div key="optimization" className="animate-fade-in-up">
+            <OptimizationTab
+              optimizeState={optimizeState}
+              budget={budget}
+              onApplyToRoster={handleApplyToRoster}
+            />
+          </div>
         )}
         {tab === 'roster' && (
-          <RosterTab teamBuilder={teamBuilder} budget={budget} onReset={handleFullReset} />
+          <div key="roster" className="animate-fade-in-up">
+            <RosterTab teamBuilder={teamBuilder} budget={budget} onReset={handleFullReset} />
+          </div>
         )}
       </div>
     </>
@@ -332,38 +340,26 @@ function SetupTab({
           </div>
         ) : (
           <div className="flex-1 min-h-[500px] rounded-sm bg-surface-container-low/30 border border-dashed border-outline-variant/20 flex flex-col items-center justify-center p-12 relative overflow-hidden">
-            <div className="relative z-10 flex flex-col items-center text-center max-w-md">
-              <div className="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center mb-6">
-                <TrendingUp className="h-8 w-8 text-primary" />
+            {/* Atmospheric road line */}
+            <div className="absolute inset-0 flex justify-center pointer-events-none">
+              <div className="w-px h-full bg-gradient-to-b from-transparent via-outline-variant/10 to-transparent" />
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-secondary/[0.02] to-transparent pointer-events-none" />
+
+            <div className="relative z-10 flex flex-col items-center text-center max-w-md animate-fade-in">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-secondary/20 to-primary/10 flex items-center justify-center mb-6 ring-1 ring-secondary/20">
+                <TrendingUp className="h-10 w-10 text-secondary" />
               </div>
-              <h3 className="text-xl font-headline font-bold text-on-surface mb-3">
-                No Roster Detected
+              <h3 className="text-2xl font-headline font-extrabold text-on-surface mb-3 tracking-tight">
+                Ready to Ride
               </h3>
-              <p className="text-on-surface-variant font-body leading-relaxed mb-8">
-                Input your budget and rider list to see the optimized lineup preview here. Our
-                engine uses historical performance data to find the best value for your budget.
+              <p className="text-on-surface-variant font-body leading-relaxed mb-6 text-sm">
+                Configure your race profile and rider list to unlock the analysis engine. Your
+                optimized lineup will appear here.
               </p>
-              <div className="w-full flex flex-col gap-3 opacity-50">
-                <div className="flex justify-between items-center py-3 border-b border-outline-variant/20">
-                  <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded bg-surface-container-highest" />
-                    <div className="flex flex-col gap-1">
-                      <div className="w-32 h-3 bg-surface-container-highest rounded" />
-                      <div className="w-20 h-2 bg-surface-container-highest rounded" />
-                    </div>
-                  </div>
-                  <div className="w-16 h-4 bg-surface-container-highest rounded" />
-                </div>
-                <div className="flex justify-between items-center py-3 border-b border-outline-variant/20">
-                  <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded bg-surface-container-highest" />
-                    <div className="flex flex-col gap-1">
-                      <div className="w-40 h-3 bg-surface-container-highest rounded" />
-                      <div className="w-24 h-2 bg-surface-container-highest rounded" />
-                    </div>
-                  </div>
-                  <div className="w-16 h-4 bg-surface-container-highest rounded" />
-                </div>
+              <div className="flex items-center gap-2 text-[10px] font-mono text-outline uppercase tracking-widest">
+                <span className="w-1.5 h-1.5 rounded-full bg-secondary/40 animate-pulse" />
+                Awaiting Input
               </div>
             </div>
           </div>

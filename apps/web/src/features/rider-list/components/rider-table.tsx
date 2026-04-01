@@ -589,20 +589,22 @@ export function RiderTable({
           </button>
         </div>
       ) : (
-        <DataTable<AnalyzedRider>
-          columns={columns}
-          data={filteredRiders}
-          initialSorting={[{ id: 'effectiveScore', desc: true }]}
-          renderExpandedRow={(row: Row<AnalyzedRider>) => (
-            <ExpandedRowContent rider={row.original} hasML={hasML} />
-          )}
-          getRowClassName={(row: Row<AnalyzedRider>) => {
-            if (excludedIds.has(row.original.rawName)) return 'opacity-40 grayscale';
-            if (lockedIds.has(row.original.rawName)) return 'bg-secondary-container/5';
-            if (row.original.unmatched) return 'opacity-60';
-            return '';
-          }}
-        />
+        <div data-animated-rows>
+          <DataTable<AnalyzedRider>
+            columns={columns}
+            data={filteredRiders}
+            initialSorting={[{ id: 'effectiveScore', desc: true }]}
+            renderExpandedRow={(row: Row<AnalyzedRider>) => (
+              <ExpandedRowContent rider={row.original} hasML={hasML} />
+            )}
+            getRowClassName={(row: Row<AnalyzedRider>) => {
+              if (excludedIds.has(row.original.rawName)) return 'opacity-40 grayscale';
+              if (lockedIds.has(row.original.rawName)) return 'bg-secondary-container/5';
+              if (row.original.unmatched) return 'opacity-60';
+              return '';
+            }}
+          />
+        </div>
       )}
     </div>
   );

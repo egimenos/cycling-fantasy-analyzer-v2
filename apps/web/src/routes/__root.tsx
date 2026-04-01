@@ -39,24 +39,30 @@ function RootLayout() {
       <div className="min-h-screen bg-surface-dim text-on-surface">
         <nav
           data-testid="nav-bar"
-          className="fixed top-0 w-full z-50 bg-surface-dim/70 backdrop-blur-md border-b border-outline-variant/15 shadow-sm shadow-black/20 flex justify-between items-center px-6 h-16"
+          className="fixed top-0 w-full z-50 bg-surface-dim/70 backdrop-blur-md border-b border-outline-variant/15 shadow-sm shadow-black/20"
         >
-          <div className="flex items-center gap-3">
-            <img src="/logo.svg" alt="" className="h-8 w-8" />
-            <span className="text-xl font-black tracking-tighter text-on-surface uppercase italic font-headline">
-              CYCLING FANTASY OPTIMIZER
-            </span>
+          <div className="flex justify-between items-center px-6 h-16">
+            <div className="flex items-center gap-3">
+              <img src="/logo.svg" alt="" className="h-8 w-8" />
+              <span className="text-xl font-black tracking-tighter text-on-surface uppercase italic font-headline">
+                CYCLING FANTASY OPTIMIZER
+              </span>
+              <span className="hidden md:inline-block text-[9px] font-mono text-outline/50 uppercase tracking-widest ml-2 border border-outline-variant/15 px-1.5 py-0.5 rounded-sm">
+                v2
+              </span>
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                data-testid="nav-theme-toggle"
+                onClick={toggle}
+                className="p-2 rounded-sm hover:bg-surface-container-high transition-colors text-on-surface-variant"
+                aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <button
-              data-testid="nav-theme-toggle"
-              onClick={toggle}
-              className="p-2 rounded-sm hover:bg-surface-container-high transition-colors text-on-surface-variant"
-              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
-          </div>
+          <div className="h-px bg-gradient-to-r from-transparent via-secondary/30 to-transparent" />
         </nav>
         <main className="pt-16">
           <Outlet />

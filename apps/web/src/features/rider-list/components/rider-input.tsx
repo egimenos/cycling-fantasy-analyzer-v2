@@ -230,11 +230,13 @@ export function RiderInput({
         </div>
 
         {/* Analyze CTA */}
-        <button
+        <Button
           data-testid="setup-analyze-btn"
+          variant="cta"
+          size="lg"
           onClick={handleSubmit}
           disabled={parsedRiders.length === 0 || isLoading}
-          className="mt-4 w-full bg-primary text-primary-foreground py-4 rounded-sm font-headline font-extrabold uppercase tracking-widest text-sm flex items-center justify-center gap-3 transition-all hover:bg-primary-fixed-dim hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-primary/10 disabled:opacity-50 disabled:pointer-events-none"
+          className="mt-4 w-full py-4"
         >
           {isLoading ? (
             <>
@@ -247,7 +249,7 @@ export function RiderInput({
               Analyze Riders
             </>
           )}
-        </button>
+        </Button>
       </div>
     </div>
   );

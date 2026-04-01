@@ -1,7 +1,8 @@
 import type { AnalyzedRider } from '@cycling-analyzer/shared-types';
 import { MlBadge } from '@/shared/ui/ml-badge';
 import { cn } from '@/shared/lib/utils';
-import { X, User, Lock } from 'lucide-react';
+import { useAnimatedNumber } from '@/shared/hooks/use-animated-number';
+import { X, User, Lock, UserPlus } from 'lucide-react';
 
 interface TeamBuilderPanelProps {
   selectedRiders: AnalyzedRider[];
@@ -40,11 +41,13 @@ export function TeamBuilderPanel({
   const usagePercent = budget > 0 ? (totalCost / budget) * 100 : 0;
   const isOverBudget = budgetRemaining < 0;
   const displayScore = mlTotalScore ?? totalScore;
+  const animatedScore = useAnimatedNumber(displayScore);
+  const animatedBudget = useAnimatedNumber(budgetRemaining);
 
   return (
     <div
       data-testid="dashboard-team-builder"
-      className="bg-surface-container-high p-6 rounded-sm border border-outline-variant/10 flex flex-col gap-6 sticky top-24 max-h-[calc(100vh-8rem)] overflow-hidden"
+      className="bg-surface-container-high p-6 rounded-sm border border-outline-variant/10 flex flex-col gap-6 sticky top-24 max-h-[calc(100vh-8rem)] overflow-hidden animate-slide-in-right"
     >
       {/* Header */}
       <header className="space-y-1">
@@ -84,7 +87,7 @@ export function TeamBuilderPanel({
             return (
               <div
                 key={rider.rawName}
-                className="flex items-center gap-3 bg-surface-container-low p-2.5 border border-outline-variant/10 rounded-sm"
+                className="flex items-center gap-3 bg-surface-container-low p-2.5 border border-outline-variant/10 rounded-sm animate-scale-in"
               >
                 <div className="w-10 h-10 bg-surface-container-highest rounded-sm flex-shrink-0 flex items-center justify-center">
                   {isLocked ? (
@@ -117,9 +120,10 @@ export function TeamBuilderPanel({
           {Array.from({ length: emptySlots }).map((_, i) => (
             <div
               key={`empty-${i}`}
-              className="h-10 border border-dashed border-outline-variant/30 rounded-sm flex items-center justify-center text-[10px] text-outline/50 uppercase font-mono tracking-widest"
+              className="h-10 border border-dashed border-outline-variant/20 rounded-sm flex items-center justify-center gap-2 text-[10px] text-outline/30 uppercase font-mono tracking-widest group hover:border-outline-variant/40 hover:text-outline/50 transition-colors"
             >
-              Empty Slot
+              <UserPlus className="h-3 w-3 opacity-50" />
+              Slot {selectedRiders.length + i + 1}
             </div>
           ))}
         </div>
@@ -129,8 +133,11 @@ export function TeamBuilderPanel({
       <div className="space-y-3 pt-4 border-t border-outline-variant/10">
         <div className="flex items-center justify-between text-[10px] font-mono text-outline uppercase">
           <span>Remaining Budget</span>
-          <span data-testid="dashboard-budget-remaining" className="text-on-surface font-bold">
-            {budgetRemaining.toFixed(1)} / {budget}
+          <span
+            data-testid="dashboard-budget-remaining"
+            className={cn('font-bold', isOverBudget ? 'text-error' : 'text-on-surface')}
+          >
+            {animatedBudget.toFixed(1)} / {budget}
           </span>
         </div>
         <div className="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
@@ -158,10 +165,10 @@ export function TeamBuilderPanel({
           </span>
           <span
             data-testid="dashboard-projected-score"
-            className="font-mono font-bold text-2xl text-secondary"
+            className="font-mono font-bold text-2xl text-secondary text-glow-secondary"
           >
             {displayScore > 0
-              ? displayScore.toLocaleString(undefined, { maximumFractionDigits: 0 })
+              ? animatedScore.toLocaleString(undefined, { maximumFractionDigits: 0 })
               : '—'}
           </span>
         </div>

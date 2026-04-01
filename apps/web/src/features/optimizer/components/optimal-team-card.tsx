@@ -1,6 +1,6 @@
 import type { AnalyzedRider, TeamSelection } from '@cycling-analyzer/shared-types';
-import { Bike } from 'lucide-react';
-import { formatNumber } from '@/shared/lib/utils';
+import { Bike, Crown } from 'lucide-react';
+import { formatNumber, cn } from '@/shared/lib/utils';
 
 function getEffectiveScore(rider: AnalyzedRider): number | null {
   return rider.mlPredictedScore ?? rider.totalProjectedPts;
@@ -8,24 +8,56 @@ function getEffectiveScore(rider: AnalyzedRider): number | null {
 
 interface OptimalTeamCardProps {
   team: TeamSelection;
+  budget?: number;
+  variant?: 'primary' | 'secondary';
+  title?: string;
 }
 
-export function OptimalTeamCard({ team }: OptimalTeamCardProps) {
+export function OptimalTeamCard({ team, variant = 'primary' }: OptimalTeamCardProps) {
+  const isPrimary = variant === 'primary';
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-1">
-      {team.riders.map((rider) => {
+    <div className={cn('grid grid-cols-1 md:grid-cols-3 gap-1', isPrimary && 'stagger-children')}>
+      {team.riders.map((rider, index) => {
         const score = getEffectiveScore(rider);
+        const isLeader = index === 0 && isPrimary;
         return (
           <div
             key={rider.rawName}
             data-testid={`optimization-rider-card-${rider.rawName}`}
-            className="bg-surface-container-high p-5 flex items-center gap-4 group hover:bg-surface-bright transition-colors relative overflow-hidden"
+            className={cn(
+              'p-5 flex items-center gap-4 group transition-all relative overflow-hidden',
+              isLeader
+                ? 'bg-gradient-to-br from-surface-container-high to-tertiary/[0.06] border-l-2 border-tertiary hover:brightness-110'
+                : 'bg-surface-container-high hover:bg-surface-bright',
+            )}
           >
-            <div className="w-14 h-14 rounded-sm bg-surface-container-highest flex-shrink-0 flex items-center justify-center">
-              <Bike className="h-6 w-6 text-on-primary-container" />
+            {/* Rank badge */}
+            <div className="absolute top-1.5 right-2 text-[9px] font-mono font-bold text-outline/30">
+              #{String(index + 1).padStart(2, '0')}
+            </div>
+
+            <div
+              className={cn(
+                'w-14 h-14 rounded-sm flex-shrink-0 flex items-center justify-center',
+                isLeader
+                  ? 'bg-tertiary/15 ring-1 ring-tertiary/30'
+                  : 'bg-surface-container-highest',
+              )}
+            >
+              {isLeader ? (
+                <Crown className="h-6 w-6 text-tertiary" />
+              ) : (
+                <Bike className="h-6 w-6 text-on-primary-container" />
+              )}
             </div>
             <div className="flex-grow min-w-0">
-              <div className="font-headline font-bold text-sm text-on-surface truncate">
+              <div
+                className={cn(
+                  'font-headline font-bold text-sm text-on-surface truncate',
+                  isLeader && 'text-base',
+                )}
+              >
                 {rider.rawName}
               </div>
               <div className="text-[10px] font-mono text-on-surface-variant uppercase tracking-widest truncate">
@@ -35,7 +67,12 @@ export function OptimalTeamCard({ team }: OptimalTeamCardProps) {
                 <span className="font-mono text-xs text-on-primary-container">
                   {formatNumber(rider.priceHillios)}
                 </span>
-                <span className="font-mono text-sm font-bold text-on-surface flex-shrink-0">
+                <span
+                  className={cn(
+                    'font-mono text-sm font-bold flex-shrink-0',
+                    isLeader ? 'text-tertiary' : 'text-on-surface',
+                  )}
+                >
                   {score?.toFixed(0) ?? '—'} pts
                 </span>
               </div>

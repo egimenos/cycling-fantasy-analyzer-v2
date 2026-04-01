@@ -17,6 +17,7 @@ const badgeVariants = cva(
         stage: 'border-stage/30 bg-stage/10 text-stage',
         mountain: 'border-mountain/30 bg-mountain/10 text-mountain',
         sprint: 'border-sprint/30 bg-sprint/10 text-sprint',
+        info: 'border-secondary/30 bg-secondary/10 text-secondary',
       },
     },
     defaultVariants: {
