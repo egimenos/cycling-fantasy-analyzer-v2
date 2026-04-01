@@ -206,13 +206,19 @@ spec-kitty implement WP02 --base WP01
    ```
 2. **Logic**:
    - If `profileSummary` is undefined/null OR `categoryScores` is null: return 0.
-   - Compute rider's category profile as proportions: for each category (gc, stage, mountain, sprint), divide by the total. If total is 0, return 0.
-   - Compute dot product of rider profile vector and race profile vector.
-   - The `ProfileSummary` should have proportions for stage types (flat, mountain, hilly, TT). Map these to the rider categories:
-     - flat → sprint affinity
-     - mountain → mountain affinity (and gc for grand tours)
-     - hilly → stage affinity
-     - TT → gc affinity
+   - **Rider profile** (proportions): for each category (gc, stage, mountain, sprint), divide by total. If total is 0, return 0. This gives a 4-element vector.
+   - **Race profile** (derive from `ProfileSummary` counts): `ProfileSummary` has `p1Count` (flat), `p2Count`/`p3Count` (hilly), `p4Count`/`p5Count` (mountain), `ittCount`/`tttCount` (TT), `unknownCount`. Compute total stages = sum of all counts. Then build a 4-element race vector:
+     ```typescript
+     const total = p1 + p2 + p3 + p4 + p5 + itt + ttt + unknown;
+     if (total === 0) return 0;
+     const raceProfile = {
+       gc: (itt + ttt) / total, // TT stages favor GC riders
+       stage: (p2 + p3) / total, // Hilly stages favor stage hunters
+       mountain: (p4 + p5) / total, // Mountain stages favor climbers
+       sprint: p1 / total, // Flat stages favor sprinters
+     };
+     ```
+   - Dot product: `Σ(riderProfile[k] × raceProfile[k])` for k in {gc, stage, mountain, sprint}.
    - Score = `Math.min(15, Math.max(0, dotProduct * 15))` — perfect alignment (dot product ~1.0) scores 15.
 
 **Files**:
@@ -223,8 +229,9 @@ spec-kitty implement WP02 --base WP01
 
 **Notes**:
 
-- Check the exact shape of `ProfileSummary` in shared-types. It likely has fields like `flatPercentage`, `mountainPercentage`, etc.
-- The mapping from race profile to rider affinity is an approximation — the key insight is that a sprinter benefits from flat stages and a climber benefits from mountain stages.
+- `ProfileSummary` fields: `p1Count`, `p2Count`, `p3Count`, `p4Count`, `p5Count`, `ittCount`, `tttCount`, `unknownCount` — all are integer counts. Percentages must be derived.
+- `unknownCount` stages are excluded from the race profile vector (they don't boost any category).
+- PCS profile mapping: p1=flat, p2/p3=hilly/medium mountains, p4/p5=high mountains, itt/ttt=time trials.
 
 ### Subtask T009 – Implement variance signal (0-15)
 

@@ -113,11 +113,11 @@
 
 - **P80 bootstrap**: Sample 1000 iterations from season totals with replacement, apply temporal weights, take the 80th percentile. For <3 seasons, use `prediction × 1.8`.
 - **Flag conditions** (from spec):
-  - EMERGING_TALENT: age < 25 AND seasonsUsed <= 3 AND trajectory slope > 30 pts/year
+  - EMERGING_TALENT: age < 25 AND seasonsUsed <= 3 AND raw trajectory slope > 30 pts/year
   - HOT_STREAK: current season total > 2× average of other seasons
   - DEEP_VALUE: price <= 100 AND pointsPerHillio > median
   - CEILING_PLAY: peak historical season > 5× current prediction AND age < 30
-  - SPRINT_OPPORTUNITY: price <= 125 AND sprint+stage % > 15% AND flat stage % > 35% (needs profileSummary)
+  - SPRINT_OPPORTUNITY: price <= 125 AND sprint+stage % > 15% AND flat stage % > 35% (flat = p1Count/totalStages from profileSummary)
   - BREAKAWAY_HUNTER: price <= 100 AND mountain % > 10%
 - **Use case integration**: After ML enrichment loop (around line 250), compute `medianPtsPerHillio` once, then `map()` over matched riders calling `computeBreakout()` for each. Assign result to `rider.breakout`. Unmatched riders get `breakout: null`.
 - **Tests**: Cover each signal, P80 both paths, each flag independently, edge cases (1 season, 0 points, null birthDate, no profileSummary).

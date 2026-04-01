@@ -152,7 +152,18 @@ spec-kitty implement WP03 --base WP02
    if (input.priceHillios <= 125 && input.profileSummary && totalPts > 0) {
      const sprintStageRatio =
        (input.categoryScores!.sprint + input.categoryScores!.stage) / totalPts;
-     const flatPct = input.profileSummary.flatPercentage ?? 0; // check actual field name
+     // ProfileSummary uses PCS stage profile counts, not percentages
+     const ps = input.profileSummary;
+     const totalStages =
+       ps.p1Count +
+       ps.p2Count +
+       ps.p3Count +
+       ps.p4Count +
+       ps.p5Count +
+       ps.ittCount +
+       ps.tttCount +
+       ps.unknownCount;
+     const flatPct = totalStages > 0 ? ps.p1Count / totalStages : 0;
      if (sprintStageRatio > 0.15 && flatPct > 0.35) {
        flags.push(BreakoutFlag.SprintOpportunity);
      }
@@ -176,8 +187,8 @@ spec-kitty implement WP03 --base WP02
 **Notes**:
 
 - Extract a `computeAge(birthDate: Date | null): number` helper (used by both signals and flags).
-- Extract `computeRawSlope(seasons)` if not already factored out from T005 — the flag needs the raw slope value, not the age-adjusted signal score.
-- Check the exact field names in `ProfileSummary` — may be `flatPercentage`, `flat`, `flatStages`, etc. Read `packages/shared-types/src/api.ts` to verify.
+- Extract `computeRawSlope(seasons)` if not already factored out from T005 — the flag needs the raw slope value (before age adjustment), not the age-adjusted signal score.
+- `ProfileSummary` fields are `p1Count`...`p5Count`, `ittCount`, `tttCount`, `unknownCount` — integer counts, NOT percentages. Flat stage percentage = `p1Count / totalStages`.
 - The CEILING_PLAY guard `input.prediction > 0` prevents false positives when prediction is 0 (5× 0 = 0, any peak would trigger).
 
 ### Subtask T013 – Compose computeBreakout()
@@ -340,6 +351,8 @@ spec-kitty implement WP03 --base WP02
 - **Bootstrap non-determinism in tests**: Use a seeded PRNG. Tests assert exact values for known seeds.
 - **Use case modification**: The integration is purely additive — a new step after existing steps. No existing code changes. Run the full test suite to verify no regressions.
 - **Performance**: 1000 bootstrap iterations × 200 riders = 200K iterations. Each is a simple array operation. Well within the 50ms budget.
+- **SC-003 validation**: After integration, do a quick before/after latency check of the analyze endpoint to confirm < 50ms overhead. This is a review checkpoint, not a formal benchmark.
+- **SC-006 (post-release)**: Historical validation against Tour de France data (do riders flagged DEEP_VALUE/HOT_STREAK outperform their price bracket?) is a post-release metric — not a unit test target. Track it after first real usage.
 
 ## Review Guidance
 
@@ -349,6 +362,7 @@ spec-kitty implement WP03 --base WP02
 - Verify unmatched riders get `breakout: null`.
 - Verify the P80 heuristic path returns `prediction × 1.8` for <3 seasons.
 - Spot check: manually compute BPI for a known rider scenario and verify the function output matches.
+- Quick latency check: run analyze before and after BPI integration, confirm < 50ms delta (SC-003).
 
 ## Activity Log
 

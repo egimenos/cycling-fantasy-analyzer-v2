@@ -108,7 +108,19 @@ apps/web/src/features/rider-list/
 
 **Rationale**: Separates "what the rider has done" from "what the rider might do" — two distinct narratives. Prevents the expandable from becoming an overwhelming wall of data. Scales for future analysis tabs.
 
-### AD-4: Two-Tier Filter System
+### AD-4: ProfileSummary → Race Profile Mapping
+
+**Decision**: Derive race profile percentages from PCS stage profile counts (`p1Count`...`p5Count`, `ittCount`, `tttCount`). Mapping: p1=flat→sprint affinity, p2/p3=hilly→stage affinity, p4/p5=mountain→mountain affinity, itt/ttt=TT→gc affinity. `unknownCount` excluded.
+
+**Rationale**: `ProfileSummary` stores raw stage counts from PCS, not percentages. The route fit signal and SPRINT_OPPORTUNITY flag need percentage-based matching, so we derive proportions at computation time.
+
+### AD-5: Signal Scaling
+
+**Decision**: Each signal scales linearly from its raw metric to its max score (e.g., trajectory: 1 point per unit of slope×ageFactor, capped at 25). No normalization across riders — BPI is absolute, not relative.
+
+**Rationale**: Simple and predictable. A rider's BPI doesn't change based on who else is in the price list (except for DEEP_VALUE flag which uses median ptsPerHillio). Allows cross-race comparison of BPI scores.
+
+### AD-6: Two-Tier Filter System
 
 **Decision**: Add two filter buttons — "Breakout" (BPI ≥50, any price) and "Value Picks" (BPI ≥50 AND price ≤125 hillios).
 
