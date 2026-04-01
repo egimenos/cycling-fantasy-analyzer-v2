@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createRootRoute, Outlet } from '@tanstack/react-router';
 import { Toaster } from 'sonner';
+import { TooltipProvider } from '@/shared/ui/tooltip';
 import { Moon, Sun } from 'lucide-react';
 
 export const Route = createRootRoute({
@@ -34,32 +35,34 @@ function RootLayout() {
   const { isDark, toggle } = useTheme();
 
   return (
-    <div className="min-h-screen bg-surface-dim text-on-surface">
-      <nav
-        data-testid="nav-bar"
-        className="fixed top-0 w-full z-50 bg-surface-dim/70 backdrop-blur-md border-b border-outline-variant/15 shadow-sm shadow-black/20 flex justify-between items-center px-6 h-16"
-      >
-        <div className="flex items-center gap-3">
-          <img src="/logo.svg" alt="" className="h-8 w-8" />
-          <span className="text-xl font-black tracking-tighter text-on-surface uppercase italic font-headline">
-            CYCLING FANTASY OPTIMIZER
-          </span>
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            data-testid="nav-theme-toggle"
-            onClick={toggle}
-            className="p-2 rounded-sm hover:bg-surface-container-high transition-colors text-on-surface-variant"
-            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </button>
-        </div>
-      </nav>
-      <main className="pt-16">
-        <Outlet />
-      </main>
-      <Toaster richColors position="top-right" />
-    </div>
+    <TooltipProvider delayDuration={300}>
+      <div className="min-h-screen bg-surface-dim text-on-surface">
+        <nav
+          data-testid="nav-bar"
+          className="fixed top-0 w-full z-50 bg-surface-dim/70 backdrop-blur-md border-b border-outline-variant/15 shadow-sm shadow-black/20 flex justify-between items-center px-6 h-16"
+        >
+          <div className="flex items-center gap-3">
+            <img src="/logo.svg" alt="" className="h-8 w-8" />
+            <span className="text-xl font-black tracking-tighter text-on-surface uppercase italic font-headline">
+              CYCLING FANTASY OPTIMIZER
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <button
+              data-testid="nav-theme-toggle"
+              onClick={toggle}
+              className="p-2 rounded-sm hover:bg-surface-container-high transition-colors text-on-surface-variant"
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
+          </div>
+        </nav>
+        <main className="pt-16">
+          <Outlet />
+        </main>
+        <Toaster richColors position="top-right" />
+      </div>
+    </TooltipProvider>
   );
 }

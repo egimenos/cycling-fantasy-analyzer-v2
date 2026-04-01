@@ -7,7 +7,8 @@ import { MlBadge } from '@/shared/ui/ml-badge';
 import { Badge } from '@/shared/ui/badge';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { formatNumber, cn } from '@/shared/lib/utils';
-import { Lock, Unlock, Ban, ExternalLink } from 'lucide-react';
+import { Lock, Unlock, Ban, ExternalLink, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import { BpiBadge, FlagChip } from './bpi-badge';
 import { BreakoutDetailPanel } from './breakout-detail-panel';
 
@@ -182,8 +183,20 @@ function createColumns(
     {
       id: 'bpi',
       accessorFn: (row) => row.breakout?.index ?? null,
-      header: 'BPI',
-      size: 60,
+      header: () => (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex items-center gap-1 cursor-default">
+              BPI <Info className="h-3 w-3 text-outline" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-[200px]">
+            Breakout Potential Index (0-100). Composite of trajectory, recency, ceiling gap, route
+            fit and variance signals.
+          </TooltipContent>
+        </Tooltip>
+      ),
+      size: 70,
       enableSorting: true,
       sortingFn: (rowA, rowB) => {
         const a = rowA.original.breakout?.index ?? -1;
