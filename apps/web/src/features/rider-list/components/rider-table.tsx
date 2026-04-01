@@ -8,6 +8,7 @@ import { Badge } from '@/shared/ui/badge';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { formatNumber, cn } from '@/shared/lib/utils';
 import { Lock, Unlock, Ban, ExternalLink } from 'lucide-react';
+import { BpiBadge, FlagChip } from './bpi-badge';
 
 interface RiderTableProps {
   data: AnalyzeResponse;
@@ -89,17 +90,23 @@ function createColumns(
         const name = getValue<string>();
         const isLocked = lockedIds.has(row.original.rawName);
         const isExcluded = excludedIds.has(row.original.rawName);
+        const flags = row.original.breakout?.flags;
         return (
-          <span
-            className={cn(
-              'max-w-[160px] truncate font-headline font-bold text-sm',
-              isExcluded && 'line-through opacity-50',
-            )}
-            title={name}
-          >
-            {name}
-            {isLocked && <Lock className="inline ml-1.5 h-3 w-3 text-secondary" />}
-          </span>
+          <div className="flex flex-wrap items-center gap-0.5">
+            <span
+              className={cn(
+                'max-w-[160px] truncate font-headline font-bold text-sm',
+                isExcluded && 'line-through opacity-50',
+              )}
+              title={name}
+            >
+              {name}
+              {isLocked && <Lock className="inline ml-1.5 h-3 w-3 text-secondary" />}
+            </span>
+            {flags?.map((flag) => (
+              <FlagChip key={flag} flag={flag} />
+            ))}
+          </div>
         );
       },
     },
@@ -170,6 +177,19 @@ function createColumns(
           <span className="text-right font-mono">{val !== null ? val.toFixed(2) : '---'}</span>
         );
       },
+    },
+    {
+      id: 'bpi',
+      accessorFn: (row) => row.breakout?.index ?? null,
+      header: 'BPI',
+      size: 60,
+      enableSorting: true,
+      sortingFn: (rowA, rowB) => {
+        const a = rowA.original.breakout?.index ?? -1;
+        const b = rowB.original.breakout?.index ?? -1;
+        return a - b;
+      },
+      cell: ({ getValue }) => <BpiBadge value={getValue<number | null>()} />,
     },
     {
       id: 'matchStatus',
