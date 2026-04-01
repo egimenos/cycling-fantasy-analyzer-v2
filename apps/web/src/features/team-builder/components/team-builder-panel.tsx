@@ -140,16 +140,34 @@ export function TeamBuilderPanel({
             {animatedBudget.toFixed(1)} / {budget}
           </span>
         </div>
-        <div className="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
-          <div
-            className={cn(
-              'h-full transition-all duration-500 rounded-full',
-              isOverBudget
-                ? 'bg-error animate-pulse'
-                : 'bg-gradient-to-r from-secondary to-blue-400',
-            )}
-            style={{ width: `${Math.min(usagePercent, 100)}%` }}
-          />
+        <div className="relative">
+          <div className="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+            <div
+              className={cn(
+                'h-full transition-all duration-500 rounded-full',
+                isOverBudget
+                  ? 'bg-error animate-pulse'
+                  : 'bg-gradient-to-r from-secondary to-blue-400',
+              )}
+              style={{ width: `${Math.min(usagePercent, 100)}%` }}
+            />
+          </div>
+          {/* Tick marks at 25/50/75% */}
+          <div className="absolute inset-0 flex justify-between px-0 pointer-events-none">
+            <div className="w-px" />
+            <div
+              className="w-px h-2 bg-on-surface/10"
+              style={{ marginLeft: '25%', position: 'absolute', left: 0 }}
+            />
+            <div
+              className="w-px h-2 bg-on-surface/10"
+              style={{ marginLeft: '50%', position: 'absolute', left: 0 }}
+            />
+            <div
+              className="w-px h-2 bg-on-surface/10"
+              style={{ marginLeft: '75%', position: 'absolute', left: 0 }}
+            />
+          </div>
         </div>
         <p className="text-[9px] text-outline italic">
           {isOverBudget ? 'Over budget!' : `Efficient build: ${usagePercent.toFixed(0)}% utilized`}

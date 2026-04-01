@@ -1,18 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
+  <defs>
+    <linearGradient id="frame" x1="12" y1="26" x2="24" y2="10">
+      <stop offset="0%" stop-color="#adc6ff"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="17" y1="13" x2="25" y2="10">
+      <stop offset="0%" stop-color="#eac34a"/>
+      <stop offset="100%" stop-color="#c9930a"/>
+    </linearGradient>
+    <linearGradient id="wheel-front" x1="21" y1="17" x2="39" y2="35">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#497cff"/>
+    </linearGradient>
+  </defs>
   <!-- Back wheel -->
-  <circle cx="12" cy="26" r="9" stroke="#adc6ff" stroke-width="1.5" opacity="0.8"/>
+  <circle cx="12" cy="26" r="9" stroke="#adc6ff" stroke-width="1.2" opacity="0.7"/>
+  <circle cx="12" cy="26" r="6" stroke="#adc6ff" stroke-width="0.4" opacity="0.2"/>
   <circle cx="12" cy="26" r="1.5" fill="#adc6ff"/>
   <!-- Front wheel -->
-  <circle cx="30" cy="26" r="9" stroke="#3b82f6" stroke-width="1.5"/>
+  <circle cx="30" cy="26" r="9" stroke="url(#wheel-front)" stroke-width="1.4"/>
+  <circle cx="30" cy="26" r="6" stroke="#3b82f6" stroke-width="0.4" opacity="0.25"/>
   <circle cx="30" cy="26" r="1.5" fill="#3b82f6"/>
   <!-- Frame -->
-  <path d="M12 26 L20 12 L30 26 M20 12 L12 26 M20 12 L24 26" stroke="#bcc7de" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M12 26 L20 12 L30 26 M20 12 L12 26 M20 12 L24 26" stroke="url(#frame)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
   <!-- Handlebars -->
-  <path d="M20 12 L23 10 L25 11" stroke="#eac34a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M20 12 L23 10 L25.5 11" stroke="url(#accent)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
   <!-- Seat -->
-  <path d="M17 13 L20 12" stroke="#eac34a" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M17 13 L20 12" stroke="url(#accent)" stroke-width="1.4" stroke-linecap="round"/>
   <!-- Speed lines -->
-  <line x1="1" y1="20" x2="5" y2="20" stroke="#adc6ff" stroke-width="0.8" opacity="0.4"/>
-  <line x1="0" y1="24" x2="3" y2="24" stroke="#adc6ff" stroke-width="0.8" opacity="0.3"/>
-  <line x1="2" y1="28" x2="4" y2="28" stroke="#adc6ff" stroke-width="0.8" opacity="0.2"/>
+  <line x1="1" y1="19" x2="5" y2="19" stroke="#adc6ff" stroke-width="0.8" opacity="0.5"/>
+  <line x1="0" y1="23" x2="4" y2="23" stroke="#adc6ff" stroke-width="0.6" opacity="0.35"/>
+  <line x1="1" y1="27" x2="3.5" y2="27" stroke="#adc6ff" stroke-width="0.5" opacity="0.2"/>
+  <!-- Subtle glow on front hub -->
+  <circle cx="30" cy="26" r="3" fill="#3b82f6" opacity="0.08"/>
 </svg>

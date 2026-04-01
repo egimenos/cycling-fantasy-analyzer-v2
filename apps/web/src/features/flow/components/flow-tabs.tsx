@@ -13,7 +13,7 @@ export function FlowTabs({ activeTab, onTabChange }: FlowTabsProps) {
   const { isUnlocked } = useFlowState();
 
   return (
-    <div className="flex gap-0 border-b border-outline-variant/10 bg-surface-container-low px-6">
+    <div className="flex gap-0 border-b border-outline-variant/10 bg-surface-container-low px-6 overflow-x-auto scrollbar-none">
       {FLOW_STEPS.map((step, i) => {
         const unlocked = isUnlocked(step);
         const active = step === activeTab;
@@ -25,7 +25,7 @@ export function FlowTabs({ activeTab, onTabChange }: FlowTabsProps) {
             onClick={() => unlocked && onTabChange(step)}
             disabled={!unlocked}
             className={cn(
-              'px-5 py-3.5 text-xs font-mono uppercase tracking-widest transition-all relative flex items-center gap-2.5',
+              'px-5 py-3.5 text-xs font-mono uppercase tracking-widest transition-all relative flex items-center gap-2.5 whitespace-nowrap flex-shrink-0',
               active && 'text-on-surface font-bold bg-surface-container/50',
               !active &&
                 unlocked &&

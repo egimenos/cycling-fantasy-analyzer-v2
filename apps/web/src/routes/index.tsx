@@ -15,11 +15,12 @@ import { useLockExclude } from '@/features/rider-list/hooks/use-lock-exclude';
 import { useTeamBuilder } from '@/features/team-builder/hooks/use-team-builder';
 import { useRaceProfile } from '@/features/rider-list/hooks/use-race-profile';
 import { LoadingSpinner } from '@/shared/ui/loading-spinner';
+import { TableSkeleton } from '@/shared/ui/table-skeleton';
 import { ErrorAlert } from '@/shared/ui/error-alert';
 import { useOptimize } from '@/features/optimizer/hooks/use-optimize';
 import { OptimizerPanel } from '@/features/optimizer/components/optimizer-panel';
 import { TeamSummary } from '@/features/team-builder/components/team-summary';
-import { TrendingUp, Settings, ChevronDown } from 'lucide-react';
+import { TrendingUp, Settings, ChevronDown, Trophy, Users } from 'lucide-react';
 import * as Collapsible from '@radix-ui/react-collapsible';
 
 const VALID_TABS: readonly string[] = ['setup', 'dashboard', 'optimization', 'roster'];
@@ -335,8 +336,12 @@ function SetupTab({
         </div>
 
         {isLoading ? (
-          <div className="flex-1 min-h-[500px] rounded-sm bg-surface-container-low/30 border border-dashed border-outline-variant/20 flex items-center justify-center">
-            <LoadingSpinner message="Analyzing riders..." />
+          <div className="flex-1 min-h-[500px] flex flex-col gap-4">
+            <div className="flex items-center gap-3 px-1">
+              <LoadingSpinner />
+              <span className="text-sm text-on-surface-variant">Analyzing riders...</span>
+            </div>
+            <TableSkeleton rows={10} />
           </div>
         ) : (
           <div className="flex-1 min-h-[500px] rounded-sm bg-surface-container-low/30 border border-dashed border-outline-variant/20 flex flex-col items-center justify-center p-12 relative overflow-hidden">
@@ -365,26 +370,39 @@ function SetupTab({
           </div>
         )}
 
-        <div className="mt-6 bg-surface-container-high/40 p-6 rounded-sm flex justify-between items-center border border-outline-variant/5">
-          <div className="flex gap-12">
-            <div className="flex flex-col">
-              <span className="text-[10px] text-outline uppercase font-mono tracking-tighter">
-                Selected Riders
-              </span>
-              <span className="text-xl font-mono font-bold text-outline">-- / --</span>
+        <div className="mt-6 bg-surface-container-high/40 p-5 rounded-sm border border-outline-variant/10 animate-fade-in">
+          <div className="flex justify-between items-center">
+            <div className="flex gap-8 items-center">
+              <div className="flex flex-col">
+                <span className="text-[10px] text-outline uppercase font-mono tracking-tighter">
+                  Selected Riders
+                </span>
+                <span className="text-lg font-mono font-bold text-outline">-- / 9</span>
+              </div>
+              <div className="h-8 w-px bg-outline-variant/15" />
+              <div className="flex flex-col">
+                <span className="text-[10px] text-outline uppercase font-mono tracking-tighter">
+                  Budget
+                </span>
+                <span className="text-lg font-mono font-bold text-outline">
+                  0 / {budget}
+                  <span className="text-[10px] ml-0.5 text-outline/50">H</span>
+                </span>
+              </div>
+              <div className="h-8 w-px bg-outline-variant/15" />
+              <div className="flex flex-col">
+                <span className="text-[10px] text-outline uppercase font-mono tracking-tighter">
+                  Projected Score
+                </span>
+                <span className="text-lg font-mono font-bold text-outline">—</span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] text-outline uppercase font-mono tracking-tighter">
-                Budget Allocation
+            <div className="flex gap-3 items-center bg-surface-container-highest/50 px-3 py-1.5 rounded-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-secondary/40 animate-pulse" />
+              <span className="text-[10px] text-on-surface-variant uppercase font-mono tracking-wider font-medium">
+                System Ready
               </span>
-              <span className="text-xl font-mono font-bold text-outline">0 / {budget}</span>
             </div>
-          </div>
-          <div className="flex gap-4 items-center">
-            <span className="text-[10px] text-outline uppercase font-mono tracking-tighter italic">
-              Status: System Ready
-            </span>
-            <div className="w-2 h-2 rounded-full bg-outline/20" />
           </div>
         </div>
       </div>
@@ -458,10 +476,33 @@ function DashboardTab({
               className={`h-4 w-4 text-outline transition-transform ${configOpen ? 'rotate-180' : ''}`}
             />
           </Collapsible.Trigger>
-          <Collapsible.Content className="px-6 pb-4 text-sm text-on-surface-variant">
-            <p className="pt-2">
-              Budget: {budget}H | Riders: {data.riders.length} | Matched: {data.totalMatched}
-            </p>
+          <Collapsible.Content className="px-6 pb-5 text-sm text-on-surface-variant">
+            <div className="pt-3 grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-surface-container-low p-3 rounded-sm">
+                <span className="text-[9px] font-mono text-outline uppercase block mb-1">
+                  Budget
+                </span>
+                <span className="font-mono font-bold text-on-surface">{budget}H</span>
+              </div>
+              <div className="bg-surface-container-low p-3 rounded-sm">
+                <span className="text-[9px] font-mono text-outline uppercase block mb-1">
+                  Total Riders
+                </span>
+                <span className="font-mono font-bold text-on-surface">{data.riders.length}</span>
+              </div>
+              <div className="bg-surface-container-low p-3 rounded-sm">
+                <span className="text-[9px] font-mono text-outline uppercase block mb-1">
+                  Matched
+                </span>
+                <span className="font-mono font-bold text-secondary">{data.totalMatched}</span>
+              </div>
+              <div className="bg-surface-container-low p-3 rounded-sm">
+                <span className="text-[9px] font-mono text-outline uppercase block mb-1">
+                  Unmatched
+                </span>
+                <span className="font-mono font-bold text-tertiary">{data.unmatchedCount}</span>
+              </div>
+            </div>
           </Collapsible.Content>
         </div>
       </Collapsible.Root>
@@ -518,9 +559,21 @@ function OptimizationTab({ optimizeState, budget, onApplyToRoster }: Optimizatio
     return (
       <div
         data-testid="tab-content-optimization"
-        className="flex items-center justify-center py-24 text-on-surface-variant font-mono text-sm uppercase tracking-widest"
+        className="flex flex-col items-center justify-center py-24 animate-fade-in"
       >
-        No optimization results available.
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-tertiary/15 to-primary/10 flex items-center justify-center mb-6 ring-1 ring-tertiary/20">
+          <Trophy className="h-10 w-10 text-tertiary/60" />
+        </div>
+        <h3 className="text-xl font-headline font-extrabold text-on-surface mb-2 tracking-tight">
+          No Results Yet
+        </h3>
+        <p className="text-sm text-on-surface-variant max-w-sm text-center">
+          Run the optimizer from the Dashboard tab to find the best lineup for your budget.
+        </p>
+        <div className="flex items-center gap-2 text-[10px] font-mono text-outline uppercase tracking-widest mt-4">
+          <span className="w-1.5 h-1.5 rounded-full bg-tertiary/30" />
+          Awaiting Optimization
+        </div>
       </div>
     );
   }
@@ -543,9 +596,21 @@ function RosterTab({ teamBuilder, budget, onReset }: RosterTabProps) {
     return (
       <div
         data-testid="tab-content-roster"
-        className="flex items-center justify-center py-24 text-on-surface-variant font-mono text-sm uppercase tracking-widest"
+        className="flex flex-col items-center justify-center py-24 animate-fade-in"
       >
-        No team selected.
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-stage/15 to-primary/10 flex items-center justify-center mb-6 ring-1 ring-stage/20">
+          <Users className="h-10 w-10 text-stage/60" />
+        </div>
+        <h3 className="text-xl font-headline font-extrabold text-on-surface mb-2 tracking-tight">
+          No Team Selected
+        </h3>
+        <p className="text-sm text-on-surface-variant max-w-sm text-center">
+          Build your 9-rider roster from the Dashboard or run the optimizer to auto-fill.
+        </p>
+        <div className="flex items-center gap-2 text-[10px] font-mono text-outline uppercase tracking-widest mt-4">
+          <span className="w-1.5 h-1.5 rounded-full bg-stage/30" />
+          Awaiting Roster
+        </div>
       </div>
     );
   }
