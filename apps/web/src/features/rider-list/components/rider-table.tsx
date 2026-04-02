@@ -284,7 +284,7 @@ function PerformanceContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boo
       {/* Category Scores — ML or rules-based */}
       {breakdown && (
         <div className="space-y-4">
-          <h4 className="text-[10px] font-mono text-outline uppercase">
+          <h4 className="inline-flex items-center gap-1.5 text-[10px] font-mono text-outline uppercase">
             {isML ? 'ML Predicted Breakdown' : 'Category Scores'}
             {isML && <MlBadge />}
           </h4>
