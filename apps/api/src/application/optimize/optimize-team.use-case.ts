@@ -42,6 +42,7 @@ function applyEffectiveScores(riders: ScoredRider[]): ScoredRider[] {
     return {
       ...rider,
       totalProjectedPts: effectiveScore,
+      categoryScores: rider.mlBreakdown ?? rider.categoryScores,
     };
   });
 }
