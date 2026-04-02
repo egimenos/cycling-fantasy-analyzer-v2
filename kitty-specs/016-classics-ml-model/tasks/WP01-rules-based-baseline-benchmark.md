@@ -1,8 +1,11 @@
 ---
 work_package_id: WP01
 title: Rules-Based Baseline Benchmark
-lane: planned
+lane: 'for_review'
 dependencies: []
+base_branch: main
+base_commit: 55de7dda50bbfae9c114d0b04dfc4b658e4a1c16
+created_at: '2026-04-02T19:04:42.012599+00:00'
 subtasks:
   - T001
   - T002
@@ -12,8 +15,8 @@ subtasks:
   - T006
 phase: Phase 1 - Baseline & Research Infrastructure
 assignee: ''
-agent: ''
-shell_pid: ''
+agent: 'claude-opus'
+shell_pid: '86193'
 review_status: ''
 reviewed_by: ''
 history:
@@ -293,3 +296,5 @@ spec-kitty implement WP01
 ## Activity Log
 
 - 2026-04-02T16:48:30Z – system – lane=planned – Prompt created.
+- 2026-04-02T19:04:42Z – claude-opus – shell_pid=86193 – lane=doing – Assigned agent via workflow command
+- 2026-04-02T19:08:23Z – claude-opus – shell_pid=86193 – lane=for_review – Rules-based baseline complete. rho=0.3124, NDCG=0.4079, P@5=0.3180. 161 races across 3 folds.
