@@ -257,10 +257,6 @@ docker build -f docker/Dockerfile.web -t cycling-web --build-arg VITE_API_URL=ht
 
 The root `docker-compose.yml` provides PostgreSQL and the ML service for local development. Production deployment uses [Dokploy](https://dokploy.com/) to a VPS with the ML service as an internal Docker sidecar.
 
-## WSL / Windows Notes
-
-If you're developing on WSL with `core.autocrlf=true`, husky hooks may break because shell scripts get CRLF line endings. The `.gitattributes` file enforces LF for `.husky/*` files to prevent this. If hooks fail with `EACCES` or `Illegal option`, check for CRLF: `xxd .husky/pre-commit`.
-
 ## License
 
 Private — not for redistribution.
