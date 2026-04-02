@@ -1,11 +1,14 @@
 ---
 work_package_id: WP06
 title: Domain Features — Pipeline & Consistency
-lane: planned
+lane: 'done'
 dependencies:
   - WP02
   - WP03
   - WP04
+base_branch: 016-classics-ml-model-WP06-merge-base
+base_commit: 9967e0df6f76e5be950ae68eed11631dc78f7db2
+created_at: '2026-04-02T20:25:44.388740+00:00'
 subtasks:
   - T028
   - T029
@@ -15,9 +18,9 @@ subtasks:
 phase: Phase 2 - Feature Engineering
 assignee: ''
 agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+shell_pid: '21398'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-04-02T16:48:30Z'
     lane: planned
@@ -248,3 +251,4 @@ spec-kitty implement WP06 --base WP04
 ## Activity Log
 
 - 2026-04-02T16:48:30Z – system – lane=planned – Prompt created.
+- 2026-04-02T20:34:56Z – unknown – shell_pid=21398 – lane=done – Pipeline features done. pipeline_feeder_pts gives first rho lift (+0.0017). Consistency is noise, drop it.
