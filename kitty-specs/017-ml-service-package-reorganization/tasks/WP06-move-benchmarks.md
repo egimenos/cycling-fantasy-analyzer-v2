@@ -3,7 +3,7 @@ work_package_id: WP06
 title: Move Benchmarks + Final Verification
 lane: planned
 dependencies: [WP02]
-subtasks: [T024, T025, T026]
+subtasks: [T024, T025, T026, T027]
 phase: Phase 2 - Cleanup
 assignee: ''
 agent: ''
@@ -116,6 +116,25 @@ python -c "from benchmarks.logbook import save_logbook_entry; print('Logbook OK'
 - [ ] No benchmark files remain in `ml/src/`
 - [ ] `ml/benchmarks/` contains exactly: `__init__.py`, `harness.py`, `canonical.py`, `classics.py`, `logbook.py`
 - [ ] Logbook is importable from both benchmarks and src (via re-export if needed)
+
+---
+
+### Subtask T027 – Create ml/README.md
+
+**Purpose**: Document the new package structure so developers can navigate the codebase.
+
+**Steps**: Create `ml/README.md` with:
+
+- Overview of the ML service purpose
+- Package structure diagram (the target structure from plan.md)
+- How to run: `make dev` (service), `make retrain` (training), `cd ml && python -m pytest tests/` (tests), `cd ml && python -m benchmarks.canonical` (benchmarks)
+- Key entry points: `src/api/app.py` (FastAPI), `src/training/retrain.py` (retraining)
+
+Keep it concise — ~50-80 lines max.
+
+**Files**: `ml/README.md` (new)
+
+---
 
 ## Risks & Mitigations
 

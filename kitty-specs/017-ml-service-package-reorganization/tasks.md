@@ -3,7 +3,7 @@
 **Inputs**: Design documents from `kitty-specs/017-ml-service-package-reorganization/`
 **Prerequisites**: plan.md (file rename map), spec.md
 
-**Organization**: 26 subtasks (`T001`–`T026`) rolled into 6 work packages (`WP01`–`WP06`).
+**Organization**: 27 subtasks (`T001`–`T027`) rolled into 6 work packages (`WP01`–`WP06`).
 
 ---
 
@@ -128,6 +128,7 @@
 - [ ] T024 Move benchmark_v8.py → benchmarks/harness.py, benchmark_canonical.py → benchmarks/canonical.py, benchmark_classics.py → benchmarks/classics.py, logbook.py → benchmarks/logbook.py
 - [ ] T025 Update benchmark imports to reference `src.*` package paths
 - [ ] T026 Verify benchmarks can be invoked: `cd ml && python -m benchmarks.harness --help`
+- [ ] T027 Create `ml/README.md` documenting new package structure and entry points
 
 ### Dependencies
 
@@ -180,3 +181,4 @@ WP01 (Move files) → WP02 (Update imports)
 | T024    | Move 4 benchmark files              | WP06 | P2       | No        |
 | T025    | Update benchmark imports            | WP06 | P2       | No        |
 | T026    | Verify benchmarks run               | WP06 | P2       | No        |
+| T027    | Create ml/README.md                 | WP06 | P2       | Yes       |
