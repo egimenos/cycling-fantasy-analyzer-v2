@@ -1,10 +1,13 @@
 ---
 work_package_id: WP04
 title: Core ML Model + A/B Benchmark
-lane: planned
+lane: 'done'
 dependencies:
   - WP01
   - WP03
+base_branch: 016-classics-ml-model-WP04-merge-base
+base_commit: 9b3790219fd73a0affe1895a26750a36bcd39e7a
+created_at: '2026-04-02T19:25:11.606014+00:00'
 subtasks:
   - T017
   - T018
@@ -14,9 +17,9 @@ subtasks:
 phase: Phase 3 - Model Training & Evaluation
 assignee: ''
 agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+shell_pid: '99586'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-04-02T16:48:30Z'
     lane: planned
@@ -303,3 +306,4 @@ spec-kitty implement WP04 --base WP03
 ## Activity Log
 
 - 2026-04-02T16:48:30Z – system – lane=planned – Prompt created.
+- 2026-04-02T19:34:19Z – unknown – shell_pid=99586 – lane=done – ML benchmark complete. 6 experiments run. NDCG improves +10% but rho flat. Domain features (WP05-06) needed for rho lift. LightGBM sqrt best rho (0.3050).
