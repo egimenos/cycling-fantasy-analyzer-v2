@@ -20,9 +20,12 @@ from sklearn.ensemble import RandomForestRegressor
 
 from .features_classics import (
     ALL_FEATURE_COLS,
+    ALL_WITH_TIER3_COLS,
+    PIPELINE_COLS,
     SPECIALIST_COLS,
     TIER1_FEATURE_COLS,
     TIER2_TYPE_COLS,
+    TIER3_COLS,
     TYPE_AFFINITY_COLS,
     TYPE_TOP10_RATE_COLS,
 )
@@ -62,8 +65,16 @@ FEATURE_SETS = {
     "tier1+type_rates": list(TIER1_FEATURE_COLS) + TYPE_TOP10_RATE_COLS,
     "tier1+specialist": list(TIER1_FEATURE_COLS) + SPECIALIST_COLS,
     "tier1+monument": list(TIER1_FEATURE_COLS) + ["monument_podium_count"],
+    "tier1+pipeline": list(TIER1_FEATURE_COLS) + PIPELINE_COLS,
     "tier1+all_tier2": list(ALL_FEATURE_COLS),
     "all": list(ALL_FEATURE_COLS),
+    # Tier 3 experimental (each added to best tier2)
+    "all+glicko": list(ALL_FEATURE_COLS) + ["classic_glicko_mu", "classic_glicko_rd"],
+    "all+age_type": list(ALL_FEATURE_COLS) + ["age_type_delta"],
+    "all+calendar": list(ALL_FEATURE_COLS) + ["days_since_last_classic", "classics_count_30d"],
+    "all+parcours": list(ALL_FEATURE_COLS) + ["cobble_affinity", "punch_affinity", "long_distance_affinity"],
+    "all+win_style": list(ALL_FEATURE_COLS) + ["classic_wins_total", "classic_win_pct"],
+    "all_tier3": list(ALL_WITH_TIER3_COLS),
 }
 
 

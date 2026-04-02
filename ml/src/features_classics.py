@@ -18,7 +18,7 @@ from datetime import date
 import numpy as np
 import pandas as pd
 
-from .classic_taxonomy import get_all_types, get_classic_types, get_races_by_type, is_monument, resolve_slug
+from .classic_taxonomy import get_all_types, get_classic_types, get_feeders_for_race, get_races_by_type, is_monument, resolve_slug
 from .points import GC_CLASSIC
 
 # ── Feature column lists ────────────────────────────────────────────
@@ -58,7 +58,34 @@ SPECIALIST_COLS = ["specialist_ratio", "monument_podium_count"]
 
 TIER2_TYPE_COLS = TYPE_AFFINITY_COLS + TYPE_TOP10_RATE_COLS + SPECIALIST_COLS
 
-ALL_FEATURE_COLS = TIER1_FEATURE_COLS + TIER2_TYPE_COLS
+# Tier 2: Pipeline & consistency features
+PIPELINE_COLS = ["pipeline_feeder_pts", "pipeline_trend", "same_race_consistency"]
+
+ALL_FEATURE_COLS = TIER1_FEATURE_COLS + TIER2_TYPE_COLS + PIPELINE_COLS
+
+# Tier 3: Experimental features
+TIER3_COLS = [
+    "classic_glicko_mu",
+    "classic_glicko_rd",
+    "age_type_delta",
+    "team_classic_commitment",
+    "days_since_last_classic",
+    "classics_count_30d",
+    "cobble_affinity",
+    "punch_affinity",
+    "long_distance_affinity",
+    "classic_wins_total",
+    "classic_win_pct",
+]
+
+ALL_WITH_TIER3_COLS = ALL_FEATURE_COLS + TIER3_COLS
+
+# Peak ages by classic type (estimated from historical data)
+TYPE_PEAK_AGE = {
+    "flemish": 28, "cobbled": 28, "ardennes": 30,
+    "puncheur": 30, "italian": 29, "sprint_classic": 27,
+    "hilly": 29, "monument": 29, "special": 29,
+}
 
 
 # ── Main feature computation ────────────────────────────────────────
@@ -114,6 +141,15 @@ def compute_classic_features(
     feats["monument_podium_count"] = _compute_monument_podium_count(
         rider_id, race_date_ts, all_classic_results
     )
+
+    # ── Tier 2: Pipeline & consistency ──────────────────────────────
+    _compute_pipeline_features(feats, rider_id, slug, race_date_ts, all_classic_results)
+    feats["same_race_consistency"] = _compute_same_race_consistency(
+        rider_id, slug, race_date_ts, all_classic_results
+    )
+
+    # ── Tier 3: Experimental features ───────────────────────────────
+    _compute_experimental_features(feats, rider_id, slug, race_date_ts, rider_history, all_classic_results)
 
     return feats
 
@@ -387,6 +423,181 @@ def _compute_monument_podium_count(
         & (classic_results["position"] <= 3)
     ]
     return float(monuments.groupby(["race_slug", "year"]).ngroups) if len(monuments) > 0 else 0.0
+
+
+# ── Tier 2: Pipeline features ────────────────────────────────────────
+
+
+def _compute_pipeline_features(
+    feats: dict, rider_id: str, race_slug: str,
+    race_date: pd.Timestamp, classic_results: pd.DataFrame,
+) -> None:
+    """Feeder race points and form trend within the current campaign."""
+    feeders = get_feeders_for_race(race_slug)
+
+    if not feeders or len(classic_results) == 0:
+        feats["pipeline_feeder_pts"] = np.nan
+        feats["pipeline_trend"] = np.nan
+        return
+
+    year = race_date.year
+    feeder_results = classic_results[
+        (classic_results["rider_id"] == rider_id)
+        & (classic_results["race_slug"].isin(feeders))
+        & (classic_results["year"] == year)
+        & (classic_results["race_date"] < race_date)
+    ]
+
+    if len(feeder_results) == 0:
+        feats["pipeline_feeder_pts"] = 0.0
+        feats["pipeline_trend"] = np.nan
+        return
+
+    feats["pipeline_feeder_pts"] = float(feeder_results["pts"].sum())
+
+    sorted_results = feeder_results.sort_values("race_date")
+    pts_values = sorted_results.groupby("race_slug")["pts"].sum().values
+
+    if len(pts_values) >= 3:
+        x = np.arange(len(pts_values))
+        if np.std(pts_values) > 0:
+            slope = np.polyfit(x, pts_values, 1)[0]
+            feats["pipeline_trend"] = float(slope)
+        else:
+            feats["pipeline_trend"] = 0.0
+    elif len(pts_values) == 2:
+        feats["pipeline_trend"] = float(pts_values[-1] - pts_values[0])
+    else:
+        feats["pipeline_trend"] = np.nan
+
+
+def _compute_same_race_consistency(
+    rider_id: str, race_slug: str,
+    race_date: pd.Timestamp, classic_results: pd.DataFrame,
+) -> float:
+    """Std dev of positions across editions of the same classic."""
+    if len(classic_results) == 0:
+        return np.nan
+
+    same_race = classic_results[
+        (classic_results["rider_id"] == rider_id)
+        & (classic_results["race_slug"] == race_slug)
+        & (classic_results["race_date"] < race_date)
+    ]
+
+    if len(same_race) >= 2:
+        positions = same_race.groupby("year")["position"].min().dropna().values
+        if len(positions) >= 2:
+            return float(np.std(positions))
+    return np.nan
+
+
+# ── Tier 3: Experimental features ────────────────────────────────────
+
+
+def _compute_experimental_features(
+    feats: dict, rider_id: str, race_slug: str,
+    race_date: pd.Timestamp,
+    rider_history: pd.DataFrame,
+    classic_results: pd.DataFrame,
+) -> None:
+    """Compute all Tier 3 experimental features."""
+
+    # Classic Glicko-2 approximation (simplified: use weighted average position as proxy)
+    # Full Glicko-2 is complex; we approximate with a position-based skill estimate
+    rider_classics = classic_results[
+        (classic_results["rider_id"] == rider_id)
+        & (classic_results["race_date"] < race_date)
+    ] if len(classic_results) > 0 else pd.DataFrame()
+
+    if len(rider_classics) >= 2:
+        # Approximate mu: inverse of mean position (higher = better)
+        positions = rider_classics.groupby(["race_slug", "year"])["position"].min().dropna()
+        if len(positions) >= 2:
+            feats["classic_glicko_mu"] = 200.0 / (positions.mean() + 1)  # Scale: pos 1 → ~100, pos 50 → ~4
+            feats["classic_glicko_rd"] = float(positions.std())  # Higher std = more uncertain
+        else:
+            feats["classic_glicko_mu"] = np.nan
+            feats["classic_glicko_rd"] = np.nan
+    else:
+        feats["classic_glicko_mu"] = np.nan
+        feats["classic_glicko_rd"] = np.nan
+
+    # Age × classic-type interaction
+    age = feats.get("age")
+    types = get_classic_types(race_slug)
+    if age and not np.isnan(age) and types and types[0] != "other":
+        primary_type = types[0] if types[0] != "monument" else (types[1] if len(types) > 1 else types[0])
+        peak = TYPE_PEAK_AGE.get(primary_type, 29)
+        feats["age_type_delta"] = age - peak
+    else:
+        feats["age_type_delta"] = np.nan
+
+    # Team classic commitment (count of teammates in same classic)
+    # For batch extraction, use actual participants as proxy
+    if len(classic_results) > 0 and "race_date" in classic_results.columns:
+        same_race_same_year = classic_results[
+            (classic_results["race_slug"] == race_slug)
+            & (classic_results["race_date"] == race_date)
+        ]
+        if len(same_race_same_year) > 0 and "rider_team" in rider_history.columns:
+            rider_team_rows = rider_history[rider_history["rider_id"] == rider_id]
+            if len(rider_team_rows) > 0 and "rider_team" in rider_team_rows.columns:
+                team = rider_team_rows.iloc[-1].get("rider_team")
+                if team and pd.notna(team):
+                    # Count how many from same team are in this race
+                    # We need team info in classic_results — may not have it
+                    feats["team_classic_commitment"] = np.nan
+                else:
+                    feats["team_classic_commitment"] = np.nan
+            else:
+                feats["team_classic_commitment"] = np.nan
+        else:
+            feats["team_classic_commitment"] = np.nan
+    else:
+        feats["team_classic_commitment"] = np.nan
+
+    # Calendar distance: days since last classic
+    if len(rider_classics) > 0:
+        last_classic_date = rider_classics["race_date"].max()
+        feats["days_since_last_classic"] = (race_date - last_classic_date).days
+    else:
+        feats["days_since_last_classic"] = np.nan
+
+    # Classics count in last 30 days
+    if len(rider_classics) > 0:
+        d30 = rider_classics[rider_classics["race_date"] >= race_date - pd.Timedelta(days=30)]
+        feats["classics_count_30d"] = float(d30.groupby(["race_slug", "year"]).ngroups) if len(d30) > 0 else 0.0
+    else:
+        feats["classics_count_30d"] = 0.0
+
+    # Parcours micro-affinity (points in cobbled/punch/long-distance races)
+    cutoff = race_date - pd.Timedelta(days=730)
+    recent_classics = rider_classics[rider_classics["race_date"] >= cutoff] if len(rider_classics) > 0 else pd.DataFrame()
+
+    for affinity_name, type_keys in [
+        ("cobble_affinity", ["cobbled"]),
+        ("punch_affinity", ["puncheur", "ardennes"]),
+        ("long_distance_affinity", ["sprint_classic"]),  # MSR, Gent-Wevelgem = long/sprint
+    ]:
+        target_slugs = set()
+        for tk in type_keys:
+            target_slugs.update(get_races_by_type(tk))
+        if len(recent_classics) > 0 and target_slugs:
+            matched = recent_classics[recent_classics["race_slug"].isin(target_slugs)]
+            feats[affinity_name] = float(matched["pts"].sum())
+        else:
+            feats[affinity_name] = 0.0
+
+    # Win style: total classic wins and win percentage
+    if len(rider_classics) > 0:
+        wins = rider_classics[rider_classics["position"] == 1]
+        feats["classic_wins_total"] = float(wins.groupby(["race_slug", "year"]).ngroups) if len(wins) > 0 else 0.0
+        n_starts = rider_classics.groupby(["race_slug", "year"]).ngroups
+        feats["classic_win_pct"] = feats["classic_wins_total"] / n_starts if n_starts > 0 else 0.0
+    else:
+        feats["classic_wins_total"] = 0.0
+        feats["classic_win_pct"] = 0.0
 
 
 # ── Batch extraction ─────────────────────────────────────────────────
