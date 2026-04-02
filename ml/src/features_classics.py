@@ -18,7 +18,7 @@ from datetime import date
 import numpy as np
 import pandas as pd
 
-from .classic_taxonomy import resolve_slug
+from .classic_taxonomy import get_all_types, get_classic_types, get_races_by_type, is_monument, resolve_slug
 from .points import GC_CLASSIC
 
 # ── Feature column lists ────────────────────────────────────────────
@@ -48,6 +48,17 @@ TIER1_FEATURE_COLS = [
     "is_leader",
     "prestige_pts_12m",
 ]
+
+# Tier 2: Domain features (type affinity, specialist profile)
+_TYPE_NAMES = [t for t in get_all_types() if t not in ("special",)]
+
+TYPE_AFFINITY_COLS = [f"type_affinity_{t}" for t in _TYPE_NAMES]
+TYPE_TOP10_RATE_COLS = [f"type_top10_rate_{t}" for t in _TYPE_NAMES]
+SPECIALIST_COLS = ["specialist_ratio", "monument_podium_count"]
+
+TIER2_TYPE_COLS = TYPE_AFFINITY_COLS + TYPE_TOP10_RATE_COLS + SPECIALIST_COLS
+
+ALL_FEATURE_COLS = TIER1_FEATURE_COLS + TIER2_TYPE_COLS
 
 
 # ── Main feature computation ────────────────────────────────────────
@@ -95,6 +106,14 @@ def compute_classic_features(
 
     # ── Team & prestige ─────────────────────────────────────────────
     _compute_team_prestige_features(feats, rider_id, race_date_ts, rider_history, team_info)
+
+    # ── Tier 2: Type affinity & specialist profile ──────────────────
+    _compute_type_affinity(feats, rider_id, race_date_ts, all_classic_results)
+    _compute_type_top10_rates(feats, rider_id, race_date_ts, all_classic_results)
+    _compute_specialist_ratio(feats, rider_id, race_date_ts, rider_history, all_classic_results)
+    feats["monument_podium_count"] = _compute_monument_podium_count(
+        rider_id, race_date_ts, all_classic_results
+    )
 
     return feats
 
@@ -267,6 +286,107 @@ def _compute_team_prestige_features(
     ] if "race_class" in hist_before.columns else pd.DataFrame()
 
     feats["prestige_pts_12m"] = float(uwt_12m["pts"].sum()) if len(uwt_12m) > 0 else 0.0
+
+
+# ── Tier 2: Type affinity ────────────────────────────────────────────
+
+
+def _compute_type_affinity(
+    feats: dict, rider_id: str,
+    race_date: pd.Timestamp, classic_results: pd.DataFrame,
+) -> None:
+    """Points from same-type classics in last 24 months."""
+    cutoff = race_date - pd.Timedelta(days=730)
+    rider_classics = classic_results[
+        (classic_results["rider_id"] == rider_id)
+        & (classic_results["race_date"] < race_date)
+        & (classic_results["race_date"] >= cutoff)
+    ] if len(classic_results) > 0 else pd.DataFrame()
+
+    for ctype in _TYPE_NAMES:
+        type_races = set(get_races_by_type(ctype))
+        if len(rider_classics) > 0 and type_races:
+            type_results = rider_classics[rider_classics["race_slug"].isin(type_races)]
+            feats[f"type_affinity_{ctype}"] = float(type_results["pts"].sum())
+        else:
+            feats[f"type_affinity_{ctype}"] = 0.0
+
+
+# ── Tier 2: Type top-10 rates ───────────────────────────────────────
+
+
+def _compute_type_top10_rates(
+    feats: dict, rider_id: str,
+    race_date: pd.Timestamp, classic_results: pd.DataFrame,
+) -> None:
+    """Top-10 rate per classic type over career."""
+    rider_classics = classic_results[
+        (classic_results["rider_id"] == rider_id)
+        & (classic_results["race_date"] < race_date)
+    ] if len(classic_results) > 0 else pd.DataFrame()
+
+    for ctype in _TYPE_NAMES:
+        type_races = set(get_races_by_type(ctype))
+        if len(rider_classics) > 0 and type_races:
+            type_results = rider_classics[rider_classics["race_slug"].isin(type_races)]
+            starts = type_results.groupby(["race_slug", "year"]).ngroups if len(type_results) > 0 else 0
+            if starts >= 2:
+                top10 = type_results[type_results["position"] <= 10]
+                n_top10 = top10.groupby(["race_slug", "year"]).ngroups if len(top10) > 0 else 0
+                feats[f"type_top10_rate_{ctype}"] = n_top10 / starts
+            else:
+                feats[f"type_top10_rate_{ctype}"] = np.nan
+        else:
+            feats[f"type_top10_rate_{ctype}"] = np.nan
+
+
+# ── Tier 2: Specialist ratio ────────────────────────────────────────
+
+
+def _compute_specialist_ratio(
+    feats: dict, rider_id: str,
+    race_date: pd.Timestamp,
+    rider_history: pd.DataFrame,
+    classic_results: pd.DataFrame,
+) -> None:
+    """Fraction of rider's points from classics over last 24m."""
+    cutoff = race_date - pd.Timedelta(days=730)
+
+    all_recent = rider_history[
+        (rider_history["rider_id"] == rider_id)
+        & (rider_history["race_date"] < race_date)
+        & (rider_history["race_date"] >= cutoff)
+    ] if len(rider_history) > 0 else pd.DataFrame()
+
+    classic_recent = classic_results[
+        (classic_results["rider_id"] == rider_id)
+        & (classic_results["race_date"] < race_date)
+        & (classic_results["race_date"] >= cutoff)
+    ] if len(classic_results) > 0 else pd.DataFrame()
+
+    total_pts = all_recent["pts"].sum() if len(all_recent) > 0 else 0.0
+    classic_pts = classic_recent["pts"].sum() if len(classic_recent) > 0 else 0.0
+    feats["specialist_ratio"] = classic_pts / total_pts if total_pts > 0 else 0.0
+
+
+# ── Tier 2: Monument gravity ────────────────────────────────────────
+
+
+def _compute_monument_podium_count(
+    rider_id: str, race_date: pd.Timestamp, classic_results: pd.DataFrame,
+) -> float:
+    """Count career monument podium finishes (top 3)."""
+    if len(classic_results) == 0:
+        return 0.0
+
+    monument_slugs = set(get_races_by_type("monument"))
+    monuments = classic_results[
+        (classic_results["rider_id"] == rider_id)
+        & (classic_results["race_slug"].isin(monument_slugs))
+        & (classic_results["race_date"] < race_date)
+        & (classic_results["position"] <= 3)
+    ]
+    return float(monuments.groupby(["race_slug", "year"]).ngroups) if len(monuments) > 0 else 0.0
 
 
 # ── Batch extraction ─────────────────────────────────────────────────

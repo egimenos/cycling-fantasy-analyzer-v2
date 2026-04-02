@@ -18,7 +18,14 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 
-from .features_classics import TIER1_FEATURE_COLS
+from .features_classics import (
+    ALL_FEATURE_COLS,
+    SPECIALIST_COLS,
+    TIER1_FEATURE_COLS,
+    TIER2_TYPE_COLS,
+    TYPE_AFFINITY_COLS,
+    TYPE_TOP10_RATE_COLS,
+)
 
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models", "classics")
 
@@ -51,6 +58,12 @@ TRANSFORMS = {
 
 FEATURE_SETS = {
     "tier1": list(TIER1_FEATURE_COLS),
+    "tier1+type_affinity": list(TIER1_FEATURE_COLS) + TYPE_AFFINITY_COLS,
+    "tier1+type_rates": list(TIER1_FEATURE_COLS) + TYPE_TOP10_RATE_COLS,
+    "tier1+specialist": list(TIER1_FEATURE_COLS) + SPECIALIST_COLS,
+    "tier1+monument": list(TIER1_FEATURE_COLS) + ["monument_podium_count"],
+    "tier1+all_tier2": list(ALL_FEATURE_COLS),
+    "all": list(ALL_FEATURE_COLS),
 }
 
 
