@@ -2,7 +2,7 @@
 Glicko-2 Rating System for cycling riders.
 
 Computes per-rider ratings updated chronologically after each race.
-Separate ratings for GC and Stage performance.
+Separate ratings for GC and Stage performance (unified + 4 type-specific tracks).
 
 Glicko-2 advantages over basic Elo:
 - Explicit rating deviation (RD) = uncertainty. New riders have high RD,
@@ -29,6 +29,11 @@ import psycopg2
 import psycopg2.extras
 
 from .research_v6 import load_data_fast
+from .stage_targets import STAGE_TYPE_MAP
+
+# ── Type-split stage Glicko configuration ──────────────────────────
+# 4 separate stage tracks matching the ML pipeline's STAGE_TYPES.
+GLICKO_STAGE_TYPES = ["flat", "hilly", "mountain", "itt"]
 
 # ── Glicko-2 Constants ──────────────────────────────────────────────
 
@@ -328,18 +333,74 @@ def process_stage_race(
 
 # ── Main computation ─────────────────────────────────────────────────
 
+def _classify_stage_glicko(parcours_type, is_itt) -> str | None:
+    """Classify a stage into one of the 4 Glicko stage tracks.
+
+    Returns 'flat', 'hilly', 'mountain', 'itt', or None if unclassifiable.
+    Reuses the same parcours_type mapping as the ML stage targets.
+    """
+    if is_itt:
+        return "itt"
+    if parcours_type is None or (isinstance(parcours_type, float) and np.isnan(parcours_type)):
+        return None
+    return STAGE_TYPE_MAP.get(parcours_type)
+
+
+def _compute_typed_stage_lists(
+    stages: pd.DataFrame,
+) -> dict[str, list[tuple[str, int]]]:
+    """Split stage results into per-type rider lists with avg position ranking.
+
+    For each stage type present in the data, computes each rider's average
+    position across stages of that type, then ranks riders by that average.
+
+    Returns dict mapping stage_type → list of (rider_id, rank) tuples.
+    """
+    stages = stages.copy()
+    stages['stage_type'] = stages.apply(
+        lambda r: _classify_stage_glicko(r.get('parcours_type'), r.get('is_itt', False)),
+        axis=1,
+    )
+
+    result = {}
+    for st in GLICKO_STAGE_TYPES:
+        typed = stages[stages['stage_type'] == st]
+        if len(typed) < 3:
+            continue
+        avg_pos = typed.groupby('rider_id')['position'].mean().reset_index()
+        avg_pos = avg_pos.sort_values('position')
+        avg_pos['rank'] = range(1, len(avg_pos) + 1)
+        result[st] = list(zip(avg_pos['rider_id'].values, avg_pos['rank'].values))
+
+    return result
+
+
+_DEFAULT_RATING = {'mu': INITIAL_MU, 'rd': INITIAL_RD, 'sigma': INITIAL_SIGMA}
+
+
 def compute_all_ratings(results_df: pd.DataFrame) -> pd.DataFrame:
     """Compute Glicko-2 ratings for all riders across all races chronologically.
 
+    Maintains 6 rating tracks:
+      - gc: from final GC classification
+      - stage (unified): from average position across ALL stages (backward compat)
+      - stage_flat: from flat stages (p1, p2)
+      - stage_hilly: from hilly stages (p3)
+      - stage_mountain: from mountain stages (p4, p5)
+      - stage_itt: from ITT stages
+
     Returns DataFrame with columns:
         rider_id, race_slug, year, race_date,
-        gc_mu, gc_rd, gc_sigma, stage_mu, stage_rd, stage_sigma
+        gc_mu/rd/sigma, stage_mu/rd/sigma,
+        stage_flat_mu/rd/sigma, stage_hilly_mu/rd/sigma,
+        stage_mountain_mu/rd/sigma, stage_itt_mu/rd/sigma
     """
     rng = np.random.RandomState(42)
 
     # Current ratings (updated as we process races)
     gc_ratings = {}
-    stage_ratings = {}
+    stage_ratings = {}  # unified (backward compat)
+    typed_stage_ratings = {st: {} for st in GLICKO_STAGE_TYPES}
 
     # Get distinct races in chronological order
     races = results_df[
@@ -389,16 +450,21 @@ def compute_all_ratings(results_df: pd.DataFrame) -> pd.DataFrame:
         ]
 
         if len(stages) >= 3:
-            # Use average stage position as the "result" for stage rating
+            # Unified stage rating (backward compat)
             avg_pos = stages.groupby('rider_id')['position'].mean().reset_index()
             avg_pos = avg_pos.sort_values('position')
-            # Convert to integer rank
             avg_pos['rank'] = range(1, len(avg_pos) + 1)
             stage_list = list(zip(avg_pos['rider_id'].values, avg_pos['rank'].values))
             stage_ratings = process_stage_race(stage_list, stage_ratings, prestige, rng)
 
-        # Snapshot: save ratings BEFORE this race (for prediction features)
-        # We want the rating at prediction time, not after the race
+            # Type-specific stage ratings (4 tracks)
+            typed_lists = _compute_typed_stage_lists(stages)
+            for st, st_list in typed_lists.items():
+                typed_stage_ratings[st] = process_stage_race(
+                    st_list, typed_stage_ratings[st], prestige, rng,
+                )
+
+        # Snapshot: save ratings after this race
         all_rider_ids = set()
         if len(gc) >= 3:
             all_rider_ids.update(gc['rider_id'].values)
@@ -406,9 +472,9 @@ def compute_all_ratings(results_df: pd.DataFrame) -> pd.DataFrame:
             all_rider_ids.update(stages.groupby('rider_id').first().index)
 
         for rid in all_rider_ids:
-            gc_r = gc_ratings.get(rid, {'mu': INITIAL_MU, 'rd': INITIAL_RD, 'sigma': INITIAL_SIGMA})
-            st_r = stage_ratings.get(rid, {'mu': INITIAL_MU, 'rd': INITIAL_RD, 'sigma': INITIAL_SIGMA})
-            snapshots.append({
+            gc_r = gc_ratings.get(rid, _DEFAULT_RATING)
+            st_r = stage_ratings.get(rid, _DEFAULT_RATING)
+            snap = {
                 'rider_id': rid,
                 'race_slug': slug,
                 'year': year,
@@ -419,7 +485,13 @@ def compute_all_ratings(results_df: pd.DataFrame) -> pd.DataFrame:
                 'stage_mu': st_r['mu'],
                 'stage_rd': st_r['rd'],
                 'stage_sigma': st_r['sigma'],
-            })
+            }
+            for st in GLICKO_STAGE_TYPES:
+                tr = typed_stage_ratings[st].get(rid, _DEFAULT_RATING)
+                snap[f'stage_{st}_mu'] = tr['mu']
+                snap[f'stage_{st}_rd'] = tr['rd']
+                snap[f'stage_{st}_sigma'] = tr['sigma']
+            snapshots.append(snap)
 
         processed += 1
         if processed % 20 == 0:
@@ -472,10 +544,18 @@ def main():
     for _, r in top_gc.iterrows():
         print(f"    {r['name']:30s}  mu={r['gc_mu']:.0f}  rd={r['gc_rd']:.0f}  (uncertainty: {'low' if r['gc_rd'] < 100 else 'med' if r['gc_rd'] < 200 else 'high'})")
 
-    print("\n  Top 20 Stage ratings:")
+    print("\n  Top 20 Stage ratings (unified):")
     top_stage = latest.nlargest(20, 'stage_mu')
     for _, r in top_stage.iterrows():
         print(f"    {r['name']:30s}  mu={r['stage_mu']:.0f}  rd={r['stage_rd']:.0f}")
+
+    for st in GLICKO_STAGE_TYPES:
+        col = f'stage_{st}_mu'
+        rd_col = f'stage_{st}_rd'
+        print(f"\n  Top 10 Stage {st} ratings:")
+        top = latest.nlargest(10, col)
+        for _, r in top.iterrows():
+            print(f"    {r['name']:30s}  mu={r[col]:.0f}  rd={r[rd_col]:.0f}")
 
     if args.rider:
         rider_match = latest[latest['name'].str.contains(args.rider, case=False, na=False)]
@@ -485,16 +565,21 @@ def main():
             history = snapshots[snapshots['rider_id'] == rid].sort_values('race_date')
             print(f"\n  Rating history for {name}:")
             for _, h in history.iterrows():
-                print(f"    {h['race_slug']:35s} {h['year']}  gc={h['gc_mu']:.0f}±{h['gc_rd']:.0f}  stage={h['stage_mu']:.0f}±{h['stage_rd']:.0f}")
+                flat = f"F={h['stage_flat_mu']:.0f}" if h['stage_flat_mu'] != INITIAL_MU else "F=---"
+                hilly = f"H={h['stage_hilly_mu']:.0f}" if h['stage_hilly_mu'] != INITIAL_MU else "H=---"
+                mtn = f"M={h['stage_mountain_mu']:.0f}" if h['stage_mountain_mu'] != INITIAL_MU else "M=---"
+                itt = f"T={h['stage_itt_mu']:.0f}" if h['stage_itt_mu'] != INITIAL_MU else "T=---"
+                print(f"    {h['race_slug']:30s} {h['year']}  gc={h['gc_mu']:.0f}±{h['gc_rd']:.0f}  stg={h['stage_mu']:.0f}  {flat} {hilly} {mtn} {itt}")
 
     if not args.dry_run:
         print("\n[3/3] Saving to database...")
         conn = psycopg2.connect(db_url)
         cur = conn.cursor()
 
-        # Create table if not exists
+        # Recreate table with all columns (TRUNCATE follows, so safe to drop+create)
+        cur.execute("DROP TABLE IF EXISTS rider_ratings")
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS rider_ratings (
+            CREATE TABLE rider_ratings (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 rider_id UUID REFERENCES riders(id),
                 race_slug VARCHAR(255) NOT NULL,
@@ -506,16 +591,25 @@ def main():
                 stage_mu FLOAT NOT NULL DEFAULT 1500,
                 stage_rd FLOAT NOT NULL DEFAULT 350,
                 stage_sigma FLOAT NOT NULL DEFAULT 0.06,
+                stage_flat_mu FLOAT NOT NULL DEFAULT 1500,
+                stage_flat_rd FLOAT NOT NULL DEFAULT 350,
+                stage_flat_sigma FLOAT NOT NULL DEFAULT 0.06,
+                stage_hilly_mu FLOAT NOT NULL DEFAULT 1500,
+                stage_hilly_rd FLOAT NOT NULL DEFAULT 350,
+                stage_hilly_sigma FLOAT NOT NULL DEFAULT 0.06,
+                stage_mountain_mu FLOAT NOT NULL DEFAULT 1500,
+                stage_mountain_rd FLOAT NOT NULL DEFAULT 350,
+                stage_mountain_sigma FLOAT NOT NULL DEFAULT 0.06,
+                stage_itt_mu FLOAT NOT NULL DEFAULT 1500,
+                stage_itt_rd FLOAT NOT NULL DEFAULT 350,
+                stage_itt_sigma FLOAT NOT NULL DEFAULT 0.06,
                 UNIQUE(rider_id, race_slug, year)
             );
-            CREATE INDEX IF NOT EXISTS idx_rider_ratings_rider ON rider_ratings(rider_id);
-            CREATE INDEX IF NOT EXISTS idx_rider_ratings_race ON rider_ratings(race_slug, year);
+            CREATE INDEX idx_rider_ratings_rider ON rider_ratings(rider_id);
+            CREATE INDEX idx_rider_ratings_race ON rider_ratings(race_slug, year);
         """)
 
-        # Truncate and reinsert (full recompute)
-        cur.execute("TRUNCATE rider_ratings")
-
-        # Batch insert
+        # Batch insert (table was dropped and recreated above)
         values = []
         for _, row in snapshots.iterrows():
             values.append((
@@ -523,15 +617,21 @@ def main():
                 row['race_date'],
                 row['gc_mu'], row['gc_rd'], row['gc_sigma'],
                 row['stage_mu'], row['stage_rd'], row['stage_sigma'],
+                row['stage_flat_mu'], row['stage_flat_rd'], row['stage_flat_sigma'],
+                row['stage_hilly_mu'], row['stage_hilly_rd'], row['stage_hilly_sigma'],
+                row['stage_mountain_mu'], row['stage_mountain_rd'], row['stage_mountain_sigma'],
+                row['stage_itt_mu'], row['stage_itt_rd'], row['stage_itt_sigma'],
             ))
 
         psycopg2.extras.execute_batch(cur, """
             INSERT INTO rider_ratings (rider_id, race_slug, year, race_date,
-                gc_mu, gc_rd, gc_sigma, stage_mu, stage_rd, stage_sigma)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (rider_id, race_slug, year) DO UPDATE SET
-                gc_mu = EXCLUDED.gc_mu, gc_rd = EXCLUDED.gc_rd, gc_sigma = EXCLUDED.gc_sigma,
-                stage_mu = EXCLUDED.stage_mu, stage_rd = EXCLUDED.stage_rd, stage_sigma = EXCLUDED.stage_sigma
+                gc_mu, gc_rd, gc_sigma, stage_mu, stage_rd, stage_sigma,
+                stage_flat_mu, stage_flat_rd, stage_flat_sigma,
+                stage_hilly_mu, stage_hilly_rd, stage_hilly_sigma,
+                stage_mountain_mu, stage_mountain_rd, stage_mountain_sigma,
+                stage_itt_mu, stage_itt_rd, stage_itt_sigma)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, values, page_size=1000)
 
         conn.commit()

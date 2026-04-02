@@ -47,7 +47,11 @@ def load_glicko_ratings(db_url: str) -> pd.DataFrame:
     conn = psycopg2.connect(db_url)
     df = pd.read_sql("""
         SELECT rider_id, race_slug, year, race_date,
-               gc_mu, gc_rd, gc_sigma, stage_mu, stage_rd, stage_sigma
+               gc_mu, gc_rd, gc_sigma, stage_mu, stage_rd, stage_sigma,
+               stage_flat_mu, stage_flat_rd, stage_flat_sigma,
+               stage_hilly_mu, stage_hilly_rd, stage_hilly_sigma,
+               stage_mountain_mu, stage_mountain_rd, stage_mountain_sigma,
+               stage_itt_mu, stage_itt_rd, stage_itt_sigma
         FROM rider_ratings
         ORDER BY race_date
     """, conn)

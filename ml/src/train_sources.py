@@ -41,7 +41,14 @@ MODEL_DIR = os.environ.get(
 
 # ── Feature definitions (frozen from benchmark_integrated.py) ────────
 
-SHARED_FEATURES = ["stage_mu", "stage_rd", "age"]
+# Type-specific shared features: each stage model gets the Glicko track
+# matching its stage type instead of the unified (type-agnostic) stage_mu.
+SHARED_FEATURES_BY_TYPE = {
+    "flat": ["stage_flat_mu", "stage_flat_rd", "age"],
+    "hilly": ["stage_hilly_mu", "stage_hilly_rd", "age"],
+    "mountain": ["stage_mountain_mu", "stage_mountain_rd", "age"],
+    "itt": ["stage_itt_mu", "stage_itt_rd", "age"],
+}
 PROFILE_FEATURES = [
     "pct_pts_p1p2", "pct_pts_p4p5", "pct_pts_p3",
     "itt_top10_rate",
@@ -59,7 +66,7 @@ GC_GATE_FEATURES = [
 ]
 
 MTN_FINAL_FEATURES = [
-    "gc_mu", "gc_rd", "stage_mu", "pct_pts_p4p5", "stage_wins_mountain",
+    "gc_mu", "gc_rd", "stage_mountain_mu", "pct_pts_p4p5", "stage_wins_mountain",
     "mountain_pts_12m", "mountain_pts_6m", "mountain_strength_12m",
     "mountain_top10_rate_12m", "mountain_top10s_12m",
     "gc_mu_delta_12m", "pts_gc_12m", "sr_gc_top10_rate",
@@ -70,7 +77,7 @@ MTN_PASS_FEATURES = [
     "pct_pts_p4p5", "stage_wins_mountain",
     "mountain_pts_12m", "mountain_pts_6m", "mountain_strength_12m",
     "mountain_top10_rate_12m", "mountain_top10s_12m", "mountain_starts_12m",
-    "stage_mu", "gc_mu", "pts_stage_12m", "target_mountain_pct", "age",
+    "stage_mountain_mu", "gc_mu", "pts_stage_12m", "target_mountain_pct", "age",
 ]
 
 SPR_INTER_FEATURES = [
@@ -78,7 +85,7 @@ SPR_INTER_FEATURES = [
     "flat_pts_12m", "flat_pts_6m", "flat_strength_12m",
     "flat_top10_rate_12m", "flat_top10s_12m",
     "hilly_pts_12m", "hilly_top10_rate_12m", "pct_pts_p3",
-    "stage_mu", "pts_stage_12m", "target_flat_pct", "age",
+    "stage_flat_mu", "pts_stage_12m", "target_flat_pct", "age",
 ]
 
 STAGE_TYPES = ["flat", "hilly", "mountain", "itt"]
@@ -97,7 +104,7 @@ SPRINT_CONTENDER_WEIGHTS = {
     },
     "allround": {
         "hilly_pts_12m": 0.2, "pts_stage_12m": 0.05,
-        "pct_pts_p3": 30.0, "stage_mu": 0.005,
+        "pct_pts_p3": 30.0, "stage_flat_mu": 0.005,
     },
     "survival_floor": 0.3,
     "survival_weight": 0.7,
@@ -119,9 +126,10 @@ MINI_RANK_DECAY = {
 
 def _stage_features(stage_type: str) -> list[str]:
     """Build the feature list for a stage type model."""
+    shared = SHARED_FEATURES_BY_TYPE[stage_type]
     raw = [f.format(t=stage_type) for f in STAGE_RAW_TEMPLATE]
     strength = [f.format(t=stage_type) for f in STAGE_STRENGTH_TEMPLATE]
-    return SHARED_FEATURES + raw + strength + PROFILE_FEATURES
+    return shared + raw + strength + PROFILE_FEATURES
 
 
 def _load_training_data(cache_dir: str) -> pd.DataFrame:

@@ -522,13 +522,35 @@ def _load_completion_rates() -> dict[str, float]:
         return {}
 
 
+_GLICKO_COLS = [
+    "gc_mu", "gc_rd", "stage_mu", "stage_rd",
+    "stage_flat_mu", "stage_flat_rd",
+    "stage_hilly_mu", "stage_hilly_rd",
+    "stage_mountain_mu", "stage_mountain_rd",
+    "stage_itt_mu", "stage_itt_rd",
+]
+
+
+def _glicko_default(col: str) -> float:
+    if "mu" in col:
+        return 1500.0
+    if "rd" in col:
+        return 350.0
+    return 0.0
+
+
 def _enrich_with_glicko(features_df: pd.DataFrame, race_date) -> pd.DataFrame:
-    """Add Glicko-2 ratings for each rider (gc_mu, gc_rd, stage_mu, stage_rd, gc_mu_delta_12m)."""
+    """Add Glicko-2 ratings for each rider (unified + 4-track split)."""
+    all_cols = _GLICKO_COLS + ["gc_mu_delta_12m"]
     try:
         conn = psycopg2.connect(DB_URL)
         cur = conn.cursor()
         cur.execute("""
-            SELECT rider_id, race_date, gc_mu, gc_rd, stage_mu, stage_rd
+            SELECT rider_id, race_date, gc_mu, gc_rd, stage_mu, stage_rd,
+                   stage_flat_mu, stage_flat_rd,
+                   stage_hilly_mu, stage_hilly_rd,
+                   stage_mountain_mu, stage_mountain_rd,
+                   stage_itt_mu, stage_itt_rd
             FROM rider_ratings
             ORDER BY race_date
         """)
@@ -538,9 +560,9 @@ def _enrich_with_glicko(features_df: pd.DataFrame, race_date) -> pd.DataFrame:
         conn.close()
 
         if not rows:
-            for col in ["gc_mu", "gc_rd", "stage_mu", "stage_rd", "gc_mu_delta_12m"]:
+            for col in all_cols:
                 if col not in features_df.columns:
-                    features_df[col] = 1500.0 if "mu" in col else (350.0 if "rd" in col else 0.0)
+                    features_df[col] = _glicko_default(col)
             return features_df
 
         ratings_df = pd.DataFrame(rows, columns=cols)
@@ -555,47 +577,40 @@ def _enrich_with_glicko(features_df: pd.DataFrame, race_date) -> pd.DataFrame:
                 (ratings_df["race_date"] < race_dt)
             ]
             if len(rider_ratings) == 0:
-                glicko_data.append({
-                    "rider_id": rider_id,
-                    "gc_mu": 1500.0, "gc_rd": 350.0,
-                    "stage_mu": 1500.0, "stage_rd": 350.0,
-                    "gc_mu_delta_12m": 0.0,
-                })
+                entry = {"rider_id": rider_id, "gc_mu_delta_12m": 0.0}
+                for col in _GLICKO_COLS:
+                    entry[col] = _glicko_default(col)
+                glicko_data.append(entry)
             else:
                 latest = rider_ratings.iloc[-1]
                 older = rider_ratings[rider_ratings["race_date"] <= cutoff_12m]
                 gc_mu_12m_ago = older.iloc[-1]["gc_mu"] if len(older) > 0 else 1500.0
-                glicko_data.append({
+                entry = {
                     "rider_id": rider_id,
-                    "gc_mu": latest["gc_mu"],
-                    "gc_rd": latest["gc_rd"],
-                    "stage_mu": latest["stage_mu"],
-                    "stage_rd": latest["stage_rd"],
                     "gc_mu_delta_12m": latest["gc_mu"] - gc_mu_12m_ago,
-                })
+                }
+                for col in _GLICKO_COLS:
+                    entry[col] = latest.get(col, _glicko_default(col))
+                glicko_data.append(entry)
 
         glicko_df = pd.DataFrame(glicko_data)
 
         # Drop existing glicko columns if any, then merge
-        drop_cols = [c for c in ["gc_mu", "gc_rd", "stage_mu", "stage_rd", "gc_mu_delta_12m"]
-                     if c in features_df.columns]
+        drop_cols = [c for c in all_cols if c in features_df.columns]
         if drop_cols:
             features_df = features_df.drop(columns=drop_cols)
         features_df = features_df.merge(glicko_df, on="rider_id", how="left")
 
         # Fill defaults
-        features_df["gc_mu"] = features_df["gc_mu"].fillna(1500.0)
-        features_df["gc_rd"] = features_df["gc_rd"].fillna(350.0)
-        features_df["stage_mu"] = features_df["stage_mu"].fillna(1500.0)
-        features_df["stage_rd"] = features_df["stage_rd"].fillna(350.0)
-        features_df["gc_mu_delta_12m"] = features_df["gc_mu_delta_12m"].fillna(0.0)
+        for col in all_cols:
+            features_df[col] = features_df[col].fillna(_glicko_default(col))
 
         return features_df
     except Exception:
         logger.exception("Failed to enrich with Glicko ratings")
-        for col in ["gc_mu", "gc_rd", "stage_mu", "stage_rd", "gc_mu_delta_12m"]:
+        for col in all_cols:
             if col not in features_df.columns:
-                features_df[col] = 1500.0 if "mu" in col else (350.0 if "rd" in col else 0.0)
+                features_df[col] = _glicko_default(col)
         return features_df
 
 

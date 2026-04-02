@@ -45,7 +45,13 @@ from .benchmark_v8 import (
 from .benchmark_v8_glicko import load_glicko_ratings
 
 # Config A: baseline + startlist features (Glicko internal only)
-GLICKO_DIRECT_FEATURES = ['gc_mu', 'gc_rd', 'stage_mu', 'stage_rd', 'gc_mu_delta_12m']
+GLICKO_DIRECT_FEATURES = [
+    'gc_mu', 'gc_rd', 'stage_mu', 'stage_rd', 'gc_mu_delta_12m',
+    'stage_flat_mu', 'stage_flat_rd',
+    'stage_hilly_mu', 'stage_hilly_rd',
+    'stage_mountain_mu', 'stage_mountain_rd',
+    'stage_itt_mu', 'stage_itt_rd',
+]
 
 CONFIGS = {
     'a': {
@@ -67,12 +73,17 @@ def get_rider_rating_before_race(ratings_df, rider_id, race_date):
         (ratings_df['rider_id'] == rider_id) &
         (ratings_df['race_date'] < race_date)
     ]
+    defaults = {
+        'gc_mu': 1500.0, 'gc_rd': 350.0,
+        'stage_mu': 1500.0, 'stage_rd': 350.0,
+        'gc_mu_delta_12m': 0.0,
+        'stage_flat_mu': 1500.0, 'stage_flat_rd': 350.0,
+        'stage_hilly_mu': 1500.0, 'stage_hilly_rd': 350.0,
+        'stage_mountain_mu': 1500.0, 'stage_mountain_rd': 350.0,
+        'stage_itt_mu': 1500.0, 'stage_itt_rd': 350.0,
+    }
     if len(rider_ratings) == 0:
-        return {
-            'gc_mu': 1500.0, 'gc_rd': 350.0,
-            'stage_mu': 1500.0, 'stage_rd': 350.0,
-            'gc_mu_delta_12m': 0.0,
-        }
+        return defaults
     latest = rider_ratings.iloc[-1]
 
     # 12-month delta: current gc_mu minus gc_mu ~12 months ago
@@ -81,16 +92,20 @@ def get_rider_rating_before_race(ratings_df, rider_id, race_date):
     if len(older) > 0:
         gc_mu_12m_ago = older.iloc[-1]['gc_mu']
     else:
-        gc_mu_12m_ago = 1500.0  # no history that far back → delta from initial
+        gc_mu_12m_ago = 1500.0
     gc_mu_delta = latest['gc_mu'] - gc_mu_12m_ago
 
-    return {
+    result = {
         'gc_mu': latest['gc_mu'],
         'gc_rd': latest['gc_rd'],
         'stage_mu': latest['stage_mu'],
         'stage_rd': latest['stage_rd'],
         'gc_mu_delta_12m': gc_mu_delta,
     }
+    for st in ['flat', 'hilly', 'mountain', 'itt']:
+        result[f'stage_{st}_mu'] = latest.get(f'stage_{st}_mu', 1500.0)
+        result[f'stage_{st}_rd'] = latest.get(f'stage_{st}_rd', 350.0)
+    return result
 
 
 def extract_features_with_startlist(

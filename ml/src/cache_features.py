@@ -32,7 +32,13 @@ from .benchmark_v8_startlist import extract_features_with_startlist
 
 CACHE_DIR = os.path.join(os.path.dirname(__file__), '..', 'cache')
 CACHE_META_PATH = os.path.join(CACHE_DIR, 'cache_meta.json')
-GLICKO_FEATURES = ['gc_mu', 'gc_rd', 'stage_mu', 'stage_rd', 'gc_mu_delta_12m']
+GLICKO_FEATURES = [
+    'gc_mu', 'gc_rd', 'stage_mu', 'stage_rd', 'gc_mu_delta_12m',
+    'stage_flat_mu', 'stage_flat_rd',
+    'stage_hilly_mu', 'stage_hilly_rd',
+    'stage_mountain_mu', 'stage_mountain_rd',
+    'stage_itt_mu', 'stage_itt_rd',
+]
 
 # Years 2019-2021 have no startlist data and never produce cache files
 MIN_CACHE_YEAR = 2022
