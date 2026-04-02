@@ -1,0 +1,11 @@
+{
+  "feature_number": "017",
+  "slug": "017-ml-service-package-reorganization",
+  "feature_slug": "017-ml-service-package-reorganization",
+  "created_at": "2026-04-03T00:15:00Z",
+  "target_branch": "main",
+  "friendly_name": "ML Service Package Reorganization",
+  "mission": "software-dev",
+  "source_description": "Refactor ml/src/ from 56-file flat spaghetti to domain-based package structure. Delete 27 obsolete files, consolidate tests, update imports.",
+  "vcs": "git"
+}
