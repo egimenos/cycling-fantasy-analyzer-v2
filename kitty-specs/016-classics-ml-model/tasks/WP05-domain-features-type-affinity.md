@@ -1,11 +1,14 @@
 ---
 work_package_id: WP05
 title: Domain Features — Type Affinity & Specialist Profile
-lane: planned
+lane: 'done'
 dependencies:
   - WP02
   - WP03
   - WP04
+base_branch: 016-classics-ml-model-WP05-merge-base
+base_commit: 9967e0df6f76e5be950ae68eed11631dc78f7db2
+created_at: '2026-04-02T19:36:49.847167+00:00'
 subtasks:
   - T022
   - T023
@@ -16,9 +19,9 @@ subtasks:
 phase: Phase 2 - Feature Engineering
 assignee: ''
 agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+shell_pid: '7206'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-04-02T16:48:30Z'
     lane: planned
@@ -274,3 +277,4 @@ spec-kitty implement WP05 --base WP04
 ## Activity Log
 
 - 2026-04-02T16:48:30Z – system – lane=planned – Prompt created.
+- 2026-04-02T20:25:22Z – unknown – shell_pid=7206 – lane=done – Tier 2 type features done. type_affinity +4% NDCG, specialist +4% P@5. Rho stable at 0.305. Ready for WP06 pipeline features.
