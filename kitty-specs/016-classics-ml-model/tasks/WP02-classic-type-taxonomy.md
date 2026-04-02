@@ -1,8 +1,11 @@
 ---
 work_package_id: WP02
 title: Classic Type Taxonomy
-lane: planned
+lane: 'for_review'
 dependencies: []
+base_branch: main
+base_commit: e31e75682188089d1c08f905e5761d3d565d6ce5
+created_at: '2026-04-02T19:10:40.685693+00:00'
 subtasks:
   - T007
   - T008
@@ -10,8 +13,8 @@ subtasks:
   - T010
 phase: Phase 1 - Baseline & Research Infrastructure
 assignee: ''
-agent: ''
-shell_pid: ''
+agent: 'claude-opus'
+shell_pid: '90230'
 review_status: ''
 reviewed_by: ''
 history:
@@ -119,6 +122,7 @@ spec-kitty implement WP02
 **Steps**:
 
 1. Write a verification function or standalone script:
+
    ```python
    def verify_slugs(conn) -> dict:
        query = """
@@ -146,6 +150,7 @@ spec-kitty implement WP02
            'coverage': len(in_db & all_known) / len(in_db) if in_db else 0,
        }
    ```
+
 2. Run verification and update `CLASSIC_TYPES` with any missing races
 3. Add `SLUG_ALIASES` dict for races whose slug changed across years:
    ```python
@@ -276,3 +281,5 @@ spec-kitty implement WP02
 ## Activity Log
 
 - 2026-04-02T16:48:30Z – system – lane=planned – Prompt created.
+- 2026-04-02T19:10:41Z – claude-opus – shell_pid=90230 – lane=doing – Assigned agent via workflow command
+- 2026-04-02T19:12:43Z – claude-opus – shell_pid=90230 – lane=for_review – Taxonomy complete: 35 classified races, 5 pipeline groups, 9 types, alias resolution. All verified against DB.
