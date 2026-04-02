@@ -52,7 +52,12 @@ export class MlScoringAdapter implements MlScoringPort {
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(this.timeout),
       });
-      if (!response.ok) return null;
+      if (!response.ok) {
+        this.logger.error(
+          `ML service returned ${response.status} for predictRace(${raceSlug}, ${year}): ${await response.text().catch(() => 'no body')}`,
+        );
+        return null;
+      }
       const data = (await response.json()) as {
         predictions: Array<{
           rider_id: string;
