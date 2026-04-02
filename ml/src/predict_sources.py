@@ -133,6 +133,8 @@ def predict_race_sources(
         List of dicts: {rider_id, predicted_score, breakdown: {gc, stage, mountain, sprint}}
     """
     if race_type == "classic":
+        # Classics are handled directly in app.py via predict_classics.py
+        # This path should not be reached, but return empty as safe fallback
         return []
 
     metadata = models.get("metadata", {})
