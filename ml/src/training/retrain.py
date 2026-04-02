@@ -41,8 +41,8 @@ def main():
         'DATABASE_URL',
         'postgresql://cycling:cycling@localhost:5432/cycling_analyzer',
     )
-    model_dir = os.path.join(os.path.dirname(__file__), '..', 'models')
-    cache_dir = os.path.join(os.path.dirname(__file__), '..', 'cache')
+    model_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
+    cache_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'cache')
     os.makedirs(model_dir, exist_ok=True)
     os.makedirs(cache_dir, exist_ok=True)
 

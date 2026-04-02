@@ -33,10 +33,10 @@ from sklearn.linear_model import LogisticRegression, RidgeCV
 
 logger = structlog.get_logger(__name__)
 
-CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", "cache")
+CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "cache")
 MODEL_DIR = os.environ.get(
     "MODEL_DIR",
-    os.path.join(os.path.dirname(__file__), "..", "models"),
+    os.path.join(os.path.dirname(__file__), "..", "..", "models"),
 )
 
 # ── Feature definitions (frozen from benchmark_integrated.py) ────────

@@ -23,7 +23,7 @@ from ..domain.points import GC_CLASSIC
 
 logger = logging.getLogger(__name__)
 
-MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models", "classics")
+MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "models", "classics")
 
 TRANSFORMS = {
     "raw": (lambda y: y, lambda y: y),

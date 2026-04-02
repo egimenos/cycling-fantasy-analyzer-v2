@@ -24,7 +24,7 @@ import pandas as pd
 from ..data.loader import load_data
 from .classics import TIER1_FEATURE_COLS, extract_all_classic_features
 
-CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", "cache")
+CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "cache")
 CACHE_PREFIX = "classics_features"
 META_FILE = os.path.join(CACHE_DIR, "classics_cache_meta.json")
 DB_URL_DEFAULT = "postgresql://cycling:cycling@localhost:5432/cycling_analyzer"

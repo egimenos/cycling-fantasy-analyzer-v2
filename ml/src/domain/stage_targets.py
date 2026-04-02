@@ -228,7 +228,7 @@ def build_stage_targets(db_url: str | None = None) -> pd.DataFrame:
 def save_stage_targets(db_url: str | None = None) -> str:
     """Build and save stage targets to parquet."""
     df = build_stage_targets(db_url)
-    cache_dir = os.path.join(os.path.dirname(__file__), "..", "cache")
+    cache_dir = os.path.join(os.path.dirname(__file__), "..", "..", "cache")
     os.makedirs(cache_dir, exist_ok=True)
     path = os.path.join(cache_dir, "stage_targets.parquet")
     df.to_parquet(path, index=False)

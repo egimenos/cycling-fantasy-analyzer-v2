@@ -41,7 +41,7 @@ logger = structlog.get_logger(__name__)
 
 MODEL_DIR = os.environ.get(
     'MODEL_DIR',
-    os.path.join(os.path.dirname(__file__), '..', 'models'),
+    os.path.join(os.path.dirname(__file__), '..', '..', 'models'),
 )
 
 DB_URL = os.environ.get(
@@ -51,7 +51,7 @@ DB_URL = os.environ.get(
 
 CACHE_DIR = os.environ.get(
     'CACHE_DIR',
-    os.path.join(os.path.dirname(__file__), '..', 'cache'),
+    os.path.join(os.path.dirname(__file__), '..', '..', 'cache'),
 )
 
 

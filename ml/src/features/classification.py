@@ -29,7 +29,7 @@ DB_URL = os.environ.get(
     "DATABASE_URL", "postgresql://cycling:cycling@localhost:5432/cycling_analyzer"
 )
 
-CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", "cache")
+CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "cache")
 
 
 def _load_classification_results(db_url: str) -> pd.DataFrame:

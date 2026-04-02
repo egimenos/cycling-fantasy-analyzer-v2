@@ -30,7 +30,7 @@ FOLDS = {1: {"train_end": 2022, "test_year": 2023}, 2: {"train_end": 2023, "test
 # load_glicko_ratings imported at runtime if needed
 # extract_features_with_startlist imported at runtime if needed
 
-CACHE_DIR = os.path.join(os.path.dirname(__file__), '..', 'cache')
+CACHE_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'cache')
 CACHE_META_PATH = os.path.join(CACHE_DIR, 'cache_meta.json')
 GLICKO_FEATURES = [
     'gc_mu', 'gc_rd', 'stage_mu', 'stage_rd', 'gc_mu_delta_12m',

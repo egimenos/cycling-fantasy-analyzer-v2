@@ -30,7 +30,7 @@ from ..features.classics import (
     TYPE_TOP10_RATE_COLS,
 )
 
-MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models", "classics")
+MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "models", "classics")
 
 RF_PARAMS = {
     "n_estimators": 500,
