@@ -378,7 +378,37 @@ def _compute_typed_stage_lists(
 _DEFAULT_RATING = {'mu': INITIAL_MU, 'rd': INITIAL_RD, 'sigma': INITIAL_SIGMA}
 
 
-def compute_all_ratings(results_df: pd.DataFrame) -> pd.DataFrame:
+def _apply_rd_decay(ratings: dict, last_dates: dict, race_date, period_days: int) -> None:
+    """Apply RD growth for inactive riders (in-place).
+
+    For each rider in ratings, increase RD based on how many periods have
+    elapsed since their last race.  This is the standard Glicko-2 behavior
+    for "no games played" between rating periods.
+    """
+    for rid, r in ratings.items():
+        last = last_dates.get(rid)
+        if last is None:
+            continue
+        days = (race_date - last).days
+        if days <= 0:
+            continue
+        periods = days / period_days
+        new_rd = min(math.sqrt(r['rd'] ** 2 + periods * r['sigma'] ** 2), INITIAL_RD)
+        r['rd'] = new_rd
+
+
+def _transform_prestige(prestige: float, transform: str) -> float:
+    """Apply a transformation to the prestige multiplier."""
+    if transform == 'sqrt':
+        return math.sqrt(prestige)
+    return prestige  # 'linear' = no change
+
+
+def compute_all_ratings(
+    results_df: pd.DataFrame,
+    rd_decay_period: int = 0,
+    prestige_transform: str = 'sqrt',
+) -> pd.DataFrame:
     """Compute Glicko-2 ratings for all riders across all races chronologically.
 
     Maintains 6 rating tracks:
@@ -388,6 +418,13 @@ def compute_all_ratings(results_df: pd.DataFrame) -> pd.DataFrame:
       - stage_hilly: from hilly stages (p3)
       - stage_mountain: from mountain stages (p4, p5)
       - stage_itt: from ITT stages
+
+    Args:
+        results_df: Race results DataFrame from load_data_fast().
+        rd_decay_period: If > 0, increase RD for inactive riders using this
+            as the period length in days (e.g. 30 = monthly decay). 0 = disabled.
+        prestige_transform: 'linear' (default) or 'sqrt'. Controls how race
+            prestige scales the rating update delta.
 
     Returns DataFrame with columns:
         rider_id, race_slug, year, race_date,
@@ -401,6 +438,11 @@ def compute_all_ratings(results_df: pd.DataFrame) -> pd.DataFrame:
     gc_ratings = {}
     stage_ratings = {}  # unified (backward compat)
     typed_stage_ratings = {st: {} for st in GLICKO_STAGE_TYPES}
+
+    # Last race date per rider per track (for RD decay)
+    gc_last_date = {}
+    stage_last_date = {}
+    typed_last_date = {st: {} for st in GLICKO_STAGE_TYPES}
 
     # Get distinct races in chronological order
     races = results_df[
@@ -426,6 +468,8 @@ def compute_all_ratings(results_df: pd.DataFrame) -> pd.DataFrame:
         else:
             prestige = RACE_PRESTIGE.get((race_type, race_class), 0.5)
 
+        prestige = _transform_prestige(prestige, prestige_transform)
+
         race_results = results_df[
             (results_df['race_slug'] == slug) &
             (results_df['year'] == year)
@@ -439,8 +483,16 @@ def compute_all_ratings(results_df: pd.DataFrame) -> pd.DataFrame:
         ].sort_values('position')
 
         if len(gc) >= 3:
+            # Apply RD decay before processing
+            if rd_decay_period > 0:
+                _apply_rd_decay(gc_ratings, gc_last_date, race_date, rd_decay_period)
+
             gc_list = list(zip(gc['rider_id'].values, gc['position'].astype(int).values))
             gc_ratings = process_gc_race(gc_list, gc_ratings, prestige, rng)
+
+            # Update last race dates for GC participants
+            for rid in gc['rider_id'].values:
+                gc_last_date[rid] = race_date
 
         # Stage results (aggregate stage finishes)
         stages = race_results[
@@ -450,6 +502,13 @@ def compute_all_ratings(results_df: pd.DataFrame) -> pd.DataFrame:
         ]
 
         if len(stages) >= 3:
+            # Apply RD decay before processing
+            if rd_decay_period > 0:
+                _apply_rd_decay(stage_ratings, stage_last_date, race_date, rd_decay_period)
+                for st in GLICKO_STAGE_TYPES:
+                    _apply_rd_decay(typed_stage_ratings[st], typed_last_date[st],
+                                    race_date, rd_decay_period)
+
             # Unified stage rating (backward compat)
             avg_pos = stages.groupby('rider_id')['position'].mean().reset_index()
             avg_pos = avg_pos.sort_values('position')
@@ -457,12 +516,18 @@ def compute_all_ratings(results_df: pd.DataFrame) -> pd.DataFrame:
             stage_list = list(zip(avg_pos['rider_id'].values, avg_pos['rank'].values))
             stage_ratings = process_stage_race(stage_list, stage_ratings, prestige, rng)
 
+            # Update last race dates for unified stage participants
+            for rid in avg_pos['rider_id'].values:
+                stage_last_date[rid] = race_date
+
             # Type-specific stage ratings (4 tracks)
             typed_lists = _compute_typed_stage_lists(stages)
             for st, st_list in typed_lists.items():
                 typed_stage_ratings[st] = process_stage_race(
                     st_list, typed_stage_ratings[st], prestige, rng,
                 )
+                for rid, _ in st_list:
+                    typed_last_date[st][rid] = race_date
 
         # Snapshot: save ratings after this race
         all_rider_ids = set()
