@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.points import (
+from src.domain.points import (
     FINAL_CLASS_GT,
     FINAL_CLASS_MINI,
     GC_CLASSIC,
@@ -29,7 +29,7 @@ from src.points import (
     STAGE_POINTS,
     get_points,
 )
-from src.data import get_sprint_count_per_stage
+from src.data.loader import get_sprint_count_per_stage
 
 
 # ── T018: Table value sanity checks ─────────────────────────────────

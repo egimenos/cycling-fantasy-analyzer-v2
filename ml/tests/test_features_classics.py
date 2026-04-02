@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from .features_classics import TIER1_FEATURE_COLS, compute_classic_features
-from .points import GC_CLASSIC
+from src.features.classics import TIER1_FEATURE_COLS, compute_classic_features
+from src.domain.points import GC_CLASSIC
 
 
 def _make_result(rider_id, slug, year, position, race_date, race_type="classic",

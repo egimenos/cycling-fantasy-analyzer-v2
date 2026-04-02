@@ -1,6 +1,6 @@
 """Tests for model version utilities (predict.py)."""
 
-from src.predict import get_model_version
+from src.api.model_version import get_model_version
 
 
 class TestGetModelVersion:

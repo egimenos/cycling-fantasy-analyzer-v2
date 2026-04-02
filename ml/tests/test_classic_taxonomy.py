@@ -1,6 +1,6 @@
 """Tests for classic_taxonomy.py — type lookups, pipeline groups, helpers."""
 
-from .classic_taxonomy import (
+from src.domain.classic_taxonomy import (
     get_all_types,
     get_classic_types,
     get_feeders_for_race,

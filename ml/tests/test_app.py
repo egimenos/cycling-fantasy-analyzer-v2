@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from starlette.testclient import TestClient
 
-from src.app import app
+from src.api.app import app
 
 
 @pytest.fixture
