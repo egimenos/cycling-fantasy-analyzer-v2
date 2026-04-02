@@ -1,6 +1,6 @@
 # Cycling Fantasy Team Optimizer
 
-Data-driven team selection tool for [Grandes miniVueltas](https://grandesminivueltas.com/) fantasy cycling. Scrapes rider race results from ProCyclingStats, scores them using configurable temporal-decay weights, fuzzy-matches against price lists, and optimizes 9-rider teams via knapsack DP — all within a budget constraint.
+ML-powered team selection tool for [Grandes miniVueltas](https://grandesminivueltas.com/) fantasy cycling. Scrapes race results from ProCyclingStats, predicts rider performance using ML models (source-by-source breakdown for stage races, dedicated LightGBM model for classics), fuzzy-matches against price lists, and optimizes 9-rider teams via knapsack DP — all within a budget constraint.
 
 ## Prerequisites
 
