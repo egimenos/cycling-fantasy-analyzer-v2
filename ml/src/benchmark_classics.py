@@ -39,6 +39,7 @@ from .logbook import (
     load_logbook_entry,
     save_logbook_entry,
 )
+from .data import load_data
 from .points import GC_CLASSIC
 
 # ── Constants ────────────────────────────────────────────────────────
@@ -373,6 +374,154 @@ def run_rules_baseline(
     return fold_details
 
 
+# ── ML benchmark runner ──────────────────────────────────────────────
+
+
+def run_ml_benchmark(
+    feature_cols: list[str],
+    model_type: str = "rf",
+    transform: str = "raw",
+) -> list[dict]:
+    """Run ML model benchmark across all 3 CV folds using cached features.
+
+    Returns fold detail dicts compatible with logbook schema.
+    """
+    from .cache_features_classics import load_cached_classics
+    from .train_classics import TRANSFORMS, print_feature_importance, train_classic_model
+
+    fold_details = []
+
+    for fold_num, fold in FOLDS.items():
+        test_year = fold["test_year"]
+        train_end = fold["train_end"]
+
+        # Load cached features
+        train_dfs = []
+        for yr in range(2019, train_end + 1):
+            try:
+                df = load_cached_classics(yr)
+                if len(df) > 0:
+                    train_dfs.append(df)
+            except FileNotFoundError:
+                pass
+
+        if not train_dfs:
+            print(f"  Fold {fold_num}: no training data, skipping")
+            continue
+
+        train_df = pd.concat(train_dfs, ignore_index=True)
+
+        try:
+            test_df = load_cached_classics(test_year)
+        except FileNotFoundError:
+            print(f"  Fold {fold_num}: no test data for {test_year}, skipping")
+            continue
+
+        if len(test_df) == 0:
+            continue
+
+        # Filter to available features
+        available = [c for c in feature_cols if c in train_df.columns]
+        if not available:
+            print(f"  Fold {fold_num}: no matching features, skipping")
+            continue
+
+        # Train model
+        model, meta = train_classic_model(train_df, available, model_type, transform)
+        train_fn, inverse_fn = TRANSFORMS[transform]
+
+        # Predict on test
+        if model_type == "lgbm":
+            X_test = test_df[available].values
+        else:
+            X_test = test_df[available].fillna(0).values
+
+        raw_preds = model.predict(X_test)
+        preds = np.maximum(inverse_fn(raw_preds), 0)
+        test_df = test_df.copy()
+        test_df["predicted"] = preds
+
+        # Per-race metrics
+        race_details = []
+        all_rhos, all_ndcg, all_p5, all_p10 = [], [], [], []
+        all_capture, all_overlap = [], []
+
+        for (slug, year), group in test_df.groupby(["race_slug", "year"]):
+            if len(group) < 5:
+                continue
+
+            predicted = group["predicted"].values
+            actual = group["actual_pts"].values
+
+            metrics = compute_race_metrics(predicted, actual)
+            if np.isnan(metrics["rho"]):
+                continue
+
+            all_rhos.append(metrics["rho"])
+            all_ndcg.append(metrics["ndcg_10"])
+            all_p5.append(metrics["p_at_5"])
+            all_p10.append(metrics["p_at_10"])
+
+            rider_names = dict(zip(group["rider_id"], group.get("rider_name", group["rider_id"])))
+            race_detail = {
+                "race_slug": slug,
+                "year": int(year),
+                "race_type": "classic",
+                "n_riders": len(group),
+                "metrics": {
+                    "rho": _safe_round(metrics["rho"]),
+                    "ndcg_10": _safe_round(metrics["ndcg_10"]),
+                    "p_at_5": _safe_round(metrics["p_at_5"]),
+                    "p_at_10": _safe_round(metrics["p_at_10"]),
+                },
+            }
+            race_details.append(race_detail)
+
+        # Fold aggregate
+        fold_agg = {
+            "n_races": len(all_rhos),
+            "rho_mean": _safe_round(np.mean(all_rhos)) if all_rhos else None,
+            "rho_ci": (
+                [_safe_round(x) for x in bootstrap_ci(all_rhos)]
+                if len(all_rhos) >= 2
+                else [None, None]
+            ),
+            "ndcg10_mean": _safe_round(np.mean(all_ndcg)) if all_ndcg else None,
+            "p5_mean": _safe_round(np.mean(all_p5)) if all_p5 else None,
+            "p10_mean": _safe_round(np.mean(all_p10)) if all_p10 else None,
+            "team_capture_mean": (
+                _safe_round(np.mean(all_capture)) if all_capture else None
+            ),
+            "team_overlap_mean": (
+                _safe_round(np.mean(all_overlap)) if all_overlap else None
+            ),
+            "n_priced_races": len(all_capture),
+        }
+
+        fold_details.append({
+            "fold": fold_num,
+            "test_year": test_year,
+            "race_types": {
+                "classic": {
+                    "aggregate": fold_agg,
+                    "races": race_details,
+                }
+            },
+        })
+
+        print(
+            f"  Fold {fold_num} ({test_year}): "
+            f"{fold_agg['n_races']} races, "
+            f"rho={fold_agg['rho_mean']}"
+        )
+
+        # Feature importance (last fold only)
+        if fold_num == max(FOLDS.keys()):
+            print_feature_importance(model, available)
+
+    return fold_details
+
+
 # ── Comparison report ────────────────────────────────────────────────
 
 
@@ -559,8 +708,47 @@ def main():
         print_summary(fold_details, title="Classic Rules-Based Baseline (Historical)")
 
     elif args.mode == "ml":
-        print("\nML mode not yet implemented (see WP04)")
-        print("Use --mode rules-baseline for now.")
+        from .cache_features_classics import cache_all_years, load_cached_classics, validate_cache
+        from .train_classics import (
+            FEATURE_SETS,
+            TRANSFORMS,
+            get_feature_cols,
+            get_feature_importance,
+            make_model,
+            print_feature_importance,
+            train_classic_model,
+        )
+
+        model_type = args.model or "rf"
+        transform = args.transform or "raw"
+        feature_set_name = args.features or "tier1"
+        feature_cols = get_feature_cols(feature_set_name)
+
+        # Ensure cache exists
+        if not validate_cache():
+            print("Cache invalid or missing, rebuilding...")
+            results_df, _ = load_data(db_url)
+            cache_all_years(results_df)
+
+        print(f"\nRunning ML benchmark: {model_type} / {feature_set_name} / {transform}")
+        fold_details = run_ml_benchmark(
+            feature_cols, model_type, transform,
+        )
+
+        metadata = build_run_metadata(
+            model_type=model_type,
+            model_params={},
+            feature_set_name=feature_set_name,
+            feature_cols=feature_cols,
+            target_transform=transform,
+            cache_schema_hash="N/A",
+        )
+
+        label = args.label or f"classics_{model_type}_{feature_set_name}_{transform}"
+        path = save_logbook_entry(metadata, fold_details, label=label)
+        print(f"\nLogbook saved: {path}")
+
+        print_summary(fold_details, title=f"Classic ML: {model_type} / {feature_set_name} / {transform}")
 
     conn.close()
 
