@@ -81,10 +81,10 @@ benchmark-suite: ## Run multi-race benchmark suite (interactive)
 
 # ── ML Service ────────────────────────────────────────────
 retrain: ## Full retrain pipeline (glicko + cache + train, runs in Docker)
-	docker compose run --rm ml-service python -m src.retrain
+	docker compose run --rm ml-service python -m src.training.retrain
 
 glicko: ## Recompute Glicko-2 ratings only (runs in Docker)
-	docker compose run --rm ml-service python -m src.glicko2
+	docker compose run --rm ml-service python -m src.domain.glicko
 
 ml-up: ## Start ML service (docker-compose)
 	docker compose up -d ml-service

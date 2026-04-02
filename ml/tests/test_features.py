@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.features import FEATURE_COLS, _compute_rider_features
-from src.points import get_points
+from src.features.stage_race import FEATURE_COLS, _compute_rider_features
+from src.domain.points import get_points
 
 
 class TestFeatureCols:

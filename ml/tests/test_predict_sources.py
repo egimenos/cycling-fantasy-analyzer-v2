@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.predict_sources import (
+from src.prediction.stage_races import (
     _sharpen,
     _scale_to_supply,
     _validate_features,
