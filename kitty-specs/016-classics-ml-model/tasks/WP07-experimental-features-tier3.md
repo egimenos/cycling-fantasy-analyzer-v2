@@ -1,7 +1,7 @@
 ---
 work_package_id: WP07
 title: Experimental Features — Tier 3
-lane: planned
+lane: 'done'
 dependencies: [WP05, WP06]
 subtasks:
   - T033
@@ -16,8 +16,8 @@ phase: Phase 2 - Feature Engineering
 assignee: ''
 agent: ''
 shell_pid: ''
-review_status: ''
-reviewed_by: ''
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-04-02T16:48:30Z'
     lane: planned
@@ -285,6 +285,7 @@ spec-kitty implement WP07 --base WP06
 **Steps**:
 
 1. Compute cobble affinity from results in cobbled-type races:
+
    ```python
    def _compute_parcours_affinity(rider_id, classic_results, race_date):
        cobbled_races = get_races_by_type('cobbled')
@@ -304,6 +305,7 @@ spec-kitty implement WP07 --base WP06
        # ... similar pattern
        return feats
    ```
+
 2. Note: This partially overlaps with type_affinity (WP05) but uses different grouping (parcours-based vs geography-based). Ablation will reveal if it adds marginal value.
 
 **Files**: `ml/src/features_classics.py` (~25 lines)
@@ -407,3 +409,4 @@ spec-kitty implement WP07 --base WP06
 ## Activity Log
 
 - 2026-04-02T16:48:30Z – system – lane=planned – Prompt created.
+- 2026-04-02T21:20:27Z – unknown – lane=done – Tier 3 features done. Glicko +0.006 rho. All combined rho=0.3130 matches baseline while NDCG +8.4%. GO candidate for WP08.
