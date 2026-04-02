@@ -221,7 +221,7 @@ Canonical baseline (2026-03-30, RF baseline 43 features, expanding window CV):
 4. **Abandonment unpredictable**: DNF events (Roglič/Ayuso Giro 2025) destroy predictions
 5. **Sprint final dual archetype**: sprinters + GC accumulators score via different mechanisms
 6. **Supply estimation**: uses historical average, GT error <7% but mini error can be 20%+
-7. **Classics NO-GO**: model only works for stage races (grand_tour, mini_tour)
+7. **Classics GO (2026-04-02)**: Independent ML model for classics — see Classic Model section below
 
 ## Evaluation Methodology
 
@@ -229,6 +229,42 @@ Canonical baseline (2026-03-30, RF baseline 43 features, expanding window CV):
 - **Per-race Spearman ρ**: rank correlation between predicted and actual points per race
 - **Team Capture**: knapsack-optimal team (9 riders, 2000 hillios budget) actual pts / true optimal pts
 - **Per-type metrics**: ρ_full (all riders) and ρ_nonzero (only riders who scored)
+
+## Classic Model
+
+**Status**: Active (2026-04-02)
+**Architecture**: Single LightGBM regression predicting GC_CLASSIC points (0-200)
+**Transform**: sqrt (y' = sqrt(y), inverse: y = y'^2)
+**Features**: 51 features across 3 tiers
+
+### Benchmark Results
+
+| Metric | Rules Baseline | ML Model | Delta |
+|--------|:---:|:---:|:---:|
+| Spearman rho | 0.3124 | 0.3130 | +0.0006 |
+| NDCG@10 | 0.4079 | 0.4422 | +0.0343 (+8.4%) |
+| P@5 | 0.3180 | 0.3209 | +0.0029 |
+| P@10 | 0.3644 | 0.3760 | +0.0116 (+3.2%) |
+
+### Feature Tiers
+
+- **Tier 1 (core, 19 feats)**: same-race history, classic points 12m/6m/3m, top10/win rates, age, micro-form, team, prestige
+- **Tier 2 (domain, 21 feats)**: type affinity per type, type top10 rates, specialist ratio, monument podium count, pipeline feeder pts, pipeline trend
+- **Tier 3 (experimental, 11 feats)**: classic Glicko-2 mu/rd, age×type delta, calendar distance, parcours affinity, win style
+
+### Top Features (by importance)
+
+1. pts_30d (micro-form)
+2. prestige_pts_12m (rider quality)
+3. classic_top10_rate (classic specialist)
+4. age
+5. classic_glicko_mu (skill rating)
+
+### Retraining
+
+- Included in `make retrain` as step 8/8
+- Model artifacts: `ml/models/classics/`
+- Decoupled pipeline: `features_classics.py`, `predict_classics.py`, `train_classics.py`
 
 ## Data Dependencies
 

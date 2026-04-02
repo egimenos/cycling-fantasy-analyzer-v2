@@ -84,10 +84,38 @@ def main():
     from .classification_history_features import save_classification_features
     save_classification_features(db_url)
 
-    # Step 7: Train all sub-models
-    print("\n[7/7] Training source-by-source models...")
+    # Step 7: Train all sub-models (stage races)
+    print("\n[7/8] Training source-by-source models (stage races)...")
     from .train_sources import train_all
     metadata = train_all(model_dir=model_dir, cache_dir=cache_dir)
+
+    # Step 8: Train classic model
+    print("\n[8/8] Training classic model...")
+    try:
+        from .cache_features_classics import cache_all_years, load_cached_classics
+        from .train_classics import get_feature_cols, save_model, train_classic_model
+        cache_all_years(results_df)
+        train_dfs = []
+        for yr in range(2019, 2026):
+            try:
+                train_dfs.append(load_cached_classics(yr))
+            except FileNotFoundError:
+                pass
+        if train_dfs:
+            classic_train = pd.concat(train_dfs, ignore_index=True)
+            feature_cols = get_feature_cols("all_tier3")
+            available = [c for c in feature_cols if c in classic_train.columns]
+            if available:
+                model, meta = train_classic_model(classic_train, available, "lgbm", "sqrt")
+                meta["version"] = metadata.get("model_version", "unknown")
+                save_model(model, meta)
+                print(f"  Classic model trained: {len(classic_train)} rows, {len(available)} features")
+            else:
+                print("  WARNING: No classic features available, skipping")
+        else:
+            print("  WARNING: No classic training data, skipping")
+    except Exception as e:
+        print(f"  WARNING: Classic model training failed: {e}")
 
     elapsed = time.time() - t0
     print(f"\n{'=' * 60}")

@@ -376,10 +376,25 @@ def predict(req: PredictRequest, request: Request):
     logger.info("Predicting", race_slug=req.race_slug, year=req.year, race_type=race_type, cutoff=str(race_date))
 
     if race_type == 'classic':
-        raise HTTPException(
-            status_code=404,
-            detail=f"Classic race — ML not supported: {req.race_slug}",
+        from .predict_classics import is_model_available, predict_classic_race
+        if not is_model_available():
+            raise HTTPException(
+                status_code=404,
+                detail=f"Classic model not available for {req.race_slug}",
+            )
+        predictions = predict_classic_race(
+            race_slug=req.race_slug,
+            year=req.year,
+            race_date=race_date,
+            results_df=results_df,
+            rider_ids=req.rider_ids,
         )
+        if not predictions:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No predictions for classic {req.race_slug}/{req.year}",
+            )
+        return {"predictions": predictions, "model_version": "classics-v1", "cached": False}
 
     # Extract features using existing pipeline
     effective_startlists = startlists_df
