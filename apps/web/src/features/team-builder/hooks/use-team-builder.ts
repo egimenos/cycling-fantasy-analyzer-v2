@@ -56,6 +56,11 @@ export function useTeamBuilder(budget: number, riders: AnalyzedRider[]) {
 
   const clearAll = useCallback(() => setSelectedNames(new Set()), []);
 
+  /** Replace the entire selection at once (e.g. from optimizer results). */
+  const setTeam = useCallback((riderNames: string[]) => {
+    setSelectedNames(new Set(riderNames.slice(0, 9)));
+  }, []);
+
   const isSelected = useCallback(
     (riderName: string) => selectedNames.has(riderName),
     [selectedNames],
@@ -82,6 +87,7 @@ export function useTeamBuilder(budget: number, riders: AnalyzedRider[]) {
     addRider,
     removeRider,
     clearAll,
+    setTeam,
     isSelected,
     canSelect,
   };

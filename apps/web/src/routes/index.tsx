@@ -132,11 +132,8 @@ function HomePageContent() {
   // When optimization succeeds, populate team builder and unlock tabs
   useEffect(() => {
     if (optimizeState.status === 'success' && !isUnlocked('optimization')) {
-      // Populate team builder with optimal riders
-      teamBuilder.clearAll();
-      for (const rider of optimizeState.data.optimalTeam.riders) {
-        teamBuilder.addRider(rider.rawName);
-      }
+      // Populate team builder with optimal riders (atomic set — no stale-state issues)
+      teamBuilder.setTeam(optimizeState.data.optimalTeam.riders.map((r) => r.rawName));
       dispatch({ type: 'OPTIMIZE_SUCCESS' });
       dispatch({ type: 'TEAM_COMPLETE' });
       void navigate({ search: { tab: 'optimization' } });
