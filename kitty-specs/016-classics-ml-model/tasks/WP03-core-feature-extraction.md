@@ -1,8 +1,11 @@
 ---
 work_package_id: WP03
 title: Core Feature Extraction — Tier 1
-lane: planned
+lane: 'done'
 dependencies: [WP02]
+base_branch: 016-classics-ml-model-WP02
+base_commit: d79f9aaca3352953dde2697563d2db15a3d4b780
+created_at: '2026-04-02T19:13:56.042258+00:00'
 subtasks:
   - T011
   - T012
@@ -12,10 +15,10 @@ subtasks:
   - T016
 phase: Phase 2 - Feature Engineering
 assignee: ''
-agent: ''
-shell_pid: ''
-review_status: ''
-reviewed_by: ''
+agent: 'claude-opus'
+shell_pid: '92393'
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-04-02T16:48:30Z'
     lane: planned
@@ -172,6 +175,7 @@ spec-kitty implement WP03 --base WP02
        feats[f'pts_classic_{window_name}'] = float(window_df['pts'].sum())
    ```
 3. Compute rate features over 24 months:
+
    ```python
    classic_24m = classic_hist[classic_hist['race_date'] >= race_date - timedelta(days=730)]
    n_classic_starts = len(classic_24m.groupby(['race_slug', 'year']))
@@ -246,6 +250,7 @@ spec-kitty implement WP03 --base WP02
 
 1. Create `ml/src/cache_features_classics.py`
 2. Follow same pattern as existing `ml/src/cache_features.py`:
+
    ```python
    def cache_classic_features(year: int, conn) -> str:
        """Extract and cache features for all classic races in a given year."""
@@ -264,6 +269,7 @@ spec-kitty implement WP03 --base WP02
        for year in range(2019, 2026):
            cache_classic_features(year, conn)
    ```
+
 3. Feature DataFrame schema:
    - Identity: `rider_id, race_slug, year, race_date, rider_name`
    - Tier 1 features: all columns from `TIER1_FEATURE_COLS`
@@ -281,6 +287,7 @@ spec-kitty implement WP03 --base WP02
 **Steps**:
 
 1. Add to `features_classics.py`:
+
    ```python
    def extract_all_classic_features(conn, year: int) -> pd.DataFrame:
        """Extract features for all riders in all classic races in a given year."""
@@ -320,6 +327,7 @@ spec-kitty implement WP03 --base WP02
 
        return pd.DataFrame(rows)
    ```
+
 2. Add progress logging (race-by-race, total riders processed)
 3. Handle edge cases: races with 0 riders after filtering, riders with no history at all
 
@@ -352,3 +360,6 @@ spec-kitty implement WP03 --base WP02
 ## Activity Log
 
 - 2026-04-02T16:48:30Z – system – lane=planned – Prompt created.
+- 2026-04-02T19:13:56Z – claude-opus – shell_pid=92393 – lane=doing – Assigned agent via workflow command
+- 2026-04-02T19:18:25Z – claude-opus – shell_pid=92393 – lane=for_review – Feature extraction complete: 19 Tier 1 features + cache. Tested on 2025 (8637 rows, 56 races). Spot-checked VdP/Pogacar.
+- 2026-04-02T19:24:57Z – claude-opus – shell_pid=92393 – lane=done – Review passed: 19 features, no leakage, domain-validated.
