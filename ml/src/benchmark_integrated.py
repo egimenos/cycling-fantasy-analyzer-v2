@@ -67,12 +67,14 @@ MTN_FINAL_FEATS = [
     "mountain_top10_rate_12m", "mountain_top10s_12m",
     "gc_mu_delta_12m", "pts_gc_12m", "sr_gc_top10_rate",
     "target_mountain_pct", "age",
+    "mountain_cls_pts_24m", "mountain_cls_top3_count_24m", "mountain_cls_best_pos_24m",
 ]
 MTN_PASS_FEATS = [
     "pct_pts_p4p5", "stage_wins_mountain",
     "mountain_pts_12m", "mountain_pts_6m", "mountain_strength_12m",
     "mountain_top10_rate_12m", "mountain_top10s_12m", "mountain_starts_12m",
     "stage_mountain_mu", "gc_mu", "pts_stage_12m", "target_mountain_pct", "age",
+    "mountain_cls_pts_24m", "mountain_cls_top3_count_24m", "mountain_cls_best_pos_24m",
 ]
 SPR_INTER_FEATS = [
     "pct_pts_p1p2", "stage_wins_flat",
