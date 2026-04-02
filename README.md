@@ -190,19 +190,20 @@ For manual invalidation, use `make clear-ml-cache`.
 ```
 cycling-analyzer-v2/
 ├── apps/
-│   ├── api/            # NestJS backend (DDD/Hexagonal architecture)
+│   ├── api/                # NestJS backend (DDD/Hexagonal architecture)
 │   │   ├── src/
 │   │   │   ├── domain/          # Entities, value objects, ports
 │   │   │   ├── application/     # Use cases (analyze, optimize, scraping)
 │   │   │   ├── infrastructure/  # DB adapters, scraping, matching, ML client
 │   │   │   └── presentation/    # Controllers, CLI commands
 │   │   └── drizzle/             # Migrations
-│   └── web/            # React frontend (Vite + TanStack Router)
+│   └── web/                # React frontend (Vite + TanStack Router)
 │       └── src/
 │           ├── features/        # rider-list, optimizer, team-builder
 │           ├── shared/          # UI primitives, utilities, API client
-│           └── routes/          # TanStack Router pages
-├── ml/                 # Python ML scoring microservice
+│           ├── routes/          # TanStack Router pages
+│           └── styles/          # Global styles
+├── ml/                     # Python ML scoring microservice
 │   ├── src/
 │   │   ├── api/            # FastAPI service, logging, telemetry
 │   │   ├── prediction/     # Inference (stage races + classics)
@@ -210,17 +211,19 @@ cycling-analyzer-v2/
 │   │   ├── domain/         # Scoring tables, Glicko-2, classic taxonomy
 │   │   ├── data/           # Database access
 │   │   └── training/       # Retraining pipeline
-│   ├── benchmarks/     # Evaluation harness (not in Docker)
-│   ├── tests/          # pytest test suite
-│   └── models/         # Trained model files (gitignored)
+│   ├── benchmarks/         # Evaluation harness (not in Docker)
+│   ├── tests/              # pytest test suite
+│   └── models/             # Trained model artifacts (gitignored)
 ├── packages/
-│   ├── shared-types/   # DTOs, enums shared between API and web
-│   └── eslint-config/  # Shared ESLint configuration
-├── docker/             # Dockerfiles (API, web, ML)
+│   ├── shared-types/       # DTOs, enums shared between API and web
+│   └── eslint-config/      # Shared ESLint configuration
+├── docker/                 # Dockerfiles (API, web, ML)
 ├── docs/
-│   ├── adr/            # Architecture Decision Records
-│   └── runbook-dev.md  # Development runbook
-└── scripts/            # Smoke tests and utilities
+│   ├── adr/                # Architecture Decision Records
+│   └── runbooks/           # Development and operations runbooks
+├── kitty-specs/            # Feature specs, plans, and work packages
+├── scripts/                # Smoke tests and utilities
+└── results/                # Race analysis output (gitignored)
 ```
 
 ## Observability
