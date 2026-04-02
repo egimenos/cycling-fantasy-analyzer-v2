@@ -83,6 +83,9 @@ pnpm exec playwright test --ui                   # Open Playwright UI
 **Prerequisites**: Docker running (DB + ML service), dev server auto-starts via config.
 
 **Structure**: `tests/e2e/pages/` (Page Objects), `tests/e2e/specs/` (test files), `tests/e2e/fixtures/` (data + Playwright fixtures), `tests/e2e/helpers/` (utilities).
+
+| Command          | Description                     |
+| ---------------- | ------------------------------- |
 | `make typecheck` | TypeScript type check (no emit) |
 
 ### Database
@@ -111,7 +114,7 @@ The seed command discovers races from PCS calendar pages, deduplicates, and skip
 
 | Command               | Description                                     |
 | --------------------- | ----------------------------------------------- |
-| `make retrain`        | Train RF models from database data              |
+| `make retrain`        | Train all ML models (stage races + classics)    |
 | `make ml-up`          | Start ML scoring service (FastAPI on port 8000) |
 | `make ml-down`        | Stop ML scoring service                         |
 | `make ml-logs`        | Tail ML service logs                            |
@@ -146,7 +149,7 @@ make benchmark-suite     # multiple races with aggregate ρ
 
 ## ML Scoring (Optional)
 
-The project includes a Python ML microservice that improves scoring accuracy for stage races (mini tours and grand tours) using Random Forest models. When available, stage race scoring uses a hybrid approach (ML + rules-based); for classics, rules-based scoring is always used.
+The project includes a Python ML microservice that improves scoring accuracy using Random Forest and LightGBM models. Stage races (mini tours and grand tours) use a 4-source decomposition model (GC, stage, mountain, sprint). Classics use an independent LightGBM model with 51 domain-specific features (type affinity, same-race history, Glicko-2 ratings, seasonal pipeline momentum). When available, scoring uses a hybrid approach (ML + rules-based).
 
 **ML scoring is optional.** The API falls back to rules-based scoring when the ML service is unavailable.
 
@@ -161,7 +164,7 @@ make ml-up
 
 # 3. Verify it is running
 curl http://localhost:8000/health
-# → {"status":"healthy","model_version":"...","models_loaded":["mini_tour","grand_tour"]}
+# → {"status":"healthy","model_version":"...","models_loaded":[...]}
 ```
 
 ### Retraining
@@ -200,7 +203,14 @@ cycling-analyzer-v2/
 │           ├── shared/          # UI primitives, utilities, API client
 │           └── routes/          # TanStack Router pages
 ├── ml/                 # Python ML scoring microservice
-│   ├── src/            # FastAPI app, feature extraction, prediction
+│   ├── src/
+│   │   ├── api/            # FastAPI service, logging, telemetry
+│   │   ├── prediction/     # Inference (stage races + classics)
+│   │   ├── features/       # Feature extraction + caching
+│   │   ├── domain/         # Scoring tables, Glicko-2, classic taxonomy
+│   │   ├── data/           # Database access
+│   │   └── training/       # Retraining pipeline
+│   ├── benchmarks/     # Evaluation harness (not in Docker)
 │   ├── tests/          # pytest test suite
 │   └── models/         # Trained model files (gitignored)
 ├── packages/
@@ -228,7 +238,7 @@ OTel tracing is active in production builds (`pnpm start` / Docker). In dev mode
 
 - **Backend**: DDD/Hexagonal with domain-driven scoring, repository ports, and adapter-based persistence (Drizzle ORM + PostgreSQL)
 - **Frontend**: React 19, TanStack Router, Tailwind CSS v4, shadcn/ui
-- **ML**: Python FastAPI microservice with scikit-learn Random Forest models
+- **ML**: Python FastAPI microservice with scikit-learn RF + LightGBM models (stage races + classics)
 - **Monorepo**: Turborepo with pnpm workspaces
 
 See [`docs/adr/`](docs/adr/) for detailed architecture decision records.
