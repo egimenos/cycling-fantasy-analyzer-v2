@@ -1,15 +1,53 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { RiderInput, parseRiderLines } from '../components/rider-input';
+import type { useRaceProfile } from '../hooks/use-race-profile';
 
-// Mock the api-client module
+// Mock api-client (importPriceList is used by the component)
 vi.mock('@/shared/lib/api-client', () => ({
   fetchRaceProfile: vi.fn(),
+  importPriceList: vi.fn(),
 }));
 
-import { fetchRaceProfile } from '@/shared/lib/api-client';
-const mockFetchRaceProfile = vi.mocked(fetchRaceProfile);
+// Default idle profile state
+const idleProfile: ReturnType<typeof useRaceProfile> = { status: 'idle' };
+
+/**
+ * Wrapper that manages controlled state for the RiderInput component,
+ * since text/raceUrl/gameUrl/budget are now lifted to the parent.
+ */
+function RiderInputWrapper({
+  onAnalyze,
+  isLoading,
+  profileState = idleProfile,
+}: {
+  onAnalyze: (...args: unknown[]) => void;
+  isLoading: boolean;
+  profileState?: ReturnType<typeof useRaceProfile>;
+}) {
+  const [text, setText] = useState('');
+  const [raceUrl, setRaceUrl] = useState('');
+  const [gameUrl, setGameUrl] = useState('');
+  const [budget, setBudget] = useState(2000);
+
+  return (
+    <RiderInput
+      onAnalyze={onAnalyze}
+      isLoading={isLoading}
+      text={text}
+      onTextChange={setText}
+      raceUrl={raceUrl}
+      onRaceUrlChange={setRaceUrl}
+      gameUrl={gameUrl}
+      onGameUrlChange={setGameUrl}
+      budget={budget}
+      onBudgetChange={setBudget}
+      profileState={profileState}
+    />
+  );
+}
 
 describe('parseRiderLines', () => {
   it('parses valid CSV lines', () => {
@@ -43,50 +81,40 @@ describe('parseRiderLines', () => {
 
 describe('RiderInput', () => {
   beforeEach(() => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    mockFetchRaceProfile.mockReset();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
+    vi.clearAllMocks();
   });
 
   it('disables Analyze button when no valid riders', () => {
-    render(<RiderInput onAnalyze={vi.fn()} isLoading={false} />);
-    expect(screen.getByRole('button', { name: 'Analyze' })).toBeDisabled();
+    render(<RiderInputWrapper onAnalyze={vi.fn()} isLoading={false} />);
+    expect(screen.getByTestId('setup-analyze-btn')).toBeDisabled();
   });
 
   it('enables Analyze button when valid riders entered', async () => {
-    vi.useRealTimers();
     const user = userEvent.setup();
-    render(<RiderInput onAnalyze={vi.fn()} isLoading={false} />);
-    await user.type(screen.getByLabelText('Rider List'), 'Pogačar, UAE, 700');
-    expect(screen.getByRole('button', { name: 'Analyze' })).toBeEnabled();
+    render(<RiderInputWrapper onAnalyze={vi.fn()} isLoading={false} />);
+    await user.type(screen.getByTestId('setup-riders-textarea'), 'Pogačar, UAE, 700');
+    expect(screen.getByTestId('setup-analyze-btn')).toBeEnabled();
   });
 
   it('shows loading state', () => {
-    render(<RiderInput onAnalyze={vi.fn()} isLoading={true} />);
-    expect(screen.getByRole('button', { name: /analyzing/i })).toBeDisabled();
+    render(<RiderInputWrapper onAnalyze={vi.fn()} isLoading={true} />);
+    const btn = screen.getByTestId('setup-analyze-btn');
+    expect(btn).toBeDisabled();
+    expect(btn).toHaveTextContent(/analyzing/i);
   });
 
-  it('shows hint text when no URL entered', () => {
-    render(<RiderInput onAnalyze={vi.fn()} isLoading={false} />);
-    expect(screen.getByText(/enter a pcs race url/i)).toBeInTheDocument();
-  });
-
-  it('has PCS URL input field', () => {
-    render(<RiderInput onAnalyze={vi.fn()} isLoading={false} />);
-    expect(screen.getByLabelText('PCS Race URL')).toBeInTheDocument();
+  it('has Race URL input field', () => {
+    render(<RiderInputWrapper onAnalyze={vi.fn()} isLoading={false} />);
+    expect(screen.getByTestId('setup-race-url-input')).toBeInTheDocument();
   });
 
   it('calls onAnalyze with default race type when no profile fetched', async () => {
-    vi.useRealTimers();
     const user = userEvent.setup();
     const onAnalyze = vi.fn();
-    render(<RiderInput onAnalyze={onAnalyze} isLoading={false} />);
+    render(<RiderInputWrapper onAnalyze={onAnalyze} isLoading={false} />);
 
-    await user.type(screen.getByLabelText('Rider List'), 'Pogačar, UAE, 700');
-    await user.click(screen.getByRole('button', { name: 'Analyze' }));
+    await user.type(screen.getByTestId('setup-riders-textarea'), 'Pogačar, UAE, 700');
+    await user.click(screen.getByTestId('setup-analyze-btn'));
 
     expect(onAnalyze).toHaveBeenCalledWith(
       [{ name: 'Pogačar', team: 'UAE', price: 700 }],
@@ -99,18 +127,17 @@ describe('RiderInput', () => {
   });
 
   it('shows valid rider count', async () => {
-    vi.useRealTimers();
     const user = userEvent.setup();
-    render(<RiderInput onAnalyze={vi.fn()} isLoading={false} />);
+    render(<RiderInputWrapper onAnalyze={vi.fn()} isLoading={false} />);
     await user.type(
-      screen.getByLabelText('Rider List'),
+      screen.getByTestId('setup-riders-textarea'),
       'Pogačar, UAE, 700\nVingegaard, Visma, 650',
     );
-    expect(screen.getByText('2 valid riders')).toBeInTheDocument();
+    expect(screen.getByTestId('setup-valid-count')).toHaveTextContent('2 valid');
   });
 
-  it('shows profile summary after successful fetch', async () => {
-    mockFetchRaceProfile.mockResolvedValueOnce({
+  it('shows profile summary when profileState is success', () => {
+    const successProfile: ReturnType<typeof useRaceProfile> = {
       status: 'success',
       data: {
         raceSlug: 'tour-de-france',
@@ -130,42 +157,26 @@ describe('RiderInput', () => {
           unknownCount: 0,
         },
       },
-    });
+    };
 
-    render(<RiderInput onAnalyze={vi.fn()} isLoading={false} />);
+    render(
+      <RiderInputWrapper onAnalyze={vi.fn()} isLoading={false} profileState={successProfile} />,
+    );
 
-    const urlInput = screen.getByLabelText('PCS Race URL');
-    await userEvent
-      .setup({ advanceTimers: vi.advanceTimersByTime })
-      .type(urlInput, 'https://www.procyclingstats.com/race/tour-de-france/2025');
-
-    // Advance past debounce
-    await vi.advanceTimersByTimeAsync(600);
-
-    await waitFor(() => {
-      expect(screen.getByText('Tour De France')).toBeInTheDocument();
-    });
-
-    expect(screen.getByText('21 stages')).toBeInTheDocument();
+    expect(screen.getByTestId('race-profile-name')).toHaveTextContent('Tour De France');
+    // totalStages is rendered as separate spans: "21" and "stages"
+    expect(screen.getByText('21')).toBeInTheDocument();
+    expect(screen.getByText('stages')).toBeInTheDocument();
   });
 
-  it('shows error when profile fetch fails', async () => {
-    mockFetchRaceProfile.mockResolvedValueOnce({
+  it('shows error when profileState is error', () => {
+    const errorProfile: ReturnType<typeof useRaceProfile> = {
       status: 'error',
       error: 'Not found',
-    });
+    };
 
-    render(<RiderInput onAnalyze={vi.fn()} isLoading={false} />);
+    render(<RiderInputWrapper onAnalyze={vi.fn()} isLoading={false} profileState={errorProfile} />);
 
-    const urlInput = screen.getByLabelText('PCS Race URL');
-    await userEvent
-      .setup({ advanceTimers: vi.advanceTimersByTime })
-      .type(urlInput, 'https://www.procyclingstats.com/race/unknown-race/2025');
-
-    await vi.advanceTimersByTimeAsync(600);
-
-    await waitFor(() => {
-      expect(screen.getByText(/could not fetch race profile/i)).toBeInTheDocument();
-    });
+    expect(screen.getByText(/could not fetch race profile/i)).toBeInTheDocument();
   });
 });

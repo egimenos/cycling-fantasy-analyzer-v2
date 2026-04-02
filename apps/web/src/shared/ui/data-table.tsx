@@ -59,6 +59,27 @@ export function DataTable<TData>({
                     key={header.id}
                     className={cn(header.column.getCanSort() && 'cursor-pointer select-none')}
                     onClick={header.column.getToggleSortingHandler()}
+                    onKeyDown={
+                      header.column.getCanSort()
+                        ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              header.column.getToggleSortingHandler()?.(e);
+                            }
+                          }
+                        : undefined
+                    }
+                    tabIndex={header.column.getCanSort() ? 0 : undefined}
+                    role={header.column.getCanSort() ? 'button' : undefined}
+                    aria-sort={
+                      header.column.getCanSort()
+                        ? header.column.getIsSorted() === 'asc'
+                          ? 'ascending'
+                          : header.column.getIsSorted() === 'desc'
+                            ? 'descending'
+                            : 'none'
+                        : undefined
+                    }
                   >
                     <div className="flex items-center">
                       {header.isPlaceholder
@@ -89,6 +110,19 @@ export function DataTable<TData>({
                   <TableRow
                     className={cn(renderExpandedRow && 'cursor-pointer', getRowClassName?.(row))}
                     onClick={renderExpandedRow ? row.getToggleExpandedHandler() : undefined}
+                    onKeyDown={
+                      renderExpandedRow
+                        ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              row.getToggleExpandedHandler()();
+                            }
+                          }
+                        : undefined
+                    }
+                    tabIndex={renderExpandedRow ? 0 : undefined}
+                    role={renderExpandedRow ? 'button' : undefined}
+                    aria-expanded={renderExpandedRow ? row.getIsExpanded() : undefined}
                     data-state={row.getIsExpanded() ? 'expanded' : undefined}
                   >
                     {row.getVisibleCells().map((cell) => (

@@ -110,7 +110,10 @@ export function RiderInput({
         {/* Race URL */}
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center">
-            <label className="text-xs font-body uppercase tracking-wider text-on-primary-container font-semibold">
+            <label
+              htmlFor="race-url"
+              className="text-xs font-body uppercase tracking-wider text-on-primary-container font-semibold"
+            >
               Race URL (ProCyclingStats)
             </label>
             <span className="text-[10px] text-primary/60 font-mono uppercase">
@@ -120,6 +123,7 @@ export function RiderInput({
           <div className="relative group">
             <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline group-focus-within:text-primary" />
             <Input
+              id="race-url"
               data-testid="setup-race-url-input"
               value={raceUrl}
               onChange={(e) => setRaceUrl(e.target.value)}
@@ -149,13 +153,17 @@ export function RiderInput({
 
         {/* Import Price List */}
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-body uppercase tracking-wider text-on-primary-container font-semibold">
+          <label
+            htmlFor="game-url"
+            className="text-xs font-body uppercase tracking-wider text-on-primary-container font-semibold"
+          >
             Import Price List
           </label>
           <div className="flex gap-2">
             <div className="relative flex-1 group">
               <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline group-focus-within:text-primary" />
               <Input
+                id="game-url"
                 data-testid="setup-game-url-input"
                 value={gameUrl}
                 onChange={(e) => setGameUrl(e.target.value)}
@@ -185,10 +193,14 @@ export function RiderInput({
 
         {/* Manual Rider Input */}
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-body uppercase tracking-wider text-on-primary-container font-semibold">
+          <label
+            htmlFor="riders-textarea"
+            className="text-xs font-body uppercase tracking-wider text-on-primary-container font-semibold"
+          >
             Rider List Manual Input
           </label>
           <Textarea
+            id="riders-textarea"
             data-testid="setup-riders-textarea"
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -196,7 +208,10 @@ export function RiderInput({
             rows={8}
             className="font-mono text-sm"
           />
-          <div className="flex gap-3 text-[10px] text-outline font-mono uppercase tracking-tighter">
+          <div
+            className="flex gap-3 text-[10px] text-outline font-mono uppercase tracking-tighter"
+            aria-live="polite"
+          >
             <span>Format: Name, Team, Price (One per line)</span>
             {parsedRiders.length > 0 && (
               <span data-testid="setup-valid-count" className="text-secondary">
@@ -213,12 +228,16 @@ export function RiderInput({
 
         {/* Budget */}
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-body uppercase tracking-wider text-on-primary-container font-semibold">
+          <label
+            htmlFor="budget-input"
+            className="text-xs font-body uppercase tracking-wider text-on-primary-container font-semibold"
+          >
             Budget
           </label>
           <div className="relative group max-w-full">
             <BarChart3 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline" />
             <Input
+              id="budget-input"
               data-testid="setup-budget-input"
               type="number"
               min={1}

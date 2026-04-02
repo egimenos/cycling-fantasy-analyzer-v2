@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import type { PriceListEntryDto, ProfileSummary } from '@cycling-analyzer/shared-types';
 import { type RaceType } from '@cycling-analyzer/shared-types';
 import type { FlowStep } from '@/features/flow/types';
-import { FLOW_STEPS } from '@/features/flow/types';
+import { FLOW_STEPS, FLOW_STEP_LABELS } from '@/features/flow/types';
 import { FlowContext, useFlowReducer, useFlowState } from '@/features/flow/hooks/use-flow-state';
 import { FlowTabs } from '@/features/flow/components/flow-tabs';
 import { RiderInput } from '@/features/rider-list/components/rider-input';
@@ -162,6 +162,10 @@ function HomePageContent() {
   };
 
   useEffect(() => {
+    document.title = `${FLOW_STEP_LABELS[tab]} — Cycling Fantasy Optimizer`;
+  }, [tab]);
+
+  useEffect(() => {
     if (!isUnlocked(tab)) {
       const lastUnlocked = [...FLOW_STEPS].reverse().find((s) => isUnlocked(s)) ?? 'setup';
       void navigate({ search: { tab: lastUnlocked }, replace: true });
@@ -200,15 +204,22 @@ function HomePageContent() {
     [analyze, teamBuilder, dispatch],
   );
 
+  const isAnalyzing = analyzeState.status === 'loading';
+  const isOptimizing = optimizeState.status === 'loading';
+
   return (
     <>
       <FlowTabs activeTab={tab} onTabChange={handleTabChange} />
+      <div role="status" aria-live="polite" className="sr-only">
+        {isAnalyzing && 'Analyzing riders...'}
+        {isOptimizing && 'Optimizing team...'}
+      </div>
       <div className="max-w-7xl mx-auto px-6 py-6">
         {tab === 'setup' && (
           <div key="setup" className="animate-fade-in-up">
             <SetupTab
               onAnalyze={handleAnalyze}
-              isLoading={analyzeState.status === 'loading'}
+              isLoading={isAnalyzing}
               error={analyzeState.status === 'error' ? analyzeState.error : undefined}
               onRetry={retryAnalyze}
               budget={budget}
@@ -238,13 +249,18 @@ function HomePageContent() {
               budget={budget}
               profileState={profileState}
               onOptimize={handleOptimize}
-              isOptimizing={optimizeState.status === 'loading'}
+              isOptimizing={isOptimizing}
               onReviewTeam={handleReviewTeam}
             />
           </div>
         )}
         {tab === 'optimization' && (
-          <div key="optimization" className="animate-fade-in-up">
+          <div
+            key="optimization"
+            className="animate-fade-in-up"
+            aria-live="polite"
+            aria-atomic="true"
+          >
             <OptimizationTab
               optimizeState={optimizeState}
               budget={budget}
@@ -451,6 +467,7 @@ function DashboardTab({
 
   return (
     <div data-testid="tab-content-dashboard" className="space-y-6">
+      <h1 className="sr-only">Dashboard</h1>
       {/* Race Profile Bar */}
       {profileState.status === 'success' && (
         <RaceProfileSummary
@@ -522,7 +539,7 @@ function DashboardTab({
           />
         </section>
 
-        <aside className="lg:w-[30%]">
+        <aside className="lg:w-[30%]" aria-label="Team Builder">
           <TeamBuilderPanel
             selectedRiders={teamBuilder.selectedRiders}
             totalCost={teamBuilder.totalCost}

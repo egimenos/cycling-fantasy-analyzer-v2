@@ -18,7 +18,7 @@ export function BpiBadge({ value }: BpiBadgeProps) {
 
   const colorClass =
     value >= 70
-      ? 'bg-green-500/15 text-green-400 border-green-500/40'
+      ? 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/40'
       : value >= 40
         ? 'bg-tertiary/15 text-tertiary border-tertiary/40'
         : 'bg-surface-container-high text-outline border-outline-variant/20';
@@ -27,6 +27,7 @@ export function BpiBadge({ value }: BpiBadgeProps) {
     <Tooltip>
       <TooltipTrigger asChild>
         <span
+          tabIndex={0}
           className={cn(
             'inline-flex items-center justify-center rounded-sm px-2 py-0.5 text-xs font-mono font-bold border cursor-default',
             colorClass,
@@ -55,7 +56,7 @@ const FLAG_CONFIG: Record<string, { label: string; colorClass: string; descripti
   },
   DEEP_VALUE: {
     label: 'VALUE',
-    colorClass: 'bg-green-500/15 text-green-400 border-green-500/40',
+    colorClass: 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/40',
     description: 'Above-median pts/hillio at low price',
   },
   CEILING_PLAY: {
@@ -83,6 +84,7 @@ export function FlagChip({ flag }: { flag: string }) {
     <Tooltip>
       <TooltipTrigger asChild>
         <span
+          tabIndex={0}
           className={cn(
             'ml-1 inline-flex items-center rounded-sm px-1 py-0.5 text-[9px] font-mono font-bold uppercase border cursor-default',
             config.colorClass,

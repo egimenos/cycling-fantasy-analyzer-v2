@@ -463,7 +463,7 @@ const FILTER_OPTIONS: FilterOption[] = [
   {
     value: 'locked',
     label: 'Locked',
-    activeClass: 'bg-green-500/15 text-green-400 border-green-500/40',
+    activeClass: 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/40',
   },
   { value: 'excluded', label: 'Excluded', activeClass: 'bg-error/15 text-error border-error/40' },
   {
@@ -479,7 +479,7 @@ const FILTER_OPTIONS: FilterOption[] = [
   {
     value: 'valuePicks',
     label: 'Value Picks',
-    activeClass: 'bg-green-500/15 text-green-400 border-green-500/40',
+    activeClass: 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/40',
   },
 ];
 

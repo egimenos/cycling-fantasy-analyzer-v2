@@ -99,9 +99,9 @@ export function TeamSummary({
             </h2>
           </div>
 
-          <div data-testid="roster-rider-list" className="space-y-2 stagger-children">
+          <ul data-testid="roster-rider-list" className="space-y-2 stagger-children">
             {riders.map((rider, index) => (
-              <div
+              <li
                 key={rider.rawName}
                 data-testid={`roster-rider-${rider.rawName}`}
                 className="bg-surface-container-high p-4 flex items-center gap-4 group hover:bg-surface-container-highest transition-all"
@@ -160,9 +160,9 @@ export function TeamSummary({
                     </div>
                   </div>
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
 
         {/* Right: Metrics Sidebar */}

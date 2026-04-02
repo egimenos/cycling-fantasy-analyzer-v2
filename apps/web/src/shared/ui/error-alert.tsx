@@ -10,7 +10,7 @@ interface ErrorAlertProps extends React.ComponentPropsWithoutRef<'div'> {
 export function ErrorAlert({ message, onRetry, ...rest }: ErrorAlertProps) {
   return (
     <Alert variant="destructive" {...rest}>
-      <AlertCircle className="h-4 w-4" />
+      <AlertCircle className="h-4 w-4" aria-hidden="true" />
       <AlertTitle>Error</AlertTitle>
       <AlertDescription className="flex items-center justify-between gap-4">
         <span>{message}</span>

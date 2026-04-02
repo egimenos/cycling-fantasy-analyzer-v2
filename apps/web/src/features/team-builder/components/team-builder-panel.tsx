@@ -52,7 +52,7 @@ export function TeamBuilderPanel({
       {/* Header */}
       <header className="space-y-1">
         <div className="flex items-center justify-between">
-          <h3 className="font-headline font-extrabold text-xl tracking-tight">TEAM BUILDER</h3>
+          <h2 className="font-headline font-extrabold text-xl tracking-tight">TEAM BUILDER</h2>
           {selectedRiders.length > 0 && (
             <button
               data-testid="dashboard-clear-all-btn"
@@ -80,12 +80,12 @@ export function TeamBuilderPanel({
           </span>
         </div>
 
-        <div className="space-y-2 overflow-y-auto max-h-[40vh] pr-1">
+        <ul className="space-y-2 overflow-y-auto max-h-[40vh] pr-1">
           {/* Selected rider cards */}
           {selectedRiders.map((rider) => {
             const isLocked = lockedIds?.has(rider.rawName) ?? false;
             return (
-              <div
+              <li
                 key={rider.rawName}
                 className="flex items-center gap-3 bg-surface-container-low p-2.5 border border-outline-variant/10 rounded-sm animate-scale-in"
               >
@@ -112,21 +112,21 @@ export function TeamBuilderPanel({
                     <X className="h-4 w-4" />
                   </button>
                 )}
-              </div>
+              </li>
             );
           })}
 
           {/* Empty slots */}
           {Array.from({ length: emptySlots }).map((_, i) => (
-            <div
+            <li
               key={`empty-${i}`}
               className="h-10 border border-dashed border-outline-variant/20 rounded-sm flex items-center justify-center gap-2 text-[10px] text-outline/30 uppercase font-mono tracking-widest group hover:border-outline-variant/40 hover:text-outline/50 transition-colors"
             >
               <UserPlus className="h-3 w-3 opacity-50" />
               Slot {selectedRiders.length + i + 1}
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
 
       {/* Budget Meter */}
@@ -202,7 +202,7 @@ export function TeamBuilderPanel({
           <button
             data-testid="dashboard-review-btn"
             onClick={onReviewTeam}
-            className="w-full py-3 bg-green-500/20 text-green-400 border border-green-500/30 font-headline font-bold uppercase tracking-wider text-sm rounded-sm hover:bg-green-500/30 transition-colors"
+            className="w-full py-3 bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30 font-headline font-bold uppercase tracking-wider text-sm rounded-sm hover:bg-green-500/30 transition-colors"
           >
             Review Team &rarr;
           </button>

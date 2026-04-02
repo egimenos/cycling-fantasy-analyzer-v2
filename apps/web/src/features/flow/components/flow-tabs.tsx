@@ -24,6 +24,7 @@ export function FlowTabs({ activeTab, onTabChange }: FlowTabsProps) {
             data-testid={`flow-tab-${step}`}
             onClick={() => unlocked && onTabChange(step)}
             disabled={!unlocked}
+            aria-current={active ? 'page' : undefined}
             className={cn(
               'px-5 py-3.5 text-xs font-mono uppercase tracking-widest transition-all relative flex items-center gap-2.5 whitespace-nowrap flex-shrink-0',
               active && 'text-on-surface font-bold bg-surface-container/50',

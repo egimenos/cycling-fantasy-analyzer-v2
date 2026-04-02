@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { OptimalTeamCard } from '../components/optimal-team-card';
+import { TooltipProvider } from '@/shared/ui/tooltip';
 import type { TeamSelection, AnalyzedRider } from '@cycling-analyzer/shared-types';
 
 function makeRider(name: string, price = 100, score = 50): AnalyzedRider {
@@ -33,46 +34,50 @@ function makeTeam(riders: AnalyzedRider[]): TeamSelection {
   };
 }
 
+function renderWithProvider(ui: React.ReactElement) {
+  return render(<TooltipProvider>{ui}</TooltipProvider>);
+}
+
 describe('OptimalTeamCard', () => {
   it('renders all rider names', () => {
     const team = makeTeam([makeRider('Alice'), makeRider('Bob')]);
-    render(<OptimalTeamCard team={team} budget={2000} />);
+    renderWithProvider(<OptimalTeamCard team={team} />);
     expect(screen.getByText('Alice')).toBeInTheDocument();
     expect(screen.getByText('Bob')).toBeInTheDocument();
   });
 
-  it('shows total score', () => {
+  it('shows total score with pts suffix', () => {
     const team = makeTeam([makeRider('A', 100, 45.5)]);
-    render(<OptimalTeamCard team={team} budget={2000} />);
-    const scores = screen.getAllByText('45.5');
-    expect(scores.length).toBeGreaterThanOrEqual(1);
+    renderWithProvider(<OptimalTeamCard team={team} />);
+    // Score is displayed as toFixed(0) + " pts"
+    expect(screen.getByText('46 pts')).toBeInTheDocument();
   });
 
-  it('renders default title "Optimal Team"', () => {
+  it('renders rider team name', () => {
     const team = makeTeam([makeRider('A')]);
-    render(<OptimalTeamCard team={team} budget={2000} />);
-    expect(screen.getByText('Optimal Team')).toBeInTheDocument();
+    renderWithProvider(<OptimalTeamCard team={team} />);
+    expect(screen.getByText('Team')).toBeInTheDocument();
   });
 
-  it('renders custom title', () => {
-    const team = makeTeam([makeRider('A')]);
-    render(<OptimalTeamCard team={team} budget={2000} title="Alt Team #1" />);
-    expect(screen.getByText('Alt Team #1')).toBeInTheDocument();
+  it('renders rank badges for each rider', () => {
+    const team = makeTeam([makeRider('A'), makeRider('B')]);
+    renderWithProvider(<OptimalTeamCard team={team} />);
+    expect(screen.getByText('#01')).toBeInTheDocument();
+    expect(screen.getByText('#02')).toBeInTheDocument();
   });
 
-  it('highlights locked riders', () => {
-    const team = makeTeam([makeRider('Locked'), makeRider('Free')]);
-    const { container } = render(
-      <OptimalTeamCard team={team} budget={2000} lockedIds={new Set(['Locked'])} />,
-    );
-    const lockedRow = container.querySelector('.border-green-500');
-    expect(lockedRow).toBeTruthy();
+  it('applies primary variant styling by default', () => {
+    const team = makeTeam([makeRider('Leader')]);
+    const { container } = renderWithProvider(<OptimalTeamCard team={team} />);
+    // The first rider in primary variant gets a leader gradient with border-l-2
+    const leaderEl = container.querySelector('.border-tertiary');
+    expect(leaderEl).toBeTruthy();
   });
 
-  it('renders score breakdown bars', () => {
-    const team = makeTeam([makeRider('A')]);
-    render(<OptimalTeamCard team={team} budget={2000} />);
-    expect(screen.getByText('GC')).toBeInTheDocument();
-    expect(screen.getByText('Stage')).toBeInTheDocument();
+  it('renders each rider with a test id', () => {
+    const team = makeTeam([makeRider('Alice'), makeRider('Bob')]);
+    renderWithProvider(<OptimalTeamCard team={team} />);
+    expect(screen.getByTestId('optimization-rider-card-Alice')).toBeInTheDocument();
+    expect(screen.getByTestId('optimization-rider-card-Bob')).toBeInTheDocument();
   });
 });

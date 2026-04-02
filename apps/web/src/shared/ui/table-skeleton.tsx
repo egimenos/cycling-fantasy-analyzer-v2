@@ -13,7 +13,11 @@ function SkeletonBar({ className }: { className?: string }) {
 
 export function TableSkeleton({ rows = 8, columns = 6 }: TableSkeletonProps) {
   return (
-    <div className="bg-surface-container-low rounded-sm overflow-hidden border border-outline-variant/10 animate-fade-in">
+    <div
+      className="bg-surface-container-low rounded-sm overflow-hidden border border-outline-variant/10 animate-fade-in"
+      role="status"
+      aria-label="Loading table data"
+    >
       {/* Header */}
       <div className="bg-surface-container-high/50 px-3 py-3 flex gap-4">
         {Array.from({ length: columns }).map((_, i) => (

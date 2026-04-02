@@ -23,7 +23,14 @@ export function BudgetIndicator({ spent, total, unit = '' }: BudgetIndicatorProp
           <span className="text-xs font-semibold font-mono text-error">Over budget!</span>
         )}
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-surface-container-highest">
+      <div
+        className="h-2 w-full overflow-hidden rounded-full bg-surface-container-highest"
+        role="progressbar"
+        aria-valuenow={percentage}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Budget usage"
+      >
         <div
           className={cn(
             'h-full rounded-full transition-all duration-500',

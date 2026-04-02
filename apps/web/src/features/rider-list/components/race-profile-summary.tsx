@@ -22,7 +22,7 @@ function getProfileBadges(profile: RaceProfileResponse): ProfileBadge[] {
       key: 'p1',
       label: 'Flat',
       count: s.p1Count,
-      className: 'border-green-500/30 bg-green-500/10 text-green-400',
+      className: 'border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400',
     },
     {
       key: 'p2',
@@ -136,7 +136,7 @@ export function RaceProfileSummary({
         {isAnalyzed && (
           <div className="flex items-center gap-3">
             <span className="text-[10px] font-mono text-outline uppercase">Status:</span>
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded-sm">
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 rounded-sm">
               <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
               <span className="text-xs font-bold uppercase tracking-tighter">Analyzed</span>
             </div>

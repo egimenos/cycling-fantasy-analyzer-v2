@@ -18,7 +18,7 @@ export function OptimalTeamCard({ team, variant = 'primary' }: OptimalTeamCardPr
   const isPrimary = variant === 'primary';
 
   return (
-    <div className={cn('grid grid-cols-1 md:grid-cols-3 gap-1', isPrimary && 'stagger-children')}>
+    <ul className={cn('grid grid-cols-1 md:grid-cols-3 gap-1', isPrimary && 'stagger-children')}>
       {team.riders.map((rider, index) => {
         const score = getEffectiveScore(rider);
         const isLeader = index === 0 && isPrimary;
@@ -26,7 +26,7 @@ export function OptimalTeamCard({ team, variant = 'primary' }: OptimalTeamCardPr
         return (
           <Tooltip key={rider.rawName}>
             <TooltipTrigger asChild>
-              <div
+              <li
                 data-testid={`optimization-rider-card-${rider.rawName}`}
                 className={cn(
                   'p-5 flex items-center gap-4 group transition-all relative overflow-hidden cursor-default',
@@ -80,7 +80,7 @@ export function OptimalTeamCard({ team, variant = 'primary' }: OptimalTeamCardPr
                     </span>
                   </div>
                 </div>
-              </div>
+              </li>
             </TooltipTrigger>
             {breakdown && (
               <TooltipContent className="p-0 bg-surface-container-highest border-outline-variant/20">
@@ -115,6 +115,6 @@ export function OptimalTeamCard({ team, variant = 'primary' }: OptimalTeamCardPr
           </Tooltip>
         );
       })}
-    </div>
+    </ul>
   );
 }

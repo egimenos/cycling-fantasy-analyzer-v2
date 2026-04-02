@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { OptimizeResponse } from '@cycling-analyzer/shared-types';
 import { OptimalTeamCard } from './optimal-team-card';
 import { ScoreBreakdown } from './score-breakdown';
@@ -20,8 +21,19 @@ export function OptimizerPanel({ data, budget, onApplyToRoster }: OptimizerPanel
   const animatedScore = useAnimatedNumber(projectedTotal, 1000);
   const animatedEfficiency = useAnimatedNumber(efficiencyNum, 1000);
 
+  const resultsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    resultsRef.current?.focus();
+  }, [data]);
+
   return (
-    <div data-testid="optimization-panel" className="space-y-10">
+    <div
+      ref={resultsRef}
+      tabIndex={-1}
+      data-testid="optimization-panel"
+      className="space-y-10 outline-none"
+    >
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-end gap-6 animate-fade-in-up">
         <div>

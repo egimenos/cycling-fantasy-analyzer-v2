@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { TooltipProvider } from '@/shared/ui/tooltip';
 import { RiderTable } from '../components/rider-table';
 import type { AnalyzedRider, AnalyzeResponse } from '@cycling-analyzer/shared-types';
 
@@ -24,6 +25,8 @@ function makeRider(overrides: Partial<AnalyzedRider> = {}): AnalyzedRider {
     unmatched: false,
     scoringMethod: 'rules' as const,
     mlPredictedScore: null,
+    mlBreakdown: null,
+    breakout: null,
     ...overrides,
   };
 }
@@ -48,31 +51,34 @@ const defaultProps = {
   canSelect: () => true,
 };
 
+function renderTable(ui: React.ReactElement) {
+  return render(<TooltipProvider>{ui}</TooltipProvider>);
+}
+
 describe('RiderTable', () => {
   it('renders rider rows', () => {
     const data = makeResponse([
       makeRider(),
       makeRider({ rawName: 'Jonas Vingegaard', rawTeam: 'Visma' }),
     ]);
-    render(<RiderTable data={data} {...defaultProps} />);
+    renderTable(<RiderTable data={data} {...defaultProps} />);
     expect(screen.getByText('Tadej Pogačar')).toBeInTheDocument();
     expect(screen.getByText('Jonas Vingegaard')).toBeInTheDocument();
   });
 
-  it('shows metadata summary', () => {
+  it('shows rider count summary', () => {
     const data = makeResponse([makeRider(), makeRider({ unmatched: true, rawName: 'Unknown' })]);
-    render(<RiderTable data={data} {...defaultProps} />);
-    expect(screen.getByText(/Showing 2 riders/)).toBeInTheDocument();
-    expect(screen.getByText(/1 matched, 1 unmatched/)).toBeInTheDocument();
+    renderTable(<RiderTable data={data} {...defaultProps} />);
+    expect(screen.getByText(/Showing 2 of 2/)).toBeInTheDocument();
   });
 
   it('shows empty state for zero riders', () => {
     const data = makeResponse([]);
-    render(<RiderTable data={data} {...defaultProps} />);
+    renderTable(<RiderTable data={data} {...defaultProps} />);
     expect(screen.getByText('No riders')).toBeInTheDocument();
   });
 
-  it('shows Unmatched badge for unmatched riders', () => {
+  it('shows UNMATCHED badge for unmatched riders', () => {
     const data = makeResponse([
       makeRider({
         unmatched: true,
@@ -83,20 +89,20 @@ describe('RiderTable', () => {
         categoryScores: null,
       }),
     ]);
-    render(<RiderTable data={data} {...defaultProps} />);
-    expect(screen.getByText('Unmatched')).toBeInTheDocument();
+    renderTable(<RiderTable data={data} {...defaultProps} />);
+    expect(screen.getByText('UNMATCHED')).toBeInTheDocument();
   });
 
-  it('shows Matched badge for matched riders', () => {
+  it('shows MATCH badge for matched riders', () => {
     const data = makeResponse([makeRider()]);
-    render(<RiderTable data={data} {...defaultProps} />);
-    expect(screen.getByText('Matched')).toBeInTheDocument();
+    renderTable(<RiderTable data={data} {...defaultProps} />);
+    expect(screen.getByText('MATCH')).toBeInTheDocument();
   });
 
   it('expands row on click to show breakdown', async () => {
     const user = userEvent.setup();
     const data = makeResponse([makeRider()]);
-    render(<RiderTable data={data} {...defaultProps} />);
+    renderTable(<RiderTable data={data} {...defaultProps} />);
 
     await user.click(screen.getByText('Tadej Pogačar'));
 
@@ -117,7 +123,7 @@ describe('RiderTable', () => {
         categoryScores: null,
       }),
     ]);
-    render(<RiderTable data={data} {...defaultProps} />);
+    renderTable(<RiderTable data={data} {...defaultProps} />);
 
     await user.click(screen.getByText('Ghost Rider'));
 
@@ -126,26 +132,30 @@ describe('RiderTable', () => {
 
   it('renders checkbox for each rider', () => {
     const data = makeResponse([makeRider()]);
-    render(<RiderTable data={data} {...defaultProps} />);
+    renderTable(<RiderTable data={data} {...defaultProps} />);
     expect(screen.getByLabelText('Select Tadej Pogačar')).toBeInTheDocument();
   });
 
   it('renders lock and exclude buttons', () => {
     const data = makeResponse([makeRider()]);
-    render(<RiderTable data={data} {...defaultProps} />);
+    renderTable(<RiderTable data={data} {...defaultProps} />);
     expect(screen.getByLabelText('Lock Tadej Pogačar')).toBeInTheDocument();
     expect(screen.getByLabelText('Exclude Tadej Pogačar')).toBeInTheDocument();
   });
 
   it('applies locked row styling', () => {
     const data = makeResponse([makeRider()]);
-    render(<RiderTable data={data} {...defaultProps} lockedIds={new Set(['Tadej Pogačar'])} />);
+    renderTable(
+      <RiderTable data={data} {...defaultProps} lockedIds={new Set(['Tadej Pogačar'])} />,
+    );
     expect(screen.getByLabelText('Unlock Tadej Pogačar')).toBeInTheDocument();
   });
 
   it('applies excluded row styling with line-through', () => {
     const data = makeResponse([makeRider()]);
-    render(<RiderTable data={data} {...defaultProps} excludedIds={new Set(['Tadej Pogačar'])} />);
+    renderTable(
+      <RiderTable data={data} {...defaultProps} excludedIds={new Set(['Tadej Pogačar'])} />,
+    );
     expect(screen.getByLabelText('Include Tadej Pogačar')).toBeInTheDocument();
     const nameEl = screen.getByText('Tadej Pogačar');
     expect(nameEl.className).toContain('line-through');

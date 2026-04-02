@@ -1,18 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { OptimizerPanel } from '../components/optimizer-panel';
+import { TooltipProvider } from '@/shared/ui/tooltip';
 import type { AnalyzedRider, OptimizeResponse } from '@cycling-analyzer/shared-types';
-
-const mockFetch = vi.fn();
-
-beforeEach(() => {
-  vi.stubGlobal('fetch', mockFetch);
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 function makeRider(name: string, price = 100): AnalyzedRider {
   return {
@@ -32,55 +23,60 @@ function makeRider(name: string, price = 100): AnalyzedRider {
   };
 }
 
-const defaultProps = {
-  riders: [makeRider('Rider A'), makeRider('Rider B')],
-  budget: 2000,
-  mustInclude: [] as string[],
-  mustExclude: [] as string[],
-  lockedIds: new Set<string>(),
-};
+function makeOptimizeResponse(riders: AnalyzedRider[]): OptimizeResponse {
+  const totalCost = riders.reduce((s, r) => s + r.priceHillios, 0);
+  const totalPts = riders.reduce((s, r) => s + (r.totalProjectedPts ?? 0), 0);
+  return {
+    optimalTeam: {
+      riders,
+      totalCostHillios: totalCost,
+      totalProjectedPts: totalPts,
+      budgetRemaining: 2000 - totalCost,
+      scoreBreakdown: { gc: 20, stage: 10, mountain: 10, sprint: 5 },
+    },
+    alternativeTeams: [],
+  };
+}
+
+function renderWithProvider(ui: React.ReactElement) {
+  return render(<TooltipProvider>{ui}</TooltipProvider>);
+}
 
 describe('OptimizerPanel', () => {
-  it('renders the optimize button', () => {
-    render(<OptimizerPanel {...defaultProps} />);
-    expect(screen.getByText('Get Optimal Team')).toBeInTheDocument();
+  it('renders the optimization results header', () => {
+    const data = makeOptimizeResponse([makeRider('Rider A'), makeRider('Rider B')]);
+    renderWithProvider(<OptimizerPanel data={data} budget={2000} onApplyToRoster={vi.fn()} />);
+    expect(screen.getByText('OPTIMAL CONFIGURATION')).toBeInTheDocument();
   });
 
-  it('disables button when no matched riders', () => {
-    const riders = [{ ...makeRider('X'), unmatched: true }];
-    render(<OptimizerPanel {...defaultProps} riders={riders} />);
-    expect(screen.getByText('Get Optimal Team')).toBeDisabled();
+  it('renders the Apply to Roster button', () => {
+    const data = makeOptimizeResponse([makeRider('Rider A')]);
+    renderWithProvider(<OptimizerPanel data={data} budget={2000} onApplyToRoster={vi.fn()} />);
+    expect(screen.getByTestId('optimization-apply-btn')).toBeInTheDocument();
+    expect(screen.getByText('Apply to Roster')).toBeInTheDocument();
   });
 
-  it('shows loading state while optimizing', async () => {
-    let resolvePromise: (v: unknown) => void;
-    mockFetch.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolvePromise = resolve;
-      }),
-    );
+  it('calls onApplyToRoster when button is clicked', async () => {
+    const onApply = vi.fn();
+    const data = makeOptimizeResponse([makeRider('Rider A')]);
+    renderWithProvider(<OptimizerPanel data={data} budget={2000} onApplyToRoster={onApply} />);
 
     const user = userEvent.setup();
-    render(<OptimizerPanel {...defaultProps} />);
+    await user.click(screen.getByText('Apply to Roster'));
 
-    await user.click(screen.getByText('Get Optimal Team'));
+    expect(onApply).toHaveBeenCalledOnce();
+  });
 
-    expect(screen.getByText('Optimizing...')).toBeInTheDocument();
+  it('renders the Primary Lineup section', () => {
+    const data = makeOptimizeResponse([makeRider('Rider A')]);
+    renderWithProvider(<OptimizerPanel data={data} budget={2000} onApplyToRoster={vi.fn()} />);
+    expect(screen.getByTestId('optimization-lineup')).toBeInTheDocument();
+    expect(screen.getByText('Primary Lineup')).toBeInTheDocument();
+  });
 
-    // Cleanup
-    await resolvePromise!({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          optimalTeam: {
-            riders: [],
-            totalCostHillios: 0,
-            totalProjectedPts: 0,
-            budgetRemaining: 2000,
-            scoreBreakdown: { gc: 0, stage: 0, mountain: 0, sprint: 0 },
-          },
-          alternativeTeams: [],
-        } satisfies OptimizeResponse),
-    });
+  it('renders the score breakdown section', () => {
+    const data = makeOptimizeResponse([makeRider('Rider A')]);
+    renderWithProvider(<OptimizerPanel data={data} budget={2000} onApplyToRoster={vi.fn()} />);
+    expect(screen.getByTestId('optimization-score-breakdown')).toBeInTheDocument();
   });
 });

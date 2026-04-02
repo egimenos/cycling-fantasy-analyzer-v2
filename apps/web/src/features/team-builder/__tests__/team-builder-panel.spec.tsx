@@ -37,12 +37,14 @@ const defaultProps = {
 describe('TeamBuilderPanel', () => {
   it('shows empty state when no riders selected', () => {
     render(<TeamBuilderPanel {...defaultProps} />);
-    expect(screen.getByText(/Select riders from the table/)).toBeInTheDocument();
+    // Redesigned component shows numbered empty slot placeholders instead of a text prompt
+    expect(screen.getByText(/Slot 1/)).toBeInTheDocument();
+    expect(screen.getByText(/Slot 9/)).toBeInTheDocument();
   });
 
   it('shows rider count', () => {
     render(<TeamBuilderPanel {...defaultProps} />);
-    expect(screen.getByText(/Team Builder \(0 \/ 9\)/)).toBeInTheDocument();
+    expect(screen.getByTestId('dashboard-roster-count')).toHaveTextContent('0 / 9 riders');
   });
 
   it('lists selected riders', () => {
@@ -101,7 +103,7 @@ describe('TeamBuilderPanel', () => {
       />,
     );
 
-    await user.click(screen.getByText('Clear'));
+    await user.click(screen.getByText('Clear All'));
     expect(onClear).toHaveBeenCalled();
   });
 
@@ -115,11 +117,12 @@ describe('TeamBuilderPanel', () => {
         budgetRemaining={-50}
       />,
     );
-    expect(screen.getByText('Budget exceeded!')).toBeInTheDocument();
+    expect(screen.getByText('Over budget!')).toBeInTheDocument();
   });
 
-  it('renders TeamSummary when team is complete', () => {
+  it('shows review button when team is complete', () => {
     const riders = Array.from({ length: 9 }, (_, i) => makeRider(`R${i}`));
+    const onReviewTeam = vi.fn();
     render(
       <TeamBuilderPanel
         {...defaultProps}
@@ -127,8 +130,12 @@ describe('TeamBuilderPanel', () => {
         totalCost={900}
         totalScore={450}
         isTeamComplete={true}
+        onReviewTeam={onReviewTeam}
       />,
     );
-    expect(screen.getByText('Team Complete!')).toBeInTheDocument();
+    // The "X more riders needed" message should not appear
+    expect(screen.queryByText(/more rider/)).not.toBeInTheDocument();
+    // A review button should be visible
+    expect(screen.getByTestId('dashboard-review-btn')).toBeInTheDocument();
   });
 });
