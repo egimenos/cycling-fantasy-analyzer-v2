@@ -374,15 +374,17 @@ export class AnalyzePriceListUseCase {
       breakdown: { gc: number; stage: number; mountain: number; sprint: number } | null;
     }
   > | null> {
-    const isStageRace =
-      input.raceType === RaceType.GRAND_TOUR || input.raceType === RaceType.MINI_TOUR;
+    const isMlSupported =
+      input.raceType === RaceType.GRAND_TOUR ||
+      input.raceType === RaceType.MINI_TOUR ||
+      input.raceType === RaceType.CLASSIC;
 
-    if (!isStageRace) {
+    if (!isMlSupported) {
       return null;
     }
 
     if (!input.raceSlug || !input.year) {
-      this.logger.debug('Stage race without raceSlug/year — skipping ML predictions');
+      this.logger.debug('Race without raceSlug/year — skipping ML predictions');
       return null;
     }
 
