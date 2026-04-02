@@ -1,7 +1,7 @@
 ---
 work_package_id: WP08
 title: Model Tuning + GO/NO-GO Decision
-lane: planned
+lane: 'done'
 dependencies: [WP05, WP06, WP07]
 subtasks:
   - T039
@@ -13,8 +13,8 @@ phase: Phase 3 - Model Training & Evaluation
 assignee: ''
 agent: ''
 shell_pid: ''
-review_status: ''
-reviewed_by: ''
+review_status: 'approved'
+reviewed_by: 'egimenos'
 history:
   - timestamp: '2026-04-02T16:48:30Z'
     lane: planned
@@ -272,3 +272,4 @@ spec-kitty implement WP08 --base WP07
 ## Activity Log
 
 - 2026-04-02T16:48:30Z – system – lane=planned – Prompt created.
+- 2026-04-02T21:45:34Z – unknown – lane=done – GO decision. NDCG +8.4%, P@10 +3.2%, rho equivalent. LightGBM sqrt 51 features. Model saved. Proceed to WP09 integration.
