@@ -22,8 +22,11 @@ import { RaceType } from '../../domain/shared/race-type.enum';
 import { ProfileDistribution } from '../../domain/scoring/profile-distribution';
 import { Rider } from '../../domain/rider/rider.entity';
 import { mapPriceListEntries, PriceListEntry, PriceListEntryDto } from './price-list-entry';
-import type { ProfileSummary, BreakoutResult } from '@cycling-analyzer/shared-types';
+import type { ProfileSummary, BreakoutResult, RaceHistory } from '@cycling-analyzer/shared-types';
 import { computeBreakout, computeMedianPtsPerHillio } from '../../domain/breakout';
+import { RaceResult } from '../../domain/race-result/race-result.entity';
+import { ResultCategory } from '../../domain/shared/result-category.enum';
+import { getPointsForPosition } from '../../domain/scoring/scoring-weights.config';
 
 export interface AnalyzeInput {
   riders: PriceListEntryDto[];
@@ -62,6 +65,7 @@ export interface AnalyzedRider {
   mlPredictedScore: number | null;
   mlBreakdown: { gc: number; stage: number; mountain: number; sprint: number } | null;
   breakout: BreakoutResult | null;
+  sameRaceHistory: RaceHistory[] | null;
 }
 
 export interface AnalyzeResponse {
@@ -69,6 +73,47 @@ export interface AnalyzeResponse {
   totalSubmitted: number;
   totalMatched: number;
   unmatchedCount: number;
+}
+
+function buildSameRaceHistory(results: readonly RaceResult[], raceSlug: string): RaceHistory[] {
+  // Group by year
+  const byYear = new Map<number, RaceResult[]>();
+  for (const r of results) {
+    if (r.raceSlug !== raceSlug) continue;
+    const existing = byYear.get(r.year);
+    if (existing) existing.push(r);
+    else byYear.set(r.year, [r]);
+  }
+
+  const history: RaceHistory[] = [];
+  for (const [year, yearResults] of byYear) {
+    let gc = 0;
+    let stage = 0;
+    let mountain = 0;
+    let sprint = 0;
+
+    for (const r of yearResults) {
+      const pts = getPointsForPosition(r.category as ResultCategory, r.position, r.raceType);
+      switch (r.category) {
+        case ResultCategory.GC:
+          gc += pts;
+          break;
+        case ResultCategory.STAGE:
+          stage += pts;
+          break;
+        case ResultCategory.MOUNTAIN:
+          mountain += pts;
+          break;
+        case ResultCategory.SPRINT:
+          sprint += pts;
+          break;
+      }
+    }
+
+    history.push({ year, gc, stage, mountain, sprint, total: gc + stage + mountain + sprint });
+  }
+
+  return history.sort((a, b) => b.year - a.year);
 }
 
 @Injectable()
@@ -221,10 +266,17 @@ export class AnalyzePriceListUseCase {
           mlPredictedScore: null,
           mlBreakdown: null,
           breakout: null,
+          sameRaceHistory: null,
         };
       }
 
-      const mlScore = mlPredictions?.get(s.matchedRider?.id ?? '')?.score ?? null;
+      const riderId = s.matchedRider?.id ?? '';
+      const riderResults = resultsByRider.get(riderId) ?? [];
+      const sameRaceHistory = input.raceSlug
+        ? buildSameRaceHistory(riderResults, input.raceSlug)
+        : null;
+
+      const mlScore = mlPredictions?.get(riderId)?.score ?? null;
       const effectiveScore = mlScore ?? s.riderScore.totalProjectedPts;
       const pointsPerHillio = s.entry.priceHillios > 0 ? effectiveScore / s.entry.priceHillios : 0;
 
@@ -242,8 +294,9 @@ export class AnalyzePriceListUseCase {
         seasonBreakdown: s.seasonBreakdown,
         scoringMethod: mlPredictions ? ('hybrid' as const) : ('rules' as const),
         mlPredictedScore: mlScore,
-        mlBreakdown: mlPredictions?.get(s.matchedRider?.id ?? '')?.breakdown ?? null,
+        mlBreakdown: mlPredictions?.get(riderId)?.breakdown ?? null,
         breakout: null,
+        sameRaceHistory: sameRaceHistory?.length ? sameRaceHistory : null,
       };
     });
 
@@ -260,6 +313,7 @@ export class AnalyzePriceListUseCase {
         profileSummary: input.profileSummary,
         medianPtsPerHillio: medianPph,
         categoryScores: rider.categoryScores,
+        sameRaceHistory: rider.sameRaceHistory ?? [],
       });
     }
 
@@ -311,8 +365,9 @@ export class AnalyzePriceListUseCase {
 
     const modelVersion = await this.mlScoring.getModelVersion();
     if (!modelVersion) {
-      this.logger.warn('ML service unavailable — falling back to rules-based scoring');
-      return null;
+      throw new UnprocessableEntityException(
+        'ML service is unavailable. Please ensure the ML container is running and try again.',
+      );
     }
 
     // Check cache first
@@ -363,10 +418,9 @@ export class AnalyzePriceListUseCase {
       input.raceType,
     );
     if (!predictions) {
-      this.logger.warn(
-        `ML predictRace returned null for ${input.raceSlug}/${input.year} — falling back to rules-based scoring`,
+      throw new UnprocessableEntityException(
+        `ML prediction failed for ${input.raceSlug}/${input.year}. The ML service could not generate predictions for this race.`,
       );
-      return null;
     }
 
     this.logger.log(

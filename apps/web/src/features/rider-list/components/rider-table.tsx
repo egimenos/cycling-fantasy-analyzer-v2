@@ -363,6 +363,50 @@ function PerformanceContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boo
           </div>
         )}
 
+        {rider.sameRaceHistory && rider.sameRaceHistory.length > 0 && (
+          <div className="mt-4">
+            <h4 className="text-[10px] font-mono text-outline uppercase mb-4">Same Race History</h4>
+            <div className="bg-surface-container-high rounded-sm overflow-hidden border border-outline-variant/10">
+              <table className="w-full text-xs font-mono">
+                <thead className="bg-surface-container-highest/50 text-outline">
+                  <tr>
+                    <th scope="col" className="p-3 text-left">
+                      Year
+                    </th>
+                    <th scope="col" className="p-3 text-right">
+                      GC
+                    </th>
+                    <th scope="col" className="p-3 text-right">
+                      Stage
+                    </th>
+                    <th scope="col" className="p-3 text-right">
+                      Mtn
+                    </th>
+                    <th scope="col" className="p-3 text-right">
+                      Sprint
+                    </th>
+                    <th scope="col" className="p-3 text-right">
+                      Total
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant/10">
+                  {rider.sameRaceHistory.map((h) => (
+                    <tr key={h.year}>
+                      <td className="p-3 font-bold">{h.year}</td>
+                      <td className="p-3 text-right">{h.gc.toFixed(1)}</td>
+                      <td className="p-3 text-right">{h.stage.toFixed(1)}</td>
+                      <td className="p-3 text-right">{h.mountain.toFixed(1)}</td>
+                      <td className="p-3 text-right">{h.sprint.toFixed(1)}</td>
+                      <td className="p-3 text-right font-bold">{h.total.toFixed(1)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {rider.matchedRider && (
           <div className="flex items-center gap-3 text-xs text-on-primary-container mt-4">
             <span>

@@ -13,6 +13,7 @@ const DEEP_VALUE: BreakoutFlag = 'DEEP_VALUE' as BreakoutFlag;
 const CEILING_PLAY: BreakoutFlag = 'CEILING_PLAY' as BreakoutFlag;
 const SPRINT_OPPORTUNITY: BreakoutFlag = 'SPRINT_OPPORTUNITY' as BreakoutFlag;
 const BREAKAWAY_HUNTER: BreakoutFlag = 'BREAKAWAY_HUNTER' as BreakoutFlag;
+const RACE_SPECIALIST: BreakoutFlag = 'RACE_SPECIALIST' as BreakoutFlag;
 
 const DEFAULT_AGE = 28;
 
@@ -271,6 +272,15 @@ export function evaluateFlags(input: ComputeBreakoutInput): BreakoutFlag[] {
   if (input.priceHillios <= 100 && totalPts > 0 && cs) {
     const mtnRatio = cs.mountain / totalPts;
     if (mtnRatio > 0.1) flags.push(BREAKAWAY_HUNTER);
+  }
+
+  // RACE_SPECIALIST — historical average in this race exceeds prediction
+  const raceHist = input.sameRaceHistory ?? [];
+  if (raceHist.length >= 2 && input.prediction > 0) {
+    const avgHistorical = raceHist.reduce((sum, h) => sum + h.total, 0) / raceHist.length;
+    if (avgHistorical > input.prediction * 1.15) {
+      flags.push(RACE_SPECIALIST);
+    }
   }
 
   return flags;

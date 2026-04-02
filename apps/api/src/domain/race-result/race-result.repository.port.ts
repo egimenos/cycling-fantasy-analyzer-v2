@@ -13,6 +13,7 @@ export interface RaceResultRepositoryPort {
   findByRiderIds(riderIds: string[]): Promise<RaceResult[]>;
   findByRace(raceSlug: string, year: number): Promise<RaceResult[]>;
   findByRiderIdsBeforeDate(riderIds: string[], cutoffDate: Date): Promise<RaceResult[]>;
+  findByRiderIdsAndRaceSlug(riderIds: string[], raceSlug: string): Promise<RaceResult[]>;
   findDistinctRacesWithDate(): Promise<RaceSummary[]>;
   saveMany(results: RaceResult[]): Promise<number>;
 }

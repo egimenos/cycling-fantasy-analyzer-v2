@@ -16,11 +16,19 @@ import { useTeamBuilder } from '@/features/team-builder/hooks/use-team-builder';
 import { useRaceProfile } from '@/features/rider-list/hooks/use-race-profile';
 import { LoadingSpinner } from '@/shared/ui/loading-spinner';
 import { TableSkeleton } from '@/shared/ui/table-skeleton';
-import { ErrorAlert } from '@/shared/ui/error-alert';
+
 import { useOptimize } from '@/features/optimizer/hooks/use-optimize';
 import { OptimizerPanel } from '@/features/optimizer/components/optimizer-panel';
 import { TeamSummary } from '@/features/team-builder/components/team-summary';
-import { TrendingUp, Settings, ChevronDown, Trophy, Users } from 'lucide-react';
+import {
+  TrendingUp,
+  Settings,
+  ChevronDown,
+  Trophy,
+  Users,
+  AlertTriangle,
+  RefreshCw,
+} from 'lucide-react';
 import * as Collapsible from '@radix-ui/react-collapsible';
 
 const VALID_TABS: readonly string[] = ['setup', 'dashboard', 'optimization', 'roster'];
@@ -336,7 +344,6 @@ function SetupTab({
           onBudgetChange={onBudgetChange}
           profileState={profileState}
         />
-        {error && <ErrorAlert message={error} onRetry={onRetry} />}
       </div>
 
       <div className="lg:col-span-7 flex flex-col">
@@ -346,12 +353,64 @@ function SetupTab({
               Real-time Preview
             </span>
             <h2 className="text-xl font-headline font-bold text-on-surface-variant">
-              {isLoading ? 'Analyzing...' : 'Analysis Pending'}
+              {error ? 'Analysis Failed' : isLoading ? 'Analyzing...' : 'Analysis Pending'}
             </h2>
           </div>
         </div>
 
-        {isLoading ? (
+        {error ? (
+          <div className="flex-1 min-h-[500px] rounded-sm bg-error-container/[0.06] border border-error/20 flex flex-col items-center justify-center p-12 relative overflow-hidden animate-fade-in">
+            {/* Diagonal hazard stripes */}
+            <div
+              className="absolute inset-0 opacity-[0.03] pointer-events-none"
+              style={{
+                backgroundImage:
+                  'repeating-linear-gradient(135deg, transparent, transparent 20px, currentColor 20px, currentColor 22px)',
+                color: 'var(--error)',
+              }}
+            />
+            {/* Bottom glow */}
+            <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-error/[0.04] to-transparent pointer-events-none" />
+
+            <div className="relative z-10 flex flex-col items-center text-center max-w-lg">
+              {/* Pulsing error icon */}
+              <div className="relative mb-8">
+                <div className="absolute inset-0 w-24 h-24 rounded-full bg-error/10 animate-pulse" />
+                <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-error/20 to-error-container/30 flex items-center justify-center ring-1 ring-error/30">
+                  <AlertTriangle className="h-11 w-11 text-error" />
+                </div>
+              </div>
+
+              <h3 className="text-2xl font-headline font-extrabold text-on-surface mb-3 tracking-tight">
+                Something Went Wrong
+              </h3>
+
+              <div className="bg-surface-container-high/80 border border-outline-variant/15 rounded-sm px-5 py-4 mb-6 w-full backdrop-blur-sm">
+                <p className="text-sm font-mono text-error leading-relaxed break-words">{error}</p>
+              </div>
+
+              <p className="text-on-surface-variant font-body text-sm leading-relaxed mb-8 max-w-sm">
+                The analysis could not be completed. Check that all services are running and your
+                configuration is correct, then try again.
+              </p>
+
+              {onRetry && (
+                <button
+                  onClick={onRetry}
+                  className="inline-flex items-center gap-2.5 px-6 py-3 bg-error/10 hover:bg-error/20 border border-error/30 text-error font-mono font-bold text-sm uppercase tracking-wider rounded-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Retry Analysis
+                </button>
+              )}
+
+              <div className="flex items-center gap-2 text-[10px] font-mono text-error/60 uppercase tracking-widest mt-6">
+                <span className="w-1.5 h-1.5 rounded-full bg-error/40" />
+                Error
+              </div>
+            </div>
+          </div>
+        ) : isLoading ? (
           <div className="flex-1 min-h-[500px] flex flex-col gap-4">
             <div className="flex items-center gap-3 px-1">
               <LoadingSpinner />

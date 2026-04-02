@@ -34,6 +34,15 @@ export interface MlBreakdown {
   sprint: number;
 }
 
+export interface RaceHistory {
+  year: number;
+  gc: number;
+  stage: number;
+  mountain: number;
+  sprint: number;
+  total: number;
+}
+
 export type ScoringMethod = 'rules' | 'hybrid';
 
 export enum BreakoutFlag {
@@ -43,6 +52,7 @@ export enum BreakoutFlag {
   CeilingPlay = 'CEILING_PLAY',
   SprintOpportunity = 'SPRINT_OPPORTUNITY',
   BreakawayHunter = 'BREAKAWAY_HUNTER',
+  RaceSpecialist = 'RACE_SPECIALIST',
 }
 
 export interface BreakoutSignals {
@@ -76,6 +86,7 @@ export interface AnalyzedRider {
   mlPredictedScore: number | null;
   mlBreakdown: MlBreakdown | null;
   breakout: BreakoutResult | null;
+  sameRaceHistory: RaceHistory[] | null;
 }
 
 export interface AnalyzeRequest {

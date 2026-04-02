@@ -57,6 +57,17 @@ export class RaceResultRepositoryAdapter implements RaceResultRepositoryPort {
     return rows.map((row) => this.toDomain(row));
   }
 
+  async findByRiderIdsAndRaceSlug(riderIds: string[], raceSlug: string): Promise<RaceResult[]> {
+    if (riderIds.length === 0) return [];
+
+    const rows = await this.db
+      .select()
+      .from(raceResults)
+      .where(and(inArray(raceResults.riderId, riderIds), eq(raceResults.raceSlug, raceSlug)));
+
+    return rows.map((row) => this.toDomain(row));
+  }
+
   async findDistinctRacesWithDate(): Promise<RaceSummary[]> {
     const rows = await this.db
       .selectDistinct({

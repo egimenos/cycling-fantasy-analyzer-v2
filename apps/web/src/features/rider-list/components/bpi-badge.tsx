@@ -74,6 +74,11 @@ const FLAG_CONFIG: Record<string, { label: string; colorClass: string; descripti
     colorClass: 'bg-secondary/15 text-secondary border-secondary/40',
     description: 'Mountain points on a budget',
   },
+  RACE_SPECIALIST: {
+    label: 'SPECIALIST',
+    colorClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/40',
+    description: 'Historically outperforms predictions in this race',
+  },
 };
 
 export function FlagChip({ flag }: { flag: string }) {

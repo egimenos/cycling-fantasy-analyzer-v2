@@ -32,6 +32,7 @@ describe('AnalyzeController', () => {
         mlPredictedScore: null,
         mlBreakdown: null,
         breakout: null,
+        sameRaceHistory: null,
       },
     ],
     totalSubmitted: 1,

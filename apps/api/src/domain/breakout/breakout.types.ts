@@ -1,4 +1,4 @@
-import type { SeasonBreakdown, ProfileSummary } from '@cycling-analyzer/shared-types';
+import type { SeasonBreakdown, ProfileSummary, RaceHistory } from '@cycling-analyzer/shared-types';
 
 export interface CoreCategoryScores {
   readonly gc: number;
@@ -15,4 +15,5 @@ export interface ComputeBreakoutInput {
   readonly profileSummary?: ProfileSummary;
   readonly medianPtsPerHillio: number;
   readonly categoryScores: CoreCategoryScores | null;
+  readonly sameRaceHistory?: readonly RaceHistory[];
 }
