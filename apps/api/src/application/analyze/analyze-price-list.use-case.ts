@@ -75,6 +75,20 @@ export interface AnalyzeResponse {
   unmatchedCount: number;
 }
 
+function countSprintsPerStage(yearResults: readonly RaceResult[]): Map<number, number> {
+  const counts = new Map<number, Set<string>>();
+  for (const r of yearResults) {
+    if (r.category !== ResultCategory.SPRINT_INTERMEDIATE || r.stageNumber === null) continue;
+    const existing = counts.get(r.stageNumber);
+    const sprintKey = r.sprintName ?? `km${r.kmMarker ?? 0}`;
+    if (existing) existing.add(sprintKey);
+    else counts.set(r.stageNumber, new Set([sprintKey]));
+  }
+  const result = new Map<number, number>();
+  for (const [stage, names] of counts) result.set(stage, names.size);
+  return result;
+}
+
 function buildSameRaceHistory(results: readonly RaceResult[], raceSlug: string): RaceHistory[] {
   // Group by year
   const byYear = new Map<number, RaceResult[]>();
@@ -92,19 +106,28 @@ function buildSameRaceHistory(results: readonly RaceResult[], raceSlug: string):
     let mountain = 0;
     let sprint = 0;
 
+    const sprintsPerStage = countSprintsPerStage(yearResults);
+
     for (const r of yearResults) {
-      const pts = getPointsForPosition(r.category as ResultCategory, r.position, r.raceType);
+      const pts = getPointsForPosition(r.category as ResultCategory, r.position, r.raceType, {
+        climbCategory: r.climbCategory,
+        sprintCount: r.stageNumber !== null ? (sprintsPerStage.get(r.stageNumber) ?? 1) : 1,
+      });
       switch (r.category) {
         case ResultCategory.GC:
+        case ResultCategory.GC_DAILY:
+        case ResultCategory.REGULARIDAD_DAILY:
           gc += pts;
           break;
         case ResultCategory.STAGE:
           stage += pts;
           break;
         case ResultCategory.MOUNTAIN:
+        case ResultCategory.MOUNTAIN_PASS:
           mountain += pts;
           break;
         case ResultCategory.SPRINT:
+        case ResultCategory.SPRINT_INTERMEDIATE:
           sprint += pts;
           break;
       }

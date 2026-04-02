@@ -117,6 +117,43 @@ const FINAL_CLASS_GRAND_TOUR: PositionPointsMap = {
   5: 10,
 };
 
+// Daily GC classification — same for all stage race types (top 10)
+const GC_DAILY_POINTS: PositionPointsMap = {
+  1: 15,
+  2: 10,
+  3: 8,
+  4: 7,
+  5: 6,
+  6: 5,
+  7: 4,
+  8: 3,
+  9: 2,
+  10: 1,
+};
+
+// Mountain pass points by climb category
+const MOUNTAIN_PASS_HC: PositionPointsMap = { 1: 12, 2: 8, 3: 6, 4: 5, 5: 4, 6: 3, 7: 2, 8: 1 };
+const MOUNTAIN_PASS_CAT1: PositionPointsMap = { 1: 8, 2: 6, 3: 4, 4: 2, 5: 1 };
+const MOUNTAIN_PASS_CAT2: PositionPointsMap = { 1: 5, 2: 3, 3: 1 };
+const MOUNTAIN_PASS_CAT3: PositionPointsMap = { 1: 3, 2: 2 };
+const MOUNTAIN_PASS_CAT4: PositionPointsMap = { 1: 1 };
+
+const MOUNTAIN_PASS_TABLES: Record<string, PositionPointsMap> = {
+  HC: MOUNTAIN_PASS_HC,
+  '1': MOUNTAIN_PASS_CAT1,
+  '2': MOUNTAIN_PASS_CAT2,
+  '3': MOUNTAIN_PASS_CAT3,
+  '4': MOUNTAIN_PASS_CAT4,
+};
+
+// Intermediate sprint points (single sprint per stage)
+const SPRINT_INTERMEDIATE_SINGLE: PositionPointsMap = { 1: 6, 2: 4, 3: 2 };
+// Intermediate sprint points (multiple sprints per stage)
+const SPRINT_INTERMEDIATE_MULTI: PositionPointsMap = { 1: 3, 2: 2, 3: 1 };
+
+// Regularidad daily classification (top 3)
+const REGULARIDAD_DAILY_POINTS: PositionPointsMap = { 1: 6, 2: 4, 3: 2 };
+
 /**
  * Cross-race-type weight matrix.
  * When computing scores for a target race type, results from other race types
@@ -174,25 +211,31 @@ export function getRaceClassWeight(raceClass: RaceClass): number {
 /**
  * Returns the fantasy points awarded for a given position in a specific category and race type.
  *
- * @param category - The result category (gc, stage, mountain, sprint)
+ * @param category - The result category
  * @param position - The finishing position (1-indexed), or null for DNF
  * @param raceType - The race type (affects GC, mountain, sprint point tables)
+ * @param opts - Optional: climbCategory for mountain_pass, sprintCount for sprint_intermediate
  * @returns Points for that position, or 0 if position is null, out of range, or below 1
  */
 export function getPointsForPosition(
   category: ResultCategory,
   position: number | null,
   raceType: RaceType,
+  opts?: { climbCategory?: string | null; sprintCount?: number },
 ): number {
   if (position === null || position < 1) {
     return 0;
   }
 
-  const table = getPointsTable(category, raceType);
+  const table = getPointsTable(category, raceType, opts);
   return table[position] ?? 0;
 }
 
-function getPointsTable(category: ResultCategory, raceType: RaceType): PositionPointsMap {
+function getPointsTable(
+  category: ResultCategory,
+  raceType: RaceType,
+  opts?: { climbCategory?: string | null; sprintCount?: number },
+): PositionPointsMap {
   switch (category) {
     case ResultCategory.STAGE:
       return STAGE_POINTS;
@@ -217,6 +260,14 @@ function getPointsTable(category: ResultCategory, raceType: RaceType): PositionP
           return FINAL_CLASS_GRAND_TOUR;
       }
       break;
+    case ResultCategory.GC_DAILY:
+      return GC_DAILY_POINTS;
+    case ResultCategory.MOUNTAIN_PASS:
+      return MOUNTAIN_PASS_TABLES[opts?.climbCategory ?? ''] ?? {};
+    case ResultCategory.SPRINT_INTERMEDIATE:
+      return (opts?.sprintCount ?? 1) >= 2 ? SPRINT_INTERMEDIATE_MULTI : SPRINT_INTERMEDIATE_SINGLE;
+    case ResultCategory.REGULARIDAD_DAILY:
+      return REGULARIDAD_DAILY_POINTS;
   }
   return {};
 }

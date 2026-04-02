@@ -274,11 +274,15 @@ export function evaluateFlags(input: ComputeBreakoutInput): BreakoutFlag[] {
     if (mtnRatio > 0.1) flags.push(BREAKAWAY_HUNTER);
   }
 
-  // RACE_SPECIALIST — historical average in this race exceeds prediction
+  // RACE_SPECIALIST — historical median in this race exceeds prediction
+  // Median rewards consistency: one great edition among failures won't trigger it
   const raceHist = input.sameRaceHistory ?? [];
   if (raceHist.length >= 2 && input.prediction > 0) {
-    const avgHistorical = raceHist.reduce((sum, h) => sum + h.total, 0) / raceHist.length;
-    if (avgHistorical > input.prediction * 1.15) {
+    const sorted = [...raceHist].map((h) => h.total).sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    const medianHistorical =
+      sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+    if (medianHistorical > input.prediction * 1.15) {
       flags.push(RACE_SPECIALIST);
     }
   }
