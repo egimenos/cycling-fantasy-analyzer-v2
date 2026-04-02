@@ -86,6 +86,7 @@ SPR_INTER_FEATURES = [
     "flat_top10_rate_12m", "flat_top10s_12m",
     "hilly_pts_12m", "hilly_top10_rate_12m", "pct_pts_p3",
     "stage_flat_mu", "pts_stage_12m", "target_flat_pct", "age",
+    "sprint_cls_pts_24m", "sprint_cls_top3_count_24m", "sprint_cls_best_pos_24m",
 ]
 
 STAGE_TYPES = ["flat", "hilly", "mountain", "itt"]
@@ -169,11 +170,20 @@ def _load_training_data(cache_dir: str) -> pd.DataFrame:
     df = cache.merge(stage_feats, on=["rider_id", "race_slug", "year"], how="left")
     df = df.merge(stage_targets[target_cols], on=["rider_id", "race_slug", "year"], how="left")
 
-    # Fill NaN for stage-related columns
+    # Merge classification history features (sprint/mountain classification history)
+    cls_path = os.path.join(cache_dir, "classification_history_features.parquet")
+    if os.path.exists(cls_path):
+        cls_feats = pd.read_parquet(cls_path)
+        df = df.merge(cls_feats, on=["rider_id", "race_slug", "year"], how="left")
+
+    # Fill NaN for stage-related and classification columns
     fill_cols = [c for c in df.columns if any(
         c.startswith(p) for p in ["flat_", "hilly_", "mountain_", "itt_",
                                    "n_flat", "n_hilly", "n_mountain", "n_itt",
-                                   "scoreable_"]
+                                   "scoreable_", "sprint_cls_", "mountain_cls_",
+                                   "gt_sprint_", "gt_mountain_", "mini_sprint_",
+                                   "mini_mountain_", "same_race_sprint_",
+                                   "same_race_mountain_"]
     )]
     df[fill_cols] = df[fill_cols].fillna(0)
 

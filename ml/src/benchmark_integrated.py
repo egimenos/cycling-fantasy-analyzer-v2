@@ -80,6 +80,7 @@ SPR_INTER_FEATS = [
     "flat_top10_rate_12m", "flat_top10s_12m",
     "hilly_pts_12m", "hilly_top10_rate_12m", "pct_pts_p3",
     "stage_flat_mu", "pts_stage_12m", "target_flat_pct", "age",
+    "sprint_cls_pts_24m", "sprint_cls_top3_count_24m", "sprint_cls_best_pos_24m",
 ]
 
 # Sprint final soft rank decay

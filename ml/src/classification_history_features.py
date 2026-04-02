@@ -162,19 +162,37 @@ def build_classification_features(db_url: str | None = None) -> pd.DataFrame:
             "best_pos": f"same_race_{cls_type}_final_best",
         })
 
+        # 24-month window — broader features capturing "repeat offender" pattern.
+        # Classification pts already weight by position (1st=50, 5th=10, 7th=2),
+        # so a dominant sprinter (Milan: 1,1,1) scores much higher than a GC
+        # rider who occasionally appears (Vingegaard: 2,5,7).
+        w24m = merged[merged["days_before"] <= 730]
+        w24m_grouped = w24m.groupby(["rider_id", "race_slug", "year"]).agg(
+            cls_pts_24m=("cls_pts", "sum"),
+            top3_count_24m=("position", lambda x: (x <= 3).sum()),
+            best_pos_24m=("position", "min"),
+        ).reset_index()
+        w24m_grouped = w24m_grouped.rename(columns={
+            "cls_pts_24m": f"{cls_type}_cls_pts_24m",
+            "top3_count_24m": f"{cls_type}_cls_top3_count_24m",
+            "best_pos_24m": f"{cls_type}_cls_best_pos_24m",
+        })
+
         # Merge all into result
         result = result.merge(gt_grouped, on=["rider_id", "race_slug", "year"], how="left")
         result = result.merge(mini_grouped, on=["rider_id", "race_slug", "year"], how="left")
         result = result.merge(same_race_best, on=["rider_id", "race_slug", "year"], how="left")
+        result = result.merge(w24m_grouped, on=["rider_id", "race_slug", "year"], how="left")
 
     # Fill NaN with 0 (no history = 0)
     feat_cols = [c for c in result.columns if c not in ["rider_id", "race_slug", "year"]]
     result[feat_cols] = result[feat_cols].fillna(0)
 
-    # For same_race_*_best: 0 means no history → set to large value (worse than any position)
+    # For position-based features: 0 means no history → set to large value (worse than any position)
     for cls_type in ["mountain", "sprint"]:
-        col = f"same_race_{cls_type}_final_best"
-        result[col] = result[col].replace(0, 99)
+        for col in [f"same_race_{cls_type}_final_best", f"{cls_type}_cls_best_pos_24m"]:
+            if col in result.columns:
+                result[col] = result[col].replace(0, 99)
 
     print(f"\nClassification features built: {len(result):,} rows, {len(feat_cols)} features")
     print(f"Features: {sorted(feat_cols)}")

@@ -386,6 +386,9 @@ def predict(req: PredictRequest, request: Request):
     # Also load stage features for this race's riders
     features_df = _enrich_with_stage_features(features_df)
 
+    # Classification history (sprint/mountain 24m repeat-performer signal)
+    features_df = _enrich_with_classification_history(features_df, race_date)
+
     # Stage counts
     if req.profile_summary:
         stage_counts = req.profile_summary.to_stage_counts()
@@ -611,6 +614,78 @@ def _enrich_with_glicko(features_df: pd.DataFrame, race_date) -> pd.DataFrame:
         for col in all_cols:
             if col not in features_df.columns:
                 features_df[col] = _glicko_default(col)
+        return features_df
+
+
+def _enrich_with_classification_history(features_df: pd.DataFrame, race_date) -> pd.DataFrame:
+    """Add sprint/mountain classification history features (24m window)."""
+    try:
+        conn = psycopg2.connect(DB_URL)
+        cur = conn.cursor()
+        race_dt = pd.Timestamp(race_date)
+        cutoff_24m = race_dt - pd.Timedelta(days=730)
+
+        from .points import FINAL_CLASS_GT, FINAL_CLASS_MINI
+
+        cur.execute("""
+            SELECT rr.rider_id, rr.category, rr.race_type, rr.position, rr.race_date
+            FROM race_results rr
+            WHERE rr.category IN ('mountain', 'sprint')
+              AND rr.race_type IN ('grand_tour', 'mini_tour')
+              AND rr.position > 0 AND rr.race_date IS NOT NULL
+              AND rr.race_date >= %s AND rr.race_date < %s
+        """, (cutoff_24m.date(), race_dt.date()))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        if not rows:
+            for col in ["sprint_cls_pts_24m", "sprint_cls_top3_count_24m", "sprint_cls_best_pos_24m"]:
+                features_df[col] = 0.0 if "pts" in col or "count" in col else 99.0
+            return features_df
+
+        hist = pd.DataFrame(rows, columns=["rider_id", "category", "race_type", "position", "race_date"])
+
+        cls_data = []
+        for rider_id in features_df["rider_id"].unique():
+            rh = hist[hist["rider_id"] == rider_id]
+            entry = {"rider_id": rider_id}
+            for cls_type in ["sprint", "mountain"]:
+                ch = rh[rh["category"] == cls_type]
+                if len(ch) == 0:
+                    entry[f"{cls_type}_cls_pts_24m"] = 0.0
+                    entry[f"{cls_type}_cls_top3_count_24m"] = 0
+                    entry[f"{cls_type}_cls_best_pos_24m"] = 99.0
+                else:
+                    pts = ch.apply(
+                        lambda r: float(
+                            (FINAL_CLASS_GT if r["race_type"] == "grand_tour" else FINAL_CLASS_MINI)
+                            .get(int(r["position"]), 0)
+                        ), axis=1,
+                    ).sum()
+                    entry[f"{cls_type}_cls_pts_24m"] = pts
+                    entry[f"{cls_type}_cls_top3_count_24m"] = int((ch["position"] <= 3).sum())
+                    entry[f"{cls_type}_cls_best_pos_24m"] = float(ch["position"].min())
+            cls_data.append(entry)
+
+        cls_df = pd.DataFrame(cls_data)
+        drop_cols = [c for c in cls_df.columns if c != "rider_id" and c in features_df.columns]
+        if drop_cols:
+            features_df = features_df.drop(columns=drop_cols)
+        features_df = features_df.merge(cls_df, on="rider_id", how="left")
+
+        for col in cls_df.columns:
+            if col == "rider_id":
+                continue
+            default = 99.0 if "best_pos" in col else 0.0
+            features_df[col] = features_df[col].fillna(default)
+
+        return features_df
+    except Exception:
+        logger.exception("Failed to enrich with classification history")
+        for col in ["sprint_cls_pts_24m", "sprint_cls_top3_count_24m", "sprint_cls_best_pos_24m"]:
+            if col not in features_df.columns:
+                features_df[col] = 0.0 if "pts" in col or "count" in col else 99.0
         return features_df
 
 
