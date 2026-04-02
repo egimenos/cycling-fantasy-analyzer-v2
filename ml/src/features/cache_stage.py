@@ -20,15 +20,15 @@ from datetime import datetime
 import pandas as pd
 import psycopg2
 
-from .features import (
+from .stage_race import (
     FEATURE_COLS, E01_MISSINGNESS_COLS, E02_INTENSITY_COLS,
     E03_REST_BUCKET_COLS, E04_PRESTIGE_COLS, SR_GC_COLS,
 )
-from .startlist_features import STARTLIST_FEATURE_COLS
-from .research_v6 import load_data_fast
-from .benchmark_v8 import FOLDS
-from .benchmark_v8_glicko import load_glicko_ratings
-from .benchmark_v8_startlist import extract_features_with_startlist
+from .startlist import STARTLIST_FEATURE_COLS
+from ..data.loader import load_data as load_data_fast
+FOLDS = {1: {"train_end": 2022, "test_year": 2023}, 2: {"train_end": 2023, "test_year": 2024}, 3: {"train_end": 2024, "test_year": 2025}}  # inline from benchmark
+# load_glicko_ratings imported at runtime if needed
+# extract_features_with_startlist imported at runtime if needed
 
 CACHE_DIR = os.path.join(os.path.dirname(__file__), '..', 'cache')
 CACHE_META_PATH = os.path.join(CACHE_DIR, 'cache_meta.json')

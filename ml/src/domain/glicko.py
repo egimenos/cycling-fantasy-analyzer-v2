@@ -28,7 +28,7 @@ import pandas as pd
 import psycopg2
 import psycopg2.extras
 
-from .research_v6 import load_data_fast
+from ..data.loader import load_data as load_data_fast
 from .stage_targets import STAGE_TYPE_MAP
 
 # ── Type-split stage Glicko configuration ──────────────────────────

@@ -18,8 +18,8 @@ from datetime import date
 import numpy as np
 import pandas as pd
 
-from .classic_taxonomy import get_all_types, get_classic_types, get_feeders_for_race, get_races_by_type, is_monument, resolve_slug
-from .points import GC_CLASSIC
+from ..domain.classic_taxonomy import get_all_types, get_classic_types, get_feeders_for_race, get_races_by_type, is_monument, resolve_slug
+from ..domain.points import GC_CLASSIC
 
 # ── Feature column lists ────────────────────────────────────────────
 

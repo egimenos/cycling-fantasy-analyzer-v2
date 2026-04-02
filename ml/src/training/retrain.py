@@ -18,8 +18,8 @@ import time
 
 import pandas as pd
 
-from .data import load_data
-from .features import extract_all_training_features
+from ..data.loader import load_data
+from ..features.stage_race import extract_all_training_features
 
 
 def _synthesize_startlists(results_df: pd.DataFrame) -> pd.DataFrame:
@@ -61,27 +61,27 @@ def main():
 
     # Step 2: Compute Glicko-2 ratings
     print("\n[2/7] Computing Glicko-2 ratings...")
-    from .glicko2 import main as glicko_main
+    from ..domain.glicko import main as glicko_main
     glicko_main()
 
     # Step 3: Build feature cache
     print("\n[3/7] Building feature cache...")
-    from .cache_features import main as cache_main
+    from ..features.cache_stage import main as cache_main
     cache_main()
 
     # Step 4: Build stage targets
     print("\n[4/7] Building stage targets...")
-    from .stage_targets import save_stage_targets
+    from ..domain.stage_targets import save_stage_targets
     save_stage_targets(db_url)
 
     # Step 5: Build stage features
     print("\n[5/7] Building stage features...")
-    from .stage_features import save_stage_features
+    from ..features.stage_type import save_stage_features
     save_stage_features(db_url)
 
     # Step 6: Build classification history features
     print("\n[6/7] Building classification history features...")
-    from .classification_history_features import save_classification_features
+    from ..features.classification import save_classification_features
     save_classification_features(db_url)
 
     # Step 7: Train all sub-models (stage races)
@@ -92,7 +92,7 @@ def main():
     # Step 8: Train classic model
     print("\n[8/8] Training classic model...")
     try:
-        from .cache_features_classics import cache_all_years, load_cached_classics
+        from ..features.cache_classics import cache_all_years, load_cached_classics
         from .train_classics import get_feature_cols, save_model, train_classic_model
         cache_all_years(results_df)
         train_dfs = []

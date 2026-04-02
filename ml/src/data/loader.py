@@ -13,7 +13,7 @@ from typing import Optional, Tuple
 import pandas as pd
 import psycopg2
 
-from .points import get_points
+from ..domain.points import get_points
 
 
 def get_sprint_count_per_stage(df: pd.DataFrame) -> dict[tuple[str, int, int], int]:

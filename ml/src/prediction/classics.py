@@ -18,8 +18,8 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from .features_classics import compute_classic_features
-from .points import GC_CLASSIC
+from ..features.classics import compute_classic_features
+from ..domain.points import GC_CLASSIC
 
 logger = logging.getLogger(__name__)
 

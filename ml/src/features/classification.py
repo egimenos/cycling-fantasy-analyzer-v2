@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 import psycopg2
 
-from .points import FINAL_CLASS_GT, FINAL_CLASS_MINI
+from ..domain.points import FINAL_CLASS_GT, FINAL_CLASS_MINI
 
 DB_URL = os.environ.get(
     "DATABASE_URL", "postgresql://cycling:cycling@localhost:5432/cycling_analyzer"

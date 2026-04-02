@@ -21,8 +21,8 @@ import time
 
 import pandas as pd
 
-from .data import load_data
-from .features_classics import TIER1_FEATURE_COLS, extract_all_classic_features
+from ..data.loader import load_data
+from .classics import TIER1_FEATURE_COLS, extract_all_classic_features
 
 CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", "cache")
 CACHE_PREFIX = "classics_features"

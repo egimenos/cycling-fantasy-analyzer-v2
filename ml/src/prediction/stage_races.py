@@ -11,7 +11,7 @@ Each source uses the architecture defined in model-baseline.md:
   - Sprint: heuristic contender for final + capture rate for inter+reg
 
 Usage (from app.py):
-    from .predict_sources import predict_race_sources, load_source_models
+    from .stage_races import predict_race_sources, load_source_models
     models = load_source_models(model_dir)
     predictions = predict_race_sources(race_slug, year, models, ...)
 """
@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 import structlog
 
-from .points import (
+from ..domain.points import (
     GC_GRAND_TOUR, GC_MINI_TOUR,
     GC_DAILY,
     STAGE_POINTS,

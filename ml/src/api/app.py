@@ -26,12 +26,12 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from .data import get_race_info, load_data
-from .features import FEATURE_COLS, extract_features_for_race
+from ..data.loader import get_race_info, load_data
+from ..features.stage_race import FEATURE_COLS, extract_features_for_race
 from .logging_config import configure_logging
-from .predict import get_model_version
-from .predict_sources import load_source_models, predict_race_sources
-from .supply_estimation import build_supply_history
+from .model_version import get_model_version
+from ..prediction.stage_races import load_source_models, predict_race_sources
+from ..prediction.supply_estimation import build_supply_history
 from .telemetry import setup_telemetry
 
 configure_logging()
@@ -376,7 +376,7 @@ def predict(req: PredictRequest, request: Request):
     logger.info("Predicting", race_slug=req.race_slug, year=req.year, race_type=race_type, cutoff=str(race_date))
 
     if race_type == 'classic':
-        from .predict_classics import is_model_available, predict_classic_race
+        from ..prediction.classics import is_model_available, predict_classic_race
         if not is_model_available():
             raise HTTPException(
                 status_code=404,
@@ -669,7 +669,7 @@ def _enrich_with_classification_history(features_df: pd.DataFrame, race_date) ->
         race_dt = pd.Timestamp(race_date)
         cutoff_24m = race_dt - pd.Timedelta(days=730)
 
-        from .points import FINAL_CLASS_GT, FINAL_CLASS_MINI
+        from ..domain.points import FINAL_CLASS_GT, FINAL_CLASS_MINI
 
         cur.execute("""
             SELECT rr.rider_id, rr.category, rr.race_type, rr.position, rr.race_date
@@ -744,7 +744,7 @@ def _enrich_with_stage_features(features_df: pd.DataFrame) -> pd.DataFrame:
         features_df = features_df.rename(columns={"race_year": "year"})
 
     try:
-        from .stage_features import compute_stage_features_ondemand
+        from ..features.stage_type import compute_stage_features_ondemand
         rider_ids = features_df["rider_id"].tolist()
         ondemand = compute_stage_features_ondemand(rider_ids, date.today(), DB_URL)
         merged = features_df.merge(ondemand, on="rider_id", how="left")

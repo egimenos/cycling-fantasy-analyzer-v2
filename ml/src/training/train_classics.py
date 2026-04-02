@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 
-from .features_classics import (
+from ..features.classics import (
     ALL_FEATURE_COLS,
     ALL_WITH_TIER3_COLS,
     PIPELINE_COLS,

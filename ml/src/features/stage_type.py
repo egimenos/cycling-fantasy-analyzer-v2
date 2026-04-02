@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 import psycopg2
 
-from .stage_targets import STAGE_TYPE_MAP, STAGE_TYPES
+from ..domain.stage_targets import STAGE_TYPE_MAP, STAGE_TYPES
 
 DB_URL = os.environ.get(
     "DATABASE_URL", "postgresql://cycling:cycling@localhost:5432/cycling_analyzer"
@@ -80,7 +80,7 @@ def _load_stage_history(db_url: str) -> pd.DataFrame:
     df["class_weight"] = df["race_class"].map(CLASS_WEIGHTS).fillna(0.5)
 
     # Fantasy stage pts
-    from .points import STAGE_POINTS
+    from ..domain.points import STAGE_POINTS
     df["stage_pts"] = df["position"].map(pd.Series(STAGE_POINTS)).fillna(0.0)
     df["weighted_pts"] = df["stage_pts"] * df["class_weight"]
 
