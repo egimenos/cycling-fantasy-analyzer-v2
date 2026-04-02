@@ -9,6 +9,8 @@ subtasks:
   - T035
   - T036
   - T037
+  - T037a
+  - T037b
   - T038
 phase: Phase 2 - Feature Engineering
 assignee: ''
@@ -84,6 +86,7 @@ spec-kitty implement WP07 --base WP06
 **Steps**:
 
 1. Adapt existing `ml/src/glicko.py` pattern:
+
    ```python
    def compute_classic_glicko(classic_results: pd.DataFrame, race_date) -> dict[str, dict]:
        """Compute Glicko-2 ratings from classic race history only.
@@ -101,6 +104,7 @@ spec-kitty implement WP07 --base WP06
        # 2. For each classic, update ratings based on finish positions
        # 3. Return final mu (skill) and rd (uncertainty)
    ```
+
 2. Key decisions:
    - Initial mu: 1500 (Glicko default)
    - Initial rd: 350 (high uncertainty)
@@ -122,6 +126,7 @@ spec-kitty implement WP07 --base WP06
 **Steps**:
 
 1. Extend classic Glicko to compute per-type:
+
    ```python
    def compute_type_glicko(classic_results, race_date) -> dict[str, dict]:
        """Compute per-type Glicko ratings.
@@ -148,6 +153,7 @@ spec-kitty implement WP07 --base WP06
                type_ratings[rid][f'{ctype}_glicko_rd'] = rating['rd']
        return type_ratings
    ```
+
 2. Only compute for types with sufficient data (flemish, ardennes, cobbled, italian)
 3. Skip puncheur, sprint_classic, hilly (too few races for stable ratings)
 
@@ -200,6 +206,7 @@ spec-kitty implement WP07 --base WP06
 **Steps**:
 
 1. Compute from startlist data:
+
    ```python
    def _compute_team_commitment(rider_id, race_slug, year, startlist_df):
        """Count high-quality teammates in this classic's startlist."""
@@ -221,6 +228,7 @@ spec-kitty implement WP07 --base WP06
        # (using cached features or a pre-computed ranking)
        return {'team_classic_commitment': len(teammates)}
    ```
+
 2. Simple version: count of teammates in the startlist
 3. Enhanced version (if data available): count of teammates with classic_top10_rate > 0
 
@@ -238,6 +246,7 @@ spec-kitty implement WP07 --base WP06
 **Steps**:
 
 1. Add to feature computation:
+
    ```python
    def _compute_calendar_distance(rider_id, race_date, rider_history, classic_results):
        """Calendar distance features — days since last classic and last race."""
@@ -269,6 +278,74 @@ spec-kitty implement WP07 --base WP06
 
 ---
 
+### Subtask T037a – Implement parcours micro-affinity (FR-013)
+
+**Purpose**: Beyond the race-slug-based type affinity (WP05), capture affinity to specific parcours characteristics: cobblestone performance, puncheur-climb performance, and long-distance (250km+) endurance.
+
+**Steps**:
+
+1. Compute cobble affinity from results in cobbled-type races:
+   ```python
+   def _compute_parcours_affinity(rider_id, classic_results, race_date):
+       cobbled_races = get_races_by_type('cobbled')
+       cobbled_results = classic_results[
+           (classic_results['rider_id'] == rider_id) &
+           (classic_results['race_slug'].isin(cobbled_races)) &
+           (classic_results['race_date'] < race_date)
+       ]
+       feats['cobble_affinity'] = float(cobbled_results['pts'].sum()) if len(cobbled_results) > 0 else 0.0
+
+       # Puncheur affinity (short steep climbs — Ardennes + puncheur types)
+       punch_races = get_races_by_type('puncheur') + get_races_by_type('ardennes')
+       # ... similar pattern
+
+       # Long-distance: MSR is 300km, use sprint_classic type as proxy
+       long_races = get_races_by_type('sprint_classic')  # MSR, Gent-Wevelgem
+       # ... similar pattern
+       return feats
+   ```
+2. Note: This partially overlaps with type_affinity (WP05) but uses different grouping (parcours-based vs geography-based). Ablation will reveal if it adds marginal value.
+
+**Files**: `ml/src/features_classics.py` (~25 lines)
+**Parallel?**: Yes.
+
+---
+
+### Subtask T037b – Implement win style features (FR-018)
+
+**Purpose**: Solo breakaway wins vs reduced group sprint finishes in past classics. A rider who wins solo has different characteristics from one who wins from a sprint.
+
+**Steps**:
+
+1. Approximate win style from margin of victory (position gap):
+   ```python
+   def _compute_win_style(rider_id, classic_results, race_date):
+       """Approximate win style from historical classic results."""
+       rider_wins = classic_results[
+           (classic_results['rider_id'] == rider_id) &
+           (classic_results['position'] == 1) &
+           (classic_results['race_date'] < race_date)
+       ]
+       feats = {}
+       feats['classic_wins_total'] = len(rider_wins)
+       # Ratio of wins vs starts (winner mentality)
+       all_starts = classic_results[
+           (classic_results['rider_id'] == rider_id) &
+           (classic_results['race_date'] < race_date)
+       ]
+       n_starts = all_starts.groupby(['race_slug', 'year']).ngroups
+       feats['classic_win_pct'] = len(rider_wins) / n_starts if n_starts > 0 else 0.0
+       return feats
+   ```
+2. Note: True solo-vs-sprint distinction is not available in `race_results` data (no time gaps). Use win count and win percentage as proxies.
+
+**Files**: `ml/src/features_classics.py` (~20 lines)
+**Parallel?**: Yes.
+
+**Notes**: FR-021 (fantasy price as prior) and FR-022 (head-to-head record) are **explicitly deferred** — price data creates circularity risk, and head-to-head has combinatorial explosion. Both may be revisited in a future iteration if the core model proves viable.
+
+---
+
 ### Subtask T038 – A/B test each experimental feature
 
 **Purpose**: Run ablation for each Tier 3 feature independently to determine which ones provide marginal value.
@@ -284,6 +361,8 @@ spec-kitty implement WP07 --base WP06
        'best_t2+age_type': BEST_TIER2_COLS + ['age_type_delta'],
        'best_t2+team_commit': BEST_TIER2_COLS + ['team_classic_commitment'],
        'best_t2+calendar': BEST_TIER2_COLS + ['days_since_last_classic', 'classics_count_30d'],
+       'best_t2+parcours': BEST_TIER2_COLS + ['cobble_affinity', 'punch_affinity', 'long_distance_affinity'],
+       'best_t2+win_style': BEST_TIER2_COLS + ['classic_wins_total', 'classic_win_pct'],
    })
    ```
 3. Run each experiment and compare against best Tier 2 model

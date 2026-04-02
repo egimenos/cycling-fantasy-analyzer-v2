@@ -4,6 +4,7 @@ title: Core ML Model + A/B Benchmark
 lane: planned
 dependencies:
   - WP01
+  - WP03
 subtasks:
   - T017
   - T018
@@ -144,6 +145,7 @@ spec-kitty implement WP04 --base WP03
 **Steps**:
 
 1. Add to `benchmark_classics.py`:
+
    ```python
    def evaluate_ml_fold(fold_num, train_df, test_df, feature_cols, model_type, transform):
        """Train model on train_df, predict on test_df, compute per-race metrics."""
@@ -177,6 +179,7 @@ spec-kitty implement WP04 --base WP03
            })
        return race_results, model, meta
    ```
+
 2. Integrate into `run_benchmark()` with `--mode ml` flag
 3. Load cached features from `ml/cache/classics_features_YYYY.parquet`
 
@@ -191,6 +194,7 @@ spec-kitty implement WP04 --base WP03
 **Steps**:
 
 1. Create comparison function:
+
    ```python
    def compare_experiments(baseline_path: str, candidate_path: str):
        """Load two logbook entries and print comparison table."""
@@ -218,6 +222,7 @@ spec-kitty implement WP04 --base WP03
            print(f"  {label:<15} Base={b_val:.4f}  ML={c_val:.4f}  "
                  f"Δ={delta:+.4f}  {sig}")
    ```
+
 2. Add `--compare` CLI flag to benchmark_classics.py
 3. Also generate feature importance output (top 10 features by RF/LightGBM importance)
 

@@ -4,6 +4,8 @@ title: Domain Features — Type Affinity & Specialist Profile
 lane: planned
 dependencies:
   - WP02
+  - WP03
+  - WP04
 subtasks:
   - T022
   - T023
@@ -26,7 +28,6 @@ history:
 requirement_refs:
   - FR-008
   - FR-010
-  - FR-012
   - FR-026
 ---
 
@@ -77,6 +78,7 @@ spec-kitty implement WP05 --base WP04
 **Steps**:
 
 1. Add to `features_classics.py`:
+
    ```python
    def _compute_type_affinity(rider_id, classic_results, race_date):
        """Compute points from same-type classics in last 24 months."""
@@ -95,6 +97,7 @@ spec-kitty implement WP05 --base WP04
 
        return feats
    ```
+
 2. Use `get_races_by_type()` from `classic_taxonomy.py`
 3. Use 24-month window for more stable signal (classics are sparse)
 4. Add to `TIER2_FEATURE_COLS` list
@@ -111,6 +114,7 @@ spec-kitty implement WP05 --base WP04
 **Steps**:
 
 1. Add to `features_classics.py`:
+
    ```python
    def _compute_type_top10_rates(rider_id, classic_results, race_date):
        """Top-10 rate per classic type over career."""
@@ -134,6 +138,7 @@ spec-kitty implement WP05 --base WP04
 
        return feats
    ```
+
 2. Use career-length window (not time-limited) for rate stability
 3. Minimum 2 starts required — else NaN (too sparse for a rate)
 

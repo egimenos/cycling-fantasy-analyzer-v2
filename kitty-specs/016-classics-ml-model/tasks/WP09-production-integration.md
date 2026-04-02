@@ -9,6 +9,8 @@ subtasks:
   - T046
   - T047
   - T048
+  - T049a
+  - T049b
 phase: Phase 4 - Production Integration
 assignee: ''
 agent: ''
@@ -294,6 +296,57 @@ spec-kitty implement WP09 --base WP08
 
 **Files**: `ml/src/predict_classics.py` (modify ~15 lines), `ml/src/train_classics.py` (modify ~5 lines)
 
+**Files**: `ml/src/predict_classics.py` (modify ~15 lines), `ml/src/train_classics.py` (modify ~5 lines)
+
+---
+
+### Subtask T049a – Add prediction caching for classics in ml_scores table
+
+**Purpose**: Constitution mandates prediction caching in PostgreSQL (`ml_scores` table). Classic predictions must be cached like stage-race predictions to avoid redundant computation.
+
+**Steps**:
+
+1. Verify the existing `ml_scores` table schema supports classic race type (check if `race_type` column exists or if it needs a new value)
+2. After computing predictions in `predict_classic_race()`, insert/upsert results into `ml_scores`:
+   ```python
+   def _cache_predictions(race_slug, year, predictions, conn):
+       """Cache classic predictions in ml_scores table."""
+       for pred in predictions:
+           # Upsert: rider_id + race_slug + year as composite key
+           # Store: predicted_score, gc, stage=0, mountain=0, sprint=0, model_version
+   ```
+3. Before computing predictions, check cache first — return cached results if model version matches
+4. Follow the same caching pattern used by stage-race predictions
+
+**Files**: `ml/src/predict_classics.py` (modify ~30 lines)
+**Parallel?**: No — depends on T044.
+
+---
+
+### Subtask T049b – Update Makefile retrain target to include classic model
+
+**Purpose**: Constitution mandates weekly retraining via `make retrain`. The classic model must be included in this pipeline.
+
+**Steps**:
+
+1. Check the existing `Makefile` `retrain` target
+2. Add classic model training step:
+
+   ```makefile
+   retrain: retrain-stage retrain-classics
+
+   retrain-classics:
+       cd ml && python src/train_classics.py --features final --model lgbm
+   ```
+
+3. Ensure the classic training step uses the final feature set and model type from WP08 decision
+4. Estimated additional time: ~1-2 min (small dataset compared to stage races)
+
+**Files**: `Makefile` (modify ~5 lines)
+**Parallel?**: Yes — independent of other subtasks.
+
+---
+
 **Validation**:
 
 - [ ] Classic race request to ML service returns 200 with predictions (not 404)
@@ -302,6 +355,8 @@ spec-kitty implement WP09 --base WP08
 - [ ] Stage-race predictions are completely unaffected
 - [ ] Model hot-reload works (change model file → next prediction uses new model)
 - [ ] API adapter correctly maps classic ML response to domain model
+- [ ] Classic predictions are cached in `ml_scores` table
+- [ ] `make retrain` trains both stage-race and classic models
 
 ---
 

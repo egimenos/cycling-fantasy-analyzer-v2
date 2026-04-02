@@ -4,6 +4,8 @@ title: Domain Features — Pipeline & Consistency
 lane: planned
 dependencies:
   - WP02
+  - WP03
+  - WP04
 subtasks:
   - T028
   - T029
@@ -74,6 +76,7 @@ spec-kitty implement WP06 --base WP04
 **Steps**:
 
 1. Add to `features_classics.py`:
+
    ```python
    def _compute_pipeline_features(rider_id, race_slug, race_date, classic_results):
        """Compute pipeline features: feeder points and form trend."""
@@ -119,6 +122,7 @@ spec-kitty implement WP06 --base WP04
 **Steps**:
 
 1. Add trend computation to pipeline features:
+
    ```python
    # Continuation from T028's _compute_pipeline_features:
    if len(feeder_results) >= 3:
@@ -157,6 +161,7 @@ spec-kitty implement WP06 --base WP04
 **Steps**:
 
 1. Add to `features_classics.py`:
+
    ```python
    def _compute_same_race_consistency(rider_id, race_slug, race_date, classic_results):
        """Std dev of positions across editions of the same classic."""
@@ -172,6 +177,7 @@ spec-kitty implement WP06 --base WP04
            return float(np.std(positions))
        return np.nan
    ```
+
 2. Lower std = more consistent = more predictable → model can learn this relationship
 
 **Files**: `ml/src/features_classics.py` (~15 lines)

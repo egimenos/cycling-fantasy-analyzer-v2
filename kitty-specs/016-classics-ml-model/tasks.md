@@ -3,7 +3,7 @@
 **Inputs**: Design documents from `kitty-specs/016-classics-ml-model/`
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, quickstart.md
 
-**Organization**: 54 subtasks (`T001`–`T054`) rolled into 10 work packages (`WP01`–`WP10`). Each WP is independently deliverable. WP09–WP10 are conditional on GO decision from WP08.
+**Organization**: 58 subtasks rolled into 10 work packages (`WP01`–`WP10`). Each WP is independently deliverable. WP09–WP10 are conditional on GO decision from WP08.
 
 ---
 
@@ -157,6 +157,7 @@
 ### Dependencies
 
 - Depends on WP01 (baseline to compare against), WP03 (cached features)
+- Dependencies: WP01, WP03
 
 ### Risks & Mitigations
 
@@ -171,7 +172,7 @@
 **Independent Test**: A Flemish specialist (e.g., Van der Poel) has high classic_type_affinity_flemish and high specialist_ratio. Ablation shows type_affinity features improve rho.
 **Prompt**: `tasks/WP05-domain-features-type-affinity.md`
 
-**Requirements Refs**: FR-008, FR-010, FR-012, FR-026
+**Requirements Refs**: FR-008, FR-010, FR-026
 
 ### Included Subtasks
 
@@ -199,6 +200,7 @@
 ### Dependencies
 
 - Depends on WP02 (taxonomy), WP03 (feature infrastructure), WP04 (ML benchmark to evaluate against)
+- Dependencies: WP02, WP03, WP04
 
 ### Risks & Mitigations
 
@@ -229,7 +231,7 @@
 - `pipeline_feeder_pts`: sum points from all feeders that occur BEFORE the target race date in the same season
 - `pipeline_trend`: linear regression slope of points across ordered feeder results (positive = building form)
 - `same_race_consistency`: std dev of finish positions across all previous editions (lower = more consistent/predictable)
-- For trend: if ≤2 data points, return NaN (not enough for slope)
+- For trend: ≥3 data points → linear regression slope; 2 points → simple difference; 1 point → NaN
 
 ### Parallel Opportunities
 
@@ -238,6 +240,7 @@
 ### Dependencies
 
 - Depends on WP02 (pipeline groups), WP03 (feature infrastructure), WP04 (ML benchmark)
+- Dependencies: WP02, WP03, WP04
 
 ### Risks & Mitigations
 
@@ -261,6 +264,8 @@
 - [ ] T035 [P] Implement `age_x_type` interaction feature (age relative to type-specific peak)
 - [ ] T036 [P] Implement `team_classic_commitment` (team strength in this specific classic)
 - [ ] T037 [P] Implement `calendar_distance` features (days since last classic, days since last race)
+- [ ] T037a [P] Implement `parcours_micro_affinity` features (cobble, puncheur, long-distance affinity — FR-013)
+- [ ] T037b [P] Implement `win_style` features (classic wins total, win percentage — FR-018)
 - [ ] T038 A/B test each feature independently against best WP05/WP06 model, document marginal impact
 
 ### Implementation Notes
@@ -344,6 +349,8 @@
 - [ ] T046 Modify `ml/src/app.py` line 378 to remove 404 and call classic prediction endpoint
 - [ ] T047 Modify `apps/api/src/infrastructure/ml/ml-scoring.adapter.ts` to handle classic response format
 - [ ] T048 Add model versioning and hot-reload support for classic model
+- [ ] T049a [P] Add prediction caching for classics in `ml_scores` table (constitution requirement)
+- [ ] T049b [P] Update `Makefile` retrain target to include classic model (constitution requirement)
 
 ### Implementation Notes
 
@@ -488,6 +495,8 @@ WP02 (Taxonomy)  ────┤
 | T035    | Age × classic-type interaction                             | WP07 | P1       | Yes       |
 | T036    | Team classic commitment feature                            | WP07 | P1       | Yes       |
 | T037    | Calendar distance features                                 | WP07 | P1       | Yes       |
+| T037a   | Parcours micro-affinity (FR-013)                           | WP07 | P1       | Yes       |
+| T037b   | Win style features (FR-018)                                | WP07 | P1       | Yes       |
 | T038    | A/B test each experimental feature                         | WP07 | P1       | No        |
 | T039    | Hyperparameter grid search                                 | WP08 | P1       | No        |
 | T040    | Final feature set selection                                | WP08 | P1       | No        |
@@ -499,6 +508,8 @@ WP02 (Taxonomy)  ────┤
 | T046    | Modify app.py remove 404                                   | WP09 | P2       | No        |
 | T047    | Modify ml-scoring.adapter.ts                               | WP09 | P2       | Yes       |
 | T048    | Model versioning and hot-reload                            | WP09 | P2       | No        |
+| T049a   | Prediction caching in ml_scores (constitution)             | WP09 | P2       | Yes       |
+| T049b   | Update Makefile retrain target (constitution)              | WP09 | P2       | Yes       |
 | T049    | pytest classic_taxonomy.py                                 | WP10 | P2       | Yes       |
 | T050    | pytest features_classics.py                                | WP10 | P2       | Yes       |
 | T051    | pytest predict_classics.py                                 | WP10 | P2       | Yes       |

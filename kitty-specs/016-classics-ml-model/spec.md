@@ -139,8 +139,8 @@ These are additional feature ideas to explore systematically during the research
 - **FR-018**: **Win style features** — Solo breakaway wins vs sprint finishes in past classics. A rider who wins solo has different characteristics from one who wins from a reduced group sprint.
 - **FR-019**: **Cross-discipline signal** — Cyclocross background (CX points, CX ranking) correlates with Flemish classics success (Van der Poel, Van Aert, Pidcock). If available in the data, encode CX racing history.
 - **FR-020**: **Calendar distance feature** — Days since last race, days since last classic, days until next classic. Captures freshness and motivation timing.
-- **FR-021**: **Fantasy price as prior** — The GMV fantasy price itself encodes collective market expectations about a rider's chances. Using it as a feature leverages crowd wisdom as an additional signal.
-- **FR-022**: **Head-to-head record** — In classics, small groups decide outcomes. Historical head-to-head results between riders who are both in the startlist could capture relative strength.
+- **FR-021**: ~~**Fantasy price as prior**~~ — DEFERRED: circularity risk (price derived from same signals model uses). May revisit in future iteration.
+- **FR-022**: ~~**Head-to-head record**~~ — DEFERRED: combinatorial explosion with sparse data. May revisit in future iteration.
 
 #### Phase 3: Model Training & Evaluation
 
