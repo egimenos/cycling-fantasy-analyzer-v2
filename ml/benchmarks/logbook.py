@@ -142,7 +142,7 @@ def _safe_round(val, decimals=4):
 
 def build_aggregate(fold_details: list[dict]) -> dict:
     """Build cross-fold aggregate metrics per race type."""
-    from .benchmark_v8 import bootstrap_ci
+    from benchmarks.harness import bootstrap_ci
 
     agg: dict[str, dict] = {}
 

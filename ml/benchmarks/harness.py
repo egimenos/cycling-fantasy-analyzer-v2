@@ -25,13 +25,13 @@ import numpy as np
 import pandas as pd
 from scipy.stats import spearmanr
 
-from .features import (
+from src.features.stage_race import (
     FEATURE_COLS,
     _compute_rider_features,
     _compute_team_info,
     compute_race_profile,
 )
-from .research_v6 import load_data_fast
+from src.data.loader import load_data as load_data_fast
 
 # ── Constants ────────────────────────────────────────────────────────
 

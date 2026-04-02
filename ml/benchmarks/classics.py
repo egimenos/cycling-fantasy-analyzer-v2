@@ -25,22 +25,22 @@ import numpy as np
 import pandas as pd
 import psycopg2
 
-from .benchmark_v8 import (
+from benchmarks.harness import (
     bootstrap_ci,
     find_optimal_team,
     ndcg_at_k,
     precision_at_k,
     spearman_rho,
 )
-from .logbook import (
+from benchmarks.logbook import (
     _json_default,
     _safe_round,
     build_run_metadata,
     load_logbook_entry,
     save_logbook_entry,
 )
-from .data import load_data
-from .points import GC_CLASSIC
+from src.data.loader import load_data
+from src.domain.points import GC_CLASSIC
 
 # ── Constants ────────────────────────────────────────────────────────
 
@@ -386,8 +386,8 @@ def run_ml_benchmark(
 
     Returns fold detail dicts compatible with logbook schema.
     """
-    from .cache_features_classics import load_cached_classics
-    from .train_classics import TRANSFORMS, print_feature_importance, train_classic_model
+    from src.features.cache_classics import load_cached_classics
+    from src.training.train_classics import TRANSFORMS, print_feature_importance, train_classic_model
 
     fold_details = []
 
@@ -708,8 +708,8 @@ def main():
         print_summary(fold_details, title="Classic Rules-Based Baseline (Historical)")
 
     elif args.mode == "ml":
-        from .cache_features_classics import cache_all_years, load_cached_classics, validate_cache
-        from .train_classics import (
+        from src.features.cache_classics import cache_all_years, load_cached_classics, validate_cache
+        from src.training.train_classics import (
             FEATURE_SETS,
             TRANSFORMS,
             get_feature_cols,

@@ -23,19 +23,19 @@ import pandas as pd
 import psycopg2
 from sklearn.ensemble import RandomForestRegressor
 
-from .features import (
+from src.features.stage_race import (
     FEATURE_COLS, E01_MISSINGNESS_COLS, E02_INTENSITY_COLS,
     E03_REST_BUCKET_COLS, E04_PRESTIGE_COLS, SR_GC_COLS,
 )
-from .startlist_features import STARTLIST_FEATURE_COLS
-from .cache_features import (
+from src.features.startlist import STARTLIST_FEATURE_COLS
+from src.features.cache_stage import (
     GLICKO_FEATURES, load_train_test, validate_cache, compute_schema_hash,
 )
-from .benchmark_v8 import (
+from benchmarks.harness import (
     FOLDS, RANDOM_SEED,
     find_optimal_team, spearman_rho, precision_at_k, ndcg_at_k, bootstrap_ci,
 )
-from .logbook import (
+from benchmarks.logbook import (
     build_run_metadata, build_race_detail, save_logbook_entry,
 )
 
@@ -387,7 +387,7 @@ def evaluate_fold_decomposed(
 
 # ── Ordinal evaluation (E07b) ────────────────────────────────────────
 
-from .points import (
+from src.domain.points import (
     gc_position_to_bucket, gc_bucket_expected_pts, N_GC_BUCKETS,
     classification_position_to_bucket, classification_bucket_expected_pts,
     n_classification_buckets, compute_expected_pts,
