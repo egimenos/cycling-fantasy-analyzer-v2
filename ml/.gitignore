@@ -1,0 +1,6 @@
+
+# Heavy artifacts — not tracked
+data/
+logbook/
+cache/
+*.parquet
