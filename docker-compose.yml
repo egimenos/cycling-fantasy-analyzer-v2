@@ -25,6 +25,9 @@ services:
       - '8000:8000'
     environment:
       DATABASE_URL: postgresql://cycling:cycling@postgres:5432/cycling_analyzer
+      LOG_LEVEL: info
+      OTEL_SERVICE_NAME: cycling-ml
+      # OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     depends_on:
       postgres:
         condition: service_healthy

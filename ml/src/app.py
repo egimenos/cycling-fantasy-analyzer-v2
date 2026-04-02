@@ -13,7 +13,6 @@ internal network, never exposed to the internet.
 
 from __future__ import annotations
 
-import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import date
@@ -21,16 +20,22 @@ from datetime import date
 import numpy as np
 import pandas as pd
 import psycopg2
+import structlog
+from asgi_correlation_id import CorrelationIdMiddleware, correlation_id
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from .data import get_race_info, load_data
 from .features import FEATURE_COLS, extract_features_for_race
+from .logging_config import configure_logging
 from .predict import get_model_version
 from .predict_sources import load_source_models, predict_race_sources
 from .supply_estimation import build_supply_history
+from .telemetry import setup_telemetry
 
-logger = logging.getLogger(__name__)
+configure_logging()
+logger = structlog.get_logger(__name__)
 
 # ── Configuration ────────────────────────────────────────────────────
 
@@ -73,11 +78,35 @@ async def lifespan(app: FastAPI):
         loaded = []
         version = None
 
-    logger.info("Startup complete — source models=%s, version=%s", loaded, version)
+    logger.info("Startup complete", source_models=loaded, version=version)
     yield
 
 
 app = FastAPI(title="Cycling ML Service", lifespan=lifespan)
+
+# Correlation ID: reads x-correlation-id from NestJS API, exposes via correlation_id.get()
+app.add_middleware(CorrelationIdMiddleware, header_name="x-correlation-id")
+
+# OpenTelemetry instrumentation
+setup_telemetry(app)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Catch-all for unhandled exceptions — log structured error, return 500."""
+    logger.exception(
+        "Unhandled exception",
+        path=request.url.path,
+        method=request.method,
+        exc_info=exc,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal server error",
+            "correlation_id": correlation_id.get() or None,
+        },
+    )
 
 
 # ── Request model ────────────────────────────────────────────────────
@@ -129,8 +158,8 @@ def maybe_reload_models(app_state) -> None:
     current = get_model_version(app_state.model_dir)
     if current and current != app_state.model_version:
         logger.info(
-            "Model version changed: %s -> %s — reloading all source models",
-            app_state.model_version, current,
+            "Model version changed — reloading all source models",
+            old_version=app_state.model_version, new_version=current,
         )
         app_state.models = load_source_models(app_state.model_dir)
         app_state.model_version = current
@@ -188,7 +217,7 @@ def check_cache(
         conn.close()
 
         if startlist_ids and cached_ids != startlist_ids:
-            logger.info("Startlist changed for %s/%d — cache invalidated", race_slug, year)
+            logger.info("Startlist changed — cache invalidated", race_slug=race_slug, year=year)
             return None
 
         # Check if we have breakdown data
@@ -266,7 +295,7 @@ def write_cache(
         conn.commit()
         cur.close()
         conn.close()
-        logger.info("Cached %d predictions for %s/%d", len(predictions), race_slug, year)
+        logger.info("Cached predictions", count=len(predictions), race_slug=race_slug, year=year)
     except Exception:
         logger.exception("Cache write failed")
 
@@ -344,7 +373,7 @@ def predict(req: PredictRequest, request: Request):
             )
     else:
         race_type = race_info['race_type']
-    logger.info("Predicting %s/%d (type=%s) with cutoff=%s", req.race_slug, req.year, race_type, race_date)
+    logger.info("Predicting", race_slug=req.race_slug, year=req.year, race_type=race_type, cutoff=str(race_date))
 
     if race_type == 'classic':
         raise HTTPException(
@@ -474,7 +503,7 @@ def _load_sprint_pedigree() -> dict[str, float]:
         pedigree = {str(row[0]): float(row[1]) for row in cur.fetchall()}
         cur.close()
         conn.close()
-        logger.info("Loaded sprint pedigree for %d riders", len(pedigree))
+        logger.info("Loaded sprint pedigree", rider_count=len(pedigree))
         return pedigree
     except Exception:
         logger.exception("Failed to load sprint pedigree")

@@ -21,7 +21,6 @@ Usage:
 from __future__ import annotations
 
 import json
-import logging
 import os
 import time
 from datetime import datetime, timezone
@@ -29,9 +28,10 @@ from datetime import datetime, timezone
 import joblib
 import numpy as np
 import pandas as pd
+import structlog
 from sklearn.linear_model import LogisticRegression, RidgeCV
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", "cache")
 MODEL_DIR = os.environ.get(
@@ -201,7 +201,7 @@ def _load_training_data(cache_dir: str) -> pd.DataFrame:
     )
 
     df = df[df["year"] >= 2022].copy()
-    logger.info("Training data: %d rows, years %s", len(df), sorted(df["year"].unique()))
+    logger.info("Training data loaded", rows=len(df), years=sorted(df["year"].unique()))
     return df
 
 
@@ -223,7 +223,7 @@ def _train_and_save(
     path = os.path.join(model_dir, f"{name}.joblib")
     joblib.dump(model, path)
     elapsed = time.time() - t0
-    logger.info("  %s: %d samples, saved to %s (%.1fs)", name, len(X), path, elapsed)
+    logger.info("Model trained", model=name, samples=len(X), path=path, elapsed_s=round(elapsed, 1))
     return path
 
 
@@ -272,7 +272,7 @@ def train_all(
         artifacts[f"stage_{st}"] = _train_and_save(
             f"stage_{st}", model, train_data[feats], y, model_dir,
         )
-        logger.info("  %s: selected alpha=%.3f", f"stage_{st}", model.alpha_)
+        logger.info("Ridge alpha selected", model=f"stage_{st}", alpha=round(model.alpha_, 3))
         feature_lists[f"stage_{st}"] = feats
 
     # ── 5. Stage ITT Gate ────────────────────────────────────────────
@@ -294,7 +294,7 @@ def train_all(
     artifacts["stage_itt_magnitude"] = _train_and_save(
         "stage_itt_magnitude", itt_mag, itt_nonzero[itt_feats], y_itt, model_dir,
     )
-    logger.info("  %s: selected alpha=%.3f", "stage_itt_magnitude", itt_mag.alpha_)
+    logger.info("Ridge alpha selected", model="stage_itt_magnitude", alpha=round(itt_mag.alpha_, 3))
     feature_lists["stage_itt_magnitude"] = itt_feats
 
     # ── 7. Mountain Final Gate ───────────────────────────────────────
@@ -316,7 +316,7 @@ def train_all(
     artifacts["mtn_pass_capture"] = _train_and_save(
         "mtn_pass_capture", mp_model, mp_data[mp_feats], y_mp, model_dir,
     )
-    logger.info("  %s: selected alpha=%.3f", "mtn_pass_capture", mp_model.alpha_)
+    logger.info("Ridge alpha selected", model="mtn_pass_capture", alpha=round(mp_model.alpha_, 3))
     feature_lists["mtn_pass_capture"] = mp_feats
 
     # ── 9. Sprint Inter Capture ──────────────────────────────────────
@@ -328,7 +328,7 @@ def train_all(
     artifacts["spr_inter_capture"] = _train_and_save(
         "spr_inter_capture", si_model, si_data[si_feats], y_si, model_dir,
     )
-    logger.info("  %s: selected alpha=%.3f", "spr_inter_capture", si_model.alpha_)
+    logger.info("Ridge alpha selected", model="spr_inter_capture", alpha=round(si_model.alpha_, 3))
     feature_lists["spr_inter_capture"] = si_feats
 
     # ── Write metadata.json ──────────────────────────────────────────
@@ -366,5 +366,6 @@ def train_all(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    from .logging_config import configure_logging
+    configure_logging()
     train_all()

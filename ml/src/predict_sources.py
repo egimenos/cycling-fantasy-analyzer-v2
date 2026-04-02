@@ -19,13 +19,13 @@ Usage (from app.py):
 from __future__ import annotations
 
 import json
-import logging
 import os
 from typing import Any
 
 import joblib
 import numpy as np
 import pandas as pd
+import structlog
 
 from .points import (
     GC_GRAND_TOUR, GC_MINI_TOUR,
@@ -36,7 +36,7 @@ from .points import (
 )
 from .supply_estimation import build_supply_history, estimate_supply
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Expected model artifact names
 _MODEL_FILES = [
@@ -58,7 +58,7 @@ def load_source_models(model_dir: str) -> dict[str, Any] | None:
     """
     meta_path = os.path.join(model_dir, "metadata.json")
     if not os.path.isfile(meta_path):
-        logger.warning("metadata.json not found in %s — source models not available", model_dir)
+        logger.warning("metadata.json not found — source models not available", model_dir=model_dir)
         return None
 
     with open(meta_path) as f:
@@ -75,11 +75,12 @@ def load_source_models(model_dir: str) -> dict[str, Any] | None:
             missing.append(name)
 
     if missing:
-        logger.warning("Missing model files: %s — some sources will be skipped", missing)
+        logger.warning("Missing model files — some sources will be skipped", missing_models=missing)
 
     logger.info(
-        "Loaded %d/%d source models + metadata (version=%s)",
-        len(models) - 1, len(_MODEL_FILES), metadata.get("model_version", "?"),
+        "Loaded source models + metadata",
+        loaded=len(models) - 1, total=len(_MODEL_FILES),
+        version=metadata.get("model_version", "?"),
     )
     return models
 
@@ -92,8 +93,9 @@ def _validate_features(metadata: dict, df: pd.DataFrame) -> None:
         missing = [f for f in expected_feats if f not in available]
         if missing:
             logger.warning(
-                "Feature mismatch in %s: %d/%d features missing: %s",
-                model_name, len(missing), len(expected_feats), missing,
+                "Feature mismatch",
+                model=model_name, missing_count=len(missing),
+                total=len(expected_feats), missing_features=missing,
             )
 
 
@@ -229,8 +231,8 @@ def predict_race_sources(
         })
 
     logger.info(
-        "Predicted %d riders for %s/%d — gc/stage/mtn/spr sources",
-        n_riders, race_slug, year,
+        "Predicted riders — gc/stage/mtn/spr sources",
+        rider_count=n_riders, race_slug=race_slug, year=year,
     )
     return predictions
 

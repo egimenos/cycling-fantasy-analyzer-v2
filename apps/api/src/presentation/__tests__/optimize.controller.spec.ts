@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HttpException, HttpStatus } from '@nestjs/common';
 import { OptimizeController } from '../optimize.controller';
 import { OptimizeTeamUseCase } from '../../application/optimize/optimize-team.use-case';
 import {
@@ -118,7 +117,8 @@ describe('OptimizeController', () => {
     );
   });
 
-  it('should map InsufficientRidersError to 422', () => {
+  // Domain errors now propagate directly — the global AllExceptionsFilter handles HTTP mapping
+  it('should let InsufficientRidersError propagate', () => {
     mockUseCase.execute.mockImplementation(() => {
       throw new InsufficientRidersError(5, 9);
     });
@@ -126,56 +126,43 @@ describe('OptimizeController', () => {
     expect(() =>
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test DTO
       controller.optimize({ riders: [], budget: 1000, mustInclude: [], mustExclude: [] } as any),
-    ).toThrow(HttpException);
-
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test DTO
-      controller.optimize({ riders: [], budget: 1000, mustInclude: [], mustExclude: [] } as any);
-    } catch (e) {
-      expect((e as HttpException).getStatus()).toBe(HttpStatus.UNPROCESSABLE_ENTITY);
-    }
+    ).toThrow(InsufficientRidersError);
   });
 
-  it('should map ConflictingConstraintsError to 400', () => {
+  it('should let ConflictingConstraintsError propagate', () => {
     mockUseCase.execute.mockImplementation(() => {
       throw new ConflictingConstraintsError(['r1']);
     });
 
-    try {
+    expect(() =>
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test DTO
-      controller.optimize({ riders: [], budget: 1000, mustInclude: [], mustExclude: [] } as any);
-    } catch (e) {
-      expect((e as HttpException).getStatus()).toBe(HttpStatus.BAD_REQUEST);
-    }
+      controller.optimize({ riders: [], budget: 1000, mustInclude: [], mustExclude: [] } as any),
+    ).toThrow(ConflictingConstraintsError);
   });
 
-  it('should map BudgetExceededByLockedRidersError to 400', () => {
+  it('should let BudgetExceededByLockedRidersError propagate', () => {
     mockUseCase.execute.mockImplementation(() => {
       throw new BudgetExceededByLockedRidersError(1500, 1000);
     });
 
-    try {
+    expect(() =>
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test DTO
-      controller.optimize({ riders: [], budget: 1000, mustInclude: [], mustExclude: [] } as any);
-    } catch (e) {
-      expect((e as HttpException).getStatus()).toBe(HttpStatus.BAD_REQUEST);
-    }
+      controller.optimize({ riders: [], budget: 1000, mustInclude: [], mustExclude: [] } as any),
+    ).toThrow(BudgetExceededByLockedRidersError);
   });
 
-  it('should map RiderNotFoundError to 400', () => {
+  it('should let RiderNotFoundError propagate', () => {
     mockUseCase.execute.mockImplementation(() => {
       throw new RiderNotFoundError('unknown');
     });
 
-    try {
+    expect(() =>
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test DTO
-      controller.optimize({ riders: [], budget: 1000, mustInclude: [], mustExclude: [] } as any);
-    } catch (e) {
-      expect((e as HttpException).getStatus()).toBe(HttpStatus.BAD_REQUEST);
-    }
+      controller.optimize({ riders: [], budget: 1000, mustInclude: [], mustExclude: [] } as any),
+    ).toThrow(RiderNotFoundError);
   });
 
-  it('should re-throw unknown errors', () => {
+  it('should let unknown errors propagate', () => {
     mockUseCase.execute.mockImplementation(() => {
       throw new Error('unexpected');
     });

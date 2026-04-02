@@ -42,15 +42,17 @@ The API uses `@nestjs/config` to load env files with this priority:
 
 Both are optional. If neither exists, built-in defaults apply.
 
-| Variable                | Default                                                        | Description                                 |
-| ----------------------- | -------------------------------------------------------------- | ------------------------------------------- |
-| `DATABASE_URL`          | `postgresql://cycling:cycling@localhost:5432/cycling_analyzer` | PostgreSQL connection string                |
-| `PORT`                  | `3001`                                                         | API server port                             |
-| `CORS_ORIGIN`           | `http://localhost:3000`                                        | Allowed CORS origin for the frontend        |
-| `PCS_REQUEST_DELAY_MS`  | `1500`                                                         | Delay between PCS scrape requests           |
-| `FUZZY_MATCH_THRESHOLD` | `-10000`                                                       | Minimum score for fuzzy rider name matching |
-| `ML_SERVICE_URL`        | `http://localhost:8000`                                        | ML scoring microservice URL                 |
-| `VITE_API_URL`          | `http://localhost:3001`                                        | API URL for the frontend (build-time)       |
+| Variable                      | Default                                                        | Description                                      |
+| ----------------------------- | -------------------------------------------------------------- | ------------------------------------------------ |
+| `DATABASE_URL`                | `postgresql://cycling:cycling@localhost:5432/cycling_analyzer` | PostgreSQL connection string                     |
+| `PORT`                        | `3001`                                                         | API server port                                  |
+| `CORS_ORIGIN`                 | `http://localhost:3000`                                        | Allowed CORS origin for the frontend             |
+| `PCS_REQUEST_DELAY_MS`        | `1500`                                                         | Delay between PCS scrape requests                |
+| `FUZZY_MATCH_THRESHOLD`       | `-10000`                                                       | Minimum score for fuzzy rider name matching      |
+| `ML_SERVICE_URL`              | `http://localhost:8000`                                        | ML scoring microservice URL                      |
+| `VITE_API_URL`                | `http://localhost:3001`                                        | API URL for the frontend (build-time)            |
+| `LOG_LEVEL`                   | `info` (prod) / `debug` (dev)                                  | Log level for API and ML service                 |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | _(disabled)_                                                   | OTLP collector URL — enables distributed tracing |
 
 > **Note:** If you have a `DATABASE_URL` already exported in your shell (e.g. from another project), it will take precedence over `.env` files. Use `.env.local` or `unset DATABASE_URL` to fix this.
 
@@ -60,13 +62,13 @@ A `Makefile` provides shortcuts for all common operations. Run `make help` to se
 
 ### Project
 
-| Command          | Description                              |
-| ---------------- | ---------------------------------------- |
-| `make install`   | Install all dependencies                 |
-| `make dev`       | Start all services (DB + ML + API + Web) |
-| `make build`     | Build all packages and apps              |
-| `make test`      | Run unit tests across all packages       |
-| `make lint`      | Run ESLint across all packages           |
+| Command        | Description                              |
+| -------------- | ---------------------------------------- |
+| `make install` | Install all dependencies                 |
+| `make dev`     | Start all services (DB + ML + API + Web) |
+| `make build`   | Build all packages and apps              |
+| `make test`    | Run unit tests across all packages       |
+| `make lint`    | Run ESLint across all packages           |
 
 ### E2E Tests (Playwright)
 
@@ -81,7 +83,7 @@ pnpm exec playwright test --ui                   # Open Playwright UI
 **Prerequisites**: Docker running (DB + ML service), dev server auto-starts via config.
 
 **Structure**: `tests/e2e/pages/` (Page Objects), `tests/e2e/specs/` (test files), `tests/e2e/fixtures/` (data + Playwright fixtures), `tests/e2e/helpers/` (utilities).
-| `make typecheck` | TypeScript type check (no emit)          |
+| `make typecheck` | TypeScript type check (no emit) |
 
 ### Database
 
@@ -210,6 +212,17 @@ cycling-analyzer-v2/
 │   └── runbook-dev.md  # Development runbook
 └── scripts/            # Smoke tests and utilities
 ```
+
+## Observability
+
+Both the API and ML service emit structured JSON logs with correlation IDs that link requests across services.
+
+- **Structured logging**: Pino (API) and structlog (ML) — JSON in production, human-readable in development
+- **Correlation IDs**: Auto-generated per request, propagated via `x-correlation-id` header from API to ML service, included in error responses
+- **Distributed tracing**: OpenTelemetry with auto-instrumentation (HTTP, Express, pg, FastAPI, psycopg2). Console exporter by default — set `OTEL_EXPORTER_OTLP_ENDPOINT` to send traces to Jaeger, Grafana Tempo, or any OTLP-compatible backend
+- **Global error handling**: All unhandled exceptions are caught, logged with stack traces, and returned as structured JSON with `correlationId` for user-reportable error tracking
+
+OTel tracing is active in production builds (`pnpm start` / Docker). In dev mode (`pnpm dev`), structured logging and correlation IDs work without tracing overhead.
 
 ## Architecture
 

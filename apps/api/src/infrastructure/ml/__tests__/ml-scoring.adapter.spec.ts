@@ -1,4 +1,5 @@
 import { MlScoringAdapter } from '../ml-scoring.adapter';
+import { CorrelationStore } from '../../observability/correlation.store';
 
 // Save original fetch and restore after tests
 const originalFetch = global.fetch;
@@ -6,12 +7,14 @@ const originalFetch = global.fetch;
 describe('MlScoringAdapter', () => {
   let adapter: MlScoringAdapter;
   let mockFetch: jest.Mock;
+  let correlationStore: CorrelationStore;
 
   beforeEach(() => {
     mockFetch = jest.fn();
     global.fetch = mockFetch as unknown as typeof fetch;
     process.env.ML_SERVICE_URL = 'http://ml-test:8000';
-    adapter = new MlScoringAdapter();
+    correlationStore = new CorrelationStore();
+    adapter = new MlScoringAdapter(correlationStore);
   });
 
   afterEach(() => {
@@ -41,8 +44,28 @@ describe('MlScoringAdapter', () => {
         'http://ml-test:8000/predict',
         expect.objectContaining({
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ race_slug: 'tour-de-france', year: 2026 }),
+        }),
+      );
+    });
+
+    it('should propagate correlation ID to ML service', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ predictions: [] }),
+      });
+
+      await correlationStore.run('test-correlation-123', () =>
+        adapter.predictRace('tour-de-france', 2026),
+      );
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://ml-test:8000/predict',
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'x-correlation-id': 'test-correlation-123',
+          }),
         }),
       );
     });

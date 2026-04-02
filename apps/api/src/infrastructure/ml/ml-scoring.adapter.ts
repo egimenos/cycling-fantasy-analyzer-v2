@@ -1,10 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   MlScoringPort,
   MlPrediction,
   MlBreakdown,
   RaceProfileSummary,
 } from '../../domain/scoring/ml-scoring.port';
+import { CorrelationStore } from '../observability/correlation.store';
 
 const DEFAULT_BREAKDOWN: MlBreakdown = { gc: 0, stage: 0, mountain: 0, sprint: 0 };
 
@@ -14,8 +15,17 @@ export class MlScoringAdapter implements MlScoringPort {
   private readonly baseUrl: string;
   private readonly timeout = 120_000;
 
-  constructor() {
+  constructor(@Inject(CorrelationStore) private readonly correlationStore: CorrelationStore) {
     this.baseUrl = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
+  }
+
+  private buildHeaders(): Record<string, string> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const correlationId = this.correlationStore.getId();
+    if (correlationId) {
+      headers['x-correlation-id'] = correlationId;
+    }
+    return headers;
   }
 
   async predictRace(
@@ -38,7 +48,7 @@ export class MlScoringAdapter implements MlScoringPort {
       }
       const response = await fetch(`${this.baseUrl}/predict`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.buildHeaders(),
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(this.timeout),
       });
@@ -64,6 +74,7 @@ export class MlScoringAdapter implements MlScoringPort {
   async getModelVersion(): Promise<string | null> {
     try {
       const resp = await fetch(`${this.baseUrl}/health`, {
+        headers: this.buildHeaders(),
         signal: AbortSignal.timeout(2000),
       });
       const data = (await resp.json()) as { model_version?: string };
@@ -76,6 +87,7 @@ export class MlScoringAdapter implements MlScoringPort {
   async isHealthy(): Promise<boolean> {
     try {
       const resp = await fetch(`${this.baseUrl}/health`, {
+        headers: this.buildHeaders(),
         signal: AbortSignal.timeout(2000),
       });
       const data = (await resp.json()) as { status?: string };

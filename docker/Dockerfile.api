@@ -26,4 +26,4 @@ COPY --from=builder /app/apps/api/package.json ./
 USER appuser
 EXPOSE 3001
 ENV NODE_ENV=production
-CMD ["node", "dist/main.js"]
+CMD ["node", "-r", "./dist/infrastructure/observability/instrumentation.js", "dist/main.js"]

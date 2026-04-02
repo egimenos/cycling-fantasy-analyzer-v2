@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body } from '@nestjs/common';
 import {
   IsArray,
   IsNumber,
@@ -13,12 +13,6 @@ import {
 import { Type } from 'class-transformer';
 import { OptimizeTeamUseCase } from '../application/optimize/optimize-team.use-case';
 import { ScoredRider } from '../domain/optimizer/types';
-import {
-  InsufficientRidersError,
-  BudgetExceededByLockedRidersError,
-  ConflictingConstraintsError,
-  RiderNotFoundError,
-} from '../domain/optimizer/errors';
 
 /* ── DTO: matches shared-types AnalyzedRider ─────────────── */
 
@@ -110,41 +104,25 @@ export class OptimizeController {
         categoryScores: r.categoryScores as ScoredRider['categoryScores'],
       }));
 
-    try {
-      const result = this.optimizeUseCase.execute({
-        riders: scoredRiders,
-        budget: dto.budget,
-        mustInclude: dto.mustInclude,
-        mustExclude: dto.mustExclude,
-      });
+    const result = this.optimizeUseCase.execute({
+      riders: scoredRiders,
+      budget: dto.budget,
+      mustInclude: dto.mustInclude,
+      mustExclude: dto.mustExclude,
+    });
 
-      // Map domain ScoredRider back to AnalyzedRider for the frontend
-      const toAnalyzed = (r: ScoredRider) => ridersByName.get(r.id)!;
+    // Map domain ScoredRider back to AnalyzedRider for the frontend
+    const toAnalyzed = (r: ScoredRider) => ridersByName.get(r.id)!;
 
-      return {
-        optimalTeam: {
-          ...result.optimalTeam,
-          riders: result.optimalTeam.riders.map(toAnalyzed),
-        },
-        alternativeTeams: result.alternativeTeams.map((team) => ({
-          ...team,
-          riders: team.riders.map(toAnalyzed),
-        })),
-      };
-    } catch (error) {
-      if (error instanceof ConflictingConstraintsError) {
-        throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
-      }
-      if (error instanceof BudgetExceededByLockedRidersError) {
-        throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
-      }
-      if (error instanceof RiderNotFoundError) {
-        throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
-      }
-      if (error instanceof InsufficientRidersError) {
-        throw new HttpException(error.message, HttpStatus.UNPROCESSABLE_ENTITY);
-      }
-      throw error;
-    }
+    return {
+      optimalTeam: {
+        ...result.optimalTeam,
+        riders: result.optimalTeam.riders.map(toAnalyzed),
+      },
+      alternativeTeams: result.alternativeTeams.map((team) => ({
+        ...team,
+        riders: team.riders.map(toAnalyzed),
+      })),
+    };
   }
 }
