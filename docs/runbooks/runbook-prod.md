@@ -10,7 +10,7 @@ Practical reference for operating and troubleshooting the Cycling Analyzer in pr
 
 | Service    | Container            | Port | Healthcheck                      | Domain                              |
 | ---------- | -------------------- | ---- | -------------------------------- | ----------------------------------- |
-| API        | `cycling-api`        | 3001 | `GET /health`                    | `api.cycling.yourdomain.com`        |
+| API        | `cycling-api`        | 3001 | `GET /health/readiness`          | `api.cycling.yourdomain.com`        |
 | Web        | `cycling-web`        | 3000 | HTTP 200 on `/`                  | `cycling.yourdomain.com`            |
 | ML Service | `cycling-ml-service` | 8000 | `GET /health`                    | Internal only (not publicly routed) |
 | Database   | Dokploy DB service   | 5432 | Dokploy native health monitoring | Internal only                       |
@@ -183,7 +183,7 @@ Alternatively, use the Dokploy UI log viewer (Project > Service > Logs).
 3. Test connectivity through the API healthcheck:
 
    ```bash
-   docker exec cycling-api wget -qO- http://localhost:3001/health
+   docker exec cycling-api wget -qO- http://localhost:3001/health/readiness
    ```
 
    The API healthcheck validates DB connectivity implicitly.
@@ -274,7 +274,7 @@ Alternatively, use the Dokploy UI log viewer (Project > Service > Logs).
 | API logs (follow)           | `docker logs cycling-api --tail 100 -f`                                       |
 | ML logs (follow)            | `docker logs cycling-ml-service --tail 100 -f`                                |
 | Web logs (follow)           | `docker logs cycling-web --tail 100 -f`                                       |
-| API healthcheck             | `docker exec cycling-api wget -qO- http://localhost:3001/health`              |
+| API healthcheck             | `docker exec cycling-api wget -qO- http://localhost:3001/health/readiness`    |
 | ML healthcheck              | `docker exec cycling-ml-service curl -s http://localhost:8000/health`         |
 | Run migrations manually     | `docker exec cycling-api node dist/infrastructure/database/run-migrations.js` |
 | Seed database               | `docker exec cycling-api node dist/cli.js seed-database`                      |
