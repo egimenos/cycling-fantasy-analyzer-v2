@@ -13,8 +13,8 @@ test.describe('Breakout Potential Index', () => {
       const bpiHeader = dashboardPage.riderTable.locator('th').filter({ hasText: 'BPI' });
       await expect(bpiHeader).toBeVisible();
 
-      // Info icon present
-      const infoIcon = bpiHeader.locator('svg');
+      // Info icon present (first svg; second is the sort arrow)
+      const infoIcon = bpiHeader.locator('svg').first();
       await expect(infoIcon).toBeVisible();
     });
 
@@ -116,11 +116,13 @@ test.describe('Breakout Potential Index', () => {
       await expect(dashboardPage.riderTable.locator('text=BPI Signal Breakdown')).toBeVisible();
 
       // All 5 signal labels should be present
-      await expect(dashboardPage.riderTable.locator('text=Trajectory')).toBeVisible();
-      await expect(dashboardPage.riderTable.locator('text=Recency')).toBeVisible();
-      await expect(dashboardPage.riderTable.locator('text=Ceiling Gap')).toBeVisible();
-      await expect(dashboardPage.riderTable.locator('text=Route Fit')).toBeVisible();
-      await expect(dashboardPage.riderTable.locator('text=Variance')).toBeVisible();
+      await expect(dashboardPage.riderTable.getByText('Trajectory', { exact: true })).toBeVisible();
+      await expect(dashboardPage.riderTable.getByText('Recency', { exact: true })).toBeVisible();
+      await expect(
+        dashboardPage.riderTable.getByText('Ceiling Gap', { exact: true }),
+      ).toBeVisible();
+      await expect(dashboardPage.riderTable.getByText('Route Fit', { exact: true })).toBeVisible();
+      await expect(dashboardPage.riderTable.getByText('Variance', { exact: true })).toBeVisible();
     });
 
     test('should show upside scenario in Breakout tab', async ({ dashboardPage }) => {
@@ -261,7 +263,8 @@ test.describe('Breakout Potential Index', () => {
       const infoIcon = dashboardPage.riderTable
         .locator('th')
         .filter({ hasText: 'BPI' })
-        .locator('svg');
+        .locator('svg')
+        .first();
       await infoIcon.hover();
 
       const tooltip = page.locator('[role="tooltip"]');
