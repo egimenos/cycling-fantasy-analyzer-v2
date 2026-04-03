@@ -12,8 +12,8 @@ class TestFeatureCols:
     """Verify the canonical feature column list."""
 
     def test_feature_cols_count(self):
-        """FEATURE_COLS must have exactly 40 features (25 V2 + 6 micro-form + 4 age + 5 team)."""
-        assert len(FEATURE_COLS) == 40
+        """FEATURE_COLS must have exactly 43 features."""
+        assert len(FEATURE_COLS) == 43
 
     def test_feature_cols_names(self):
         """All expected feature names must be present."""
@@ -21,20 +21,27 @@ class TestFeatureCols:
             'pts_gc_12m', 'pts_stage_12m', 'pts_mountain_12m', 'pts_sprint_12m',
             'pts_total_12m', 'pts_total_6m', 'pts_total_3m',
             'pts_same_type_12m', 'race_count_12m', 'race_count_6m',
-            'top10_rate', 'top5_rate', 'win_rate', 'podium_rate',
+            'top10_rate', 'win_rate',
             'best_race_pts_12m', 'median_race_pts_12m',
-            'days_since_last', 'same_race_best', 'same_race_mean', 'same_race_editions',
-            'pts_total_alltime', 'race_type_enc', 'pts_trend_3m',
-            'stage_pts_12m', 'gc_pts_same_type',
+            'days_since_last',
+            'same_race_best', 'same_race_mean', 'has_same_race', 'same_race_gc_best',
+            'pts_trend_3m',
+            'gc_pts_same_type',
+            'recent_gc_form_score',
         ]
         expected_micro = [
             'pts_30d', 'pts_14d', 'race_count_30d',
             'last_race_pts', 'last_3_mean_pts', 'last_3_max_pts',
         ]
-        expected_age = ['age', 'is_young', 'is_veteran', 'pts_per_career_year']
+        expected_age = ['age']
         expected_team = ['team_rank', 'is_leader', 'team_size', 'pct_of_team', 'team_total_pts']
+        expected_profile = [
+            'pct_pts_p1p2', 'pct_pts_p4p5', 'pct_pts_p3',
+            'itt_top10_rate', 'stage_wins_flat', 'stage_wins_mountain',
+            'target_flat_pct', 'target_mountain_pct', 'target_itt_pct',
+        ]
 
-        all_expected = expected_v2 + expected_micro + expected_age + expected_team
+        all_expected = expected_v2 + expected_micro + expected_age + expected_team + expected_profile
         for name in all_expected:
             assert name in FEATURE_COLS, f"Missing feature: {name}"
 
@@ -133,8 +140,6 @@ class TestZeroHistoryRider:
 
         # Age should default to 28.0 (median)
         assert feats['age'] == 28.0
-        assert feats['is_young'] == 0
-        assert feats['is_veteran'] == 0
 
         # Team defaults
         assert feats['team_rank'] == 4

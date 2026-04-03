@@ -16,11 +16,13 @@ description: Implement documentation work packages using Divio templates and gen
 3. **NEVER write deliverable files to the main repository** - This is a critical workflow error
 
 **Why this matters:**
+
 - Each WP has an isolated worktree with its own branch
 - Changes in main repository will NOT be seen by reviewers looking at the WP worktree
 - Writing to main instead of the workspace causes review failures and merge conflicts
 
 **Verify you're in the right directory:**
+
 ```bash
 pwd
 # Should show: /path/to/repo/.worktrees/###-feature-WP##/
@@ -48,6 +50,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 ## Implementation Workflow
 
 Documentation implementation follows the standard workspace-per-WP model:
+
 - **Worktrees used** - Each WP has its own worktree with dedicated branch (same as code missions)
 - **Templates populated** - Use Divio templates as starting point
 - **Generators invoked** - Run JSDoc/Sphinx/rustdoc to create API reference
@@ -64,10 +67,13 @@ Documentation implementation follows the standard workspace-per-WP model:
 **Objective**: Create directory structure and configure doc generators.
 
 **Steps**:
+
 1. Create docs/ directory structure:
+
    ```bash
    mkdir -p docs/{tutorials,how-to,reference/api,explanation}
    ```
+
    <details><summary>PowerShell equivalent</summary>
 
    ```powershell
@@ -75,7 +81,9 @@ Documentation implementation follows the standard workspace-per-WP model:
    ```
 
    </details>
+
 2. Create index.md landing page:
+
    ```markdown
    # {Project Name} Documentation
 
@@ -88,11 +96,13 @@ Documentation implementation follows the standard workspace-per-WP model:
    - [Reference](reference/) - Technical specifications
    - [Explanation](explanation/) - Understand concepts
    ```
+
 3. Configure generators (per plan.md):
    - For Sphinx: Create docs/conf.py from template
    - For JSDoc: Create jsdoc.json from template
    - For rustdoc: Update Cargo.toml with metadata
 4. Create build script:
+
    ```bash
    #!/bin/bash
    # build-docs.sh
@@ -108,9 +118,11 @@ Documentation implementation follows the standard workspace-per-WP model:
 
    echo "Documentation built successfully!"
    ```
+
 5. Test build: Run build script, verify no errors
 
 **Deliverables**:
+
 - docs/ directory structure
 - index.md landing page
 - Generator configs (conf.py, jsdoc.json, Cargo.toml)
@@ -124,6 +136,7 @@ Documentation implementation follows the standard workspace-per-WP model:
 **Objective**: Write documentation content using Divio templates.
 
 **Steps**:
+
 1. **Select appropriate Divio template**:
    - Tutorial: Use `templates/divio/tutorial-template.md`
    - How-To: Use `templates/divio/howto-template.md`
@@ -131,20 +144,22 @@ Documentation implementation follows the standard workspace-per-WP model:
    - Explanation: Use `templates/divio/explanation-template.md`
 
 2. **Copy template to docs/**:
+
    ```bash
    # Example for tutorial
    cp templates/divio/tutorial-template.md docs/tutorials/getting-started.md
    ```
 
 3. **Fill in frontmatter**:
+
    ```yaml
    ---
    type: tutorial
-   audience: "beginners"
-   purpose: "Learn how to get started with {Project}"
-   created: "2026-01-12"
-   estimated_time: "15 minutes"
-   prerequisites: "Python 3.11+, pip"
+   audience: 'beginners'
+   purpose: 'Learn how to get started with {Project}'
+   created: '2026-01-12'
+   estimated_time: '15 minutes'
+   prerequisites: 'Python 3.11+, pip'
    ---
    ```
 
@@ -174,11 +189,13 @@ Documentation implementation follows the standard workspace-per-WP model:
 **For Reference Documentation**:
 
 **Auto-Generated Reference** (API docs):
+
 1. Ensure code has good doc comments:
    - Python: Docstrings with Google/NumPy format
    - JavaScript: JSDoc comments with @param, @returns
    - Rust: /// doc comments
 2. Run generator:
+
    ```bash
    # Sphinx (Python)
    sphinx-build -b html docs/ docs/_build/html/
@@ -189,6 +206,7 @@ Documentation implementation follows the standard workspace-per-WP model:
    # rustdoc (Rust)
    cargo doc --no-deps --document-private-items
    ```
+
 3. Review generated output:
    - Are all public APIs present?
    - Are descriptions clear?
@@ -200,12 +218,14 @@ Documentation implementation follows the standard workspace-per-WP model:
    - Or supplement with manual reference
 
 **Manual Reference** (CLI, config, data formats):
+
 1. Use reference template
 2. Document every option, every command, every field
 3. Be consistent in format (use tables)
 4. Include examples for each item
 
 **Deliverables**:
+
 - Completed documentation files in docs/
 - All templates filled with real content
 - All code examples tested and working
@@ -219,7 +239,9 @@ Documentation implementation follows the standard workspace-per-WP model:
 **Objective**: Validate documentation quality before considering complete.
 
 **Steps**:
+
 1. **Automated checks**:
+
    ```bash
    # Check heading hierarchy
    find docs/ -name "*.md" -exec grep -E '^#+' {} + | head -50
@@ -261,6 +283,7 @@ Documentation implementation follows the standard workspace-per-WP model:
    - Revise based on feedback
 
 6. **Final build and deploy** (if applicable):
+
    ```bash
    # Build final documentation
    ./build-docs.sh
@@ -270,6 +293,7 @@ Documentation implementation follows the standard workspace-per-WP model:
    ```
 
 **Deliverables**:
+
 - All automated checks passing
 - Manual review completed with feedback addressed
 - Divio compliance verified
@@ -282,6 +306,7 @@ Documentation implementation follows the standard workspace-per-WP model:
 ## Key Guidelines
 
 **For Agents**:
+
 - Use Divio templates as starting point, not empty files
 - Fill templates with real content, not more placeholders
 - Test all code examples before committing
@@ -290,6 +315,7 @@ Documentation implementation follows the standard workspace-per-WP model:
 - Validate quality at end (automated + manual checks)
 
 **For Users**:
+
 - Implementation creates actual documentation, not just structure
 - Templates provide guidance, you provide content
 - Generators handle API reference, you write the rest
@@ -301,6 +327,7 @@ Documentation implementation follows the standard workspace-per-WP model:
 ## Common Pitfalls
 
 **DON'T**:
+
 - Mix Divio types (tutorial that explains concepts, how-to that teaches basics)
 - Skip testing code examples (broken examples break trust)
 - Use only Western male names in examples
@@ -310,6 +337,7 @@ Documentation implementation follows the standard workspace-per-WP model:
 - Commit before validating (quality issue)
 
 **DO**:
+
 - Follow Divio principles for each type
 - Test every code example
 - Use diverse names in examples
@@ -341,16 +369,19 @@ git commit -m "docs(WP##): <describe your documentation>"
 </details>
 
 **Example commit messages:**
+
 - `docs(WP01): Add Divio structure and generator configs`
 - `docs(WP02): Add getting started tutorial`
 - `docs(WP05): Add API reference documentation`
 
 **Then move to review:**
+
 ```bash
 spec-kitty agent tasks move-task WP## --to for_review --note "Ready for review: <summary>"
 ```
 
 **Why this matters:**
+
 - `move-task` validates that your worktree has commits beyond main
 - Uncommitted changes will block the move to for_review
 - This prevents lost work and ensures reviewers see complete documentation

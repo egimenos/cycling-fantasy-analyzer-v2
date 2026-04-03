@@ -37,6 +37,7 @@ git branch --show-current  # Should match TARGET_BRANCH from setup-plan output
 ## Planning Interrogation
 
 For documentation missions, planning interrogation is lighter than software-dev:
+
 - **Simple projects** (single language, initial docs): 1-2 questions about structure preferences
 - **Complex projects** (multiple languages, existing docs): 2-3 questions about integration approach
 
@@ -44,6 +45,7 @@ For documentation missions, planning interrogation is lighter than software-dev:
 
 **Q1: Documentation Framework**
 "Do you have a preferred documentation framework/generator?"
+
 - Sphinx (Python ecosystem standard)
 - MkDocs (Markdown-focused, simple)
 - Docusaurus (React-based, modern)
@@ -54,6 +56,7 @@ For documentation missions, planning interrogation is lighter than software-dev:
 
 **Q2: Generator Integration Approach** (if multiple languages detected)
 "How should API reference for different languages be organized?"
+
 - Unified (all APIs in one reference section)
 - Separated (language-specific reference sections)
 - Parallel (side-by-side comparison)
@@ -99,7 +102,7 @@ For documentation missions, planning interrogation is lighter than software-dev:
 
    **Output**: `gap-analysis.md` file in feature directory
 
-   ---
+   ***
 
    ### Generator Research (all modes)
 
@@ -163,13 +166,14 @@ For documentation missions, planning interrogation is lighter than software-dev:
    - Project size (small projects may flatten structure)
    - Existing docs (extend existing structure if gap-filling)
 
-   ---
+   ***
 
    ### Generator Configuration Design
 
    **For Each Generator**:
 
    **Sphinx (Python)**:
+
    ```python
    # docs/conf.py
    project = '{project_name}'
@@ -189,6 +193,7 @@ For documentation missions, planning interrogation is lighter than software-dev:
    ```
 
    **JSDoc (JavaScript)**:
+
    ```json
    {
      "source": {
@@ -204,6 +209,7 @@ For documentation missions, planning interrogation is lighter than software-dev:
    ```
 
    **rustdoc (Rust)**:
+
    ```toml
    [package.metadata.docs.rs]
    all-features = true
@@ -212,7 +218,7 @@ For documentation missions, planning interrogation is lighter than software-dev:
 
    **Output**: Generator config snippets in plan.md, templates ready for implementation
 
-   ---
+   ***
 
    ### Data Model
 
@@ -222,7 +228,7 @@ For documentation missions, planning interrogation is lighter than software-dev:
    - **Documentation Generator**: JSDoc, Sphinx, rustdoc configurations
    - **Gap Analysis** (if applicable): Coverage matrix, prioritized gaps
 
-   ---
+   ***
 
    ### Work Breakdown
 
@@ -248,7 +254,7 @@ For documentation missions, planning interrogation is lighter than software-dev:
    2. WP02: Integration - Integrate with existing documentation
    3. WP03: Quality Validation - Validate feature docs
 
-   ---
+   ***
 
    ### Quickstart
 
@@ -268,6 +274,7 @@ For documentation missions, planning interrogation is lighter than software-dev:
 ## Key Guidelines
 
 **For Agents**:
+
 - Run gap analysis only for gap-filling mode
 - Auto-detect documentation framework from existing docs
 - Configure generators based on detected languages
@@ -276,6 +283,7 @@ For documentation missions, planning interrogation is lighter than software-dev:
 - Plan includes both auto-generated and manual documentation
 
 **For Users**:
+
 - Planning designs documentation structure, doesn't write content yet
 - Generator configs enable automated API reference
 - Gap analysis (if iterating) shows what needs attention

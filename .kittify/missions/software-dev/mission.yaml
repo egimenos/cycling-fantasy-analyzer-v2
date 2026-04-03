@@ -1,21 +1,21 @@
-name: "Software Dev Kitty"
-description: "Build high-quality software with structured workflows and test-driven development"
-version: "1.0.0"
-domain: "software"
+name: 'Software Dev Kitty'
+description: 'Build high-quality software with structured workflows and test-driven development'
+version: '1.0.0'
+domain: 'software'
 
 # Workflow customization
 workflow:
   phases:
-    - name: "research"
-      description: "Research technologies and best practices"
-    - name: "design"
-      description: "Define architecture and contracts"
-    - name: "implement"
-      description: "Write code following TDD"
-    - name: "test"
-      description: "Validate implementation"
-    - name: "review"
-      description: "Code review and quality checks"
+    - name: 'research'
+      description: 'Research technologies and best practices'
+    - name: 'design'
+      description: 'Define architecture and contracts'
+    - name: 'implement'
+      description: 'Write code following TDD'
+    - name: 'test'
+      description: 'Validate implementation'
+    - name: 'review'
+      description: 'Code review and quality checks'
 
 # Expected artifacts
 artifacts:
@@ -32,10 +32,10 @@ artifacts:
 
 # Path conventions for this mission
 paths:
-  workspace: "src/"
-  tests: "tests/"
-  deliverables: "contracts/"
-  documentation: "docs/"
+  workspace: 'src/'
+  tests: 'tests/'
+  deliverables: 'contracts/'
+  documentation: 'docs/'
 
 # Validation rules
 validation:
@@ -44,7 +44,7 @@ validation:
     - all_tests_pass
     - kanban_complete
     - no_clarification_markers
-  custom_validators: true  # Use validators.py
+  custom_validators: true # Use validators.py
 
 # MCP tools recommended for this mission
 mcp_tools:
@@ -87,14 +87,14 @@ task_metadata:
 # Command customization
 commands:
   specify:
-    prompt: "Define user scenarios and acceptance criteria"
+    prompt: 'Define user scenarios and acceptance criteria'
   plan:
-    prompt: "Design technical architecture and implementation plan"
+    prompt: 'Design technical architecture and implementation plan'
   tasks:
-    prompt: "Break into work packages with TDD workflow"
+    prompt: 'Break into work packages with TDD workflow'
   implement:
-    prompt: "Execute implementation following test-first methodology"
+    prompt: 'Execute implementation following test-first methodology'
   review:
-    prompt: "Perform code review and validate against specification"
+    prompt: 'Perform code review and validate against specification'
   accept:
-    prompt: "Validate feature completeness and quality gates"
+    prompt: 'Validate feature completeness and quality gates'

@@ -1,4 +1,5 @@
 # Feature Specification: Documentation Project - [PROJECT NAME]
+
 <!-- Replace [PROJECT NAME] with the confirmed friendly title generated during /spec-kitty.specify. -->
 
 **Feature Branch**: `[###-feature-name]`
@@ -15,21 +16,23 @@
 **Languages Detected**: [Auto-detected during planning - JavaScript, Python, Rust, etc.]
 **Generators to Use**: [Based on languages - JSDoc, Sphinx, rustdoc]
 
-### Gap Analysis Results *(for gap-filling mode only)*
+### Gap Analysis Results _(for gap-filling mode only)_
 
 **Existing Documentation**:
+
 - [List current docs and their Divio types]
 - Example: `README.md` - explanation (partial)
 - Example: `API.md` - reference (outdated)
 
 **Identified Gaps**:
+
 - [Missing Divio types or outdated content]
 - Example: No tutorial for getting started
 - Example: Reference docs don't cover new v2 API
 
-**Coverage Percentage**: [X%] *(calculated from gap analysis)*
+**Coverage Percentage**: [X%] _(calculated from gap analysis)_
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 <!--
   IMPORTANT: Documentation user stories focus on DOCUMENTATION CONSUMERS.
@@ -46,6 +49,7 @@
 **Why this priority**: [Explain value - e.g., "New users can't adopt the library without a tutorial"]
 
 **Independent Test**: [How to verify documentation achieves the goal]
+
 - Example: "New developer with no prior knowledge can complete getting-started tutorial in under 15 minutes"
 
 **Acceptance Scenarios**:
@@ -91,7 +95,7 @@
 - How do users find information that doesn't fit standard Divio types?
 - What if generated documentation conflicts with manually-written documentation?
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -102,17 +106,17 @@
 - **FR-003**: Documentation MUST use bias-free language and inclusive examples
 - **FR-004**: Documentation MUST provide working code examples for all key use cases
 
-*Example of marking unclear requirements:*
+_Example of marking unclear requirements:_
 
 - **FR-005**: Documentation MUST cover [NEEDS CLARIFICATION: which features? all public APIs? core features only?]
 
-#### Generation Requirements *(if using generators)*
+#### Generation Requirements _(if using generators)_
 
 - **FR-006**: System MUST generate API reference from [JSDoc comments | Python docstrings | Rust doc comments]
 - **FR-007**: Generated documentation MUST integrate seamlessly with manually-written documentation
 - **FR-008**: Generator configuration MUST be version-controlled and reproducible
 
-#### Gap-Filling Requirements *(if gap-filling mode)*
+#### Gap-Filling Requirements _(if gap-filling mode)_
 
 - **FR-009**: Gap analysis MUST identify missing Divio types across all documentation areas
 - **FR-010**: Gap analysis MUST detect API reference docs that are outdated compared to current code
@@ -125,7 +129,7 @@
 - **Gap Analysis**: Assessment identifying missing or outdated documentation, with coverage metrics
 - **Documentation Template**: Structured template following Divio principles for a specific documentation type
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

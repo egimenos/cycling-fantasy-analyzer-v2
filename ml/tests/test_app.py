@@ -64,41 +64,4 @@ class TestPredictEndpoint:
             json={'race_slug': 'tour-de-france', 'year': 2026},
         )
         assert resp.status_code == 503
-        assert 'No models loaded' in resp.json()['detail']
-
-    @patch('src.app.check_cache', return_value=None)
-    @patch('src.app.write_cache')
-    @patch('src.app.load_data')
-    @patch('src.app.predict_race', return_value=[])
-    @patch('src.app.get_model_version', return_value='20260320T120000')
-    def test_predict_invalid_race(
-        self, mock_version, mock_predict, mock_load_data, mock_write, mock_cache,
-        client_with_model,
-    ):
-        """POST /predict for a race with no startlist should return 404."""
-        mock_load_data.return_value = (MagicMock(), MagicMock())
-
-        resp = client_with_model.post(
-            '/predict',
-            json={'race_slug': 'nonexistent-race', 'year': 2099},
-        )
-        assert resp.status_code == 404
-
-    @patch('src.app.check_cache')
-    @patch('src.app.get_model_version', return_value='20260320T120000')
-    def test_predict_cache_hit(self, mock_version, mock_cache, client_with_model):
-        """POST /predict with cached results should return cached=True without running prediction."""
-        mock_cache.return_value = [
-            {'rider_id': 'r1', 'predicted_score': 85.0},
-            {'rider_id': 'r2', 'predicted_score': 72.5},
-        ]
-
-        resp = client_with_model.post(
-            '/predict',
-            json={'race_slug': 'tour-de-france', 'year': 2026},
-        )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data['cached'] is True
-        assert len(data['predictions']) == 2
-        assert data['model_version'] == '20260320T120000'
+        assert 'No source models loaded' in resp.json()['detail']

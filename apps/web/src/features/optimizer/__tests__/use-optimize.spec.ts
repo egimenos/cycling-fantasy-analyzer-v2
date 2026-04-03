@@ -22,13 +22,23 @@ const sampleRider: AnalyzedRider = {
   unmatched: false,
   pointsPerHillio: 0.5,
   totalProjectedPts: 50,
-  categoryScores: { gc: 20, stage: 10, mountain: 10, sprint: 5 },
+  categoryScores: {
+    gc: 20,
+    stage: 10,
+    mountain: 10,
+    sprint: 5,
+    gc_daily: 0,
+    mountain_pass: 0,
+    sprint_intermediate: 0,
+    regularidad_daily: 0,
+  },
   seasonsUsed: 2,
   seasonBreakdown: null,
   scoringMethod: 'rules' as const,
   mlPredictedScore: null,
   mlBreakdown: null,
   breakout: null,
+  sameRaceHistory: null,
 };
 
 const sampleResponse: OptimizeResponse = {
@@ -37,7 +47,16 @@ const sampleResponse: OptimizeResponse = {
     totalCostHillios: 100,
     totalProjectedPts: 50,
     budgetRemaining: 1900,
-    scoreBreakdown: { gc: 20, stage: 10, mountain: 10, sprint: 5 },
+    scoreBreakdown: {
+      gc: 20,
+      stage: 10,
+      mountain: 10,
+      sprint: 5,
+      gc_daily: 0,
+      mountain_pass: 0,
+      sprint_intermediate: 0,
+      regularidad_daily: 0,
+    },
   },
   alternativeTeams: [],
 };

@@ -8,10 +8,10 @@ Research WPs produce deliverables in a **worktree**, which merge to the target b
 
 ### Two Types of Artifacts
 
-| Type | Location | Review Focus |
-|------|----------|--------------|
-| **Research Deliverables** | `{{deliverables_path}}` (in worktree) | PRIMARY - Your main review target |
-| **Planning Artifacts** | `kitty-specs/{{feature_slug}}/research/` (in main) | SECONDARY - Citation validation only |
+| Type                      | Location                                           | Review Focus                         |
+| ------------------------- | -------------------------------------------------- | ------------------------------------ |
+| **Research Deliverables** | `{{deliverables_path}}` (in worktree)              | PRIMARY - Your main review target    |
+| **Planning Artifacts**    | `kitty-specs/{{feature_slug}}/research/` (in main) | SECONDARY - Citation validation only |
 
 ### Review Checklist
 
@@ -28,6 +28,7 @@ Research WPs produce deliverables in a **worktree**, which merge to the target b
 **For research missions, `dependencies: []` is often NORMAL.**
 
 Research phases typically work like this:
+
 - **Investigation phase**: WPs run in parallel, no inter-dependencies
 - **Synthesis phase**: WPs depend on investigation WPs
 - **Final/Validation phase**: Depends on synthesis
@@ -35,6 +36,7 @@ Research phases typically work like this:
 Empty dependencies means this WP CAN start immediately - it's **not an error**.
 
 **To see dependency relationships:**
+
 ```bash
 spec-kitty agent tasks list-dependents WP##
 
@@ -44,6 +46,7 @@ spec-kitty agent tasks list-dependents WP##
 ```
 
 **Why this matters for review:**
+
 - If a WP has dependents and you request changes, those downstream WPs may need updates
 - The review workflow will warn you about incomplete dependents
 
@@ -62,9 +65,11 @@ You **MUST** consider the user input before proceeding (if not empty).
 Before proceeding with review, verify you are in the correct working directory by running the shared pre-flight validation:
 
 ```python
+
 ```
 
 **What this validates**:
+
 - Current branch follows the feature pattern like `001-feature-name`
 - You're not attempting to run from `main` or any release branch
 - The validator prints clear navigation instructions if you're outside the feature worktree
@@ -102,6 +107,7 @@ if source_register.exists():
 ```
 
 **Validation Requirements**:
+
 - All sources must be documented with unique `source_id` entries.
 - Citations must be present in both CSVs (format warnings are advisory).
 - Confidence levels should be filled for evidence entries.
@@ -128,16 +134,17 @@ if source_register.exists():
    - Document findings explicitly: bugs, regressions, missing tests, risks, or validation notes.
 
 5. Decide outcome:
-  - **Needs changes**:
-     * Append a new entry in the prompt’s **Activity Log** detailing feedback (include timestamp, reviewer agent, shell PID).
-     * Update frontmatter `lane` back to `planned`, clear `assignee` if necessary, keep history entry.
-     * Add/revise a `## Review Feedback` section (create if missing) summarizing action items.
-     * Save feedback to a file and run `spec-kitty agent tasks move-task <TASK_ID> --to planned --review-feedback-file <feedback-file>` (use the PowerShell equivalent on Windows) so rollback validation captures the feedback source deterministically.
-  - **Approved**:
-     * Append Activity Log entry capturing approval details (capture shell PID via `echo $$` or helper script).
-     * Update frontmatter: set `lane=done`, set reviewer metadata (`agent`, `shell_pid`), optional `assignee` for approver.
-     * Use helper script to mark the task complete in `tasks.md` (see Step 6).
-     * Run `spec-kitty agent tasks move-task <FEATURE> <TASK_ID> done --note "Approved for release"` (PowerShell variant available) to transition the prompt into `tasks/`.
+
+- **Needs changes**:
+  - Append a new entry in the prompt’s **Activity Log** detailing feedback (include timestamp, reviewer agent, shell PID).
+  - Update frontmatter `lane` back to `planned`, clear `assignee` if necessary, keep history entry.
+  - Add/revise a `## Review Feedback` section (create if missing) summarizing action items.
+  - Save feedback to a file and run `spec-kitty agent tasks move-task <TASK_ID> --to planned --review-feedback-file <feedback-file>` (use the PowerShell equivalent on Windows) so rollback validation captures the feedback source deterministically.
+- **Approved**:
+  - Append Activity Log entry capturing approval details (capture shell PID via `echo $$` or helper script).
+  - Update frontmatter: set `lane=done`, set reviewer metadata (`agent`, `shell_pid`), optional `assignee` for approver.
+  - Use helper script to mark the task complete in `tasks.md` (see Step 6).
+  - Run `spec-kitty agent tasks move-task <FEATURE> <TASK_ID> done --note "Approved for release"` (PowerShell variant available) to transition the prompt into `tasks/`.
 
 6. Update `tasks.md` automatically:
    - Run `spec-kitty agent tasks mark-status --task-id <TASK_ID> --status done` (POSIX) or `spec-kitty agent tasks mark-status --task-id <TASK_ID> --status done` (PowerShell) from repo root.
@@ -145,10 +152,11 @@ if source_register.exists():
 
 7. Produce a review report summarizing:
    - Task ID and filename reviewed.
-  - Approval status and key findings.
-   - Tests executed and their results.
-   - Follow-up actions (if any) for other team members.
-   - Reminder to push changes or notify teammates as per project conventions.
+
+- Approval status and key findings.
+- Tests executed and their results.
+- Follow-up actions (if any) for other team members.
+- Reminder to push changes or notify teammates as per project conventions.
 
 Context for review: {ARGS}
 
@@ -185,6 +193,7 @@ if source_register.exists():
 ```
 
 **Validation Requirements**:
+
 - All sources must be documented with unique `source_id` entries.
 - Citations must be present in both CSVs (format warnings are advisory).
 - Confidence levels should be filled for evidence entries.

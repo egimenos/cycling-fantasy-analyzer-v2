@@ -19,7 +19,16 @@ function makeRider(overrides: Partial<AnalyzedRider> = {}): AnalyzedRider {
     matchConfidence: 0.95,
     pointsPerHillio: 0.12,
     totalProjectedPts: 85,
-    categoryScores: { gc: 40, stage: 20, mountain: 10, sprint: 5 },
+    categoryScores: {
+      gc: 40,
+      stage: 20,
+      mountain: 10,
+      sprint: 5,
+      gc_daily: 0,
+      mountain_pass: 0,
+      sprint_intermediate: 0,
+      regularidad_daily: 0,
+    },
     seasonsUsed: 3,
     seasonBreakdown: null,
     unmatched: false,
@@ -27,6 +36,7 @@ function makeRider(overrides: Partial<AnalyzedRider> = {}): AnalyzedRider {
     mlPredictedScore: null,
     mlBreakdown: null,
     breakout: null,
+    sameRaceHistory: null,
     ...overrides,
   };
 }

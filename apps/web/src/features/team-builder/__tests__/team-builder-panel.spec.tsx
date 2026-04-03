@@ -14,11 +14,23 @@ function makeRider(name: string, price = 100, score = 50): AnalyzedRider {
     unmatched: false,
     pointsPerHillio: score / price,
     totalProjectedPts: score,
-    categoryScores: { gc: 20, stage: 10, mountain: 10, sprint: 5 },
+    categoryScores: {
+      gc: 20,
+      stage: 10,
+      mountain: 10,
+      sprint: 5,
+      gc_daily: 0,
+      mountain_pass: 0,
+      sprint_intermediate: 0,
+      regularidad_daily: 0,
+    },
     seasonsUsed: 2,
     seasonBreakdown: null,
     scoringMethod: 'rules' as const,
     mlPredictedScore: null,
+    mlBreakdown: null,
+    breakout: null,
+    sameRaceHistory: null,
   };
 }
 

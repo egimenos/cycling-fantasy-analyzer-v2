@@ -1,23 +1,23 @@
-name: "Documentation Kitty"
-description: "Create and maintain high-quality software documentation following Write the Docs and Divio principles"
-version: "1.0.0"
-domain: "other"
+name: 'Documentation Kitty'
+description: 'Create and maintain high-quality software documentation following Write the Docs and Divio principles'
+version: '1.0.0'
+domain: 'other'
 
 # Workflow customization
 workflow:
   phases:
-    - name: "discover"
-      description: "Identify documentation needs and target audience"
-    - name: "audit"
-      description: "Analyze existing documentation and identify gaps"
-    - name: "design"
-      description: "Plan documentation structure and Divio types"
-    - name: "generate"
-      description: "Create documentation from templates and generators"
-    - name: "validate"
-      description: "Check quality, accessibility, and completeness"
-    - name: "publish"
-      description: "Deploy documentation and notify stakeholders"
+    - name: 'discover'
+      description: 'Identify documentation needs and target audience'
+    - name: 'audit'
+      description: 'Analyze existing documentation and identify gaps'
+    - name: 'design'
+      description: 'Plan documentation structure and Divio types'
+    - name: 'generate'
+      description: 'Create documentation from templates and generators'
+    - name: 'validate'
+      description: 'Check quality, accessibility, and completeness'
+    - name: 'publish'
+      description: 'Deploy documentation and notify stakeholders'
 
 # Expected artifacts
 artifacts:
@@ -37,9 +37,9 @@ artifacts:
 
 # Path conventions for this mission
 paths:
-  workspace: "docs/"
-  deliverables: "docs/output/"
-  documentation: "docs/"
+  workspace: 'docs/'
+  deliverables: 'docs/output/'
+  documentation: 'docs/'
 
 # Validation rules
 validation:
@@ -50,7 +50,7 @@ validation:
     - gap_analysis_complete
     - documentation_state_exists
     - audit_recency
-  custom_validators: false  # No custom validators.py initially
+  custom_validators: false # No custom validators.py initially
 
 # MCP tools recommended for this mission
 mcp_tools:
@@ -102,14 +102,14 @@ task_metadata:
 # Command customization
 commands:
   specify:
-    prompt: "Define documentation needs: iteration mode (initial/gap-filling/feature-specific), Divio types to include, target audience, and documentation goals"
+    prompt: 'Define documentation needs: iteration mode (initial/gap-filling/feature-specific), Divio types to include, target audience, and documentation goals'
   plan:
-    prompt: "Design documentation structure, configure generators (JSDoc/Sphinx/rustdoc), plan gap-filling strategy if iterating"
+    prompt: 'Design documentation structure, configure generators (JSDoc/Sphinx/rustdoc), plan gap-filling strategy if iterating'
   tasks:
-    prompt: "Break documentation work into packages: template creation, generator setup, content authoring, quality validation"
+    prompt: 'Break documentation work into packages: template creation, generator setup, content authoring, quality validation'
   implement:
-    prompt: "Generate documentation from templates, invoke generators for reference docs, populate templates with project-specific content"
+    prompt: 'Generate documentation from templates, invoke generators for reference docs, populate templates with project-specific content'
   review:
-    prompt: "Validate Divio type adherence, check accessibility guidelines, verify generator output quality, assess completeness"
+    prompt: 'Validate Divio type adherence, check accessibility guidelines, verify generator output quality, assess completeness'
   accept:
-    prompt: "Validate documentation completeness, quality gates, and readiness for publication"
+    prompt: 'Validate documentation completeness, quality gates, and readiness for publication'

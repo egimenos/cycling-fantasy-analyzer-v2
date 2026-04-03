@@ -20,7 +20,7 @@ export function parseRaceOverview(html: string): ParsedStageInfo[] {
     $(el).text().trim().toLowerCase().includes('stages'),
   );
 
-  let table =
+  const table =
     stagesHeading.length > 0 ? stagesHeading.next('table.basic') : $('table.basic').first();
 
   if (table.length === 0) return [];

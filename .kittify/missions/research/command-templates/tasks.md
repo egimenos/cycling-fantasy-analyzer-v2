@@ -111,7 +111,6 @@ git branch --show-current  # Should match TARGET_BRANCH from check-prerequisites
    - WP04: Validation
 
    ### Prioritization
-
    - **P0 (foundation)**: Literature search setup, source register initialization
    - **P1 (critical)**: Source review, evidence extraction
    - **P2 (important)**: Analysis, synthesis, findings
@@ -128,7 +127,6 @@ git branch --show-current  # Should match TARGET_BRANCH from check-prerequisites
 6. **Generate prompt files**:
 
    **CRITICAL PATH RULE**: All work package files MUST be created in a FLAT `feature_dir/tasks/` directory, NOT in subdirectories!
-
    - Use `artifact_dirs.tasks_dir` when available.
    - Do **not** shell out with `mkdir -p`; `create-feature` already creates `tasks/` in normal flow.
    - If `tasks/` is missing unexpectedly, report the mismatch instead of improvising shell directory setup.
@@ -147,6 +145,7 @@ git branch --show-current  # Should match TARGET_BRANCH from check-prerequisites
 7. **Finalize tasks with dependency parsing and commit**:
 
    **CRITICAL**: Run this command from repo root:
+
    ```bash
    spec-kitty agent feature finalize-tasks --json
    ```
@@ -167,21 +166,25 @@ git branch --show-current  # Should match TARGET_BRANCH from check-prerequisites
 ## Research-Specific Task Generation Rules
 
 **Evidence Tracking**:
+
 - Every subtask that produces findings MUST specify output to evidence-log.csv
 - Every subtask that identifies sources MUST specify output to source-register.csv
 - Include subtasks for evidence validation and citation verification
 
 **Parallel Opportunities**:
+
 - Database searches are parallel (`[P]`) - different databases can be searched simultaneously
 - Source reviews are parallel (`[P]`) - different sources can be reviewed simultaneously
 - Researcher batches are parallel (`[P]`) - work can be split across reviewers
 
 **Quality Subtasks**:
+
 - Include confidence level assignment for findings
 - Include bias checking for source selection
 - Include methodology adherence verification
 
 **Work Package Scope**:
+
 - Each methodology phase typically gets its own work package
 - Phase transitions are natural dependency boundaries
 - Quality validation is always the final work package
@@ -194,25 +197,25 @@ git branch --show-current  # Should match TARGET_BRANCH from check-prerequisites
 
 ```yaml
 ---
-work_package_id: "WP01"
+work_package_id: 'WP01'
 subtasks:
-  - "T001"
-  - "T002"
-title: "Literature Search & Source Collection"
-phase: "Phase 1 - Literature Review"
-lane: "planned"  # DO NOT EDIT - use: spec-kitty agent tasks move-task <WPID> --to <lane>
-assignee: ""
-agent: ""
-shell_pid: ""
-review_status: ""
-reviewed_by: ""
-dependencies: []  # Added by finalize-tasks
+  - 'T001'
+  - 'T002'
+title: 'Literature Search & Source Collection'
+phase: 'Phase 1 - Literature Review'
+lane: 'planned' # DO NOT EDIT - use: spec-kitty agent tasks move-task <WPID> --to <lane>
+assignee: ''
+agent: ''
+shell_pid: ''
+review_status: ''
+reviewed_by: ''
+dependencies: [] # Added by finalize-tasks
 history:
-  - timestamp: "2026-01-19T00:00:00Z"
-    lane: "planned"
-    agent: "system"
-    shell_pid: ""
-    action: "Prompt generated via /spec-kitty.tasks"
+  - timestamp: '2026-01-19T00:00:00Z'
+    lane: 'planned'
+    agent: 'system'
+    shell_pid: ''
+    action: 'Prompt generated via /spec-kitty.tasks'
 ---
 ```
 
@@ -223,6 +226,7 @@ history:
 ## Key Guidelines
 
 **For Agents**:
+
 - Use methodology phases as natural WP boundaries
 - Mark parallel subtasks (database searches, source reviews)
 - Include evidence tracking in every WP prompt
@@ -230,6 +234,7 @@ history:
 - Use `spec-kitty agent tasks move-task` to change lanes
 
 **For Users**:
+
 - Tasks.md shows the full research work breakdown
 - Work packages follow methodology phases
 - MVP is typically the literature search phase

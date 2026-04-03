@@ -9,8 +9,10 @@ function log(level: string, msg: string, extra?: Record<string, unknown>): void 
 }
 
 async function runMigrations(): Promise<void> {
-  const connectionString =
-    process.env.DATABASE_URL ?? 'postgresql://cycling:cycling@localhost:5432/cycling_analyzer';
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL environment variable is required');
+  }
+  const connectionString = process.env.DATABASE_URL;
 
   const pool = new Pool({ connectionString });
   const db = drizzle(pool);

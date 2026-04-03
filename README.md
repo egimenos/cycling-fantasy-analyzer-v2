@@ -185,6 +185,23 @@ ML predictions are cached in the `ml_scores` database table. The cache auto-inva
 
 For manual invalidation, use `make clear-ml-cache`.
 
+## CI Pipeline
+
+GitHub Actions runs on every PR to `main` and on pushes to `main`. All checks must pass before merging.
+
+| Job               | What it checks                                          |
+| ----------------- | ------------------------------------------------------- |
+| **Lint & Format** | ESLint (all packages via turbo) + Prettier format check |
+| **Type Check**    | `tsc --noEmit` for API and Web                          |
+| **Build**         | Full turbo build (shared-types → API + Web)             |
+| **Commitlint**    | Conventional commit messages on PR commits              |
+| **API Tests**     | Jest unit tests                                         |
+| **Web Tests**     | Vitest unit tests                                       |
+| **ML Tests**      | pytest (Python 3.11)                                    |
+| **E2E Tests**     | Playwright with Postgres service + API server           |
+
+Concurrency control cancels in-progress runs when a new push arrives on the same branch. E2E failures upload Playwright traces and screenshots as artifacts.
+
 ## Project Structure
 
 ```
