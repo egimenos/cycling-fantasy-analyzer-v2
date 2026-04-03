@@ -65,7 +65,6 @@
     "classic_win_pct"
   ],
   "n_features": 51,
-  "n_train": 35166,
-  "version": "1.0.0",
-  "description": "Classics ML model v1 \u2014 LightGBM sqrt, all Tier 1+2+3 features"
+  "n_train": 43803,
+  "version": "1.0.0"
 }
