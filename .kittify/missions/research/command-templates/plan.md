@@ -15,9 +15,11 @@ You **MUST** consider the user input before proceeding (if not empty).
 Before proceeding with planning, verify you are in the correct working directory by running the shared pre-flight validation:
 
 ```python
+
 ```
 
 **What this validates**:
+
 - Current branch follows the feature pattern like `001-feature-name`
 - You're not attempting to run from `main` or any release branch
 - The validator prints clear navigation instructions if you're outside the feature worktree
@@ -82,6 +84,7 @@ Planning requirements (scale to complexity):
    - For each integration → patterns task
 
 2. **Generate and dispatch research agents**:
+
    ```
    For each unknown in Technical Context:
      Task: "Research {unknown} for {feature context}"
@@ -117,7 +120,7 @@ Planning requirements (scale to complexity):
    - Add only new technology from current plan
    - Preserve manual additions between markers
 
-**Output**: data-model.md, /contracts/*, quickstart.md, agent-specific file
+**Output**: data-model.md, /contracts/\*, quickstart.md, agent-specific file
 
 ## Key rules
 

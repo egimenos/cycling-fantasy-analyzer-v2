@@ -81,25 +81,25 @@ Planning requirements (scale to complexity):
    Before running any commands, detect which feature you're working on:
 
    a. **Check git branch name**:
-      - Run: `git rev-parse --abbrev-ref HEAD`
-      - If branch matches pattern `###-feature-name` or `###-feature-name-WP##`, extract the feature slug (strip `-WP##` suffix if present)
-      - Example: Branch `020-my-feature` or `020-my-feature-WP01` → Feature `020-my-feature`
+   - Run: `git rev-parse --abbrev-ref HEAD`
+   - If branch matches pattern `###-feature-name` or `###-feature-name-WP##`, extract the feature slug (strip `-WP##` suffix if present)
+   - Example: Branch `020-my-feature` or `020-my-feature-WP01` → Feature `020-my-feature`
 
    b. **Check current directory**:
-      - Look for `###-feature-name` pattern in the current path
-      - Examples:
-        - Inside `kitty-specs/020-my-feature/` → Feature `020-my-feature`
-        - Not in a worktree during planning (worktrees only used during implement): If detection runs from `.worktrees/020-my-feature-WP01/` → Feature `020-my-feature`
+   - Look for `###-feature-name` pattern in the current path
+   - Examples:
+     - Inside `kitty-specs/020-my-feature/` → Feature `020-my-feature`
+     - Not in a worktree during planning (worktrees only used during implement): If detection runs from `.worktrees/020-my-feature-WP01/` → Feature `020-my-feature`
 
    c. **Prioritize features without plan.md** (if multiple exist):
-      - If multiple features exist and none detected from branch/path, list all features in `kitty-specs/`
-      - Prefer features that don't have `plan.md` yet (unplanned features)
-      - If ambiguous, ask the user which feature to plan
+   - If multiple features exist and none detected from branch/path, list all features in `kitty-specs/`
+   - Prefer features that don't have `plan.md` yet (unplanned features)
+   - If ambiguous, ask the user which feature to plan
 
    d. **Extract feature slug**:
-      - Feature slug format: `###-feature-name` (e.g., `020-my-feature`)
-      - You MUST pass this explicitly to the setup-plan command using `--feature` flag
-      - **DO NOT** rely on auto-detection by the CLI (prevents wrong feature selection)
+   - Feature slug format: `###-feature-name` (e.g., `020-my-feature`)
+   - You MUST pass this explicitly to the setup-plan command using `--feature` flag
+   - **DO NOT** rely on auto-detection by the CLI (prevents wrong feature selection)
 
 3. **Setup**: Run `spec-kitty agent feature setup-plan --feature <feature-slug> --json` from the repository root and parse JSON for:
    - `result`: "success" or error message
@@ -108,6 +108,7 @@ Planning requirements (scale to complexity):
    - `target_branch` / `base_branch` (deterministic branch contract for downstream commands)
 
    **Example**:
+
    ```bash
    # If detected feature is 020-my-feature:
    spec-kitty agent feature setup-plan --feature 020-my-feature --json
@@ -140,6 +141,7 @@ Planning requirements (scale to complexity):
    - For each integration → patterns task
 
 2. **Generate and dispatch research agents**:
+
    ```
    For each unknown in Technical Context:
      Task: "Research {unknown} for {feature context}"
@@ -175,7 +177,7 @@ Planning requirements (scale to complexity):
    - Add only new technology from current plan
    - Preserve manual additions between markers
 
-**Output**: data-model.md, /contracts/*, quickstart.md, agent-specific file
+**Output**: data-model.md, /contracts/\*, quickstart.md, agent-specific file
 
 ## Key rules
 
@@ -189,6 +191,7 @@ Planning requirements (scale to complexity):
 **This command is COMPLETE after generating planning artifacts.**
 
 After reporting:
+
 - `plan.md` path
 - `research.md` path (if generated)
 - `data-model.md` path (if generated)
@@ -198,6 +201,7 @@ After reporting:
 **YOU MUST STOP HERE.**
 
 Do NOT:
+
 - ❌ Generate `tasks.md`
 - ❌ Create work package (WP) files
 - ❌ Create `tasks/` subdirectories

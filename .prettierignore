@@ -4,3 +4,20 @@ dist
 .output
 coverage
 pnpm-lock.yaml
+
+# Generated files
+*.gen.ts
+
+# Drizzle migration snapshots (auto-generated JSON)
+apps/api/drizzle/
+
+# ML service (Python, not formatted by Prettier)
+ml/
+
+# Spec Kitty artifacts
+kitty-specs/
+
+# Local-only directories
+docs-local/
+results/
+redesign/

@@ -36,7 +36,7 @@ Build a completely independent ML pipeline for classics with:
 ### Key Features (by impact)
 
 1. **classic_glicko_mu**: Biggest single rho improvement (+0.006)
-2. **type_affinity_{type}**: Biggest NDCG improvement (+4%)
+2. **type*affinity*{type}**: Biggest NDCG improvement (+4%)
 3. **specialist_ratio**: Best P@5 improvement (+4%)
 4. **pipeline_feeder_pts**: Seasonal campaign momentum signal
 5. **prestige_pts_12m**: General rider quality (23% feature importance)
