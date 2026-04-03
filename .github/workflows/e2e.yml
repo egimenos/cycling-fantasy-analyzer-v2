@@ -48,8 +48,9 @@ jobs:
       - run: cd apps/api && npx drizzle-kit migrate
       - run: psql $DATABASE_URL -f apps/web/tests/e2e/fixtures/seed-ci.sql
 
-      # Start API server in background
-      - run: pnpm --filter @cycling-analyzer/api run start > /tmp/api.log 2>&1 &
+      # Start API server in background (skip OTel instrumentation to avoid
+      # require-in-the-middle breaking pnpm's strict module resolution)
+      - run: cd apps/api && node dist/main > /tmp/api.log 2>&1 &
 
       # Wait for API to be ready
       - run: npx wait-on http://localhost:3001/health --timeout 60000 || (cat /tmp/api.log && exit 1)
