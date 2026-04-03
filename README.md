@@ -255,7 +255,13 @@ docker build -f docker/Dockerfile.api -t cycling-api .
 docker build -f docker/Dockerfile.web -t cycling-web --build-arg VITE_API_URL=http://api:3001 .
 ```
 
-The root `docker-compose.yml` provides PostgreSQL and the ML service for local development. Production deployment uses [Dokploy](https://dokploy.com/) to a VPS with the ML service as an internal Docker sidecar.
+The root `docker-compose.yml` provides PostgreSQL and the ML service for local development.
+
+### Production
+
+Production deployment uses [Dokploy](https://dokploy.com/) on a VPS with `docker-compose.prod.yml`. PostgreSQL runs as a native Dokploy database service; API, Web, and ML are deployed as a single Docker Compose. Migrations run automatically on every deploy via the API entrypoint.
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the full deployment guide and [docs/runbooks/runbook-prod.md](docs/runbooks/runbook-prod.md) for operational commands and troubleshooting.
 
 ## License
 

@@ -6,6 +6,7 @@ import { AnalyzeModule } from './application/analyze/analyze.module';
 import { OptimizeModule } from './application/optimize/optimize.module';
 import { ScrapingModule } from './presentation/scraping.module';
 import { BenchmarkModule } from './presentation/benchmark.module';
+import { HealthController } from './presentation/health.controller';
 
 @Module({
   imports: [
@@ -20,5 +21,6 @@ import { BenchmarkModule } from './presentation/benchmark.module';
     ScrapingModule,
     BenchmarkModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}

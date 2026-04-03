@@ -14,16 +14,19 @@ COPY packages/shared-types/ packages/shared-types/
 COPY tsconfig.base.json ./
 RUN pnpm --filter @cycling-analyzer/shared-types build 2>/dev/null || true
 RUN pnpm --filter @cycling-analyzer/api build
+RUN pnpm --filter @cycling-analyzer/api deploy --prod /app/deploy
 
 # Stage 3: Production
 FROM node:20-alpine AS runner
 WORKDIR /app
 RUN addgroup -g 1001 -S appgroup && adduser -S appuser -u 1001 -G appgroup
+COPY --from=builder /app/deploy/node_modules ./node_modules
 COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/api/node_modules ./apps_node_modules
-COPY --from=builder /app/apps/api/package.json ./
+COPY --from=builder /app/apps/api/drizzle/migrations ./drizzle/migrations
+COPY --from=builder /app/deploy/package.json ./
+COPY docker/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 USER appuser
 EXPOSE 3001
 ENV NODE_ENV=production
-CMD ["node", "-r", "./dist/infrastructure/observability/instrumentation.js", "dist/main.js"]
+ENTRYPOINT ["/app/entrypoint.sh"]

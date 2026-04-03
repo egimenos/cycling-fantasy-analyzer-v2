@@ -1,15 +1,52 @@
+# Dependencies
 node_modules
-.git
-.env
-.env.*
-!.env.example
+ml/venv
+ml/.venv
+
+# Build artifacts
 dist
 coverage
 .turbo
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Tests & dev tooling
+playwright-report
+test-results
+apps/web/e2e
+
+# Documentation (not needed in image)
+docs
+*.md
+LICENSE
+
+# Spec Kitty / worktrees
 .worktrees
 kitty-specs
 .kittify
-*.md
+
+# ML development artifacts
+ml/benchmarks
+ml/tests
+ml/cache
+**/__pycache__
+*.pyc
+
+# Docker (avoid recursive context)
+docker-compose*.yml
+
+# Keep files needed by build
 !package.json
 !pnpm-workspace.yaml
 !tsconfig.base.json
