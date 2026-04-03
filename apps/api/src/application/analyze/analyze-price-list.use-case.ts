@@ -365,8 +365,7 @@ export class AnalyzePriceListUseCase {
    */
   private async fetchMlPredictions(
     input: AnalyzeInput,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _riderIds: string[],
+    riderIds: string[],
   ): Promise<Map<
     string,
     {
@@ -439,7 +438,7 @@ export class AnalyzePriceListUseCase {
       input.raceSlug,
       input.year,
       profileForMl,
-      matchedRiderIds,
+      riderIds,
       input.raceType,
     );
     if (!predictions) {
