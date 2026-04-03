@@ -1,0 +1,64 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: cycling-api
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - PORT=${PORT}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      - ML_SERVICE_URL=${ML_SERVICE_URL}
+      - PCS_REQUEST_DELAY_MS=${PCS_REQUEST_DELAY_MS}
+      - FUZZY_MATCH_THRESHOLD=${FUZZY_MATCH_THRESHOLD}
+    depends_on:
+      ml-service:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3001/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - dokploy-network
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    container_name: cycling-web
+    restart: unless-stopped
+    networks:
+      - dokploy-network
+
+  ml-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ml
+    container_name: cycling-ml-service
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    volumes:
+      - ml-models:/app/models
+      - ml-cache:/app/cache
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - dokploy-network
+
+volumes:
+  ml-models:
+  ml-cache:
+
+networks:
+  dokploy-network:
+    external: true
