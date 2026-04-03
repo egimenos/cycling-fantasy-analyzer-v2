@@ -432,16 +432,14 @@ export class AnalyzePriceListUseCase {
           ttt: input.profileSummary.tttCount ?? 0,
         }
       : undefined;
-    // For stage races: don't pass riderIds — let the ML service use its own
-    // startlist from DB (passing riderIds corrupts team features).
-    // For classics: pass riderIds because classics don't have startlist entries
-    // in the DB — the price list is the only source of who's racing.
-    const isClassic = input.raceType === RaceType.CLASSIC;
+    // Pass riderIds for all race types — the ML service uses them to know
+    // which riders to predict for. For classics especially, the DB may not
+    // have startlist entries, so the price list riders are the only source.
     const predictions = await this.mlScoring.predictRace(
       input.raceSlug,
       input.year,
       profileForMl,
-      isClassic ? matchedRiderIds : undefined,
+      matchedRiderIds,
       input.raceType,
     );
     if (!predictions) {

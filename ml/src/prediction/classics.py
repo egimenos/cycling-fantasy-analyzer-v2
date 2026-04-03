@@ -74,20 +74,25 @@ def predict_classic_race(
     year: int,
     race_date: pd.Timestamp,
     results_df: pd.DataFrame,
+    startlists_df: pd.DataFrame | None = None,
     rider_ids: list[str] | None = None,
 ) -> list[dict]:
-    """Predict classic race scores for riders in the startlist.
+    """Predict classic race scores for riders.
+
+    Follows the same pattern as stage races: discovers riders from the
+    startlist (or explicit rider_ids), then extracts features from
+    historical results.
 
     Args:
         race_slug: Classic race slug.
         year: Race year.
         race_date: Race date for feature cutoff.
         results_df: Full results DataFrame (all race types, with pts column).
-        rider_ids: Optional filter to specific rider IDs.
+        startlists_df: Startlist entries DataFrame (same as stage races use).
+        rider_ids: Optional explicit rider IDs (e.g., from price list).
 
     Returns:
-        List of prediction dicts compatible with stage-race format:
-        [{rider_id, predicted_score, breakdown: {gc, stage, mountain, sprint}}]
+        List of prediction dicts compatible with stage-race format.
     """
     model, metadata = _load_model()
     if model is None:
@@ -107,33 +112,40 @@ def predict_classic_race(
     results_df = results_df.copy()
     results_df["race_date"] = pd.to_datetime(results_df["race_date"])
 
-    # Determine riders to predict for
-    # First try race_results (post-race), then startlist (pre-race)
-    race_riders = results_df[
-        (results_df["race_slug"] == race_slug)
-        & (results_df["year"] == year)
-        & (results_df["category"] == "gc")
-    ]
-    if rider_ids:
-        # Use explicitly provided rider IDs (from startlist via API)
-        race_riders = results_df[results_df["rider_id"].isin(rider_ids)].drop_duplicates("rider_id")
-    elif race_riders.empty:
-        # No results yet — try startlist
-        try:
-            from ..data.loader import load_startlist_for_race
-            import os
-            db_url = os.environ.get("DATABASE_URL", "postgresql://cycling:cycling@localhost:5432/cycling_analyzer")
-            startlist = load_startlist_for_race(db_url, race_slug, year)
-            if not startlist.empty:
-                sl_rider_ids = startlist["rider_id"].unique().tolist()
-                race_riders = results_df[results_df["rider_id"].isin(sl_rider_ids)].drop_duplicates("rider_id")
-                logger.info("Using startlist for %s/%s: %d riders", race_slug, year, len(race_riders))
-        except Exception as e:
-            logger.warning("Could not load startlist for %s/%s: %s", race_slug, year, e)
+    # Determine riders to predict for (same pattern as stage races):
+    # 1. Explicit rider_ids (from price list / API caller)
+    # 2. Startlist entries from DB
+    # 3. Race results (post-race fallback)
+    target_rider_ids: list[str] = []
 
-    if race_riders.empty:
+    if rider_ids:
+        target_rider_ids = rider_ids
+    elif startlists_df is not None and not startlists_df.empty:
+        sl = startlists_df[
+            (startlists_df["race_slug"] == race_slug)
+            & (startlists_df["year"] == year)
+        ]
+        if not sl.empty:
+            target_rider_ids = sl["rider_id"].unique().tolist()
+            logger.info("Using startlist for %s/%s: %d riders", race_slug, year, len(target_rider_ids))
+
+    if not target_rider_ids:
+        # Fallback: use race results (post-race)
+        race_results = results_df[
+            (results_df["race_slug"] == race_slug)
+            & (results_df["year"] == year)
+            & (results_df["category"] == "gc")
+        ]
+        if not race_results.empty:
+            target_rider_ids = race_results["rider_id"].unique().tolist()
+
+    if not target_rider_ids:
         logger.warning("No riders found for %s/%s", race_slug, year)
         return []
+
+    # Get rider names from results (for response)
+    rider_names = dict(zip(results_df["rider_id"], results_df.get("rider_name", results_df["rider_id"])))
+    race_riders = results_df[results_df["rider_id"].isin(target_rider_ids)].drop_duplicates("rider_id")
 
     # Extract features for each rider
     classic_hist = all_classics[all_classics["race_date"] < race_date]

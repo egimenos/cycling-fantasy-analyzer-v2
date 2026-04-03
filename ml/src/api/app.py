@@ -387,6 +387,7 @@ def predict(req: PredictRequest, request: Request):
             year=req.year,
             race_date=race_date,
             results_df=results_df,
+            startlists_df=startlists_df,
             rider_ids=req.rider_ids,
         )
         if not predictions:
