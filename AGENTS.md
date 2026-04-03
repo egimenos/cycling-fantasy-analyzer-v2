@@ -112,6 +112,29 @@ make dev           # starts all services
 - Never commit agent directories (`.claude/`, `.codex/`, `.cursor/`).
 - Keep commits atomic and meaningful.
 
+## Self-Healing Documentation
+
+When you encounter a gotcha, non-obvious behavior, implicit assumption, or any mistake that better documentation would have prevented, you must update the relevant documentation **before moving on**. This is not optional — undocumented pitfalls will bite the next agent (or the next session of yourself).
+
+**Trigger**: You hit an unexpected error, misunderstand a convention, use a wrong flag, miss a required step, discover an undocumented dependency between components, or find that existing docs are stale or misleading.
+
+**Action**: Identify where the lesson belongs and add it there:
+
+| What you learned                                | Where to document it                 |
+| ----------------------------------------------- | ------------------------------------ |
+| Project convention or rule agents keep breaking | This file (`AGENTS.md`)              |
+| Setup step, command quirk, or workflow gap      | `README.md` or `docs/runbooks/`      |
+| Architectural constraint or rationale           | `docs/adr/` (new ADR if significant) |
+| Non-obvious code behavior or coupling           | Inline code comment at the source    |
+| Stale or incorrect existing documentation       | Fix it in place                      |
+
+**Rules**:
+
+- Document the **lesson**, not the story. Future readers need the rule, not a narrative of how you discovered it.
+- Keep it concise — one or two sentences is usually enough.
+- Place it next to related content so it is found in context, not buried in an appendix.
+- If an existing doc already covers the topic but is incomplete or wrong, update it rather than adding a new one.
+
 ## Language
 
 - All code, comments, commit messages, and documentation must be in English.
