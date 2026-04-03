@@ -108,13 +108,28 @@ def predict_classic_race(
     results_df["race_date"] = pd.to_datetime(results_df["race_date"])
 
     # Determine riders to predict for
+    # First try race_results (post-race), then startlist (pre-race)
     race_riders = results_df[
         (results_df["race_slug"] == race_slug)
         & (results_df["year"] == year)
         & (results_df["category"] == "gc")
     ]
     if rider_ids:
-        race_riders = race_riders[race_riders["rider_id"].isin(rider_ids)]
+        # Use explicitly provided rider IDs (from startlist via API)
+        race_riders = results_df[results_df["rider_id"].isin(rider_ids)].drop_duplicates("rider_id")
+    elif race_riders.empty:
+        # No results yet — try startlist
+        try:
+            from ..data.loader import load_startlist_for_race
+            import os
+            db_url = os.environ.get("DATABASE_URL", "postgresql://cycling:cycling@localhost:5432/cycling_analyzer")
+            startlist = load_startlist_for_race(db_url, race_slug, year)
+            if not startlist.empty:
+                sl_rider_ids = startlist["rider_id"].unique().tolist()
+                race_riders = results_df[results_df["rider_id"].isin(sl_rider_ids)].drop_duplicates("rider_id")
+                logger.info("Using startlist for %s/%s: %d riders", race_slug, year, len(race_riders))
+        except Exception as e:
+            logger.warning("Could not load startlist for %s/%s: %s", race_slug, year, e)
 
     if race_riders.empty:
         logger.warning("No riders found for %s/%s", race_slug, year)
