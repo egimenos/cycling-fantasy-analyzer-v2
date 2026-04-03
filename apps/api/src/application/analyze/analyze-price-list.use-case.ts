@@ -1,4 +1,10 @@
-import { Injectable, Inject, Logger, UnprocessableEntityException } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
+import {
+  EmptyPriceListError,
+  MlServiceUnavailableError,
+  EmptyStartlistError,
+  MlPredictionFailedError,
+} from '../../domain/analyze/errors';
 import {
   RiderMatcherPort,
   RIDER_MATCHER_PORT,
@@ -158,7 +164,7 @@ export class AnalyzePriceListUseCase {
     const entries = mapPriceListEntries(input.riders);
 
     if (entries.length === 0) {
-      throw new UnprocessableEntityException('Zero valid riders after filtering');
+      throw new EmptyPriceListError();
     }
 
     const allRiders = await this.riderRepo.findAll();
@@ -389,9 +395,7 @@ export class AnalyzePriceListUseCase {
 
     const modelVersion = await this.mlScoring.getModelVersion();
     if (!modelVersion) {
-      throw new UnprocessableEntityException(
-        'ML service is unavailable. Please ensure the ML container is running and try again.',
-      );
+      throw new MlServiceUnavailableError();
     }
 
     // Check cache first
@@ -428,10 +432,7 @@ export class AnalyzePriceListUseCase {
       year: input.year!,
     });
     if (startlistEntries.length === 0) {
-      throw new UnprocessableEntityException(
-        `No startlist found for ${input.raceSlug}/${input.year}. ` +
-          'Check the race URL — PCS may not have published the startlist yet.',
-      );
+      throw new EmptyStartlistError(input.raceSlug!, input.year!);
     }
     this.logger.log(
       `Startlist ready for ${input.raceSlug}/${input.year}: ${startlistEntries.length} riders`,
@@ -457,9 +458,7 @@ export class AnalyzePriceListUseCase {
       input.raceType,
     );
     if (!predictions) {
-      throw new UnprocessableEntityException(
-        `ML prediction failed for ${input.raceSlug}/${input.year}. The ML service could not generate predictions for this race.`,
-      );
+      throw new MlPredictionFailedError(input.raceSlug!, input.year!);
     }
 
     this.logger.log(

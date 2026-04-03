@@ -1,4 +1,4 @@
-import { UnprocessableEntityException } from '@nestjs/common';
+import { EmptyPriceListError } from '../../../domain/analyze/errors';
 import { AnalyzePriceListUseCase } from '../analyze-price-list.use-case';
 import { RiderMatcherPort } from '../../../domain/matching/rider-matcher.port';
 import { RiderRepositoryPort } from '../../../domain/rider/rider.repository.port';
@@ -234,14 +234,14 @@ describe('AnalyzePriceListUseCase', () => {
     expect(unmatchedRider!.categoryScores).toBeNull();
   });
 
-  it('should throw UnprocessableEntityException for zero valid riders', async () => {
+  it('should throw EmptyPriceListError for zero valid riders', async () => {
     await expect(
       useCase.execute({
         riders: [{ name: '', team: '', price: 0 }],
         raceType: RaceType.GRAND_TOUR,
         budget: 2000,
       }),
-    ).rejects.toThrow(UnprocessableEntityException);
+    ).rejects.toThrow(EmptyPriceListError);
   });
 
   it('should handle all riders unmatched', async () => {

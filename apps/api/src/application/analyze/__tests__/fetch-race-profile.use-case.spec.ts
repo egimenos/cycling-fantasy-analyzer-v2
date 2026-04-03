@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { RaceUrlParseError, RaceProfileNotFoundError } from '../../../domain/analyze/errors';
 import { FetchRaceProfileUseCase } from '../fetch-race-profile.use-case';
 import { PcsScraperPort } from '../../scraping/ports/pcs-scraper.port';
 import { RaceType } from '../../../domain/shared/race-type.enum';
@@ -67,8 +67,8 @@ describe('FetchRaceProfileUseCase', () => {
       expect(result).toEqual({ raceSlug: 'tour-de-france', year: 2025 });
     });
 
-    it('should throw NotFoundException for invalid URL', () => {
-      expect(() => useCase.parseUrl('https://example.com/not-a-race')).toThrow(NotFoundException);
+    it('should throw RaceUrlParseError for invalid URL', () => {
+      expect(() => useCase.parseUrl('https://example.com/not-a-race')).toThrow(RaceUrlParseError);
     });
   });
 
@@ -177,7 +177,7 @@ describe('FetchRaceProfileUseCase', () => {
       expect(mockPcsClient.fetchPage).toHaveBeenCalledWith('race/strade-bianche/2025/result');
     });
 
-    it('should throw NotFoundException if both current and previous year fail', async () => {
+    it('should throw RaceProfileNotFoundError if both current and previous year fail', async () => {
       // Overview: no stages
       mockPcsClient.fetchPage.mockResolvedValueOnce('<html><body></body></html>');
       // Current year: fails
@@ -187,7 +187,7 @@ describe('FetchRaceProfileUseCase', () => {
 
       await expect(
         useCase.execute('https://www.procyclingstats.com/race/unknown-race/2026'),
-      ).rejects.toThrow(NotFoundException);
+      ).rejects.toThrow(RaceProfileNotFoundError);
     });
 
     it('should fall back when current year has no profile data', async () => {

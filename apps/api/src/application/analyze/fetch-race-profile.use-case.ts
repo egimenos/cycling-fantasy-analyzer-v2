@@ -1,4 +1,5 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { RaceUrlParseError, RaceProfileNotFoundError } from '../../domain/analyze/errors';
 import { PcsScraperPort, PCS_SCRAPER_PORT } from '../scraping/ports/pcs-scraper.port';
 import {
   parseRaceOverview,
@@ -47,7 +48,7 @@ export class FetchRaceProfileUseCase {
     //   procyclingstats.com/race/tour-de-france/2025
     const match = url.match(/procyclingstats\.com\/race\/([^/]+)\/(\d{4})/);
     if (!match) {
-      throw new NotFoundException(`Could not parse race URL: ${url}`);
+      throw new RaceUrlParseError(url);
     }
     return {
       raceSlug: match[1],
@@ -122,9 +123,7 @@ export class FetchRaceProfileUseCase {
     }
 
     // No profile data available
-    throw new NotFoundException(
-      `Could not determine profile for ${raceSlug} ${year} or ${year - 1}`,
-    );
+    throw new RaceProfileNotFoundError(raceSlug, year);
   }
 
   private buildClassicResponse(

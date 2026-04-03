@@ -8,6 +8,14 @@ import {
   RiderNotFoundError,
   BudgetExceededByLockedRidersError,
 } from '../../domain/optimizer/errors';
+import {
+  EmptyPriceListError,
+  MlServiceUnavailableError,
+  EmptyStartlistError,
+  MlPredictionFailedError,
+  RaceUrlParseError,
+  RaceProfileNotFoundError,
+} from '../../domain/analyze/errors';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const DOMAIN_ERROR_MAP = new Map<new (...args: any[]) => Error, HttpStatus>([
@@ -15,6 +23,12 @@ const DOMAIN_ERROR_MAP = new Map<new (...args: any[]) => Error, HttpStatus>([
   [BudgetExceededByLockedRidersError, HttpStatus.BAD_REQUEST],
   [RiderNotFoundError, HttpStatus.BAD_REQUEST],
   [InsufficientRidersError, HttpStatus.UNPROCESSABLE_ENTITY],
+  [EmptyPriceListError, HttpStatus.UNPROCESSABLE_ENTITY],
+  [MlServiceUnavailableError, HttpStatus.UNPROCESSABLE_ENTITY],
+  [EmptyStartlistError, HttpStatus.UNPROCESSABLE_ENTITY],
+  [MlPredictionFailedError, HttpStatus.UNPROCESSABLE_ENTITY],
+  [RaceUrlParseError, HttpStatus.NOT_FOUND],
+  [RaceProfileNotFoundError, HttpStatus.NOT_FOUND],
 ]);
 
 @Catch()
