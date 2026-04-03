@@ -53,7 +53,7 @@ jobs:
       - run: cd apps/api && node dist/main > /tmp/api.log 2>&1 &
 
       # Wait for API to be ready
-      - run: npx wait-on http://localhost:3001/health --timeout 60000 || (cat /tmp/api.log && exit 1)
+      - run: npx wait-on http://localhost:3001/health/liveness --timeout 60000 || (cat /tmp/api.log && exit 1)
 
       # Install Playwright browsers
       - run: cd apps/web && pnpm exec playwright install --with-deps chromium
