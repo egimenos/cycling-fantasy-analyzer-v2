@@ -243,7 +243,7 @@ services:
       ml-service:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:3001/health']
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3001/health/readiness']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -388,12 +388,12 @@ directly.
 
 ## 8. Service Summary Table
 
-| Service    | Container            | Port | Healthcheck      | Volumes                 | Non-root        |
-| ---------- | -------------------- | ---- | ---------------- | ----------------------- | --------------- |
-| API        | `cycling-api`        | 3001 | `wget` `/health` | None                    | Yes (UID 1001)  |
-| Web        | `cycling-web`        | 3000 | None             | None                    | Yes (UID 1001)  |
-| ML Service | `cycling-ml-service` | 8000 | `curl` `/health` | `ml-models`, `ml-cache` | Yes (UID 1001)  |
-| PostgreSQL | (Dokploy-managed)    | 5432 | Dokploy-managed  | Dokploy-managed         | Default PG user |
+| Service    | Container            | Port | Healthcheck                | Volumes                 | Non-root        |
+| ---------- | -------------------- | ---- | -------------------------- | ----------------------- | --------------- |
+| API        | `cycling-api`        | 3001 | `wget` `/health/readiness` | None                    | Yes (UID 1001)  |
+| Web        | `cycling-web`        | 3000 | None                       | None                    | Yes (UID 1001)  |
+| ML Service | `cycling-ml-service` | 8000 | `curl` `/health`           | `ml-models`, `ml-cache` | Yes (UID 1001)  |
+| PostgreSQL | (Dokploy-managed)    | 5432 | Dokploy-managed            | Dokploy-managed         | Default PG user |
 
 ---
 

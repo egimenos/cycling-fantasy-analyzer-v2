@@ -6,8 +6,13 @@ import { sql } from 'drizzle-orm';
 export class HealthController {
   constructor(@Inject(DRIZZLE) private readonly db: DrizzleDatabase) {}
 
-  @Get()
-  async check() {
+  @Get('liveness')
+  liveness() {
+    return { status: 'ok' };
+  }
+
+  @Get('readiness')
+  async readiness() {
     await this.db.execute(sql`SELECT 1`);
     return { status: 'ok' };
   }
