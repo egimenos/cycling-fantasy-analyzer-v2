@@ -19,6 +19,7 @@ import {
 } from '../../domain/ml-score/ml-score.repository.port';
 import { ScoringService, SeasonBreakdown } from '../../domain/scoring/scoring.service';
 import { RaceType } from '../../domain/shared/race-type.enum';
+import { FetchStartlistUseCase } from '../benchmark/fetch-startlist.use-case';
 import { ProfileDistribution } from '../../domain/scoring/profile-distribution';
 import { Rider } from '../../domain/rider/rider.entity';
 import { mapPriceListEntries, PriceListEntry, PriceListEntryDto } from './price-list-entry';
@@ -150,6 +151,7 @@ export class AnalyzePriceListUseCase {
     private readonly scoringService: ScoringService,
     @Inject(ML_SCORING_PORT) private readonly mlScoring: MlScoringPort,
     @Inject(ML_SCORE_REPOSITORY_PORT) private readonly mlScoreRepo: MlScoreRepositoryPort,
+    private readonly fetchStartlist: FetchStartlistUseCase,
   ) {}
 
   async execute(input: AnalyzeInput): Promise<AnalyzeResponse> {
@@ -269,7 +271,7 @@ export class AnalyzePriceListUseCase {
     });
 
     // --- ML prediction enrichment for stage races ---
-    const mlPredictions = await this.fetchMlPredictions(input, matchedRiderIds);
+    const mlPredictions = await this.fetchMlPredictions(input);
 
     const analyzedRiders: AnalyzedRider[] = scoredEntries.map((s) => {
       if (s.unmatched || s.riderScore === null) {
@@ -360,13 +362,11 @@ export class AnalyzePriceListUseCase {
   }
 
   /**
-   * Fetch ML predictions for stage races, using cache when available.
-   * Returns a Map<riderId, predictedScore> or null if ML is not applicable/available.
+   * Fetch ML predictions, using cache when available.
+   * Ensures the race has a startlist in DB (scraped from PCS) so the ML
+   * service can discover riders from its own data — no synthetic riderIds.
    */
-  private async fetchMlPredictions(
-    input: AnalyzeInput,
-    riderIds: string[],
-  ): Promise<Map<
+  private async fetchMlPredictions(input: AnalyzeInput): Promise<Map<
     string,
     {
       score: number;
@@ -419,6 +419,24 @@ export class AnalyzePriceListUseCase {
       );
     }
 
+    // Scrape the startlist from PCS and persist it in DB. The ML service reads
+    // startlists from DB to discover which riders to predict for — we never
+    // pass synthetic riderIds (that inflates rider count and breaks scaling).
+    // The persisted startlist is also reused for benchmarks and future training.
+    const { entries: startlistEntries } = await this.fetchStartlist.execute({
+      raceSlug: input.raceSlug!,
+      year: input.year!,
+    });
+    if (startlistEntries.length === 0) {
+      throw new UnprocessableEntityException(
+        `No startlist found for ${input.raceSlug}/${input.year}. ` +
+          'Check the race URL — PCS may not have published the startlist yet.',
+      );
+    }
+    this.logger.log(
+      `Startlist ready for ${input.raceSlug}/${input.year}: ${startlistEntries.length} riders`,
+    );
+
     // Cache miss — call ML service (pass race profile for v4 features)
     const profileForMl = input.profileSummary
       ? {
@@ -431,14 +449,11 @@ export class AnalyzePriceListUseCase {
           ttt: input.profileSummary.tttCount ?? 0,
         }
       : undefined;
-    // Pass riderIds for all race types — the ML service uses them to know
-    // which riders to predict for. For classics especially, the DB may not
-    // have startlist entries, so the price list riders are the only source.
     const predictions = await this.mlScoring.predictRace(
       input.raceSlug,
       input.year,
       profileForMl,
-      riderIds,
+      undefined,
       input.raceType,
     );
     if (!predictions) {

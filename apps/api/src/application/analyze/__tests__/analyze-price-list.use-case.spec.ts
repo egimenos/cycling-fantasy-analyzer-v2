@@ -11,6 +11,7 @@ import { RaceResult } from '../../../domain/race-result/race-result.entity';
 import { RaceType } from '../../../domain/shared/race-type.enum';
 import { RaceClass } from '../../../domain/shared/race-class.enum';
 import { ResultCategory } from '../../../domain/shared/result-category.enum';
+import { FetchStartlistUseCase } from '../../benchmark/fetch-startlist.use-case';
 
 function createMockRider(
   overrides: Partial<{
@@ -127,6 +128,10 @@ describe('AnalyzePriceListUseCase', () => {
 
     scoringService = new ScoringService();
 
+    const mockFetchStartlist = {
+      execute: jest.fn().mockResolvedValue({ entries: [], fromCache: true }),
+    } as unknown as FetchStartlistUseCase;
+
     useCase = new AnalyzePriceListUseCase(
       mockMatcher,
       mockRiderRepo,
@@ -134,6 +139,7 @@ describe('AnalyzePriceListUseCase', () => {
       scoringService,
       mockMlScoring,
       mockMlScoreRepo,
+      mockFetchStartlist,
     );
   });
 
