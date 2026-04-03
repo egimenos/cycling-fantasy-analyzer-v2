@@ -10,7 +10,16 @@ function renderWithProvider(ui: React.ReactElement) {
 
 describe('ScoreBreakdown', () => {
   it('renders all category labels', () => {
-    const breakdown: CategoryScores = { gc: 20, stage: 10, mountain: 10, sprint: 5 };
+    const breakdown: CategoryScores = {
+      gc: 20,
+      stage: 10,
+      mountain: 10,
+      sprint: 5,
+      gc_daily: 0,
+      mountain_pass: 0,
+      sprint_intermediate: 0,
+      regularidad_daily: 0,
+    };
     renderWithProvider(<ScoreBreakdown breakdown={breakdown} />);
     expect(screen.getByText('GC')).toBeInTheDocument();
     expect(screen.getByText('STAGE')).toBeInTheDocument();
@@ -24,6 +33,10 @@ describe('ScoreBreakdown', () => {
       stage: 12.7,
       mountain: 8.1,
       sprint: 3.9,
+      gc_daily: 0,
+      mountain_pass: 0,
+      sprint_intermediate: 0,
+      regularidad_daily: 0,
     };
     renderWithProvider(<ScoreBreakdown breakdown={breakdown} />);
     // Percentage appears in both the legend and the bar segment
@@ -34,13 +47,31 @@ describe('ScoreBreakdown', () => {
   });
 
   it('handles all-zero breakdown without crashing', () => {
-    const breakdown: CategoryScores = { gc: 0, stage: 0, mountain: 0, sprint: 0 };
+    const breakdown: CategoryScores = {
+      gc: 0,
+      stage: 0,
+      mountain: 0,
+      sprint: 0,
+      gc_daily: 0,
+      mountain_pass: 0,
+      sprint_intermediate: 0,
+      regularidad_daily: 0,
+    };
     renderWithProvider(<ScoreBreakdown breakdown={breakdown} />);
     expect(screen.getByText('GC')).toBeInTheDocument();
   });
 
   it('renders the Point Distribution Analysis label', () => {
-    const breakdown: CategoryScores = { gc: 20, stage: 10, mountain: 10, sprint: 5 };
+    const breakdown: CategoryScores = {
+      gc: 20,
+      stage: 10,
+      mountain: 10,
+      sprint: 5,
+      gc_daily: 0,
+      mountain_pass: 0,
+      sprint_intermediate: 0,
+      regularidad_daily: 0,
+    };
     renderWithProvider(<ScoreBreakdown breakdown={breakdown} />);
     expect(screen.getByText('Point Distribution Analysis')).toBeInTheDocument();
   });

@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { RiderInput, parseRiderLines } from '../components/rider-input';
+import { RaceType } from '@cycling-analyzer/shared-types';
 import type { useRaceProfile } from '../hooks/use-race-profile';
 
 // Mock api-client (importPriceList is used by the component)
@@ -142,7 +143,7 @@ describe('RiderInput', () => {
       data: {
         raceSlug: 'tour-de-france',
         raceName: 'Tour De France',
-        raceType: 'grand_tour',
+        raceType: RaceType.GRAND_TOUR,
         year: 2025,
         totalStages: 21,
         stages: [],
