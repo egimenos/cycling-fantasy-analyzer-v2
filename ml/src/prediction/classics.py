@@ -103,6 +103,9 @@ def predict_classic_race(
     transform = metadata.get("transform", "raw")
     _, inverse_fn = TRANSFORMS[transform]
 
+    # Ensure race_date is a Timestamp for comparison with datetime64 columns
+    race_date = pd.Timestamp(race_date)
+
     # Prepare classic results for feature extraction
     classic_mask = (results_df["race_type"] == "classic") & (results_df["category"] == "gc")
     all_classics = results_df[classic_mask].copy()
