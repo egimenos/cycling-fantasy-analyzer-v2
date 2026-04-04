@@ -19,10 +19,9 @@ const DEFAULT_AGE = 28;
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-export function computeAge(birthDate: Date | null): number {
+export function computeAge(birthDate: Date | null, currentDate: Date = new Date()): number {
   if (!birthDate) return DEFAULT_AGE;
-  const now = new Date();
-  return (now.getTime() - birthDate.getTime()) / (365.25 * 86_400_000);
+  return (currentDate.getTime() - birthDate.getTime()) / (365.25 * 86_400_000);
 }
 
 export function computeRawSlope(seasons: readonly SeasonBreakdown[]): number {
