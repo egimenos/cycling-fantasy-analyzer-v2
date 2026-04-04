@@ -1,13 +1,15 @@
 import type { AnalyzedRider } from '@cycling-analyzer/shared-types';
-import { formatNumber } from '@/shared/lib/utils';
+import { formatNumber, cn } from '@/shared/lib/utils';
 import { CheckCircle, Copy, RotateCcw, Bike, Crown } from 'lucide-react';
 import { useState } from 'react';
 import { useAnimatedNumber } from '@/shared/hooks/use-animated-number';
+import { useIsDesktop } from '@/shared/hooks/use-media-query';
+import { FlagChip } from '@/features/rider-list/components/bpi-badge';
+import { toast } from 'sonner';
 
 function getEffectiveScore(rider: AnalyzedRider): number | null {
   return rider.mlPredictedScore ?? rider.totalProjectedPts;
 }
-import { toast } from 'sonner';
 
 interface TeamSummaryProps {
   riders: AnalyzedRider[];
@@ -32,6 +34,7 @@ export function TeamSummary({
   const avgCost = riders.length > 0 ? totalCost / riders.length : 0;
   const usagePercent = budget > 0 ? (totalCost / budget) * 100 : 0;
   const animatedScore = useAnimatedNumber(displayScore, 1000);
+  const isDesktop = useIsDesktop();
 
   const handleCopy = async (): Promise<void> => {
     const header = 'CYCLING FANTASY OPTIMIZER - TEAM ROSTER';
@@ -99,20 +102,159 @@ export function TeamSummary({
             </h2>
           </div>
 
-          <ul data-testid="roster-rider-list" className="space-y-2 stagger-children">
+          <ul
+            data-testid="roster-rider-list"
+            className={cn('stagger-children', isDesktop ? 'space-y-1' : 'space-y-2')}
+          >
             {riders.map((rider, index) => {
               const score = getEffectiveScore(rider);
               const value =
                 score !== null && rider.priceHillios > 0 ? score / rider.priceHillios : null;
+              const breakdown = rider.mlBreakdown ?? rider.categoryScores;
+              const bpi = rider.breakout?.index ?? null;
+              const flags = rider.breakout?.flags;
+
+              if (isDesktop) {
+                // Desktop: compact single-row with all data inline
+                return (
+                  <li
+                    key={rider.rawName}
+                    data-testid={`roster-rider-${rider.rawName}`}
+                    className="bg-surface-container-high rounded-sm flex items-center gap-4 px-4 py-2.5 group hover:bg-surface-container-highest transition-all"
+                  >
+                    {/* Rank icon */}
+                    <div className="w-8 h-8 rounded-sm bg-surface-container-highest flex items-center justify-center flex-shrink-0">
+                      {index === 0 ? (
+                        <Crown className="h-4 w-4 text-tertiary" />
+                      ) : (
+                        <span className="text-[10px] font-mono font-bold text-outline">
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Name + team + flags */}
+                    <div className="w-[200px] flex-shrink-0 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-headline font-bold text-sm text-on-surface truncate">
+                          {rider.rawName}
+                        </span>
+                        {index === 0 && (
+                          <span
+                            data-testid="roster-captain-badge"
+                            className="bg-tertiary/20 text-tertiary text-[9px] px-1 font-bold rounded-sm border border-tertiary/30 flex-shrink-0"
+                          >
+                            CPT
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="text-[10px] text-on-surface-variant font-mono uppercase truncate">
+                          {rider.rawTeam}
+                        </span>
+                        {flags?.map((flag) => (
+                          <FlagChip key={flag} flag={flag} />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Cost */}
+                    <div className="w-16 text-right flex-shrink-0">
+                      <span className="text-[9px] font-mono text-outline uppercase block">
+                        Cost
+                      </span>
+                      <span className="font-mono font-bold text-primary text-sm">
+                        {formatNumber(rider.priceHillios)}
+                      </span>
+                    </div>
+
+                    {/* Projected */}
+                    <div className="w-14 text-right flex-shrink-0">
+                      <span className="text-[9px] font-mono text-outline uppercase block">
+                        Proj
+                      </span>
+                      <span className="font-mono font-bold text-tertiary text-sm">
+                        {score?.toFixed(0) ?? '—'}
+                      </span>
+                    </div>
+
+                    {/* Value */}
+                    <div className="w-14 text-right flex-shrink-0">
+                      <span className="text-[9px] font-mono text-outline uppercase block">
+                        Value
+                      </span>
+                      <span className="font-mono font-bold text-stage text-sm">
+                        {value !== null ? value.toFixed(1) : '—'}
+                      </span>
+                    </div>
+
+                    {/* Category breakdown */}
+                    {breakdown && (
+                      <div className="flex gap-3 flex-shrink-0 ml-2">
+                        <div className="text-center">
+                          <span className="text-[8px] font-mono text-gc uppercase block">GC</span>
+                          <span className="font-mono font-bold text-gc text-xs">
+                            {breakdown.gc.toFixed(0)}
+                          </span>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-[8px] font-mono text-stage uppercase block">
+                            STG
+                          </span>
+                          <span className="font-mono font-bold text-stage text-xs">
+                            {breakdown.stage.toFixed(0)}
+                          </span>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-[8px] font-mono text-mountain uppercase block">
+                            MTN
+                          </span>
+                          <span className="font-mono font-bold text-mountain text-xs">
+                            {breakdown.mountain.toFixed(0)}
+                          </span>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-[8px] font-mono text-sprint uppercase block">
+                            SPR
+                          </span>
+                          <span className="font-mono font-bold text-sprint text-xs">
+                            {breakdown.sprint.toFixed(0)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* BPI */}
+                    {bpi !== null && (
+                      <div className="ml-auto flex-shrink-0 text-right">
+                        <span
+                          className={cn(
+                            'text-lg font-mono font-bold',
+                            bpi >= 70
+                              ? 'text-green-600 dark:text-green-400'
+                              : bpi >= 40
+                                ? 'text-tertiary'
+                                : 'text-outline',
+                          )}
+                        >
+                          {bpi}
+                        </span>
+                        <span className="text-[8px] font-mono text-outline ml-0.5">BPI</span>
+                      </div>
+                    )}
+                  </li>
+                );
+              }
+
+              // Mobile: stacked card layout
               return (
                 <li
                   key={rider.rawName}
                   data-testid={`roster-rider-${rider.rawName}`}
                   className="bg-surface-container-high rounded-sm overflow-hidden group hover:bg-surface-container-highest transition-all"
                 >
-                  {/* Top row: rank + name + team */}
-                  <div className="flex items-center gap-3 md:gap-4 p-3 md:p-4">
-                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-sm bg-surface-container-highest flex items-center justify-center flex-shrink-0">
+                  <div className="flex items-center gap-3 p-3">
+                    <div className="w-10 h-10 rounded-sm bg-surface-container-highest flex items-center justify-center flex-shrink-0">
                       {index === 0 ? (
                         <Crown className="h-5 w-5 text-tertiary" />
                       ) : (
@@ -136,9 +278,7 @@ export function TeamSummary({
                       <span className="text-xs text-on-surface-variant">{rider.rawTeam}</span>
                     </div>
                   </div>
-
-                  {/* Stats row: Cost / Projected / Value */}
-                  <div className="grid grid-cols-3 mx-3 md:mx-4 mb-3 md:mb-4 border border-outline-variant/10 rounded-sm overflow-hidden">
+                  <div className="grid grid-cols-3 mx-3 mb-3 border border-outline-variant/10 rounded-sm overflow-hidden">
                     <div className="px-3 py-2 border-r border-outline-variant/10">
                       <span className="text-[9px] font-mono text-outline uppercase block">
                         Cost
