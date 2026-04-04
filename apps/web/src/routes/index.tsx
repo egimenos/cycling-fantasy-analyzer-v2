@@ -63,7 +63,7 @@ function HomePageContent() {
   const { isUnlocked, dispatch } = useFlowState();
 
   // Shared state across tabs — persists when switching tabs
-  const { state: analyzeState, analyze, retry: retryAnalyze } = useAnalyze();
+  const { state: analyzeState, analyze, retry: retryAnalyze, reset: resetAnalyze } = useAnalyze();
   const { state: optimizeState, optimize, reset: resetOptimize } = useOptimize();
   const { lockedIds, excludedIds, toggleLock, toggleExclude } = useLockExclude();
   const [budget, setBudget] = useState(2000);
@@ -172,10 +172,15 @@ function HomePageContent() {
     void navigate({ search: { tab: 'roster' } });
   }, [navigate]);
 
-  // Handle race selection from combobox
+  // Handle race selection from combobox — reset all downstream state
   const handleRaceSelect = useCallback(
     (race: RaceListItem | null) => {
       setSelectedRace(race);
+      // Reset analysis and downstream flow when race changes
+      resetAnalyze();
+      resetOptimize();
+      teamBuilder.clearAll();
+      dispatch({ type: 'RESET' });
       if (race) {
         setRaceUrl('');
         setGameUrl('');
@@ -184,7 +189,7 @@ function HomePageContent() {
         resetGmvImport();
       }
     },
-    [importForRace, resetGmvImport],
+    [importForRace, resetGmvImport, resetAnalyze, resetOptimize, teamBuilder, dispatch],
   );
 
   // Auto-populate riders when GMV import succeeds
