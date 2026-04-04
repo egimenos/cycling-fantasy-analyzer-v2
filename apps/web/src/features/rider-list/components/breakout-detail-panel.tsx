@@ -17,31 +17,25 @@ const SIGNAL_CONFIGS: SignalConfig[] = [
   {
     key: 'trajectory',
     label: 'Trajectory',
-    max: 25,
+    max: 30,
     description: 'Career trend direction — rising, stable, or declining',
   },
   {
     key: 'form',
     label: 'Form',
-    max: 25,
+    max: 30,
     description: 'Recent 90-day performance vs career average — current hot streak',
-  },
-  {
-    key: 'comeback',
-    label: 'Comeback',
-    max: 20,
-    description: 'Gap to historical peak with evidence of recovery',
   },
   {
     key: 'routeFit',
     label: 'Route Fit',
-    max: 15,
+    max: 20,
     description: 'How well rider profile matches the race parcours',
   },
   {
     key: 'variance',
     label: 'Variance',
-    max: 15,
+    max: 20,
     description: 'Score volatility — high variance means bigger boom-or-bust potential',
   },
 ];
@@ -50,7 +44,6 @@ const FLAG_DESCRIPTIONS: Record<string, string> = {
   EMERGING_TALENT: 'Young rider with steep upward career trajectory',
   HOT_STREAK: 'Strong recent form — last 90 days well above career average',
   DEEP_VALUE: 'Top-quartile efficiency at low price with meaningful prediction',
-  COMEBACK: 'Historical peak far exceeds prediction with recovery signs',
   SPRINT_OPPORTUNITY: 'Sprint profile on a flat-friendly course',
   BREAKAWAY_HUNTER: 'Mountain points on a budget — breakaway potential',
   RACE_SPECIALIST: 'Historically outperforms predictions in this race',

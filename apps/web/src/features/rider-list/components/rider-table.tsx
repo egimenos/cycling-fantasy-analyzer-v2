@@ -196,8 +196,8 @@ function createColumns(
             </span>
           </TooltipTrigger>
           <TooltipContent className="max-w-[200px]">
-            Breakout Potential Index (0-100). Composite of trajectory, form, comeback, route fit and
-            variance signals.
+            Breakout Potential Index (0-100). Composite of trajectory, form, route fit and variance
+            signals.
           </TooltipContent>
         </Tooltip>
       ),
