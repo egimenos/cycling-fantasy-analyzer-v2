@@ -1,10 +1,7 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../infrastructure/database/database.module';
+import { MlModule } from '../infrastructure/ml/ml.module';
 import { ScrapingModule } from './scraping.module';
-import { STARTLIST_REPOSITORY_PORT } from '../domain/startlist/startlist.repository.port';
-import { StartlistRepositoryAdapter } from '../infrastructure/database/startlist.repository.adapter';
-import { ML_SCORING_PORT } from '../domain/scoring/ml-scoring.port';
-import { MlScoringAdapter } from '../infrastructure/ml/ml-scoring.adapter';
 import { STARTLIST_PARSER_PORT } from '../application/benchmark/ports/startlist-parser.port';
 import { StartlistParserAdapter } from '../infrastructure/scraping/startlist-parser.adapter';
 import { ListBenchmarkRacesUseCase } from '../application/benchmark/list-benchmark-races.use-case';
@@ -14,16 +11,8 @@ import { RunBenchmarkSuiteUseCase } from '../application/benchmark/run-benchmark
 import { BenchmarkCommand } from './cli/benchmark.command';
 
 @Module({
-  imports: [DatabaseModule, ScrapingModule],
+  imports: [DatabaseModule, MlModule, ScrapingModule],
   providers: [
-    {
-      provide: STARTLIST_REPOSITORY_PORT,
-      useClass: StartlistRepositoryAdapter,
-    },
-    {
-      provide: ML_SCORING_PORT,
-      useClass: MlScoringAdapter,
-    },
     {
       provide: STARTLIST_PARSER_PORT,
       useClass: StartlistParserAdapter,
