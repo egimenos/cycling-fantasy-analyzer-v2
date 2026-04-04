@@ -5,7 +5,7 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
-import { Loader2, Download, Globe, Link, BarChart3 } from 'lucide-react';
+import { Loader2, Download, Globe, Link, BarChart3, Settings } from 'lucide-react';
 import type { useRaceProfile } from '../hooks/use-race-profile';
 import { RaceProfileSummary } from './race-profile-summary';
 import { importPriceList } from '@/shared/lib/api-client';
@@ -98,7 +98,8 @@ export function RiderInput({
   return (
     <div className="flex flex-col gap-6">
       <header className="mb-2">
-        <span className="text-secondary font-mono text-xs tracking-widest uppercase mb-1 block">
+        <span className="text-secondary font-mono text-xs tracking-widest uppercase mb-1 flex items-center gap-1.5">
+          <Settings className="h-3.5 w-3.5" />
           Analysis Engine
         </span>
         <h1 className="text-3xl font-headline font-extrabold text-on-surface tracking-tight">

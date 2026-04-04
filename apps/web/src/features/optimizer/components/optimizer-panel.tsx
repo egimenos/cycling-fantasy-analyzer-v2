@@ -6,6 +6,7 @@ import { AlternativeTeams } from './alternative-teams';
 import { computeMlTotal } from '@/features/team-builder/hooks/use-team-builder';
 import { formatNumber } from '@/shared/lib/utils';
 import { useAnimatedNumber } from '@/shared/hooks/use-animated-number';
+import { Zap } from 'lucide-react';
 
 interface OptimizerPanelProps {
   data: OptimizeResponse;
@@ -37,7 +38,8 @@ export function OptimizerPanel({ data, budget, onApplyToRoster }: OptimizerPanel
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-end gap-6 animate-fade-in-up">
         <div>
-          <span className="text-secondary font-mono text-xs tracking-widest uppercase mb-2 block">
+          <span className="text-secondary font-mono text-xs tracking-widest uppercase mb-2 flex items-center gap-1.5">
+            <Zap className="h-3.5 w-3.5" />
             Optimization Results
           </span>
           <h1 className="text-2xl md:text-4xl lg:text-5xl font-extrabold font-headline tracking-tighter text-on-surface">

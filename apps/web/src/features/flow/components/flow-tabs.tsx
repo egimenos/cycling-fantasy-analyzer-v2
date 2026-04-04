@@ -1,15 +1,8 @@
-import { Lock, Settings, BarChart3, Zap, Users } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import type { FlowStep } from '../types';
-import { FLOW_STEPS, FLOW_STEP_LABELS } from '../types';
+import { FLOW_STEPS, FLOW_STEP_LABELS, FLOW_STEP_ICONS } from '../types';
 import { useFlowState } from '../hooks/use-flow-state';
 import { cn } from '@/shared/lib/utils';
-
-const FLOW_STEP_ICONS: Record<FlowStep, typeof Settings> = {
-  setup: Settings,
-  dashboard: BarChart3,
-  optimization: Zap,
-  roster: Users,
-};
 
 const FLOW_STEP_SHORT: Record<FlowStep, string> = {
   setup: 'Setup',
@@ -59,11 +52,12 @@ export function FlowTabs({ activeTab, onTabChange }: FlowTabsProps) {
         })}
       </div>
 
-      {/* Desktop: full labels with numbered badges */}
+      {/* Desktop: icons + full labels */}
       <div className="hidden md:flex px-6">
-        {FLOW_STEPS.map((step, i) => {
+        {FLOW_STEPS.map((step) => {
           const unlocked = isUnlocked(step);
           const active = step === activeTab;
+          const Icon = unlocked ? FLOW_STEP_ICONS[step] : Lock;
 
           return (
             <button
@@ -73,7 +67,7 @@ export function FlowTabs({ activeTab, onTabChange }: FlowTabsProps) {
               disabled={!unlocked}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'px-5 py-3.5 text-xs font-mono uppercase tracking-widest transition-all relative flex items-center gap-2.5 whitespace-nowrap flex-shrink-0',
+                'px-5 py-3.5 text-xs font-mono uppercase tracking-widest transition-all relative flex items-center gap-2 whitespace-nowrap flex-shrink-0',
                 active && 'text-on-surface font-bold bg-surface-container/50',
                 !active &&
                   unlocked &&
@@ -81,18 +75,7 @@ export function FlowTabs({ activeTab, onTabChange }: FlowTabsProps) {
                 !unlocked && 'text-on-primary-container/40 cursor-not-allowed',
               )}
             >
-              <span
-                className={cn(
-                  'w-5 h-5 rounded-full text-[9px] font-bold flex items-center justify-center flex-shrink-0 transition-colors',
-                  active
-                    ? 'bg-secondary text-white'
-                    : unlocked
-                      ? 'bg-surface-container-highest text-on-surface-variant'
-                      : 'bg-surface-container-high text-on-primary-container/40',
-                )}
-              >
-                {unlocked ? String(i + 1).padStart(2, '0') : <Lock className="h-2.5 w-2.5" />}
-              </span>
+              <Icon className={cn('h-4 w-4 flex-shrink-0', active && 'text-secondary')} />
               {FLOW_STEP_LABELS[step]}
               {active && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-secondary to-secondary/50" />
