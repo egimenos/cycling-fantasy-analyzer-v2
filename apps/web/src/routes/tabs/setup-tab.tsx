@@ -1,10 +1,15 @@
-import type { PriceListEntryDto, ProfileSummary } from '@cycling-analyzer/shared-types';
+import type {
+  PriceListEntryDto,
+  ProfileSummary,
+  RaceListItem,
+} from '@cycling-analyzer/shared-types';
 import { type RaceType } from '@cycling-analyzer/shared-types';
 import { RiderInput } from '@/features/rider-list/components/rider-input';
 import { LoadingSpinner } from '@/shared/ui/loading-spinner';
 import { TableSkeleton } from '@/shared/ui/table-skeleton';
 import { TrendingUp, AlertTriangle, RefreshCw } from 'lucide-react';
 import type { useRaceProfile } from '@/features/rider-list/hooks/use-race-profile';
+import type { GmvImportState } from '@/features/rider-list/hooks/use-gmv-auto-import';
 
 export interface SetupTabProps {
   onAnalyze: (
@@ -27,6 +32,11 @@ export interface SetupTabProps {
   onGameUrlChange: (url: string) => void;
   onBudgetChange: (budget: number) => void;
   profileState: ReturnType<typeof useRaceProfile>;
+  races: RaceListItem[];
+  raceCatalogLoading: boolean;
+  selectedRace: RaceListItem | null;
+  onRaceSelect: (race: RaceListItem | null) => void;
+  gmvImportState: GmvImportState;
 }
 
 export function SetupTab({
@@ -43,6 +53,11 @@ export function SetupTab({
   onGameUrlChange,
   onBudgetChange,
   profileState,
+  races,
+  raceCatalogLoading,
+  selectedRace,
+  onRaceSelect,
+  gmvImportState,
 }: SetupTabProps) {
   return (
     <div
@@ -62,6 +77,11 @@ export function SetupTab({
           budget={budget}
           onBudgetChange={onBudgetChange}
           profileState={profileState}
+          races={races}
+          raceCatalogLoading={raceCatalogLoading}
+          selectedRace={selectedRace}
+          onRaceSelect={onRaceSelect}
+          gmvImportState={gmvImportState}
         />
       </div>
 

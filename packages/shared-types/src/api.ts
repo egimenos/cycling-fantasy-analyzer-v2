@@ -153,3 +153,22 @@ export interface RaceProfileResponse {
   stages: StageInfo[];
   profileSummary: ProfileSummary;
 }
+
+export interface RaceListItem {
+  raceSlug: string;
+  raceName: string;
+  raceType: RaceType;
+  year: number;
+}
+
+export interface RaceListResponse {
+  races: RaceListItem[];
+}
+
+export interface GmvMatchResponse {
+  matched: boolean;
+  postTitle: string | null;
+  postUrl: string | null;
+  confidence: number | null;
+  riders: PriceListEntryDto[] | null;
+}

@@ -4,6 +4,8 @@ import type {
   OptimizeRequest,
   OptimizeResponse,
   RaceProfileResponse,
+  RaceListResponse,
+  GmvMatchResponse,
 } from '@cycling-analyzer/shared-types';
 
 export type ApiResult<T> = { status: 'success'; data: T } | { status: 'error'; error: string };
@@ -91,4 +93,34 @@ export function importPriceList(
     `/api/import-price-list?url=${encodeURIComponent(url)}`,
     signal,
   );
+}
+
+export function fetchRaces(
+  params?: { minYear?: number; raceType?: string },
+  signal?: AbortSignal,
+): Promise<ApiResult<RaceListResponse>> {
+  const searchParams = new URLSearchParams();
+  if (params?.minYear) searchParams.set('minYear', String(params.minYear));
+  if (params?.raceType) searchParams.set('raceType', params.raceType);
+  const query = searchParams.toString();
+  return apiGet<RaceListResponse>(`/api/races${query ? `?${query}` : ''}`, signal);
+}
+
+export function gmvMatch(
+  raceSlug: string,
+  raceName: string,
+  year: number,
+  signal?: AbortSignal,
+): Promise<ApiResult<GmvMatchResponse>> {
+  const params = new URLSearchParams({ raceSlug, raceName, year: String(year) });
+  return apiGet<GmvMatchResponse>(`/api/gmv-match?${params}`, signal);
+}
+
+export function fetchRaceProfileBySlug(
+  raceSlug: string,
+  year: number,
+  signal?: AbortSignal,
+): Promise<ApiResult<RaceProfileResponse>> {
+  const params = new URLSearchParams({ raceSlug, year: String(year) });
+  return apiGet<RaceProfileResponse>(`/api/race-profile-by-slug?${params}`, signal);
 }

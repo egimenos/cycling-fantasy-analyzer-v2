@@ -1,13 +1,19 @@
 import { useState, useMemo, useCallback } from 'react';
-import type { PriceListEntryDto, ProfileSummary } from '@cycling-analyzer/shared-types';
+import type {
+  PriceListEntryDto,
+  ProfileSummary,
+  RaceListItem,
+} from '@cycling-analyzer/shared-types';
 import { RaceType } from '@cycling-analyzer/shared-types';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
-import { Loader2, Download, Globe, Link, BarChart3, Settings } from 'lucide-react';
+import { Loader2, Download, Globe, Link, BarChart3, Settings, ChevronDown } from 'lucide-react';
 import type { useRaceProfile } from '../hooks/use-race-profile';
+import type { GmvImportState } from '../hooks/use-gmv-auto-import';
 import { RaceProfileSummary } from './race-profile-summary';
+import { RaceSelector } from './race-selector';
 import { importPriceList } from '@/shared/lib/api-client';
 
 interface RiderInputProps {
@@ -22,13 +28,20 @@ interface RiderInputProps {
   isLoading: boolean;
   text: string;
   onTextChange: (text: string) => void;
+  budget: number;
+  onBudgetChange: (budget: number) => void;
+  profileState: ReturnType<typeof useRaceProfile>;
+  // Race selector props
+  races: RaceListItem[];
+  raceCatalogLoading: boolean;
+  selectedRace: RaceListItem | null;
+  onRaceSelect: (race: RaceListItem | null) => void;
+  gmvImportState: GmvImportState;
+  // Manual fallback props
   raceUrl: string;
   onRaceUrlChange: (url: string) => void;
   gameUrl: string;
   onGameUrlChange: (url: string) => void;
-  budget: number;
-  onBudgetChange: (budget: number) => void;
-  profileState: ReturnType<typeof useRaceProfile>;
 }
 
 function parseRiderLines(text: string): PriceListEntryDto[] {
@@ -53,16 +66,22 @@ export function RiderInput({
   isLoading,
   text,
   onTextChange: setText,
+  budget,
+  onBudgetChange: setBudget,
+  profileState,
+  races,
+  raceCatalogLoading,
+  selectedRace,
+  onRaceSelect,
+  gmvImportState,
   raceUrl,
   onRaceUrlChange: setRaceUrl,
   gameUrl,
   onGameUrlChange: setGameUrl,
-  budget,
-  onBudgetChange: setBudget,
-  profileState,
 }: RiderInputProps) {
   const [importStatus, setImportStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [importError, setImportError] = useState('');
+  const [showManual, setShowManual] = useState(false);
 
   const raceType =
     profileState.status === 'success' ? profileState.data.raceType : RaceType.GRAND_TOUR;
@@ -70,6 +89,12 @@ export function RiderInput({
   const parsedRiders = useMemo(() => parseRiderLines(text), [text]);
   const lineCount = text.split('\n').filter((l) => l.trim().length > 0).length;
   const invalidCount = lineCount - parsedRiders.length;
+
+  // Auto-expand manual fallback when GMV match fails
+  const shouldShowManual =
+    showManual ||
+    (gmvImportState.status === 'success' && !gmvImportState.data.matched) ||
+    gmvImportState.status === 'error';
 
   const handleImport = useCallback(async () => {
     if (!gameUrl) return;
@@ -108,30 +133,18 @@ export function RiderInput({
       </header>
 
       <div className="bg-surface-container-low rounded-sm p-4 md:p-8 flex flex-col gap-5 md:gap-6 shadow-xl border border-outline-variant/15">
-        {/* Race URL */}
+        {/* Race Selector */}
         <div className="flex flex-col gap-2">
-          <div className="flex justify-between items-center">
-            <label
-              htmlFor="race-url"
-              className="text-xs font-body uppercase tracking-wider text-on-primary-container font-semibold"
-            >
-              Race URL (ProCyclingStats)
-            </label>
-            <span className="text-[10px] text-primary/60 font-mono uppercase">
-              Auto-detect enabled
-            </span>
-          </div>
-          <div className="relative group">
-            <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline group-focus-within:text-primary" />
-            <Input
-              id="race-url"
-              data-testid="setup-race-url-input"
-              value={raceUrl}
-              onChange={(e) => setRaceUrl(e.target.value)}
-              placeholder="Paste race startlist URL to auto-detect riders..."
-              className="pl-10"
-            />
-          </div>
+          <label className="text-xs font-body uppercase tracking-wider text-on-primary-container font-semibold">
+            Select Race
+          </label>
+          <RaceSelector
+            races={races}
+            isLoading={raceCatalogLoading}
+            selectedRace={selectedRace}
+            onSelect={onRaceSelect}
+            gmvImportState={gmvImportState}
+          />
           {profileState.status === 'loading' && (
             <div className="flex items-center gap-2 text-xs text-on-primary-container">
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -152,42 +165,81 @@ export function RiderInput({
           )}
         </div>
 
-        {/* Import Price List */}
-        <div className="flex flex-col gap-2">
-          <label
-            htmlFor="game-url"
-            className="text-xs font-body uppercase tracking-wider text-on-primary-container font-semibold"
+        {/* Manual URL fallback (collapsible) */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowManual(!showManual)}
+            className="flex items-center gap-1.5 text-xs text-outline hover:text-on-surface transition-colors"
           >
-            Import Price List
-          </label>
-          <div className="flex gap-2">
-            <div className="relative flex-1 group">
-              <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline group-focus-within:text-primary" />
-              <Input
-                id="game-url"
-                data-testid="setup-game-url-input"
-                value={gameUrl}
-                onChange={(e) => setGameUrl(e.target.value)}
-                placeholder="Fantasy platform price URL"
-                className="pl-10"
-              />
+            <ChevronDown
+              className={`h-3 w-3 transition-transform ${shouldShowManual ? 'rotate-0' : '-rotate-90'}`}
+            />
+            Enter URLs manually
+          </button>
+
+          {shouldShowManual && (
+            <div className="mt-3 flex flex-col gap-4 rounded-sm border border-outline-variant/10 bg-surface-container/50 p-4">
+              {/* Race URL */}
+              <div className="flex flex-col gap-2">
+                <label
+                  htmlFor="race-url"
+                  className="text-xs font-body uppercase tracking-wider text-on-primary-container font-semibold"
+                >
+                  Race URL (ProCyclingStats)
+                </label>
+                <div className="relative group">
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline group-focus-within:text-primary" />
+                  <Input
+                    id="race-url"
+                    data-testid="setup-race-url-input"
+                    value={raceUrl}
+                    onChange={(e) => setRaceUrl(e.target.value)}
+                    placeholder="Paste race startlist URL to auto-detect riders..."
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              {/* Import Price List */}
+              <div className="flex flex-col gap-2">
+                <label
+                  htmlFor="game-url"
+                  className="text-xs font-body uppercase tracking-wider text-on-primary-container font-semibold"
+                >
+                  Import Price List
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1 group">
+                    <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-outline group-focus-within:text-primary" />
+                    <Input
+                      id="game-url"
+                      data-testid="setup-game-url-input"
+                      value={gameUrl}
+                      onChange={(e) => setGameUrl(e.target.value)}
+                      placeholder="Fantasy platform price URL"
+                      className="pl-10"
+                    />
+                  </div>
+                  <Button
+                    data-testid="setup-fetch-btn"
+                    variant="secondary"
+                    onClick={handleImport}
+                    disabled={!gameUrl || importStatus === 'loading'}
+                    className="border border-primary/20"
+                  >
+                    {importStatus === 'loading' ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    Fetch
+                  </Button>
+                </div>
+                {importStatus === 'error' && <p className="text-xs text-error">{importError}</p>}
+              </div>
             </div>
-            <Button
-              data-testid="setup-fetch-btn"
-              variant="secondary"
-              onClick={handleImport}
-              disabled={!gameUrl || importStatus === 'loading'}
-              className="border border-primary/20"
-            >
-              {importStatus === 'loading' ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
-              )}
-              Fetch
-            </Button>
-          </div>
-          {importStatus === 'error' && <p className="text-xs text-error">{importError}</p>}
+          )}
         </div>
 
         <div className="h-px bg-outline-variant/10 my-2" />

@@ -46,6 +46,11 @@ function RiderInputWrapper({
       budget={budget}
       onBudgetChange={setBudget}
       profileState={profileState}
+      races={[]}
+      raceCatalogLoading={false}
+      selectedRace={null}
+      onRaceSelect={() => {}}
+      gmvImportState={{ status: 'idle' }}
     />
   );
 }
