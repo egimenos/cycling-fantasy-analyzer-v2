@@ -4,6 +4,7 @@ title: Frontend Integration & Wiring
 lane: planned
 dependencies:
 - WP03
+- WP04
 subtasks:
 - T022
 - T023

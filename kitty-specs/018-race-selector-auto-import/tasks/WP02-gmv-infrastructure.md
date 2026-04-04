@@ -72,10 +72,10 @@ spec-kitty implement WP02 --base WP01
      const EXCLUDED_TITLE_PATTERNS = ['Equipos y elecciones', 'Calendario'];
 
      @Injectable()
-     export class GmvClientAdapter implements GmvClientPort {
+     export class GmvClientAdapter {
        private readonly logger = new Logger(GmvClientAdapter.name);
 
-       async fetchPosts(): Promise<GmvPost[]> {
+       async fetchPostsFromApi(): Promise<GmvPost[]> {
          try {
            const url = `${GMV_WP_API_URL}?categories=${GMV_CATEGORIES}&per_page=100&_fields=id,title,link,date`;
            this.logger.debug(`Fetching GMV posts: ${url}`);
@@ -133,25 +133,26 @@ spec-kitty implement WP02 --base WP01
 
 ### Subtask T007 – Create GmvPostCacheService
 
-- **Purpose**: In-memory cache for GMV posts with TTL-based expiration. Avoids hitting the WP API on every race selection.
+- **Purpose**: In-memory cache that **implements `GmvClientPort`**. The use case injects the port and gets cached posts — clean DDD boundary. Wraps the raw `GmvClientAdapter` internally.
 - **Files**: `apps/api/src/infrastructure/gmv/gmv-post-cache.service.ts` (new file)
 - **Steps**:
   1. Create `gmv-post-cache.service.ts`:
      ```typescript
-     import { Inject, Injectable, Logger } from '@nestjs/common';
+     import { Injectable, Logger } from '@nestjs/common';
      import { GmvPost } from '../../domain/gmv/gmv-post';
-     import { GmvClientPort, GMV_CLIENT_PORT } from '../../domain/gmv/gmv-client.port';
+     import { GmvClientPort } from '../../domain/gmv/gmv-client.port';
+     import { GmvClientAdapter } from './gmv-client.adapter';
 
      const DEFAULT_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours
 
      @Injectable()
-     export class GmvPostCacheService {
+     export class GmvPostCacheService implements GmvClientPort {
        private readonly logger = new Logger(GmvPostCacheService.name);
        private cache: GmvPost[] = [];
        private lastFetchedAt = 0;
        private readonly ttlMs: number;
 
-       constructor(@Inject(GMV_CLIENT_PORT) private readonly client: GmvClientPort) {
+       constructor(private readonly adapter: GmvClientAdapter) {
          this.ttlMs = parseInt(process.env.GMV_CACHE_TTL_MS ?? String(DEFAULT_TTL_MS), 10);
        }
 
@@ -163,7 +164,7 @@ spec-kitty implement WP02 --base WP01
          }
 
          this.logger.debug('GMV cache miss — refreshing');
-         this.cache = await this.client.fetchPosts();
+         this.cache = await this.adapter.fetchPostsFromApi();
          this.lastFetchedAt = Date.now();
          return this.cache;
        }
@@ -175,11 +176,12 @@ spec-kitty implement WP02 --base WP01
      }
      ```
   2. Key decisions:
+     - **Implements `GmvClientPort`**: This is the class bound to `GMV_CLIENT_PORT`. The use case injects the port and never knows about caching — clean DDD.
+     - **Wraps `GmvClientAdapter`**: Injects the raw adapter (internal infra detail), delegates fetch to it.
      - **Singleton scope**: NestJS services are singletons by default — no extra config needed.
      - **TTL configurable**: Via `GMV_CACHE_TTL_MS` env var (useful for testing with short TTL).
-     - **Thread-safe enough**: Single-user app, no concurrent request concerns.
      - **`invalidate()`**: Useful for testing and future admin endpoints.
-- **Parallel?**: No — depends on T006 being in place for the port injection.
+- **Parallel?**: No — depends on T006 being in place.
 - **Notes**: The cache holds the filtered, decoded posts. No need to re-filter on cache hits.
 
 ### Subtask T008 – Create GmvModule
@@ -196,19 +198,23 @@ spec-kitty implement WP02 --base WP01
 
      @Module({
        providers: [
+         GmvClientAdapter,
          {
            provide: GMV_CLIENT_PORT,
-           useClass: GmvClientAdapter,
+           useClass: GmvPostCacheService,
          },
-         GmvPostCacheService,
        ],
-       exports: [GMV_CLIENT_PORT, GmvPostCacheService],
+       exports: [GMV_CLIENT_PORT],
      })
      export class GmvModule {}
      ```
-  2. Pattern follows `MlModule` — simple, exports port symbol + service.
+  2. Key decisions:
+     - **`GMV_CLIENT_PORT` → `GmvPostCacheService`**: The port is bound to the cached version. Consumers get caching transparently.
+     - **`GmvClientAdapter` as plain provider**: Injected internally by `GmvPostCacheService`, not exported.
+     - **Only exports the port symbol**: Clean boundary — consumers depend on the port, not infrastructure classes.
+  3. Pattern follows `MlModule` — simple, exports port symbol.
 - **Parallel?**: No — this is the final wiring step.
-- **Notes**: This module will be imported by `AnalyzeModule` in WP03. Exporting both the port and the cache service so the use case can inject the cache directly.
+- **Notes**: This module will be imported by `AnalyzeModule` in WP03. Only the port is exported — the use case injects `GMV_CLIENT_PORT` and gets the cached implementation.
 
 ## Risks & Mitigations
 

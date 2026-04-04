@@ -6,12 +6,13 @@ Attempts to find and import a price list from GrandesMiniVueltas by fuzzy-matchi
 ## Request
 
 ```
-GET /api/gmv-match?raceSlug=volta-a-catalunya&year=2026
+GET /api/gmv-match?raceSlug=volta-a-catalunya&raceName=Volta+a+Catalunya&year=2026
 ```
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | raceSlug | string | Yes | PCS race slug |
+| raceName | string | No | Human-readable race name (derived from slug if omitted) |
 | year | number | Yes | Race year |
 
 ## Response (match found)

@@ -75,10 +75,10 @@ When the automatic flow cannot find a match (new race not in DB, or no GMV post 
 - **FR-004**: Upon race selection, system MUST auto-construct the PCS URL from the race slug and year, and fetch the race profile
 - **FR-005**: System MUST fetch and cache men's race posts from the GMV WordPress API (categories 23 and 21), excluding posts containing "Equipos y elecciones" or "Calendario" in the title
 - **FR-006**: System MUST fuzzy-match the selected race name against cached GMV post titles to find the corresponding price list
-- **FR-007**: When a unique GMV match is found (above confidence threshold), the system MUST auto-import the price list and populate the rider list
+- **FR-007**: When a unique GMV match is found (confidence ≥ 0.7), the system MUST auto-import the price list and populate the rider list
 - **FR-008**: When no GMV match is found, the system MUST display a message and show a manual URL input fallback
 - **FR-009**: The manual URL fallback MUST support the existing workflow (PCS URL + GMV URL inputs)
-- **FR-010**: GMV post cache MUST have a configurable TTL (default: a few hours) and refresh transparently
+- **FR-010**: GMV post cache MUST have a configurable TTL (default: 4 hours) and refresh transparently
 - **FR-011**: System MUST only display men's race posts from GMV (no women's or sub-23 categories)
 
 ### Key Entities

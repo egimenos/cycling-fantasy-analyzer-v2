@@ -4,6 +4,7 @@ title: Backend Use Cases & Controller
 lane: planned
 dependencies:
 - WP01
+- WP02
 subtasks:
 - T009
 - T010
@@ -222,8 +223,8 @@ spec-kitty implement WP03 --base WP02
 - **Steps**:
   1. Create the use case:
      ```typescript
-     import { Injectable, Logger } from '@nestjs/common';
-     import { GmvPostCacheService } from '../../infrastructure/gmv/gmv-post-cache.service';
+     import { Inject, Injectable, Logger } from '@nestjs/common';
+     import { GmvClientPort, GMV_CLIENT_PORT } from '../../domain/gmv/gmv-client.port';
      import { ImportPriceListUseCase } from './import-price-list.use-case';
      import { fuzzyMatchGmvPost } from './fuzzy-match-gmv';
      import { GmvMatchResponse } from '@cycling-analyzer/shared-types';
@@ -233,12 +234,12 @@ spec-kitty implement WP03 --base WP02
        private readonly logger = new Logger(GmvAutoImportUseCase.name);
 
        constructor(
-         private readonly gmvCache: GmvPostCacheService,
+         @Inject(GMV_CLIENT_PORT) private readonly gmvClient: GmvClientPort,
          private readonly importPriceList: ImportPriceListUseCase,
        ) {}
 
        async execute(raceSlug: string, raceName: string, year: number): Promise<GmvMatchResponse> {
-         const posts = await this.gmvCache.getPosts();
+         const posts = await this.gmvClient.getPosts();
 
          if (posts.length === 0) {
            this.logger.warn('No GMV posts available (API down or cache empty)');
@@ -279,7 +280,7 @@ spec-kitty implement WP03 --base WP02
   2. Key decisions:
      - **Reuses `ImportPriceListUseCase`**: The existing use case already handles fetching HTML and parsing price list tables. No duplication.
      - **Graceful on import failure**: If the match is found but the page can't be parsed, returns `matched: true` with `riders: null`. Frontend can offer manual retry.
-     - **Injects `GmvPostCacheService` directly** (not port): This is acceptable — the cache is an application-level concern, not a domain boundary. The port boundary is at `GmvClientPort`.
+     - **Injects `GMV_CLIENT_PORT`**: Clean DDD boundary — the use case depends on the port, not the infrastructure cache service. Caching is transparent (handled by the adapter behind the port).
 - **Parallel?**: No — depends on T010 and T011 (alias map + fuzzy match).
 - **Notes**: The `raceName` parameter comes from the database `race_results.race_name` column (already human-readable, e.g., "Volta a Catalunya").
 
