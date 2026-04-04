@@ -168,7 +168,7 @@ function FilterPill({
       className={cn(
         'rounded-full border px-2.5 py-0.5 text-xs transition-colors',
         active
-          ? 'border-primary bg-primary text-on-primary'
+          ? 'border-secondary bg-secondary/20 text-secondary font-semibold'
           : 'border-outline-variant/30 text-outline hover:bg-surface-container-highest',
       )}
     >
