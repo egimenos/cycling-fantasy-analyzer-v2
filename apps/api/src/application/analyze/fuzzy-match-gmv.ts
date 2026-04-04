@@ -30,16 +30,22 @@ export function fuzzyMatchGmvPost(
 }
 
 function computeTokenOverlap(searchTerm: string, year: number, postTitle: string): number {
-  const searchTokens = tokenize(stripYear(searchTerm, year));
-  const titleTokens = tokenize(stripYear(postTitle, year));
+  const searchTokens = dedupe(tokenize(stripYear(searchTerm, year)));
+  const titleTokens = dedupe(
+    tokenize(stripYear(postTitle, year)).filter((t) => t !== 'me' && t !== 'men'),
+  );
 
   if (searchTokens.length === 0 || titleTokens.length === 0) return 0;
 
-  // Strip "ME" suffix from GMV titles (men's edition marker)
-  const cleanTitleTokens = titleTokens.filter((t) => t !== 'me');
+  const matches = searchTokens.filter((t) => titleTokens.includes(t));
+  // Bidirectional: best of "how much of search is in title" vs "how much of title is in search"
+  const forward = matches.length / searchTokens.length;
+  const reverse = matches.length / titleTokens.length;
+  return Math.max(forward, reverse);
+}
 
-  const matches = searchTokens.filter((t) => cleanTitleTokens.includes(t));
-  return matches.length / searchTokens.length;
+function dedupe(tokens: string[]): string[] {
+  return [...new Set(tokens)];
 }
 
 function tokenize(text: string): string[] {
