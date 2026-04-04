@@ -146,7 +146,7 @@ function HomePageContent() {
       dispatchRef.current({ type: 'TEAM_COMPLETE' });
       void navigateRef.current({ search: { tab: 'optimization' } });
     }
-  }, [optimizeState.status, optimizeState.data]);
+  }, [optimizeState]);
 
   // Handle apply optimal team to roster (just navigates — team already populated)
   const handleApplyToRoster = useCallback(() => {
