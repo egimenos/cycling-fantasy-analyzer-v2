@@ -55,7 +55,7 @@ export class RaceCatalogController {
       throw new BadRequestException('Invalid year');
     }
 
-    const name = raceName ?? this.slugToName(raceSlug);
+    const name = raceName ?? this.fetchRaceProfile.slugToName(raceSlug);
     return this.gmvAutoImport.execute(raceSlug, name, parsedYear);
   }
 
@@ -74,12 +74,5 @@ export class RaceCatalogController {
     }
 
     return this.fetchRaceProfile.executeBySlug(raceSlug, parsedYear);
-  }
-
-  private slugToName(slug: string): string {
-    return slug
-      .split('-')
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' ');
   }
 }
