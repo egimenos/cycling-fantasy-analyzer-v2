@@ -4,6 +4,7 @@ import type {
   AnalyzedRider,
   PriceListEntryDto,
   ProfileSummary,
+  RaceListItem,
 } from '@cycling-analyzer/shared-types';
 import { type RaceType } from '@cycling-analyzer/shared-types';
 import type { FlowStep } from '@/features/flow/types';
@@ -13,7 +14,12 @@ import { FlowTabs } from '@/features/flow/components/flow-tabs';
 import { useAnalyze } from '@/features/rider-list/hooks/use-analyze';
 import { useLockExclude } from '@/features/rider-list/hooks/use-lock-exclude';
 import { useTeamBuilder } from '@/features/team-builder/hooks/use-team-builder';
-import { useRaceProfile } from '@/features/rider-list/hooks/use-race-profile';
+import {
+  useRaceProfile,
+  type RaceProfileInput,
+} from '@/features/rider-list/hooks/use-race-profile';
+import { useRaceCatalog } from '@/features/rider-list/hooks/use-race-catalog';
+import { useGmvAutoImport } from '@/features/rider-list/hooks/use-gmv-auto-import';
 import { useOptimize } from '@/features/optimizer/hooks/use-optimize';
 import { LoadingSpinner } from '@/shared/ui/loading-spinner';
 import { useIsDesktop } from '@/shared/hooks/use-media-query';
@@ -57,16 +63,26 @@ function HomePageContent() {
   const { isUnlocked, dispatch } = useFlowState();
 
   // Shared state across tabs — persists when switching tabs
-  const { state: analyzeState, analyze, retry: retryAnalyze } = useAnalyze();
+  const { state: analyzeState, analyze, retry: retryAnalyze, reset: resetAnalyze } = useAnalyze();
   const { state: optimizeState, optimize, reset: resetOptimize } = useOptimize();
   const { lockedIds, excludedIds, toggleLock, toggleExclude } = useLockExclude();
   const [budget, setBudget] = useState(2000);
   const [raceUrl, setRaceUrl] = useState('');
   const [riderText, setRiderText] = useState('');
   const [gameUrl, setGameUrl] = useState('');
+  const [selectedRace, setSelectedRace] = useState<RaceListItem | null>(null);
   const riders = analyzeState.status === 'success' ? analyzeState.data.riders : EMPTY_RIDERS;
   const teamBuilder = useTeamBuilder(budget, riders);
-  const profileState = useRaceProfile(raceUrl);
+  const raceCatalog = useRaceCatalog();
+  const { state: gmvImportState, importForRace, reset: resetGmvImport } = useGmvAutoImport();
+
+  // Race profile: slug mode when race selected from combobox, URL mode for manual fallback
+  const profileInput: RaceProfileInput | null = selectedRace
+    ? { mode: 'slug', raceSlug: selectedRace.raceSlug, year: selectedRace.year }
+    : raceUrl
+      ? { mode: 'url', url: raceUrl }
+      : null;
+  const profileState = useRaceProfile(profileInput);
 
   // Sync lock -> auto-select in team builder
   useEffect(() => {
@@ -156,13 +172,53 @@ function HomePageContent() {
     void navigate({ search: { tab: 'roster' } });
   }, [navigate]);
 
-  // Handle full reset from Roster tab
+  // Handle race selection from combobox — reset all downstream state
+  const handleRaceSelect = useCallback(
+    (race: RaceListItem | null) => {
+      setSelectedRace(race);
+      // Reset analysis and downstream flow when race changes
+      resetAnalyze();
+      resetOptimize();
+      teamBuilder.clearAll();
+      dispatch({ type: 'RESET' });
+      if (race) {
+        setRaceUrl('');
+        setGameUrl('');
+        importForRace(race.raceSlug, race.raceName, race.year);
+      } else {
+        resetGmvImport();
+      }
+    },
+    [importForRace, resetGmvImport, resetAnalyze, resetOptimize, teamBuilder, dispatch],
+  );
+
+  // Auto-populate riders when GMV import succeeds
+  useEffect(() => {
+    if (
+      gmvImportState.status === 'success' &&
+      gmvImportState.data.matched &&
+      gmvImportState.data.riders
+    ) {
+      const riderLines = gmvImportState.data.riders
+        .map((r) => `${r.name}, ${r.team}, ${r.price}`)
+        .join('\n');
+      setRiderText(riderLines);
+    }
+  }, [gmvImportState]);
+
+  // Handle full reset (from Roster tab or Setup "Start New Analysis")
   const handleFullReset = useCallback(() => {
-    teamBuilder.clearAll();
+    resetAnalyze();
     resetOptimize();
+    resetGmvImport();
+    teamBuilder.clearAll();
+    setSelectedRace(null);
+    setRiderText('');
+    setRaceUrl('');
+    setGameUrl('');
     dispatch({ type: 'RESET' });
     void navigate({ search: { tab: 'setup' } });
-  }, [teamBuilder, resetOptimize, dispatch, navigate]);
+  }, [resetAnalyze, resetOptimize, resetGmvImport, teamBuilder, dispatch, navigate]);
 
   // Handle team complete (manual path)
   const handleReviewTeam = useCallback(() => {
@@ -249,6 +305,13 @@ function HomePageContent() {
               onGameUrlChange={setGameUrl}
               onBudgetChange={setBudget}
               profileState={profileState}
+              races={raceCatalog.status === 'success' ? raceCatalog.races : []}
+              raceCatalogLoading={raceCatalog.status === 'loading'}
+              selectedRace={selectedRace}
+              onRaceSelect={handleRaceSelect}
+              gmvImportState={gmvImportState}
+              analyzeResult={analyzeState.status === 'success' ? analyzeState.data : undefined}
+              onReset={handleFullReset}
             />
           </div>
         )}

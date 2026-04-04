@@ -25,6 +25,11 @@ export class FetchRaceProfileUseCase {
     private readonly parser: RaceProfileParserPort,
   ) {}
 
+  async executeBySlug(raceSlug: string, year: number): Promise<RaceProfileResponse> {
+    const pcsUrl = `https://www.procyclingstats.com/race/${raceSlug}/${year}`;
+    return this.execute(pcsUrl);
+  }
+
   async execute(pcsUrl: string): Promise<RaceProfileResponse> {
     const { raceSlug, year } = this.parseUrl(pcsUrl);
     const raceName = this.slugToName(raceSlug);

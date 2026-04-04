@@ -8,13 +8,18 @@ export interface RaceSummary {
   readonly raceType: RaceType;
 }
 
+export interface RaceCatalogFilter {
+  minYear?: number;
+  raceType?: RaceType;
+}
+
 export interface RaceResultRepositoryPort {
   findByRider(riderId: string): Promise<RaceResult[]>;
   findByRiderIds(riderIds: string[]): Promise<RaceResult[]>;
   findByRace(raceSlug: string, year: number): Promise<RaceResult[]>;
   findByRiderIdsBeforeDate(riderIds: string[], cutoffDate: Date): Promise<RaceResult[]>;
   findByRiderIdsAndRaceSlug(riderIds: string[], raceSlug: string): Promise<RaceResult[]>;
-  findDistinctRacesWithDate(): Promise<RaceSummary[]>;
+  findDistinctRacesWithDate(filter?: RaceCatalogFilter): Promise<RaceSummary[]>;
   saveMany(results: RaceResult[]): Promise<number>;
 }
 

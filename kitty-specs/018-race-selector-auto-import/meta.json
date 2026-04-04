@@ -1,0 +1,11 @@
+{
+  "feature_number": "018",
+  "slug": "018-race-selector-auto-import",
+  "feature_slug": "018-race-selector-auto-import",
+  "created_at": "2026-04-04T23:07:00Z",
+  "target_branch": "main",
+  "friendly_name": "Race Selector with Auto Price Import",
+  "mission": "software-dev",
+  "source_description": "Replace manual URL inputs in Setup tab with a single searchable combobox that auto-constructs PCS URL and auto-imports GMV price list via WordPress API fuzzy matching",
+  "vcs": "git"
+}

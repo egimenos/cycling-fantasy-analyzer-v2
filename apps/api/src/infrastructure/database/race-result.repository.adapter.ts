@@ -1,8 +1,9 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { eq, inArray, and, lt, isNotNull, desc } from 'drizzle-orm';
+import { eq, inArray, and, lt, gte, isNotNull, desc, asc } from 'drizzle-orm';
 import {
   RaceResultRepositoryPort,
   RaceSummary,
+  RaceCatalogFilter,
 } from '../../domain/race-result/race-result.repository.port';
 import { RaceResult, RaceResultProps } from '../../domain/race-result/race-result.entity';
 import { RaceType } from '../../domain/shared/race-type.enum';
@@ -68,7 +69,16 @@ export class RaceResultRepositoryAdapter implements RaceResultRepositoryPort {
     return rows.map((row) => this.toDomain(row));
   }
 
-  async findDistinctRacesWithDate(): Promise<RaceSummary[]> {
+  async findDistinctRacesWithDate(filter?: RaceCatalogFilter): Promise<RaceSummary[]> {
+    const conditions = [isNotNull(raceResults.raceDate)];
+
+    if (filter?.minYear) {
+      conditions.push(gte(raceResults.year, filter.minYear));
+    }
+    if (filter?.raceType) {
+      conditions.push(eq(raceResults.raceType, filter.raceType));
+    }
+
     const rows = await this.db
       .selectDistinct({
         raceSlug: raceResults.raceSlug,
@@ -77,8 +87,8 @@ export class RaceResultRepositoryAdapter implements RaceResultRepositoryPort {
         raceType: raceResults.raceType,
       })
       .from(raceResults)
-      .where(isNotNull(raceResults.raceDate))
-      .orderBy(desc(raceResults.year));
+      .where(and(...conditions))
+      .orderBy(desc(raceResults.year), asc(raceResults.raceName));
 
     return rows.map((row) => ({
       raceSlug: row.raceSlug,

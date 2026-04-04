@@ -46,6 +46,11 @@ function RiderInputWrapper({
       budget={budget}
       onBudgetChange={setBudget}
       profileState={profileState}
+      races={[]}
+      raceCatalogLoading={false}
+      selectedRace={null}
+      onRaceSelect={() => {}}
+      gmvImportState={{ status: 'idle' }}
     />
   );
 }
@@ -104,9 +109,9 @@ describe('RiderInput', () => {
     expect(btn).toHaveTextContent(/analyzing/i);
   });
 
-  it('has Race URL input field', () => {
+  it('has Race Selector combobox', () => {
     render(<RiderInputWrapper onAnalyze={vi.fn()} isLoading={false} />);
-    expect(screen.getByTestId('setup-race-url-input')).toBeInTheDocument();
+    expect(screen.getByTestId('race-selector-trigger')).toBeInTheDocument();
   });
 
   it('calls onAnalyze with default race type when no profile fetched', async () => {

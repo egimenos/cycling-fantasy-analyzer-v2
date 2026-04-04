@@ -1,10 +1,16 @@
-import type { PriceListEntryDto, ProfileSummary } from '@cycling-analyzer/shared-types';
+import type {
+  AnalyzeResponse,
+  PriceListEntryDto,
+  ProfileSummary,
+  RaceListItem,
+} from '@cycling-analyzer/shared-types';
 import { type RaceType } from '@cycling-analyzer/shared-types';
 import { RiderInput } from '@/features/rider-list/components/rider-input';
 import { LoadingSpinner } from '@/shared/ui/loading-spinner';
 import { TableSkeleton } from '@/shared/ui/table-skeleton';
-import { TrendingUp, AlertTriangle, RefreshCw } from 'lucide-react';
+import { TrendingUp, AlertTriangle, RefreshCw, CheckCircle2, RotateCcw } from 'lucide-react';
 import type { useRaceProfile } from '@/features/rider-list/hooks/use-race-profile';
+import type { GmvImportState } from '@/features/rider-list/hooks/use-gmv-auto-import';
 
 export interface SetupTabProps {
   onAnalyze: (
@@ -18,6 +24,7 @@ export interface SetupTabProps {
   isLoading: boolean;
   error?: string;
   onRetry?: () => void;
+  onReset?: () => void;
   budget: number;
   riderText: string;
   onRiderTextChange: (text: string) => void;
@@ -27,6 +34,12 @@ export interface SetupTabProps {
   onGameUrlChange: (url: string) => void;
   onBudgetChange: (budget: number) => void;
   profileState: ReturnType<typeof useRaceProfile>;
+  races: RaceListItem[];
+  raceCatalogLoading: boolean;
+  selectedRace: RaceListItem | null;
+  onRaceSelect: (race: RaceListItem | null) => void;
+  gmvImportState: GmvImportState;
+  analyzeResult?: AnalyzeResponse;
 }
 
 export function SetupTab({
@@ -34,6 +47,7 @@ export function SetupTab({
   isLoading,
   error,
   onRetry,
+  onReset,
   budget,
   riderText,
   onRiderTextChange,
@@ -43,7 +57,15 @@ export function SetupTab({
   onGameUrlChange,
   onBudgetChange,
   profileState,
+  races,
+  raceCatalogLoading,
+  selectedRace,
+  onRaceSelect,
+  gmvImportState,
+  analyzeResult,
 }: SetupTabProps) {
+  const hasResult = !!analyzeResult;
+
   return (
     <div
       data-testid="tab-content-setup"
@@ -62,6 +84,11 @@ export function SetupTab({
           budget={budget}
           onBudgetChange={onBudgetChange}
           profileState={profileState}
+          races={races}
+          raceCatalogLoading={raceCatalogLoading}
+          selectedRace={selectedRace}
+          onRaceSelect={onRaceSelect}
+          gmvImportState={gmvImportState}
         />
       </div>
 
@@ -72,15 +99,20 @@ export function SetupTab({
               Real-time Preview
             </span>
             <h2 className="text-xl font-headline font-bold text-on-surface-variant">
-              {error ? 'Analysis Failed' : isLoading ? 'Analyzing...' : 'Analysis Pending'}
+              {error
+                ? 'Analysis Failed'
+                : isLoading
+                  ? 'Analyzing...'
+                  : hasResult
+                    ? 'Analysis Complete'
+                    : 'Analysis Pending'}
             </h2>
           </div>
         </div>
 
         {error ? (
-          /* Error state — always visible */
+          /* Error state */
           <div className="flex-1 min-h-[500px] rounded-sm bg-error-container/[0.06] border border-error/20 flex flex-col items-center justify-center p-12 relative overflow-hidden animate-fade-in">
-            {/* Diagonal hazard stripes */}
             <div
               className="absolute inset-0 opacity-[0.03] pointer-events-none"
               style={{
@@ -89,11 +121,9 @@ export function SetupTab({
                 color: 'var(--error)',
               }}
             />
-            {/* Bottom glow */}
             <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-error/[0.04] to-transparent pointer-events-none" />
 
             <div className="relative z-10 flex flex-col items-center text-center max-w-lg">
-              {/* Pulsing error icon */}
               <div className="relative mb-8">
                 <div className="absolute inset-0 w-24 h-24 rounded-full bg-error/10 animate-pulse" />
                 <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-error/20 to-error-container/30 flex items-center justify-center ring-1 ring-error/30">
@@ -138,9 +168,70 @@ export function SetupTab({
             </div>
             <TableSkeleton rows={10} />
           </div>
+        ) : hasResult ? (
+          /* Analysis complete — show summary */
+          <div className="hidden lg:flex flex-1 min-h-[500px] rounded-sm bg-surface-container-low/30 border border-secondary/20 flex-col items-center justify-center p-8 md:p-12 relative overflow-hidden">
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-secondary/[0.04] to-transparent pointer-events-none" />
+
+            <div className="relative z-10 flex flex-col items-center text-center max-w-md animate-fade-in">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-secondary/20 to-secondary/5 flex items-center justify-center mb-6 ring-1 ring-secondary/30">
+                <CheckCircle2 className="h-10 w-10 text-secondary" />
+              </div>
+              <h3 className="text-2xl font-headline font-extrabold text-on-surface mb-3 tracking-tight">
+                Analysis Complete
+              </h3>
+
+              <div className="grid grid-cols-3 gap-4 w-full mb-6">
+                <div className="bg-surface-container-high/60 rounded-sm p-3 border border-outline-variant/10">
+                  <span className="text-2xl font-mono font-bold text-secondary">
+                    {analyzeResult.totalMatched}
+                  </span>
+                  <span className="block text-[10px] font-mono text-outline uppercase tracking-wider mt-1">
+                    Matched
+                  </span>
+                </div>
+                <div className="bg-surface-container-high/60 rounded-sm p-3 border border-outline-variant/10">
+                  <span className="text-2xl font-mono font-bold text-on-surface">
+                    {analyzeResult.totalSubmitted}
+                  </span>
+                  <span className="block text-[10px] font-mono text-outline uppercase tracking-wider mt-1">
+                    Submitted
+                  </span>
+                </div>
+                <div className="bg-surface-container-high/60 rounded-sm p-3 border border-outline-variant/10">
+                  <span className="text-2xl font-mono font-bold text-tertiary">
+                    {analyzeResult.unmatchedCount}
+                  </span>
+                  <span className="block text-[10px] font-mono text-outline uppercase tracking-wider mt-1">
+                    Unmatched
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-on-surface-variant font-body leading-relaxed mb-6 text-sm">
+                Your analysis is ready. Head to the Dashboard to explore results, or re-analyze with
+                different settings.
+              </p>
+
+              {onReset && (
+                <button
+                  onClick={onReset}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/20 text-on-surface-variant font-mono text-xs uppercase tracking-wider rounded-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Start New Analysis
+                </button>
+              )}
+
+              <div className="flex items-center gap-2 text-[10px] font-mono text-secondary/60 uppercase tracking-widest mt-6">
+                <span className="w-1.5 h-1.5 rounded-full bg-secondary/60" />
+                Complete
+              </div>
+            </div>
+          </div>
         ) : (
+          /* Idle state — awaiting input */
           <div className="hidden lg:flex flex-1 min-h-[500px] rounded-sm bg-surface-container-low/30 border border-dashed border-outline-variant/20 flex-col items-center justify-center p-8 md:p-12 relative overflow-hidden">
-            {/* Atmospheric road line */}
             <div className="absolute inset-0 flex justify-center pointer-events-none">
               <div className="w-px h-full bg-gradient-to-b from-transparent via-outline-variant/10 to-transparent" />
             </div>
@@ -171,7 +262,9 @@ export function SetupTab({
               <span className="text-[10px] md:text-xs text-outline uppercase font-mono tracking-tighter">
                 Selected Riders
               </span>
-              <span className="text-base md:text-lg font-mono font-bold text-outline">-- / 9</span>
+              <span className="text-base md:text-lg font-mono font-bold text-outline">
+                {hasResult ? `${analyzeResult.totalMatched}` : '--'} / 9
+              </span>
             </div>
             <div className="hidden md:block h-8 w-px bg-outline-variant/15" />
             <div className="flex flex-col">
@@ -191,9 +284,11 @@ export function SetupTab({
               <span className="text-base md:text-lg font-mono font-bold text-outline">—</span>
             </div>
             <div className="flex gap-2 items-center bg-surface-container-highest/50 px-2 md:px-3 py-1.5 rounded-sm justify-center md:justify-start">
-              <span className="w-1.5 h-1.5 rounded-full bg-secondary/40 animate-pulse" />
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${hasResult ? 'bg-secondary/60' : 'bg-secondary/40 animate-pulse'}`}
+              />
               <span className="text-[10px] text-on-surface-variant uppercase font-mono tracking-wider font-medium">
-                System Ready
+                {hasResult ? 'Analysis Done' : 'System Ready'}
               </span>
             </div>
           </div>
