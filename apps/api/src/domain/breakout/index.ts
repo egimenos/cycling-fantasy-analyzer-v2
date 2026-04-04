@@ -1,7 +1,6 @@
 export {
   computeTrajectory,
   computeForm,
-  computeComeback,
   computeRouteFit,
   computeVariance,
   computeBpiIndex,

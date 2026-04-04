@@ -59,11 +59,6 @@ const FLAG_CONFIG: Record<string, { label: string; colorClass: string; descripti
     colorClass: 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/40',
     description: 'Top-quartile pts/hillio at low price with meaningful prediction',
   },
-  COMEBACK: {
-    label: 'COMEBACK',
-    colorClass: 'bg-primary/15 text-primary border-primary/40',
-    description: 'Historical peak far exceeds prediction with recovery signs',
-  },
   SPRINT_OPPORTUNITY: {
     label: 'SPRINT',
     colorClass: 'bg-tertiary/15 text-tertiary border-tertiary/40',
