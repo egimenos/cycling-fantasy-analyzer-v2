@@ -1,4 +1,4 @@
-import { GmvPost } from '../../domain/gmv/gmv-post';
+import { GmvPost } from './gmv-post';
 import { getSearchTerms } from './race-name-aliases';
 
 const CONFIDENCE_THRESHOLD = 0.7;

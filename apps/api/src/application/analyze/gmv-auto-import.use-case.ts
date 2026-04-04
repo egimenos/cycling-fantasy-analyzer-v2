@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { GmvClientPort, GMV_CLIENT_PORT } from '../../domain/gmv/gmv-client.port';
 import { ImportPriceListUseCase } from './import-price-list.use-case';
-import { fuzzyMatchGmvPost } from './fuzzy-match-gmv';
+import { fuzzyMatchGmvPost } from '../../domain/gmv/fuzzy-match';
 import type { GmvMatchResponse } from '@cycling-analyzer/shared-types';
 
 const NO_MATCH: GmvMatchResponse = {
