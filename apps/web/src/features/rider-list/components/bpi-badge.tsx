@@ -52,17 +52,17 @@ const FLAG_CONFIG: Record<string, { label: string; colorClass: string; descripti
   HOT_STREAK: {
     label: 'HOT',
     colorClass: 'bg-error/15 text-error border-error/40',
-    description: 'Current season 2x+ their historical average',
+    description: 'Strong recent form — last 90 days well above career average',
   },
   DEEP_VALUE: {
     label: 'VALUE',
     colorClass: 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/40',
     description: 'Above-median pts/hillio at low price',
   },
-  CEILING_PLAY: {
-    label: 'CEILING',
+  COMEBACK: {
+    label: 'COMEBACK',
     colorClass: 'bg-primary/15 text-primary border-primary/40',
-    description: 'Historical peak far exceeds prediction',
+    description: 'Historical peak far exceeds prediction with recovery signs',
   },
   SPRINT_OPPORTUNITY: {
     label: 'SPRINT',

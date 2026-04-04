@@ -2,6 +2,7 @@ import { RaceResult } from '../race-result/race-result.entity';
 import { ResultCategory } from '../shared/result-category.enum';
 import { getPointsForPosition } from './scoring-weights.config';
 import type { RaceHistory } from '@cycling-analyzer/shared-types';
+import type { RacePerformance } from '../breakout/breakout.types';
 
 /**
  * Counts unique sprint intermediate locations per stage from race results.
@@ -75,4 +76,43 @@ export function buildSameRaceHistory(
   }
 
   return history.sort((a, b) => b.year - a.year);
+}
+
+/**
+ * Aggregates race results into per-race performance summaries with dates.
+ * Groups by (raceSlug, year) and sums fantasy points across all categories.
+ * Only includes races with a known raceDate (needed for time-window signals).
+ */
+export function buildRacePerformances(results: readonly RaceResult[]): RacePerformance[] {
+  const byRace = new Map<string, RaceResult[]>();
+  for (const r of results) {
+    if (!r.raceDate) continue;
+    const key = `${r.raceSlug}:${r.year}`;
+    const existing = byRace.get(key);
+    if (existing) existing.push(r);
+    else byRace.set(key, [r]);
+  }
+
+  const performances: RacePerformance[] = [];
+  for (const [, raceResults] of byRace) {
+    const first = raceResults[0];
+    const sprintsPerStage = countSprintsPerStage(raceResults);
+    let total = 0;
+
+    for (const r of raceResults) {
+      total += getPointsForPosition(r.category as ResultCategory, r.position, r.raceType, {
+        climbCategory: r.climbCategory,
+        sprintCount: r.stageNumber !== null ? (sprintsPerStage.get(r.stageNumber) ?? 1) : 1,
+      });
+    }
+
+    performances.push({
+      raceSlug: first.raceSlug,
+      year: first.year,
+      raceDate: first.raceDate!,
+      total,
+    });
+  }
+
+  return performances.sort((a, b) => b.raceDate.getTime() - a.raceDate.getTime());
 }

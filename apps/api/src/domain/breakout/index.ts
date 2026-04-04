@@ -1,7 +1,7 @@
 export {
   computeTrajectory,
-  computeRecencyBurst,
-  computeCeilingGap,
+  computeForm,
+  computeComeback,
   computeRouteFit,
   computeVariance,
   computeBpiIndex,
@@ -13,4 +13,4 @@ export {
   computeRawSlope,
 } from './breakout.service';
 
-export type { ComputeBreakoutInput } from './breakout.types';
+export type { ComputeBreakoutInput, RacePerformance } from './breakout.types';

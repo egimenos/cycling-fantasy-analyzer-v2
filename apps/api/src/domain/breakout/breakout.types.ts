@@ -7,8 +7,16 @@ export interface CoreCategoryScores {
   readonly sprint: number;
 }
 
+export interface RacePerformance {
+  readonly raceSlug: string;
+  readonly year: number;
+  readonly raceDate: Date;
+  readonly total: number;
+}
+
 export interface ComputeBreakoutInput {
   readonly seasonBreakdown: readonly SeasonBreakdown[];
+  readonly racePerformances: readonly RacePerformance[];
   readonly prediction: number;
   readonly priceHillios: number;
   readonly birthDate: Date | null;
