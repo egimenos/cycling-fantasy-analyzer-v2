@@ -28,8 +28,19 @@ test.describe('Setup Tab', () => {
     await expect(dashboardPage.riderCount).toContainText(/showing/i);
   });
 
-  // T022 — Race URL auto-detect
-  test('should auto-detect race profile from PCS URL', async ({ setupPage, page }) => {
+  // Race selector — combobox interaction
+  test('should display race selector combobox with races from DB', async ({ setupPage }) => {
+    await setupPage.goto();
+
+    // Combobox trigger should be visible
+    await expect(setupPage.raceSelectorTrigger).toBeVisible();
+  });
+
+  // T022 — Race URL auto-detect (manual fallback)
+  test('should auto-detect race profile from PCS URL via manual fallback', async ({
+    setupPage,
+    page,
+  }) => {
     test.slow(); // External HTTP call to PCS
 
     await setupPage.goto();
@@ -43,12 +54,13 @@ test.describe('Setup Tab', () => {
     await expect(page.getByTestId('race-profile-type')).toBeVisible();
   });
 
-  // T023 — Game URL import (depends on external service availability)
-  test('should import price list from game URL', async ({ setupPage }) => {
+  // T023 — Game URL import via manual fallback
+  test('should import price list from game URL via manual fallback', async ({ setupPage }) => {
     test.skip(!!process.env.SKIP_EXTERNAL, 'Skipped: external services unavailable');
     test.slow(); // External scraping call
 
     await setupPage.goto();
+    await setupPage.expandManualFallback();
 
     await setupPage.setGameUrl(
       'https://grandesminivueltas.com/index.php/2026/03/07/paris-niza-2026/',
@@ -98,5 +110,53 @@ test.describe('Setup Tab', () => {
     await setupPage.fillRiders(invalidPriceList);
 
     expect(await setupPage.isAnalyzeDisabled()).toBe(true);
+  });
+
+  // Analysis complete state — returning to setup
+  test('should show analysis summary when returning to setup after analyze', async ({
+    setupPage,
+    dashboardPage,
+    navPage,
+    validPriceList,
+    page,
+  }) => {
+    await setupPage.goto();
+    await setupPage.fillRiders(validPriceList);
+    await setupPage.setBudget(2000);
+    await setupPage.clickAnalyze();
+
+    // Wait for dashboard
+    await expect(dashboardPage.riderTable).toBeVisible({ timeout: 30_000 });
+
+    // Navigate back to setup
+    await navPage.goToTab('setup');
+
+    // Should show "Analysis Complete" (desktop only — hidden on mobile)
+    await expect(page.getByText('Analysis Complete')).toBeVisible();
+    await expect(setupPage.resetBtn).toBeVisible();
+  });
+
+  // Reset flow
+  test('should reset all state when clicking Start New Analysis', async ({
+    setupPage,
+    dashboardPage,
+    navPage,
+    validPriceList,
+    page,
+  }) => {
+    await setupPage.goto();
+    await setupPage.fillRiders(validPriceList);
+    await setupPage.setBudget(2000);
+    await setupPage.clickAnalyze();
+
+    await expect(dashboardPage.riderTable).toBeVisible({ timeout: 30_000 });
+
+    // Go back and reset
+    await navPage.goToTab('setup');
+    await setupPage.clickReset();
+
+    // Should stay on setup, dashboard locked again
+    await expect(page.getByTestId('tab-content-setup')).toBeVisible();
+    expect(await navPage.isTabLocked('dashboard')).toBe(true);
   });
 });
