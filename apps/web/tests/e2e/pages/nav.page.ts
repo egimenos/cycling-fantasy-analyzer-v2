@@ -1,29 +1,25 @@
 import type { Locator, Page } from '@playwright/test';
 
 export class NavPage {
-  readonly setupTab: Locator;
-  readonly dashboardTab: Locator;
-  readonly optimizationTab: Locator;
-  readonly rosterTab: Locator;
   readonly themeToggle: Locator;
 
   private readonly page: Page;
 
   constructor(page: Page) {
     this.page = page;
-    this.setupTab = page.getByTestId('flow-tab-setup');
-    this.dashboardTab = page.getByTestId('flow-tab-dashboard');
-    this.optimizationTab = page.getByTestId('flow-tab-optimization');
-    this.rosterTab = page.getByTestId('flow-tab-roster');
     this.themeToggle = page.getByTestId('nav-theme-toggle');
   }
 
-  private getTabLocator(tab: string): Locator {
+  /** Returns the visible tab locator (mobile or desktop variant). */
+  private async getVisibleTabLocator(tab: string): Promise<Locator> {
+    const desktop = this.page.getByTestId(`flow-tab-${tab}-desktop`);
+    if (await desktop.isVisible()) return desktop;
     return this.page.getByTestId(`flow-tab-${tab}`);
   }
 
   async goToTab(tab: 'setup' | 'dashboard' | 'optimization' | 'roster'): Promise<void> {
-    await this.getTabLocator(tab).click();
+    const locator = await this.getVisibleTabLocator(tab);
+    await locator.click();
   }
 
   async toggleTheme(): Promise<void> {
@@ -31,7 +27,8 @@ export class NavPage {
   }
 
   async isTabLocked(tab: string): Promise<boolean> {
-    return this.getTabLocator(tab).isDisabled();
+    const locator = await this.getVisibleTabLocator(tab);
+    return locator.isDisabled();
   }
 
   async isTabActive(tab: string): Promise<boolean> {
