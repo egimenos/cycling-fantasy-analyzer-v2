@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react';
 import type { ColumnDef, Row } from '@tanstack/react-table';
-import type { AnalyzedRider, AnalyzeResponse } from '@cycling-analyzer/shared-types';
+import {
+  BreakoutFlag,
+  type AnalyzedRider,
+  type AnalyzeResponse,
+} from '@cycling-analyzer/shared-types';
 import { DataTable } from '@/shared/ui/data-table';
 import { ScoreBadge } from '@/shared/ui/score-badge';
 import { MlBadge } from '@/shared/ui/ml-badge';
@@ -559,7 +563,7 @@ export function RiderTable({
           case 'breakout':
             return (rider.breakout?.index ?? 0) >= 50;
           case 'valuePicks':
-            return (rider.breakout?.index ?? 0) >= 50 && rider.priceHillios <= 125;
+            return rider.breakout?.flags?.includes(BreakoutFlag.DeepValue) ?? false;
           default:
             return true;
         }
@@ -575,8 +579,9 @@ export function RiderTable({
       excluded: excludedIds.size,
       unmatched: data.unmatchedCount,
       breakout: data.riders.filter((r) => (r.breakout?.index ?? 0) >= 50).length,
-      valuePicks: data.riders.filter((r) => (r.breakout?.index ?? 0) >= 50 && r.priceHillios <= 125)
-        .length,
+      valuePicks: data.riders.filter(
+        (r) => r.breakout?.flags?.includes(BreakoutFlag.DeepValue) ?? false,
+      ).length,
     }),
     [data.riders, data.unmatchedCount, selectedNames.size, lockedIds.size, excludedIds.size],
   );
