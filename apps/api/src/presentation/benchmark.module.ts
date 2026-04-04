@@ -5,6 +5,8 @@ import { STARTLIST_REPOSITORY_PORT } from '../domain/startlist/startlist.reposit
 import { StartlistRepositoryAdapter } from '../infrastructure/database/startlist.repository.adapter';
 import { ML_SCORING_PORT } from '../domain/scoring/ml-scoring.port';
 import { MlScoringAdapter } from '../infrastructure/ml/ml-scoring.adapter';
+import { STARTLIST_PARSER_PORT } from '../application/benchmark/ports/startlist-parser.port';
+import { StartlistParserAdapter } from '../infrastructure/scraping/startlist-parser.adapter';
 import { FetchStartlistUseCase } from '../application/benchmark/fetch-startlist.use-case';
 import { RunBenchmarkUseCase } from '../application/benchmark/run-benchmark.use-case';
 import { RunBenchmarkSuiteUseCase } from '../application/benchmark/run-benchmark-suite.use-case';
@@ -20,6 +22,10 @@ import { BenchmarkCommand } from './cli/benchmark.command';
     {
       provide: ML_SCORING_PORT,
       useClass: MlScoringAdapter,
+    },
+    {
+      provide: STARTLIST_PARSER_PORT,
+      useClass: StartlistParserAdapter,
     },
     FetchStartlistUseCase,
     RunBenchmarkUseCase,

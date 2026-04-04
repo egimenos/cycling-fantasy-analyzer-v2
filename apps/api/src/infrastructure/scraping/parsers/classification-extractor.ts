@@ -1,13 +1,10 @@
 import * as cheerio from 'cheerio';
+import type {
+  ClassificationType,
+  ClassificationUrl,
+} from '../../../application/scraping/ports/scraping.types';
 
-export type ClassificationType = 'GC' | 'STAGE' | 'SPRINT' | 'MOUNTAIN';
-
-export interface ClassificationUrl {
-  readonly urlPath: string;
-  readonly classificationType: ClassificationType;
-  readonly stageNumber: number | null;
-  readonly label: string;
-}
+export type { ClassificationType, ClassificationUrl };
 
 const PREV_NEXT_REGEX = /PREV|NEXT|«|»/i;
 

@@ -1,20 +1,3 @@
-import { ResultCategory } from '../../../domain/shared/result-category.enum';
-
-export interface ParsedResult {
-  readonly riderName: string;
-  readonly riderSlug: string;
-  readonly teamName: string;
-  readonly position: number | null;
-  readonly category: ResultCategory;
-  readonly stageNumber: number | null;
-  readonly dnf: boolean;
-  readonly parcoursType: string | null;
-  readonly isItt: boolean;
-  readonly isTtt: boolean;
-  readonly profileScore: number | null;
-  readonly raceDate: Date | null;
-  readonly climbCategory?: string | null;
-  readonly climbName?: string | null;
-  readonly sprintName?: string | null;
-  readonly kmMarker?: number | null;
-}
+// Canonical type definition lives in the application layer port.
+// Re-exported here so infrastructure parsers can import from their local path.
+export type { ParsedResult } from '../../../application/scraping/ports/scraping.types';

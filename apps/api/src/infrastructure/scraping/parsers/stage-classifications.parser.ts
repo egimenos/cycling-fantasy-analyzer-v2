@@ -25,14 +25,10 @@ const SPRINT_INTERMEDIATE_MAX_POSITION = 3;
 const MOUNTAIN_PASS_RE = /KOM Sprint \((HC|[1-4])\)\s+(.+?)\s*\((\d+(?:\.\d+)?)\s*km\)/;
 const SPRINT_INTERMEDIATE_RE = /Sprint\s*\|\s*(.+?)\s*\((\d+(?:\.\d+)?)\s*km\)/;
 
-/* ── Result type ────────────────────────────────────────── */
+/* ── Result type — canonical definition in application layer port ── */
 
-export interface StageClassificationResult {
-  readonly dailyGC: ParsedResult[];
-  readonly mountainPasses: ParsedResult[];
-  readonly intermediateSprints: ParsedResult[];
-  readonly dailyRegularidad: ParsedResult[];
-}
+export type { StageClassificationResult } from '../../../application/scraping/ports/scraping.types';
+import type { StageClassificationResult } from '../../../application/scraping/ports/scraping.types';
 
 /* ── Main coordinator ───────────────────────────────────── */
 

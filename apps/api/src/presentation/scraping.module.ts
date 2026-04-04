@@ -4,6 +4,8 @@ import { DatabaseModule } from '../infrastructure/database/database.module';
 import { PcsClientAdapter } from '../infrastructure/scraping/pcs-client.adapter';
 import { ScraperHealthService } from '../infrastructure/scraping/health/scraper-health.service';
 import { PCS_SCRAPER_PORT } from '../application/scraping/ports/pcs-scraper.port';
+import { RACE_RESULT_PARSER_PORT } from '../application/scraping/ports/race-result-parser.port';
+import { RaceResultParserAdapter } from '../infrastructure/scraping/race-result-parser.adapter';
 import { TriggerScrapeUseCase } from '../application/scraping/trigger-scrape.use-case';
 import { GetScrapeJobsUseCase } from '../application/scraping/get-scrape-jobs.use-case';
 import { TriggerScrapeCommand } from './cli/trigger-scrape.command';
@@ -15,6 +17,10 @@ import { SeedDatabaseCommand } from './cli/seed-database.command';
     {
       provide: PCS_SCRAPER_PORT,
       useClass: PcsClientAdapter,
+    },
+    {
+      provide: RACE_RESULT_PARSER_PORT,
+      useClass: RaceResultParserAdapter,
     },
     {
       provide: ScraperHealthService,

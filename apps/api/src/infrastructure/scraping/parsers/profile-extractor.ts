@@ -1,9 +1,7 @@
 import * as cheerio from 'cheerio';
 
-export interface ExtractedProfile {
-  parcoursType: string | null; // 'p1'-'p5' or null
-  profileScore: number | null;
-}
+export type { ExtractedProfile } from '../../../application/analyze/ports/race-profile-parser.port';
+import type { ExtractedProfile } from '../../../application/analyze/ports/race-profile-parser.port';
 
 export function extractProfile(html: string): ExtractedProfile {
   const $ = cheerio.load(html);

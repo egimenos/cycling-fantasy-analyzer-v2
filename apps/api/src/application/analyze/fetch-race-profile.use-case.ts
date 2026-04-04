@@ -2,10 +2,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import { RaceUrlParseError, RaceProfileNotFoundError } from '../../domain/analyze/errors';
 import { PcsScraperPort, PCS_SCRAPER_PORT } from '../scraping/ports/pcs-scraper.port';
 import {
-  parseRaceOverview,
+  RaceProfileParserPort,
+  RACE_PROFILE_PARSER_PORT,
   ParsedStageInfo,
-} from '../../infrastructure/scraping/parsers/race-overview.parser';
-import { extractProfile } from '../../infrastructure/scraping/parsers/profile-extractor';
+} from './ports/race-profile-parser.port';
 import { RaceType } from '../../domain/shared/race-type.enum';
 import { ParcoursType } from '../../domain/shared/parcours-type.enum';
 import type {
@@ -21,6 +21,8 @@ export class FetchRaceProfileUseCase {
   constructor(
     @Inject(PCS_SCRAPER_PORT)
     private readonly pcsClient: PcsScraperPort,
+    @Inject(RACE_PROFILE_PARSER_PORT)
+    private readonly parser: RaceProfileParserPort,
   ) {}
 
   async execute(pcsUrl: string): Promise<RaceProfileResponse> {
@@ -29,7 +31,7 @@ export class FetchRaceProfileUseCase {
 
     // Try to fetch overview page first (works for stage races)
     const overviewHtml = await this.pcsClient.fetchPage(`race/${raceSlug}/${year}`);
-    const stages = parseRaceOverview(overviewHtml);
+    const stages = this.parser.parseRaceOverview(overviewHtml);
 
     if (stages.length > 0) {
       // Stage race — determine if GT or mini-tour
@@ -103,7 +105,7 @@ export class FetchRaceProfileUseCase {
     // Try current year result page
     try {
       const html = await this.pcsClient.fetchPage(`race/${raceSlug}/${year}/result`);
-      const profile = extractProfile(html);
+      const profile = this.parser.extractProfile(html);
       if (profile.parcoursType) {
         return this.buildClassicResponse(raceSlug, raceName, year, profile.parcoursType);
       }
@@ -114,7 +116,7 @@ export class FetchRaceProfileUseCase {
     // Try previous year as fallback (FR-007b)
     try {
       const html = await this.pcsClient.fetchPage(`race/${raceSlug}/${year - 1}/result`);
-      const profile = extractProfile(html);
+      const profile = this.parser.extractProfile(html);
       if (profile.parcoursType) {
         return this.buildClassicResponse(raceSlug, raceName, year, profile.parcoursType);
       }

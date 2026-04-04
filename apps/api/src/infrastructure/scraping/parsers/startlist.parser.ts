@@ -1,11 +1,7 @@
 import * as cheerio from 'cheerio';
 
-export interface ParsedStartlistEntry {
-  readonly riderName: string;
-  readonly riderSlug: string;
-  readonly teamName: string;
-  readonly bibNumber: number | null;
-}
+export type { ParsedStartlistEntry } from '../../../application/benchmark/ports/startlist-parser.port';
+import type { ParsedStartlistEntry } from '../../../application/benchmark/ports/startlist-parser.port';
 
 /**
  * Parses a PCS startlist page and extracts rider entries.

@@ -1,14 +1,7 @@
 import * as cheerio from 'cheerio';
 
-export interface ParsedStageInfo {
-  stageNumber: number;
-  parcoursType: string | null; // 'p1'-'p5' or null
-  isItt: boolean;
-  isTtt: boolean;
-  distanceKm: number | null;
-  departure: string | null;
-  arrival: string | null;
-}
+export type { ParsedStageInfo } from '../../../application/analyze/ports/race-profile-parser.port';
+import type { ParsedStageInfo } from '../../../application/analyze/ports/race-profile-parser.port';
 
 export function parseRaceOverview(html: string): ParsedStageInfo[] {
   const $ = cheerio.load(html);

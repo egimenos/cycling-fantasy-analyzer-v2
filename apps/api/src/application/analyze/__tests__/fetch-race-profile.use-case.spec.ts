@@ -1,54 +1,23 @@
 import { RaceUrlParseError, RaceProfileNotFoundError } from '../../../domain/analyze/errors';
+import { RaceProfileParserPort } from '../ports/race-profile-parser.port';
 import { FetchRaceProfileUseCase } from '../fetch-race-profile.use-case';
 import { PcsScraperPort } from '../../scraping/ports/pcs-scraper.port';
 import { RaceType } from '../../../domain/shared/race-type.enum';
 
-function buildOverviewHtml(
-  stages: { profile?: string; name: string; distance?: string }[],
-): string {
-  const rows = stages
-    .map(
-      (s) =>
-        `<tr>
-          <td>01/07</td>
-          <td>Sat</td>
-          <td><span class="icon profile ${s.profile ?? ''}"></span></td>
-          <td><a href="#">${s.name}</a></td>
-          <td>${s.distance ?? '180'}</td>
-        </tr>`,
-    )
-    .join('\n');
-
-  return `
-    <html><body>
-      <h4>Stages</h4>
-      <table class="basic">
-        <tbody>${rows}</tbody>
-      </table>
-    </body></html>
-  `;
-}
-
-function buildResultHtml(profileClass: string): string {
-  return `
-    <html><body>
-      <span class="icon profile ${profileClass}"></span>
-      <ul class="infolist">
-        <li><div class="title">ProfileScore</div><div class="value">42</div></li>
-      </ul>
-    </body></html>
-  `;
-}
-
 describe('FetchRaceProfileUseCase', () => {
   let useCase: FetchRaceProfileUseCase;
   let mockPcsClient: jest.Mocked<PcsScraperPort>;
+  let mockParser: jest.Mocked<RaceProfileParserPort>;
 
   beforeEach(() => {
     mockPcsClient = {
       fetchPage: jest.fn(),
     };
-    useCase = new FetchRaceProfileUseCase(mockPcsClient);
+    mockParser = {
+      parseRaceOverview: jest.fn().mockReturnValue([]),
+      extractProfile: jest.fn().mockReturnValue({ parcoursType: null, profileScore: null }),
+    };
+    useCase = new FetchRaceProfileUseCase(mockPcsClient, mockParser);
   });
 
   describe('parseUrl', () => {
@@ -102,12 +71,36 @@ describe('FetchRaceProfileUseCase', () => {
 
   describe('execute — stage race', () => {
     it('should return profile with stages and summary for a stage race', async () => {
-      const overviewHtml = buildOverviewHtml([
-        { profile: 'p1', name: 'Stage 1 | Brussels - Charleroi', distance: '195' },
-        { profile: 'p5', name: 'Stage 2 | Pau - Col du Tourmalet', distance: '170' },
-        { profile: 'p1', name: 'Stage 3 (ITT) | Bordeaux - Bordeaux', distance: '30' },
+      mockParser.parseRaceOverview.mockReturnValue([
+        {
+          stageNumber: 1,
+          parcoursType: 'p1',
+          isItt: false,
+          isTtt: false,
+          distanceKm: 195,
+          departure: 'Brussels',
+          arrival: 'Charleroi',
+        },
+        {
+          stageNumber: 2,
+          parcoursType: 'p5',
+          isItt: false,
+          isTtt: false,
+          distanceKm: 170,
+          departure: 'Pau',
+          arrival: 'Col du Tourmalet',
+        },
+        {
+          stageNumber: 3,
+          parcoursType: 'p1',
+          isItt: true,
+          isTtt: false,
+          distanceKm: 30,
+          departure: 'Bordeaux',
+          arrival: 'Bordeaux',
+        },
       ]);
-      mockPcsClient.fetchPage.mockResolvedValue(overviewHtml);
+      mockPcsClient.fetchPage.mockResolvedValue('<html></html>');
 
       const result = await useCase.execute(
         'https://www.procyclingstats.com/race/tour-de-france/2025',
@@ -127,11 +120,27 @@ describe('FetchRaceProfileUseCase', () => {
     });
 
     it('should detect mini-tour for non-GT stage races', async () => {
-      const overviewHtml = buildOverviewHtml([
-        { profile: 'p2', name: 'Stage 1 | Nice - Nice', distance: '150' },
-        { profile: 'p3', name: 'Stage 2 | Nice - Col de la Couillole', distance: '180' },
+      mockParser.parseRaceOverview.mockReturnValue([
+        {
+          stageNumber: 1,
+          parcoursType: 'p2',
+          isItt: false,
+          isTtt: false,
+          distanceKm: 150,
+          departure: 'Nice',
+          arrival: 'Nice',
+        },
+        {
+          stageNumber: 2,
+          parcoursType: 'p3',
+          isItt: false,
+          isTtt: false,
+          distanceKm: 180,
+          departure: 'Nice',
+          arrival: 'Col de la Couillole',
+        },
       ]);
-      mockPcsClient.fetchPage.mockResolvedValue(overviewHtml);
+      mockPcsClient.fetchPage.mockResolvedValue('<html></html>');
 
       const result = await useCase.execute('https://www.procyclingstats.com/race/paris-nice/2025');
 
@@ -142,10 +151,9 @@ describe('FetchRaceProfileUseCase', () => {
 
   describe('execute — classic', () => {
     it('should return classic profile when overview has no stages', async () => {
-      // First call: overview with no stages
-      mockPcsClient.fetchPage.mockResolvedValueOnce('<html><body></body></html>');
-      // Second call: result page with profile
-      mockPcsClient.fetchPage.mockResolvedValueOnce(buildResultHtml('p3'));
+      // parseRaceOverview default returns [] (no stages) → classic path
+      mockParser.extractProfile.mockReturnValue({ parcoursType: 'p3', profileScore: 42 });
+      mockPcsClient.fetchPage.mockResolvedValue('<html></html>');
 
       const result = await useCase.execute(
         'https://www.procyclingstats.com/race/milano-sanremo/2025',
@@ -160,12 +168,13 @@ describe('FetchRaceProfileUseCase', () => {
     });
 
     it('should fall back to previous year if current year result page fails', async () => {
-      // Overview: no stages
-      mockPcsClient.fetchPage.mockResolvedValueOnce('<html><body></body></html>');
+      // Overview: no stages (default)
+      mockPcsClient.fetchPage.mockResolvedValueOnce('<html></html>');
       // Current year result: fails
       mockPcsClient.fetchPage.mockRejectedValueOnce(new Error('Not found'));
       // Previous year result: succeeds
-      mockPcsClient.fetchPage.mockResolvedValueOnce(buildResultHtml('p2'));
+      mockPcsClient.fetchPage.mockResolvedValueOnce('<html></html>');
+      mockParser.extractProfile.mockReturnValue({ parcoursType: 'p2', profileScore: 30 });
 
       const result = await useCase.execute(
         'https://www.procyclingstats.com/race/strade-bianche/2026',
@@ -178,8 +187,8 @@ describe('FetchRaceProfileUseCase', () => {
     });
 
     it('should throw RaceProfileNotFoundError if both current and previous year fail', async () => {
-      // Overview: no stages
-      mockPcsClient.fetchPage.mockResolvedValueOnce('<html><body></body></html>');
+      // Overview: no stages (default)
+      mockPcsClient.fetchPage.mockResolvedValueOnce('<html></html>');
       // Current year: fails
       mockPcsClient.fetchPage.mockRejectedValueOnce(new Error('Not found'));
       // Previous year: also fails
@@ -191,12 +200,16 @@ describe('FetchRaceProfileUseCase', () => {
     });
 
     it('should fall back when current year has no profile data', async () => {
-      // Overview: no stages
-      mockPcsClient.fetchPage.mockResolvedValueOnce('<html><body></body></html>');
-      // Current year result: no profile span
-      mockPcsClient.fetchPage.mockResolvedValueOnce('<html><body>No data</body></html>');
-      // Previous year result: has profile
-      mockPcsClient.fetchPage.mockResolvedValueOnce(buildResultHtml('p4'));
+      // Overview: no stages (default)
+      mockPcsClient.fetchPage.mockResolvedValueOnce('<html></html>');
+      // Current year: no profile
+      mockPcsClient.fetchPage.mockResolvedValueOnce('<html></html>');
+      // extractProfile returns null parcoursType on first call, then valid on second
+      mockParser.extractProfile
+        .mockReturnValueOnce({ parcoursType: null, profileScore: null })
+        .mockReturnValueOnce({ parcoursType: 'p4', profileScore: 50 });
+      // Previous year result
+      mockPcsClient.fetchPage.mockResolvedValueOnce('<html></html>');
 
       const result = await useCase.execute(
         'https://www.procyclingstats.com/race/future-classic/2026',
