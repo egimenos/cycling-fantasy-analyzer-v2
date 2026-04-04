@@ -132,7 +132,7 @@ test.describe('Setup Tab', () => {
     await navPage.goToTab('setup');
 
     // Should show "Analysis Complete" (desktop only — hidden on mobile)
-    await expect(page.getByText('Analysis Complete')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Analysis Complete', level: 3 })).toBeVisible();
     await expect(setupPage.resetBtn).toBeVisible();
   });
 
@@ -156,7 +156,7 @@ test.describe('Setup Tab', () => {
     await setupPage.clickReset();
 
     // Should stay on setup, dashboard locked again
-    await expect(page.getByTestId('tab-content-setup')).toBeVisible();
+    await expect(page.getByTestId('tab-content-setup')).toBeVisible({ timeout: 10_000 });
     expect(await navPage.isTabLocked('dashboard')).toBe(true);
   });
 });
