@@ -29,7 +29,7 @@ describe('AnalyzeController', () => {
         categoryScores: { gc: 150, stage: 30, mountain: 10, sprint: 10 },
         seasonsUsed: 2,
         seasonBreakdown: null,
-        scoringMethod: 'rules' as const,
+        scoringMethod: 'none' as const,
         mlPredictedScore: null,
         mlBreakdown: null,
         breakout: null,

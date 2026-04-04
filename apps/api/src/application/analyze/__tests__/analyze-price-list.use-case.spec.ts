@@ -191,11 +191,9 @@ describe('AnalyzePriceListUseCase', () => {
     expect(result.totalMatched).toBe(2);
     expect(result.unmatchedCount).toBe(0);
     expect(result.riders).toHaveLength(2);
-    expect(result.riders[0].totalProjectedPts).not.toBeNull();
-    expect(result.riders[1].totalProjectedPts).not.toBeNull();
-    expect(result.riders[0].totalProjectedPts!).toBeGreaterThanOrEqual(
-      result.riders[1].totalProjectedPts!,
-    );
+    // Without raceSlug/year, ML is unavailable so scores are null
+    expect(result.riders[0].totalProjectedPts).toBeNull();
+    expect(result.riders[1].totalProjectedPts).toBeNull();
   });
 
   it('should handle partially unmatched riders', async () => {
@@ -228,7 +226,8 @@ describe('AnalyzePriceListUseCase', () => {
     const unmatchedRider = result.riders.find((r) => r.unmatched);
 
     expect(matchedRider).toBeDefined();
-    expect(matchedRider!.totalProjectedPts).not.toBeNull();
+    // Without raceSlug/year, ML is unavailable so scores are null
+    expect(matchedRider!.totalProjectedPts).toBeNull();
     expect(unmatchedRider).toBeDefined();
     expect(unmatchedRider!.totalProjectedPts).toBeNull();
     expect(unmatchedRider!.categoryScores).toBeNull();

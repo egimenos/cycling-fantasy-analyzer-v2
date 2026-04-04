@@ -160,29 +160,33 @@ export function computeRiderScore(
     maxSeasons,
     profileDistribution,
   );
-  const stageScore = computeStageScore(
-    results,
-    targetRaceType,
-    currentYear,
-    maxSeasons,
-    profileDistribution,
-  );
-  const mountainScore = computeCategoryScore(
-    results,
-    ResultCategory.MOUNTAIN,
-    targetRaceType,
-    currentYear,
-    maxSeasons,
-    profileDistribution,
-  );
-  const sprintScore = computeCategoryScore(
-    results,
-    ResultCategory.SPRINT,
-    targetRaceType,
-    currentYear,
-    maxSeasons,
-    profileDistribution,
-  );
+
+  // Classics only score on final position (GC) — no stage/mountain/sprint classifications
+  const isClassic = targetRaceType === RaceType.CLASSIC;
+
+  const stageScore = isClassic
+    ? 0
+    : computeStageScore(results, targetRaceType, currentYear, maxSeasons, profileDistribution);
+  const mountainScore = isClassic
+    ? 0
+    : computeCategoryScore(
+        results,
+        ResultCategory.MOUNTAIN,
+        targetRaceType,
+        currentYear,
+        maxSeasons,
+        profileDistribution,
+      );
+  const sprintScore = isClassic
+    ? 0
+    : computeCategoryScore(
+        results,
+        ResultCategory.SPRINT,
+        targetRaceType,
+        currentYear,
+        maxSeasons,
+        profileDistribution,
+      );
 
   const totalProjectedPts = gcScore + stageScore + mountainScore + sprintScore;
 
@@ -257,16 +261,15 @@ export function computeSeasonBreakdown(
 
     // Compute raw (unweighted) scores for this year using maxSeasons=1
     // Cross-type weights are applied inside computeCategoryScore/computeStageScore
+    const isClassic = targetRaceType === RaceType.CLASSIC;
     const gc = computeCategoryScore(results, ResultCategory.GC, targetRaceType, year, 1);
-    const stage = computeStageScore(results, targetRaceType, year, 1);
-    const mountain = computeCategoryScore(
-      results,
-      ResultCategory.MOUNTAIN,
-      targetRaceType,
-      year,
-      1,
-    );
-    const sprint = computeCategoryScore(results, ResultCategory.SPRINT, targetRaceType, year, 1);
+    const stage = isClassic ? 0 : computeStageScore(results, targetRaceType, year, 1);
+    const mountain = isClassic
+      ? 0
+      : computeCategoryScore(results, ResultCategory.MOUNTAIN, targetRaceType, year, 1);
+    const sprint = isClassic
+      ? 0
+      : computeCategoryScore(results, ResultCategory.SPRINT, targetRaceType, year, 1);
 
     breakdown.push({
       year,

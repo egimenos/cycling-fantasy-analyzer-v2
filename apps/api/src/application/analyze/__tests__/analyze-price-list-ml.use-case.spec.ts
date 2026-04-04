@@ -1,12 +1,9 @@
 /**
  * Tests for AnalyzePriceListUseCase — ML integration behavior.
  *
- * The current use case uses rules-based scoring for all race types.
- * ML predictions flow through the benchmark and optimizer paths.
- * These tests verify that the analyze use case:
- *   - Produces consistent rules-based scores for stage races and classics
- *   - Scoring output structure is unchanged regardless of race type
- *   - Falls back gracefully (rules-only) as expected behavior
+ * The use case uses ML predictions as the sole scoring source.
+ * When ML is unavailable (no raceSlug/year, service down), totalProjectedPts
+ * and categoryScores are null — rules-based scores are never exposed.
  */
 
 import { AnalyzePriceListUseCase } from '../analyze-price-list.use-case';
@@ -168,25 +165,16 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
     return rider;
   }
 
-  it('should produce rules-based scoring for stage races', async () => {
+  it('should return null totalProjectedPts when ML is unavailable (no raceSlug)', async () => {
     setupMatchedRider('r1', 'Pogacar Tadej');
 
-    const currentYear = new Date().getFullYear();
     mockResultRepo.findByRiderIds.mockResolvedValue([
       createMockRaceResult({
         riderId: 'r1',
         raceType: RaceType.GRAND_TOUR,
         category: ResultCategory.GC,
         position: 1,
-        year: currentYear,
-      }),
-      createMockRaceResult({
-        riderId: 'r1',
-        raceType: RaceType.GRAND_TOUR,
-        category: ResultCategory.STAGE,
-        position: 1,
-        stageNumber: 1,
-        year: currentYear,
+        year: new Date().getFullYear(),
       }),
     ]);
 
@@ -196,27 +184,25 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
       budget: 2000,
     });
 
-    // Use case currently uses rules-based scoring for all race types
     expect(result.riders).toHaveLength(1);
     const rider = result.riders[0];
-    expect(rider.totalProjectedPts).not.toBeNull();
-    expect(rider.totalProjectedPts).not.toBeNull();
-    expect(rider.totalProjectedPts!).toBeGreaterThan(0);
-    expect(rider.categoryScores).not.toBeNull();
-    expect(rider.categoryScores!.gc).toBeGreaterThan(0);
+    expect(rider.totalProjectedPts).toBeNull();
+    expect(rider.categoryScores).toBeNull();
+    expect(rider.scoringMethod).toBe('none');
+    // Season breakdown is still available for transparency
+    expect(rider.seasonsUsed).not.toBeNull();
   });
 
-  it('should produce rules-based scoring for classics', async () => {
+  it('should return null totalProjectedPts for classics without ML', async () => {
     setupMatchedRider('r1', 'Van der Poel Mathieu');
 
-    const currentYear = new Date().getFullYear();
     mockResultRepo.findByRiderIds.mockResolvedValue([
       createMockRaceResult({
         riderId: 'r1',
         raceType: RaceType.CLASSIC,
         category: ResultCategory.GC,
         position: 1,
-        year: currentYear,
+        year: new Date().getFullYear(),
       }),
     ]);
 
@@ -228,24 +214,21 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
 
     expect(result.riders).toHaveLength(1);
     const rider = result.riders[0];
-    expect(rider.totalProjectedPts).not.toBeNull();
-    expect(rider.totalProjectedPts).not.toBeNull();
-    expect(rider.categoryScores).not.toBeNull();
+    expect(rider.totalProjectedPts).toBeNull();
+    expect(rider.categoryScores).toBeNull();
+    expect(rider.scoringMethod).toBe('none');
   });
 
-  it('should keep existing scoring unchanged when ML service would be unavailable', async () => {
-    // This test verifies that the use case works identically with or without
-    // ML service availability, since ML integration is external to this use case.
+  it('should produce deterministic null results when ML is unavailable', async () => {
     setupMatchedRider('r1', 'Pogacar Tadej');
 
-    const currentYear = new Date().getFullYear();
     const results = [
       createMockRaceResult({
         riderId: 'r1',
         raceType: RaceType.GRAND_TOUR,
         category: ResultCategory.GC,
         position: 2,
-        year: currentYear,
+        year: new Date().getFullYear(),
       }),
     ];
     mockResultRepo.findByRiderIds.mockResolvedValue(results);
@@ -256,12 +239,10 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
       budget: 2000,
     });
 
-    // Rules-based scoring produces deterministic results
     const rider = result.riders[0];
-    expect(rider.totalProjectedPts).not.toBeNull();
-    expect(rider.totalProjectedPts).not.toBeNull();
+    expect(rider.totalProjectedPts).toBeNull();
 
-    // Run again with same inputs to verify determinism
+    // Run again — same null result
     mockRiderRepo.findAll.mockResolvedValue([
       createMockRider({ id: 'r1', fullName: 'Pogacar Tadej', pcsSlug: 'pogacar-tadej' }),
     ]);
@@ -282,17 +263,16 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
     expect(result2.riders[0].categoryScores).toEqual(rider.categoryScores);
   });
 
-  it('should preserve full category breakdown in scoring response', async () => {
+  it('should still populate seasonBreakdown even without ML', async () => {
     setupMatchedRider('r1', 'Evenepoel Remco');
 
-    const currentYear = new Date().getFullYear();
     mockResultRepo.findByRiderIds.mockResolvedValue([
       createMockRaceResult({
         riderId: 'r1',
         raceType: RaceType.GRAND_TOUR,
         category: ResultCategory.GC,
         position: 1,
-        year: currentYear,
+        year: new Date().getFullYear(),
       }),
       createMockRaceResult({
         riderId: 'r1',
@@ -300,14 +280,14 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
         category: ResultCategory.STAGE,
         position: 2,
         stageNumber: 5,
-        year: currentYear,
+        year: new Date().getFullYear(),
       }),
       createMockRaceResult({
         riderId: 'r1',
         raceType: RaceType.GRAND_TOUR,
         category: ResultCategory.MOUNTAIN,
         position: 3,
-        year: currentYear,
+        year: new Date().getFullYear(),
       }),
     ]);
 
@@ -318,13 +298,10 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
     });
 
     const rider = result.riders[0];
-    expect(rider.categoryScores).not.toBeNull();
-    // Verify all four category score keys exist
-    expect(rider.categoryScores).toHaveProperty('gc');
-    expect(rider.categoryScores).toHaveProperty('stage');
-    expect(rider.categoryScores).toHaveProperty('mountain');
-    expect(rider.categoryScores).toHaveProperty('sprint');
-    // GC should have a score from position 1
-    expect(rider.categoryScores!.gc).toBeGreaterThan(0);
+    // totalProjectedPts is null (no ML), but seasonBreakdown is still computed
+    expect(rider.totalProjectedPts).toBeNull();
+    expect(rider.categoryScores).toBeNull();
+    expect(rider.seasonBreakdown).not.toBeNull();
+    expect(rider.seasonBreakdown!.length).toBeGreaterThan(0);
   });
 });

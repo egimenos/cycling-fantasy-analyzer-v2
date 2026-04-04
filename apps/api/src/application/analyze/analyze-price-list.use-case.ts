@@ -69,7 +69,7 @@ export interface AnalyzedRider {
   } | null;
   seasonsUsed: number | null;
   seasonBreakdown: SeasonBreakdown[] | null;
-  scoringMethod: 'rules' | 'hybrid';
+  scoringMethod: 'ml' | 'none';
   mlPredictedScore: number | null;
   mlBreakdown: { gc: number; stage: number; mountain: number; sprint: number } | null;
   breakout: BreakoutResult | null;
@@ -230,7 +230,7 @@ export class AnalyzePriceListUseCase {
           categoryScores: null,
           seasonsUsed: null,
           seasonBreakdown: null,
-          scoringMethod: 'rules' as const,
+          scoringMethod: 'none' as const,
           mlPredictedScore: null,
           mlBreakdown: null,
           breakout: null,
@@ -244,9 +244,11 @@ export class AnalyzePriceListUseCase {
         ? buildSameRaceHistory(riderResults, input.raceSlug)
         : null;
 
-      const mlScore = mlPredictions?.get(riderId)?.score ?? null;
-      const effectiveScore = mlScore ?? s.riderScore.totalProjectedPts;
-      const pointsPerHillio = s.entry.priceHillios > 0 ? effectiveScore / s.entry.priceHillios : 0;
+      const mlEntry = mlPredictions?.get(riderId) ?? null;
+      const mlScore = mlEntry?.score ?? null;
+      const mlBreakdown = mlEntry?.breakdown ?? null;
+      const pointsPerHillio =
+        mlScore !== null && s.entry.priceHillios > 0 ? mlScore / s.entry.priceHillios : null;
 
       return {
         rawName: s.entry.rawName,
@@ -256,13 +258,13 @@ export class AnalyzePriceListUseCase {
         matchConfidence: s.matchConfidence,
         unmatched: false,
         pointsPerHillio,
-        totalProjectedPts: s.riderScore.totalProjectedPts,
-        categoryScores: { ...s.riderScore.categoryScores },
+        totalProjectedPts: mlScore,
+        categoryScores: mlBreakdown,
         seasonsUsed: s.riderScore.seasonsUsed,
         seasonBreakdown: s.seasonBreakdown,
-        scoringMethod: mlPredictions ? ('hybrid' as const) : ('rules' as const),
+        scoringMethod: mlScore !== null ? ('ml' as const) : ('none' as const),
         mlPredictedScore: mlScore,
-        mlBreakdown: mlPredictions?.get(riderId)?.breakdown ?? null,
+        mlBreakdown,
         breakout: null,
         sameRaceHistory: sameRaceHistory?.length ? sameRaceHistory : null,
       };
@@ -278,7 +280,7 @@ export class AnalyzePriceListUseCase {
       rider.breakout = computeBreakout({
         seasonBreakdown: rider.seasonBreakdown ?? [],
         racePerformances,
-        prediction: rider.mlPredictedScore ?? rider.totalProjectedPts ?? 0,
+        prediction: rider.totalProjectedPts ?? 0,
         priceHillios: rider.priceHillios,
         birthDate: riderEntity?.birthDate ?? null,
         profileSummary: input.profileSummary,
@@ -289,8 +291,8 @@ export class AnalyzePriceListUseCase {
     }
 
     analyzedRiders.sort((a, b) => {
-      const scoreA = a.mlPredictedScore ?? a.totalProjectedPts;
-      const scoreB = b.mlPredictedScore ?? b.totalProjectedPts;
+      const scoreA = a.totalProjectedPts;
+      const scoreB = b.totalProjectedPts;
       if (scoreA === null && scoreB === null) return 0;
       if (scoreA === null) return 1;
       if (scoreB === null) return -1;

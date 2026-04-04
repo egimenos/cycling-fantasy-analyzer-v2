@@ -33,10 +33,10 @@ interface RiderTableProps {
   externalFilter?: RiderFilter;
 }
 
-function findMaxEffectiveScore(riders: AnalyzedRider[], hasML: boolean): number {
+function findMaxEffectiveScore(riders: AnalyzedRider[]): number {
   let max = 0;
   for (const r of riders) {
-    const score = getEffectiveScore(r, hasML);
+    const score = getEffectiveScore(r);
     if (score !== null && score > max) max = score;
   }
   return max || 100;
@@ -149,7 +149,7 @@ function createColumns(
     },
     {
       id: 'effectiveScore',
-      accessorFn: (row) => getEffectiveScore(row, hasML),
+      accessorFn: (row) => getEffectiveScore(row),
       header: () =>
         hasML ? (
           <span className="inline-flex items-center gap-1.5">
@@ -164,14 +164,14 @@ function createColumns(
         if (row.original.unmatched) {
           return <span className="text-on-primary-container font-mono">---</span>;
         }
-        const score = getEffectiveScore(row.original, hasML);
+        const score = getEffectiveScore(row.original);
         return <ScoreBadge score={score} maxScore={maxScore} />;
       },
     },
     {
       id: 'value',
       accessorFn: (row) => {
-        const score = getEffectiveScore(row, hasML);
+        const score = getEffectiveScore(row);
         return score !== null && row.priceHillios > 0 ? score / row.priceHillios : null;
       },
       header: 'Value',
@@ -533,9 +533,9 @@ export function RiderTable({
     return <EmptyState title="No riders" description="Submit riders to see analysis results." />;
   }
 
-  const hasML = data.riders.some((r) => r.scoringMethod === 'hybrid');
+  const hasML = data.riders.some((r) => r.scoringMethod === 'ml');
 
-  const maxScore = useMemo(() => findMaxEffectiveScore(data.riders, hasML), [data.riders, hasML]);
+  const maxScore = useMemo(() => findMaxEffectiveScore(data.riders), [data.riders]);
 
   const filteredRiders = useMemo(
     () =>
@@ -674,7 +674,6 @@ export function RiderTable({
           onToggleExclude={onToggleExclude}
           onToggleSelect={onToggleSelect}
           canSelect={canSelect}
-          hasML={hasML}
           maxScore={maxScore}
         />
       )}

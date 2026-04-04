@@ -43,7 +43,7 @@ export interface RaceHistory {
   total: number;
 }
 
-export type ScoringMethod = 'rules' | 'hybrid';
+export type ScoringMethod = 'ml' | 'none';
 
 export enum BreakoutFlag {
   EmergingTalent = 'EMERGING_TALENT',
