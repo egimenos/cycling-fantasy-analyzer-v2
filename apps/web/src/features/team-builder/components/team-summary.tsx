@@ -100,68 +100,73 @@ export function TeamSummary({
           </div>
 
           <ul data-testid="roster-rider-list" className="space-y-2 stagger-children">
-            {riders.map((rider, index) => (
-              <li
-                key={rider.rawName}
-                data-testid={`roster-rider-${rider.rawName}`}
-                className="bg-surface-container-high p-4 flex items-center gap-4 group hover:bg-surface-container-highest transition-all"
-              >
-                <div className="w-12 h-12 rounded-sm bg-surface-container-highest flex items-center justify-center flex-shrink-0">
-                  {index === 0 ? (
-                    <Crown className="h-5 w-5 text-tertiary" />
-                  ) : (
-                    <Bike className="h-5 w-5 text-on-primary-container" />
-                  )}
-                </div>
-                <div className="flex-grow min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-headline font-bold text-on-surface truncate">
-                      {rider.rawName}
-                    </span>
-                    {index === 0 && (
-                      <span
-                        data-testid="roster-captain-badge"
-                        className="bg-tertiary/20 text-tertiary text-[10px] px-1.5 font-bold rounded-sm border border-tertiary/30 flex-shrink-0"
-                      >
-                        CAPTAIN
+            {riders.map((rider, index) => {
+              const score = getEffectiveScore(rider);
+              const value =
+                score !== null && rider.priceHillios > 0 ? score / rider.priceHillios : null;
+              return (
+                <li
+                  key={rider.rawName}
+                  data-testid={`roster-rider-${rider.rawName}`}
+                  className="bg-surface-container-high rounded-sm overflow-hidden group hover:bg-surface-container-highest transition-all"
+                >
+                  {/* Top row: rank + name + team */}
+                  <div className="flex items-center gap-3 md:gap-4 p-3 md:p-4">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-sm bg-surface-container-highest flex items-center justify-center flex-shrink-0">
+                      {index === 0 ? (
+                        <Crown className="h-5 w-5 text-tertiary" />
+                      ) : (
+                        <Bike className="h-5 w-5 text-on-primary-container" />
+                      )}
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-headline font-bold text-on-surface truncate">
+                          {rider.rawName}
+                        </span>
+                        {index === 0 && (
+                          <span
+                            data-testid="roster-captain-badge"
+                            className="bg-tertiary/20 text-tertiary text-[10px] px-1.5 font-bold rounded-sm border border-tertiary/30 flex-shrink-0"
+                          >
+                            CAPTAIN
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-on-surface-variant">{rider.rawTeam}</span>
+                    </div>
+                  </div>
+
+                  {/* Stats row: Cost / Projected / Value */}
+                  <div className="grid grid-cols-3 mx-3 md:mx-4 mb-3 md:mb-4 border border-outline-variant/10 rounded-sm overflow-hidden">
+                    <div className="px-3 py-2 border-r border-outline-variant/10">
+                      <span className="text-[9px] font-mono text-outline uppercase block">
+                        Cost
                       </span>
-                    )}
-                  </div>
-                  <span className="text-xs text-on-surface-variant">{rider.rawTeam}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-3 md:gap-8 text-right pr-2 md:pr-4 flex-shrink-0">
-                  <div>
-                    <div className="text-[10px] text-on-primary-container font-mono uppercase">
-                      Cost
+                      <span className="font-mono font-bold text-primary">
+                        {formatNumber(rider.priceHillios)}
+                      </span>
                     </div>
-                    <div className="font-mono text-primary font-bold">
-                      {formatNumber(rider.priceHillios)}
+                    <div className="px-3 py-2 border-r border-outline-variant/10">
+                      <span className="text-[9px] font-mono text-outline uppercase block">
+                        Proj
+                      </span>
+                      <span className="font-mono font-bold text-tertiary">
+                        {score?.toFixed(0) ?? '—'}
+                      </span>
                     </div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-on-primary-container font-mono uppercase">
-                      Proj
-                    </div>
-                    <div className="font-mono text-tertiary font-bold">
-                      {getEffectiveScore(rider)?.toFixed(0) ?? '—'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-on-primary-container font-mono uppercase">
-                      Value
-                    </div>
-                    <div className="font-mono text-stage font-bold">
-                      {(() => {
-                        const score = getEffectiveScore(rider);
-                        return score !== null && rider.priceHillios > 0
-                          ? (score / rider.priceHillios).toFixed(1)
-                          : '—';
-                      })()}
+                    <div className="px-3 py-2">
+                      <span className="text-[9px] font-mono text-outline uppercase block">
+                        Value
+                      </span>
+                      <span className="font-mono font-bold text-stage">
+                        {value !== null ? value.toFixed(1) : '—'}
+                      </span>
                     </div>
                   </div>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         </div>
 
