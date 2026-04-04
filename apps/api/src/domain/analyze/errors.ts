@@ -44,3 +44,17 @@ export class RaceProfileNotFoundError extends Error {
     this.name = 'RaceProfileNotFoundError';
   }
 }
+
+export class PriceListFetchError extends Error {
+  constructor(url: string, statusCode: number) {
+    super(`Failed to fetch price list from ${url} (HTTP ${statusCode})`);
+    this.name = 'PriceListFetchError';
+  }
+}
+
+export class EmptyPriceListPageError extends Error {
+  constructor(url: string) {
+    super(`No riders found on the page. Check the URL: ${url}`);
+    this.name = 'EmptyPriceListPageError';
+  }
+}

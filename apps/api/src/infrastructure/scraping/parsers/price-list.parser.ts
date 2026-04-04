@@ -1,10 +1,7 @@
 import * as cheerio from 'cheerio';
 
-export interface ParsedPriceEntry {
-  readonly name: string;
-  readonly team: string;
-  readonly price: number;
-}
+export type { ParsedPriceEntry } from '../../../application/analyze/ports/price-list-parser.port';
+import type { ParsedPriceEntry } from '../../../application/analyze/ports/price-list-parser.port';
 
 /**
  * Parses a price list table from grandesminivueltas.com.

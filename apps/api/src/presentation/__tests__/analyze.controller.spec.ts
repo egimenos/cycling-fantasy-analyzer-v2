@@ -4,6 +4,7 @@ import {
   AnalyzePriceListUseCase,
   AnalyzeResponse,
 } from '../../application/analyze/analyze-price-list.use-case';
+import { ImportPriceListUseCase } from '../../application/analyze/import-price-list.use-case';
 
 describe('AnalyzeController', () => {
   let controller: AnalyzeController;
@@ -47,7 +48,10 @@ describe('AnalyzeController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AnalyzeController],
-      providers: [{ provide: AnalyzePriceListUseCase, useValue: mockUseCase }],
+      providers: [
+        { provide: AnalyzePriceListUseCase, useValue: mockUseCase },
+        { provide: ImportPriceListUseCase, useValue: { execute: jest.fn() } },
+      ],
     }).compile();
 
     controller = module.get<AnalyzeController>(AnalyzeController);

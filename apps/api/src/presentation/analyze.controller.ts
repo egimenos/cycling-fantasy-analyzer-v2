@@ -18,9 +18,9 @@ import {
   AnalyzeResponse,
 } from '../application/analyze/analyze-price-list.use-case';
 import {
-  parsePriceListPage,
+  ImportPriceListUseCase,
   ParsedPriceEntry,
-} from '../infrastructure/scraping/parsers/price-list.parser';
+} from '../application/analyze/import-price-list.use-case';
 
 class PriceListEntryDto {
   @IsString()
@@ -100,7 +100,10 @@ class AnalyzeRequestDto {
 
 @Controller('api')
 export class AnalyzeController {
-  constructor(private readonly analyzeUseCase: AnalyzePriceListUseCase) {}
+  constructor(
+    private readonly analyzeUseCase: AnalyzePriceListUseCase,
+    private readonly importPriceListUseCase: ImportPriceListUseCase,
+  ) {}
 
   @Post('analyze')
   async analyze(@Body() dto: AnalyzeRequestDto): Promise<AnalyzeResponse> {
@@ -121,27 +124,6 @@ export class AnalyzeController {
       throw new BadRequestException('url query parameter is required');
     }
 
-    const dynamicImport = new Function('specifier', 'return import(specifier)');
-    const { gotScraping } = await dynamicImport('got-scraping');
-    const response = await gotScraping({
-      url: trimmedUrl,
-      headerGeneratorOptions: {
-        browsers: [{ name: 'chrome', minVersion: 100 }],
-        locales: ['es-ES'],
-        operatingSystems: ['windows'],
-      },
-      timeout: { request: 15000 },
-    });
-
-    if (response.statusCode !== 200) {
-      throw new BadRequestException(`Failed to fetch price list (HTTP ${response.statusCode})`);
-    }
-
-    const riders = parsePriceListPage(response.body);
-    if (riders.length === 0) {
-      throw new BadRequestException('No riders found on the page. Check the URL.');
-    }
-
-    return { riders };
+    return this.importPriceListUseCase.execute(trimmedUrl);
   }
 }

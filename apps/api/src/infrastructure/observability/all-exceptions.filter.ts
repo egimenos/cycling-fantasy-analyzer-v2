@@ -15,6 +15,8 @@ import {
   MlPredictionFailedError,
   RaceUrlParseError,
   RaceProfileNotFoundError,
+  PriceListFetchError,
+  EmptyPriceListPageError,
 } from '../../domain/analyze/errors';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,6 +31,8 @@ const DOMAIN_ERROR_MAP = new Map<new (...args: any[]) => Error, HttpStatus>([
   [MlPredictionFailedError, HttpStatus.UNPROCESSABLE_ENTITY],
   [RaceUrlParseError, HttpStatus.NOT_FOUND],
   [RaceProfileNotFoundError, HttpStatus.NOT_FOUND],
+  [PriceListFetchError, HttpStatus.BAD_REQUEST],
+  [EmptyPriceListPageError, HttpStatus.BAD_REQUEST],
 ]);
 
 @Catch()
