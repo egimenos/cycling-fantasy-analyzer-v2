@@ -48,6 +48,43 @@ test.describe('Tab Navigation State Machine', () => {
     expect(await navPage.isTabLocked('optimization')).toBe(false);
   });
 
+  test('should preserve dashboard state when navigating back and forth', async ({
+    page,
+    setupPage,
+    dashboardPage,
+    navPage,
+    validPriceList,
+  }) => {
+    await setupPage.goto();
+    await setupPage.analyzeValidRiders(validPriceList);
+
+    // On Dashboard — select and lock riders
+    await dashboardPage.selectRider('EVENEPOEL Remco');
+    await dashboardPage.lockRider('POGACAR Tadej');
+    await expect(dashboardPage.rosterCount).toContainText('2');
+
+    // Navigate back to Setup
+    await navPage.goToTab('setup');
+    await expect(page.getByTestId('tab-content-setup')).toBeVisible({
+      timeout: TIMEOUTS.UI_TRANSITION,
+    });
+
+    // Navigate forward to Dashboard again
+    await navPage.goToTab('dashboard');
+    await expect(page.getByTestId('tab-content-dashboard')).toBeVisible({
+      timeout: TIMEOUTS.UI_TRANSITION,
+    });
+
+    // Rider table should still be visible
+    await expect(dashboardPage.riderTable).toBeVisible();
+
+    // Selections should be preserved — roster count should still be 2
+    await expect(dashboardPage.rosterCount).toContainText('2');
+
+    // Lock button should still reflect locked state
+    await expect(page.getByLabel('Unlock POGACAR Tadej')).toBeVisible();
+  });
+
   test('should re-lock downstream tabs when lock changes after optimization', async ({
     page,
     setupPage,

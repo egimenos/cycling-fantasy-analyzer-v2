@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ColumnDef, Row } from '@tanstack/react-table';
-import type { AnalyzedRider, AnalyzeResponse } from '@cycling-analyzer/shared-types';
+import {
+  BreakoutFlag,
+  type AnalyzedRider,
+  type AnalyzeResponse,
+} from '@cycling-analyzer/shared-types';
 import { DataTable } from '@/shared/ui/data-table';
 import { ScoreBadge } from '@/shared/ui/score-badge';
 import { MlBadge } from '@/shared/ui/ml-badge';
@@ -46,6 +50,7 @@ function createColumns(
   onToggleSelect: (name: string) => void,
   canSelect: (name: string) => boolean,
   hasML: boolean,
+  maxScore: number,
 ): ColumnDef<AnalyzedRider, unknown>[] {
   return [
     {
@@ -151,14 +156,10 @@ function createColumns(
           'Score'
         ),
       enableSorting: true,
-      cell: ({ row, table }) => {
+      cell: ({ row }) => {
         if (row.original.unmatched) {
           return <span className="text-on-primary-container font-mono">---</span>;
         }
-        const maxScore = findMaxEffectiveScore(
-          table.getCoreRowModel().rows.map((r) => r.original),
-          hasML,
-        );
         const score = getEffectiveScore(row.original, hasML);
         return <ScoreBadge score={score} maxScore={maxScore} />;
       },
@@ -545,45 +546,70 @@ export function RiderTable({
 
   const hasML = data.riders.some((r) => r.scoringMethod === 'hybrid');
 
-  const filteredRiders = data.riders.filter((rider) => {
-    switch (filter) {
-      case 'selected':
-        return selectedNames.has(rider.rawName);
-      case 'locked':
-        return lockedIds.has(rider.rawName);
-      case 'excluded':
-        return excludedIds.has(rider.rawName);
-      case 'unmatched':
-        return rider.unmatched;
-      case 'breakout':
-        return (rider.breakout?.index ?? 0) >= 50;
-      case 'valuePicks':
-        return (rider.breakout?.index ?? 0) >= 50 && rider.priceHillios <= 125;
-      default:
-        return true;
-    }
-  });
+  const maxScore = useMemo(() => findMaxEffectiveScore(data.riders, hasML), [data.riders, hasML]);
 
-  const filterCounts: Record<RiderFilter, number> = {
-    all: data.riders.length,
-    selected: selectedNames.size,
-    locked: lockedIds.size,
-    excluded: excludedIds.size,
-    unmatched: data.unmatchedCount,
-    breakout: data.riders.filter((r) => (r.breakout?.index ?? 0) >= 50).length,
-    valuePicks: data.riders.filter((r) => (r.breakout?.index ?? 0) >= 50 && r.priceHillios <= 125)
-      .length,
-  };
+  const filteredRiders = useMemo(
+    () =>
+      data.riders.filter((rider) => {
+        switch (filter) {
+          case 'selected':
+            return selectedNames.has(rider.rawName);
+          case 'locked':
+            return lockedIds.has(rider.rawName);
+          case 'excluded':
+            return excludedIds.has(rider.rawName);
+          case 'unmatched':
+            return rider.unmatched;
+          case 'breakout':
+            return (rider.breakout?.index ?? 0) >= 50;
+          case 'valuePicks':
+            return rider.breakout?.flags?.includes(BreakoutFlag.DeepValue) ?? false;
+          default:
+            return true;
+        }
+      }),
+    [data.riders, filter, selectedNames, lockedIds, excludedIds],
+  );
 
-  const columns = createColumns(
-    lockedIds,
-    excludedIds,
-    selectedNames,
-    onToggleLock,
-    onToggleExclude,
-    onToggleSelect,
-    canSelect,
-    hasML,
+  const filterCounts: Record<RiderFilter, number> = useMemo(
+    () => ({
+      all: data.riders.length,
+      selected: selectedNames.size,
+      locked: lockedIds.size,
+      excluded: excludedIds.size,
+      unmatched: data.unmatchedCount,
+      breakout: data.riders.filter((r) => (r.breakout?.index ?? 0) >= 50).length,
+      valuePicks: data.riders.filter(
+        (r) => r.breakout?.flags?.includes(BreakoutFlag.DeepValue) ?? false,
+      ).length,
+    }),
+    [data.riders, data.unmatchedCount, selectedNames.size, lockedIds.size, excludedIds.size],
+  );
+
+  const columns = useMemo(
+    () =>
+      createColumns(
+        lockedIds,
+        excludedIds,
+        selectedNames,
+        onToggleLock,
+        onToggleExclude,
+        onToggleSelect,
+        canSelect,
+        hasML,
+        maxScore,
+      ),
+    [
+      lockedIds,
+      excludedIds,
+      selectedNames,
+      onToggleLock,
+      onToggleExclude,
+      onToggleSelect,
+      canSelect,
+      hasML,
+      maxScore,
+    ],
   );
 
   return (
