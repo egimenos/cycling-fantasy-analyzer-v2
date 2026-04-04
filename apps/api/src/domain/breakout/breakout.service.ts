@@ -265,9 +265,9 @@ export function evaluateFlags(
     flags.push(HOT_STREAK);
   }
 
-  // DEEP_VALUE — cheap rider with above-median efficiency
+  // DEEP_VALUE — cheap rider with high efficiency and meaningful prediction
   const ptsPerHillio = input.priceHillios > 0 ? input.prediction / input.priceHillios : 0;
-  if (input.priceHillios <= 100 && ptsPerHillio > input.medianPtsPerHillio) {
+  if (input.priceHillios <= 100 && input.prediction >= 20 && ptsPerHillio > input.p75PtsPerHillio) {
     flags.push(DEEP_VALUE);
   }
 
@@ -344,9 +344,9 @@ export function computeBreakout(input: ComputeBreakoutInput): BreakoutResult {
   };
 }
 
-// ── Median helper ──────────────────────────────��────────────────────
+// ── P75 helper ──────────────────────────────────────────────────────
 
-export function computeMedianPtsPerHillio(
+export function computeP75PtsPerHillio(
   riders: readonly { pointsPerHillio: number | null }[],
 ): number {
   const values = riders
@@ -355,6 +355,6 @@ export function computeMedianPtsPerHillio(
     .sort((a, b) => a - b);
 
   if (values.length === 0) return 0;
-  const mid = Math.floor(values.length / 2);
-  return values.length % 2 === 0 ? (values[mid - 1] + values[mid]) / 2 : values[mid];
+  const idx = Math.floor(values.length * 0.75);
+  return values[Math.min(idx, values.length - 1)];
 }

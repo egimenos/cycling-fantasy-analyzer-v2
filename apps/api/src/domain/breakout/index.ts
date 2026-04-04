@@ -8,7 +8,7 @@ export {
   computeUpsideP80,
   evaluateFlags,
   computeBreakout,
-  computeMedianPtsPerHillio,
+  computeP75PtsPerHillio,
   computeAge,
   computeRawSlope,
 } from './breakout.service';

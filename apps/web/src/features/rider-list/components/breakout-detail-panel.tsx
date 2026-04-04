@@ -49,7 +49,7 @@ const SIGNAL_CONFIGS: SignalConfig[] = [
 const FLAG_DESCRIPTIONS: Record<string, string> = {
   EMERGING_TALENT: 'Young rider with steep upward career trajectory',
   HOT_STREAK: 'Strong recent form — last 90 days well above career average',
-  DEEP_VALUE: 'Cheap rider with above-median points per hillio',
+  DEEP_VALUE: 'Top-quartile efficiency at low price with meaningful prediction',
   COMEBACK: 'Historical peak far exceeds prediction with recovery signs',
   SPRINT_OPPORTUNITY: 'Sprint profile on a flat-friendly course',
   BREAKAWAY_HUNTER: 'Mountain points on a budget — breakaway potential',

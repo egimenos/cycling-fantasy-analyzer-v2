@@ -23,7 +23,7 @@ import {
   computeUpsideP80,
   evaluateFlags,
   computeBreakout,
-  computeMedianPtsPerHillio,
+  computeP75PtsPerHillio,
 } from '../breakout.service';
 import type { ComputeBreakoutInput } from '../breakout.types';
 
@@ -410,7 +410,7 @@ describe('evaluateFlags', () => {
     prediction: 100,
     priceHillios: 200,
     birthDate: null,
-    medianPtsPerHillio: 1.0,
+    p75PtsPerHillio: 1.0,
     categoryScores: cat(25, 25, 25, 25),
   };
 
@@ -464,14 +464,14 @@ describe('evaluateFlags', () => {
   });
 
   describe('DEEP_VALUE', () => {
-    it('triggers for cheap rider with above-median pts/hillio', () => {
+    it('triggers for cheap rider with above-P75 pts/hillio and prediction >= 20', () => {
       const input: ComputeBreakoutInput = {
         ...baseInput,
         priceHillios: 80,
         prediction: 200,
-        medianPtsPerHillio: 1.0,
+        p75PtsPerHillio: 1.0,
       };
-      // ptsPerHillio = 200/80 = 2.5, median = 1.0
+      // ptsPerHillio = 200/80 = 2.5, P75 = 1.0, prediction = 200 >= 20
       expect(evaluateFlags(input, neutralSignals)).toContain(BreakoutFlag.DeepValue);
     });
 
@@ -480,8 +480,19 @@ describe('evaluateFlags', () => {
         ...baseInput,
         priceHillios: 150,
         prediction: 300,
-        medianPtsPerHillio: 1.0,
+        p75PtsPerHillio: 1.0,
       };
+      expect(evaluateFlags(input, neutralSignals)).not.toContain(BreakoutFlag.DeepValue);
+    });
+
+    it('does not trigger when prediction < 20', () => {
+      const input: ComputeBreakoutInput = {
+        ...baseInput,
+        priceHillios: 50,
+        prediction: 15,
+        p75PtsPerHillio: 0.1,
+      };
+      // ptsPerHillio = 15/50 = 0.3 > 0.1, but prediction < 20
       expect(evaluateFlags(input, neutralSignals)).not.toContain(BreakoutFlag.DeepValue);
     });
   });
@@ -588,7 +599,7 @@ describe('computeBreakout', () => {
       prediction: 120,
       priceHillios: 80,
       birthDate: youngBirthDate,
-      medianPtsPerHillio: 1.0,
+      p75PtsPerHillio: 1.0,
       categoryScores: cat(30, 30, 20, 20),
     };
 
@@ -612,7 +623,7 @@ describe('computeBreakout', () => {
       prediction: 0,
       priceHillios: 50,
       birthDate: null,
-      medianPtsPerHillio: 0,
+      p75PtsPerHillio: 0,
       categoryScores: null,
     };
 
@@ -633,7 +644,7 @@ describe('computeBreakout', () => {
       prediction: 0,
       priceHillios: 50,
       birthDate: null,
-      medianPtsPerHillio: 0,
+      p75PtsPerHillio: 0,
       categoryScores: cat(0, 0, 0, 0),
     };
 
@@ -643,41 +654,42 @@ describe('computeBreakout', () => {
   });
 });
 
-// ── computeMedianPtsPerHillio ───────────────────────────────────────
+// ── computeP75PtsPerHillio ──────────────────────────────────────────
 
-describe('computeMedianPtsPerHillio', () => {
+describe('computeP75PtsPerHillio', () => {
   it('returns 0 for empty array', () => {
-    expect(computeMedianPtsPerHillio([])).toBe(0);
+    expect(computeP75PtsPerHillio([])).toBe(0);
   });
 
   it('returns 0 when all values are null', () => {
-    expect(computeMedianPtsPerHillio([{ pointsPerHillio: null }, { pointsPerHillio: null }])).toBe(
-      0,
-    );
+    expect(computeP75PtsPerHillio([{ pointsPerHillio: null }, { pointsPerHillio: null }])).toBe(0);
   });
 
-  it('computes median for odd count', () => {
-    const riders = [{ pointsPerHillio: 1 }, { pointsPerHillio: 3 }, { pointsPerHillio: 5 }];
-    expect(computeMedianPtsPerHillio(riders)).toBe(3);
-  });
-
-  it('computes median for even count', () => {
+  it('computes P75 for sorted values', () => {
+    // sorted: [1, 2, 3, 4]. P75 index = floor(4*0.75) = 3 → value = 4
     const riders = [
       { pointsPerHillio: 1 },
       { pointsPerHillio: 2 },
       { pointsPerHillio: 3 },
       { pointsPerHillio: 4 },
     ];
-    expect(computeMedianPtsPerHillio(riders)).toBe(2.5);
+    expect(computeP75PtsPerHillio(riders)).toBe(4);
+  });
+
+  it('computes P75 for odd count', () => {
+    // sorted: [1, 3, 5]. P75 index = floor(3*0.75) = 2 → value = 5
+    const riders = [{ pointsPerHillio: 1 }, { pointsPerHillio: 3 }, { pointsPerHillio: 5 }];
+    expect(computeP75PtsPerHillio(riders)).toBe(5);
   });
 
   it('filters out null and zero values', () => {
+    // valid: [5, 10]. P75 index = floor(2*0.75) = 1 → value = 10
     const riders = [
       { pointsPerHillio: null },
       { pointsPerHillio: 0 },
       { pointsPerHillio: 5 },
       { pointsPerHillio: 10 },
     ];
-    expect(computeMedianPtsPerHillio(riders)).toBe(7.5);
+    expect(computeP75PtsPerHillio(riders)).toBe(10);
   });
 });

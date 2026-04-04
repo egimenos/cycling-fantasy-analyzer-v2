@@ -57,7 +57,7 @@ const FLAG_CONFIG: Record<string, { label: string; colorClass: string; descripti
   DEEP_VALUE: {
     label: 'VALUE',
     colorClass: 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/40',
-    description: 'Above-median pts/hillio at low price',
+    description: 'Top-quartile pts/hillio at low price with meaningful prediction',
   },
   COMEBACK: {
     label: 'COMEBACK',

@@ -21,7 +21,7 @@ export interface ComputeBreakoutInput {
   readonly priceHillios: number;
   readonly birthDate: Date | null;
   readonly profileSummary?: ProfileSummary;
-  readonly medianPtsPerHillio: number;
+  readonly p75PtsPerHillio: number;
   readonly categoryScores: CoreCategoryScores | null;
   readonly sameRaceHistory?: readonly RaceHistory[];
 }
