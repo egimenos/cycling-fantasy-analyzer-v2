@@ -54,20 +54,20 @@ function makeTeam(pts: number): TeamSelection {
 
 describe('AlternativeTeams', () => {
   it('shows empty message when no alternatives', () => {
-    render(<AlternativeTeams teams={[]} budget={2000} />);
+    render(<AlternativeTeams teams={[]} />);
     expect(screen.getByText('No alternative teams available.')).toBeInTheDocument();
   });
 
   it('renders accordion items for each alternative', () => {
     const teams = [makeTeam(45), makeTeam(40)];
-    render(<AlternativeTeams teams={teams} budget={2000} />);
+    render(<AlternativeTeams teams={teams} />);
     expect(screen.getByText(/Alternative Team #1/)).toBeInTheDocument();
     expect(screen.getByText(/Alternative Team #2/)).toBeInTheDocument();
   });
 
   it('shows points in trigger label', () => {
     const teams = [makeTeam(42.3)];
-    render(<AlternativeTeams teams={teams} budget={2000} />);
+    render(<AlternativeTeams teams={teams} />);
     expect(screen.getByText(/42\.3 pts/)).toBeInTheDocument();
   });
 });

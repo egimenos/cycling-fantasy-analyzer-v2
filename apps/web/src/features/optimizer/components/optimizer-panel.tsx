@@ -108,7 +108,7 @@ export function OptimizerPanel({ data, budget, onApplyToRoster }: OptimizerPanel
       {/* Alternative Teams — desktop only */}
       {data.alternativeTeams && data.alternativeTeams.length > 0 && (
         <div className="hidden md:block animate-fade-in-up" style={{ animationDelay: '400ms' }}>
-          <AlternativeTeams teams={data.alternativeTeams} budget={budget} />
+          <AlternativeTeams teams={data.alternativeTeams} />
         </div>
       )}
     </div>

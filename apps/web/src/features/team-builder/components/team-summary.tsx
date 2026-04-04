@@ -1,15 +1,13 @@
 import type { AnalyzedRider } from '@cycling-analyzer/shared-types';
 import { formatNumber, cn } from '@/shared/lib/utils';
+import { getEffectiveScore, calculateValue } from '@/shared/lib/rider-utils';
 import { CheckCircle, Copy, RotateCcw, Bike, Crown } from 'lucide-react';
 import { useState } from 'react';
 import { useAnimatedNumber } from '@/shared/hooks/use-animated-number';
 import { useIsDesktop } from '@/shared/hooks/use-media-query';
+import { CategoryBreakdown } from '@/shared/ui/category-breakdown';
 import { FlagChip } from '@/features/rider-list/components/bpi-badge';
 import { toast } from 'sonner';
-
-function getEffectiveScore(rider: AnalyzedRider): number | null {
-  return rider.mlPredictedScore ?? rider.totalProjectedPts;
-}
 
 interface TeamSummaryProps {
   riders: AnalyzedRider[];
@@ -108,8 +106,7 @@ export function TeamSummary({
           >
             {riders.map((rider, index) => {
               const score = getEffectiveScore(rider);
-              const value =
-                score !== null && rider.priceHillios > 0 ? score / rider.priceHillios : null;
+              const value = calculateValue(score, rider.priceHillios);
               const breakdown = rider.mlBreakdown ?? rider.categoryScores;
               const bpi = rider.breakout?.index ?? null;
               const flags = rider.breakout?.flags;
@@ -190,37 +187,8 @@ export function TeamSummary({
 
                     {/* Category breakdown */}
                     {breakdown && (
-                      <div className="flex gap-3 flex-shrink-0 ml-2">
-                        <div className="text-center">
-                          <span className="text-[8px] font-mono text-gc uppercase block">GC</span>
-                          <span className="font-mono font-bold text-gc text-xs">
-                            {breakdown.gc.toFixed(0)}
-                          </span>
-                        </div>
-                        <div className="text-center">
-                          <span className="text-[8px] font-mono text-stage uppercase block">
-                            STG
-                          </span>
-                          <span className="font-mono font-bold text-stage text-xs">
-                            {breakdown.stage.toFixed(0)}
-                          </span>
-                        </div>
-                        <div className="text-center">
-                          <span className="text-[8px] font-mono text-mountain uppercase block">
-                            MTN
-                          </span>
-                          <span className="font-mono font-bold text-mountain text-xs">
-                            {breakdown.mountain.toFixed(0)}
-                          </span>
-                        </div>
-                        <div className="text-center">
-                          <span className="text-[8px] font-mono text-sprint uppercase block">
-                            SPR
-                          </span>
-                          <span className="font-mono font-bold text-sprint text-xs">
-                            {breakdown.sprint.toFixed(0)}
-                          </span>
-                        </div>
+                      <div className="ml-2">
+                        <CategoryBreakdown breakdown={breakdown} variant="compact" />
                       </div>
                     )}
 

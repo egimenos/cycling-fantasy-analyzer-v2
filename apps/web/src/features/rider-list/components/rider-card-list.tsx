@@ -2,9 +2,11 @@ import { useState } from 'react';
 import type { AnalyzedRider } from '@cycling-analyzer/shared-types';
 import { FlagChip } from './bpi-badge';
 import { cn, formatNumber } from '@/shared/lib/utils';
+import { getEffectiveScore, calculateValue } from '@/shared/lib/rider-utils';
 import { Lock, Unlock, Ban } from 'lucide-react';
 import { BreakoutDetailPanel } from './breakout-detail-panel';
 import { MlBadge } from '@/shared/ui/ml-badge';
+import { CategoryBreakdown } from '@/shared/ui/category-breakdown';
 
 interface RiderCardListProps {
   riders: AnalyzedRider[];
@@ -43,11 +45,8 @@ export function RiderCardList({
         const isExpanded = expandedId === name;
         const disabled =
           rider.unmatched || isExcluded || isLocked || (!isSelected && !canSelect(name));
-        const score =
-          hasML && rider.mlPredictedScore !== null
-            ? rider.mlPredictedScore
-            : rider.totalProjectedPts;
-        const value = score !== null && rider.priceHillios > 0 ? score / rider.priceHillios : null;
+        const score = getEffectiveScore(rider, hasML);
+        const value = calculateValue(score, rider.priceHillios);
         const flags = rider.breakout?.flags;
         const bpi = rider.breakout?.index ?? null;
         const scoreRatio = score !== null && maxScore > 0 ? score / maxScore : 0;
@@ -218,30 +217,7 @@ export function RiderCardList({
                       {rider.mlBreakdown ? 'ML Predicted' : 'Category Scores'}
                       {rider.mlBreakdown && <MlBadge />}
                     </h4>
-                    <div className="grid grid-cols-4 gap-2">
-                      <div className="bg-surface-container-high p-2 rounded-sm border-l-2 border-gc">
-                        <p className="text-[10px] text-outline font-mono">GC</p>
-                        <p className="font-mono font-bold text-gc">{breakdown.gc.toFixed(1)}</p>
-                      </div>
-                      <div className="bg-surface-container-high p-2 rounded-sm border-l-2 border-stage">
-                        <p className="text-[10px] text-outline font-mono">STG</p>
-                        <p className="font-mono font-bold text-stage">
-                          {breakdown.stage.toFixed(1)}
-                        </p>
-                      </div>
-                      <div className="bg-surface-container-high p-2 rounded-sm border-l-2 border-mountain">
-                        <p className="text-[10px] text-outline font-mono">MTN</p>
-                        <p className="font-mono font-bold text-mountain">
-                          {breakdown.mountain.toFixed(1)}
-                        </p>
-                      </div>
-                      <div className="bg-surface-container-high p-2 rounded-sm border-l-2 border-sprint">
-                        <p className="text-[10px] text-outline font-mono">SPR</p>
-                        <p className="font-mono font-bold text-sprint">
-                          {breakdown.sprint.toFixed(1)}
-                        </p>
-                      </div>
-                    </div>
+                    <CategoryBreakdown breakdown={breakdown} />
                   </div>
                 )}
 

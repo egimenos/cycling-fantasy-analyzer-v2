@@ -17,6 +17,8 @@ import { BpiBadge, FlagChip } from './bpi-badge';
 import { BreakoutDetailPanel } from './breakout-detail-panel';
 import { RiderCardList } from './rider-card-list';
 import { useIsDesktop } from '@/shared/hooks/use-media-query';
+import { getEffectiveScore } from '@/shared/lib/rider-utils';
+import { CategoryBreakdown } from '@/shared/ui/category-breakdown';
 
 interface RiderTableProps {
   data: AnalyzeResponse;
@@ -29,11 +31,6 @@ interface RiderTableProps {
   canSelect: (riderName: string) => boolean;
   /** When set externally (e.g. mobile bottom nav), overrides internal filter state */
   externalFilter?: RiderFilter;
-}
-
-function getEffectiveScore(rider: AnalyzedRider, hasML: boolean): number | null {
-  if (hasML && rider.mlPredictedScore !== null) return rider.mlPredictedScore;
-  return rider.totalProjectedPts;
 }
 
 function findMaxEffectiveScore(riders: AnalyzedRider[], hasML: boolean): number {
@@ -298,28 +295,7 @@ function PerformanceContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boo
             {isML ? 'ML Predicted Breakdown' : 'Category Scores'}
             {isML && <MlBadge />}
           </h4>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-surface-container-high p-3 rounded-sm border-l-2 border-gc">
-              <p className="text-[11px] md:text-[9px] text-outline uppercase font-mono">GC</p>
-              <p className="font-mono font-bold text-gc text-lg">{breakdown.gc.toFixed(1)}</p>
-            </div>
-            <div className="bg-surface-container-high p-3 rounded-sm border-l-2 border-stage">
-              <p className="text-[11px] md:text-[9px] text-outline uppercase font-mono">Stage</p>
-              <p className="font-mono font-bold text-stage text-lg">{breakdown.stage.toFixed(1)}</p>
-            </div>
-            <div className="bg-surface-container-high p-3 rounded-sm border-l-2 border-mountain">
-              <p className="text-[11px] md:text-[9px] text-outline uppercase font-mono">MTN</p>
-              <p className="font-mono font-bold text-mountain text-lg">
-                {breakdown.mountain.toFixed(1)}
-              </p>
-            </div>
-            <div className="bg-surface-container-high p-3 rounded-sm border-l-2 border-sprint">
-              <p className="text-[11px] md:text-[9px] text-outline uppercase font-mono">SPR</p>
-              <p className="font-mono font-bold text-sprint text-lg">
-                {breakdown.sprint.toFixed(1)}
-              </p>
-            </div>
-          </div>
+          <CategoryBreakdown breakdown={breakdown} />
         </div>
       )}
 
