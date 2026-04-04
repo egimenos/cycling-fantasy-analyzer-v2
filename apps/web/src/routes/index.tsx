@@ -206,15 +206,19 @@ function HomePageContent() {
     }
   }, [gmvImportState]);
 
-  // Handle full reset from Roster tab
+  // Handle full reset (from Roster tab or Setup "Start New Analysis")
   const handleFullReset = useCallback(() => {
-    teamBuilder.clearAll();
+    resetAnalyze();
     resetOptimize();
     resetGmvImport();
+    teamBuilder.clearAll();
     setSelectedRace(null);
+    setRiderText('');
+    setRaceUrl('');
+    setGameUrl('');
     dispatch({ type: 'RESET' });
     void navigate({ search: { tab: 'setup' } });
-  }, [teamBuilder, resetOptimize, resetGmvImport, dispatch, navigate]);
+  }, [resetAnalyze, resetOptimize, resetGmvImport, teamBuilder, dispatch, navigate]);
 
   // Handle team complete (manual path)
   const handleReviewTeam = useCallback(() => {
