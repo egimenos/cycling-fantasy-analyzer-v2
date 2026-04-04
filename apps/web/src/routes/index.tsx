@@ -16,6 +16,9 @@ import { useTeamBuilder } from '@/features/team-builder/hooks/use-team-builder';
 import { useRaceProfile } from '@/features/rider-list/hooks/use-race-profile';
 import { useOptimize } from '@/features/optimizer/hooks/use-optimize';
 import { LoadingSpinner } from '@/shared/ui/loading-spinner';
+import { useIsDesktop } from '@/shared/hooks/use-media-query';
+import type { RiderFilter } from '@/features/rider-list/components/rider-table';
+import { Bike, Unlink, TrendingUp, Trophy } from 'lucide-react';
 
 import { SetupTab } from './tabs/setup-tab';
 
@@ -219,6 +222,8 @@ function HomePageContent() {
 
   const isAnalyzing = analyzeState.status === 'loading';
   const isOptimizing = optimizeState.status === 'loading';
+  const isDesktop = useIsDesktop();
+  const [mobileFilter, setMobileFilter] = useState<RiderFilter>('all');
 
   return (
     <>
@@ -227,7 +232,7 @@ function HomePageContent() {
         {isAnalyzing && 'Analyzing riders...'}
         {isOptimizing && 'Optimizing team...'}
       </div>
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="px-4 md:px-5 lg:px-8 xl:px-12 py-4 md:py-6 overflow-x-hidden">
         {tab === 'setup' && (
           <div key="setup" className="animate-fade-in-up">
             <SetupTab
@@ -265,6 +270,7 @@ function HomePageContent() {
                 onOptimize={handleOptimize}
                 isOptimizing={isOptimizing}
                 onReviewTeam={handleReviewTeam}
+                mobileFilter={mobileFilter}
               />
             </div>
           )}
@@ -289,6 +295,29 @@ function HomePageContent() {
           )}
         </Suspense>
       </div>
+
+      {/* Mobile bottom nav — outside animated wrappers so position:fixed works */}
+      {!isDesktop && tab === 'dashboard' && analyzeState.status === 'success' && (
+        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-surface-dim border-t border-outline-variant/15 flex justify-around py-2 safe-area-pb">
+          {[
+            { value: 'all' as RiderFilter, icon: Bike, label: 'All' },
+            { value: 'unmatched' as RiderFilter, icon: Unlink, label: 'Unmatched' },
+            { value: 'breakout' as RiderFilter, icon: TrendingUp, label: 'Breakout' },
+            { value: 'valuePicks' as RiderFilter, icon: Trophy, label: 'Value Picks' },
+          ].map(({ value, icon: Icon, label }) => (
+            <button
+              key={value}
+              onClick={() => setMobileFilter(value)}
+              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-sm transition-colors ${
+                mobileFilter === value ? 'text-secondary' : 'text-outline hover:text-on-surface'
+              }`}
+            >
+              <Icon className="h-5 w-5" />
+              <span className="text-[9px] font-mono uppercase tracking-wider">{label}</span>
+            </button>
+          ))}
+        </nav>
+      )}
     </>
   );
 }
