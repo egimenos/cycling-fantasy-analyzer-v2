@@ -124,10 +124,8 @@ test.describe('Breakout Potential Index', () => {
 
       // All 5 signal labels should be present
       await expect(dashboardPage.riderTable.getByText('Trajectory', { exact: true })).toBeVisible();
-      await expect(dashboardPage.riderTable.getByText('Recency', { exact: true })).toBeVisible();
-      await expect(
-        dashboardPage.riderTable.getByText('Ceiling Gap', { exact: true }),
-      ).toBeVisible();
+      await expect(dashboardPage.riderTable.getByText('Form', { exact: true })).toBeVisible();
+      await expect(dashboardPage.riderTable.getByText('Comeback', { exact: true })).toBeVisible();
       await expect(dashboardPage.riderTable.getByText('Route Fit', { exact: true })).toBeVisible();
       await expect(dashboardPage.riderTable.getByText('Variance', { exact: true })).toBeVisible();
     });

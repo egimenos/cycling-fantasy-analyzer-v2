@@ -49,7 +49,7 @@ export enum BreakoutFlag {
   EmergingTalent = 'EMERGING_TALENT',
   HotStreak = 'HOT_STREAK',
   DeepValue = 'DEEP_VALUE',
-  CeilingPlay = 'CEILING_PLAY',
+  Comeback = 'COMEBACK',
   SprintOpportunity = 'SPRINT_OPPORTUNITY',
   BreakawayHunter = 'BREAKAWAY_HUNTER',
   RaceSpecialist = 'RACE_SPECIALIST',
@@ -57,8 +57,8 @@ export enum BreakoutFlag {
 
 export interface BreakoutSignals {
   readonly trajectory: number;
-  readonly recency: number;
-  readonly ceiling: number;
+  readonly form: number;
+  readonly comeback: number;
   readonly routeFit: number;
   readonly variance: number;
 }

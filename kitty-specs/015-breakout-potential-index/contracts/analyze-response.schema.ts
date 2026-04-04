@@ -11,21 +11,22 @@ export enum BreakoutFlag {
   EmergingTalent = 'EMERGING_TALENT',
   HotStreak = 'HOT_STREAK',
   DeepValue = 'DEEP_VALUE',
-  CeilingPlay = 'CEILING_PLAY',
+  Comeback = 'COMEBACK',
   SprintOpportunity = 'SPRINT_OPPORTUNITY',
   BreakawayHunter = 'BREAKAWAY_HUNTER',
+  RaceSpecialist = 'RACE_SPECIALIST',
 }
 
 export interface BreakoutSignals {
   /** Career trajectory slope adjusted by age factor (0-25) */
   trajectory: number;
-  /** Current season burst relative to historical average (0-25) */
-  recency: number;
-  /** Gap between historical peak and current prediction (0-20) */
-  ceiling: number;
+  /** 90-day rolling form vs career average pts/race (0-25) */
+  form: number;
+  /** Ceiling gap gated by recovery evidence (0-20) */
+  comeback: number;
   /** Rider category profile × race route profile fit (0-15) */
   routeFit: number;
-  /** Season-to-season variance indicating upside potential (0-15) */
+  /** Season-to-season variance normalized by pts/race (0-15) */
   variance: number;
 }
 
@@ -77,8 +78,8 @@ export const exampleRider = {
     flags: ['EMERGING_TALENT', 'HOT_STREAK'],
     signals: {
       trajectory: 22,
-      recency: 20,
-      ceiling: 14,
+      form: 20,
+      comeback: 14,
       routeFit: 8,
       variance: 10,
     },

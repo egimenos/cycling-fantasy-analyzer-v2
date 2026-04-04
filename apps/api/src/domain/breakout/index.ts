@@ -1,16 +1,16 @@
 export {
   computeTrajectory,
-  computeRecencyBurst,
-  computeCeilingGap,
+  computeForm,
+  computeComeback,
   computeRouteFit,
   computeVariance,
   computeBpiIndex,
   computeUpsideP80,
   evaluateFlags,
   computeBreakout,
-  computeMedianPtsPerHillio,
+  computeP75PtsPerHillio,
   computeAge,
   computeRawSlope,
 } from './breakout.service';
 
-export type { ComputeBreakoutInput } from './breakout.types';
+export type { ComputeBreakoutInput, RacePerformance } from './breakout.types';

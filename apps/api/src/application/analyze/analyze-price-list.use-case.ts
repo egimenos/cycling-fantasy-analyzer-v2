@@ -30,8 +30,11 @@ import { ProfileDistribution } from '../../domain/scoring/profile-distribution';
 import { Rider } from '../../domain/rider/rider.entity';
 import { mapPriceListEntries, PriceListEntry, PriceListEntryDto } from './price-list-entry';
 import type { ProfileSummary, BreakoutResult, RaceHistory } from '@cycling-analyzer/shared-types';
-import { computeBreakout, computeMedianPtsPerHillio } from '../../domain/breakout';
-import { buildSameRaceHistory } from '../../domain/scoring/race-history.service';
+import { computeBreakout, computeP75PtsPerHillio } from '../../domain/breakout';
+import {
+  buildSameRaceHistory,
+  buildRacePerformances,
+} from '../../domain/scoring/race-history.service';
 
 export interface AnalyzeInput {
   riders: PriceListEntryDto[];
@@ -266,17 +269,20 @@ export class AnalyzePriceListUseCase {
     });
 
     // --- BPI computation (step 5.5) ---
-    const medianPph = computeMedianPtsPerHillio(analyzedRiders);
+    const p75Pph = computeP75PtsPerHillio(analyzedRiders);
     for (const rider of analyzedRiders) {
       if (rider.unmatched || !rider.matchedRider) continue;
       const riderEntity = riderMap.get(rider.matchedRider.id);
+      const riderResults = resultsByRider.get(rider.matchedRider.id) ?? [];
+      const racePerformances = buildRacePerformances(riderResults);
       rider.breakout = computeBreakout({
         seasonBreakdown: rider.seasonBreakdown ?? [],
+        racePerformances,
         prediction: rider.mlPredictedScore ?? rider.totalProjectedPts ?? 0,
         priceHillios: rider.priceHillios,
         birthDate: riderEntity?.birthDate ?? null,
         profileSummary: input.profileSummary,
-        medianPtsPerHillio: medianPph,
+        p75PtsPerHillio: p75Pph,
         categoryScores: rider.categoryScores,
         sameRaceHistory: rider.sameRaceHistory ?? [],
       });

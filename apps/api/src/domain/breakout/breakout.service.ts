@@ -5,19 +5,20 @@ import type {
   BreakoutResult,
   BreakoutFlag,
 } from '@cycling-analyzer/shared-types';
-import type { ComputeBreakoutInput, CoreCategoryScores } from './breakout.types';
+import type { ComputeBreakoutInput, CoreCategoryScores, RacePerformance } from './breakout.types';
 
 const EMERGING_TALENT: BreakoutFlag = 'EMERGING_TALENT' as BreakoutFlag;
 const HOT_STREAK: BreakoutFlag = 'HOT_STREAK' as BreakoutFlag;
 const DEEP_VALUE: BreakoutFlag = 'DEEP_VALUE' as BreakoutFlag;
-const CEILING_PLAY: BreakoutFlag = 'CEILING_PLAY' as BreakoutFlag;
+const COMEBACK_FLAG: BreakoutFlag = 'COMEBACK' as BreakoutFlag;
 const SPRINT_OPPORTUNITY: BreakoutFlag = 'SPRINT_OPPORTUNITY' as BreakoutFlag;
 const BREAKAWAY_HUNTER: BreakoutFlag = 'BREAKAWAY_HUNTER' as BreakoutFlag;
 const RACE_SPECIALIST: BreakoutFlag = 'RACE_SPECIALIST' as BreakoutFlag;
 
 const DEFAULT_AGE = 28;
+const FORM_WINDOW_DAYS = 90;
 
-// ── Helpers ──────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────��──────────────────────────
 
 export function computeAge(birthDate: Date | null, currentDate: Date = new Date()): number {
   if (!birthDate) return DEFAULT_AGE;
@@ -44,15 +45,21 @@ export function computeRawSlope(seasons: readonly SeasonBreakdown[]): number {
 }
 
 // ── Signal 1: Trajectory (0-25) ─────────────────────────────────────
+// Uses only completed seasons (excludes current year) to avoid
+// partial-season depression of the slope.
 
 export function computeTrajectory(
   seasons: readonly SeasonBreakdown[],
   birthDate: Date | null,
+  currentDate: Date = new Date(),
 ): number {
-  const slope = computeRawSlope(seasons);
+  const currentYear = currentDate.getFullYear();
+  const completedSeasons = seasons.filter((s) => s.year < currentYear);
+
+  const slope = computeRawSlope(completedSeasons);
   if (slope <= 0) return 0;
 
-  const age = computeAge(birthDate);
+  const age = computeAge(birthDate, currentDate);
   let ageFactor: number;
   if (age < 25) ageFactor = 1.5;
   else if (age <= 27) ageFactor = 1.0;
@@ -62,42 +69,56 @@ export function computeTrajectory(
   return Math.min(25, Math.max(0, slope * ageFactor));
 }
 
-// ── Signal 2: Recency Burst (0-25) ──────────────────────────────────
+// ── Signal 2: Form (0-25) ───────────────────────────────────────────
+// Rolling 90-day window: compares recent pts/race vs career pts/race.
+// Replaces the broken calendar-year Recency signal.
 
-export function computeRecencyBurst(seasons: readonly SeasonBreakdown[]): number {
-  if (seasons.length === 0) return 0;
+export function computeForm(
+  racePerformances: readonly RacePerformance[],
+  currentDate: Date = new Date(),
+): number {
+  if (racePerformances.length === 0) return 0;
 
-  const current = seasons.reduce((a, b) => (a.year > b.year ? a : b));
-  if (current.total <= 20) return 0;
+  const cutoff = new Date(currentDate.getTime() - FORM_WINDOW_DAYS * 86_400_000);
+  const recent = racePerformances.filter((r) => r.raceDate >= cutoff && r.raceDate <= currentDate);
 
-  const others = seasons.filter((s) => s.year !== current.year);
-  if (others.length === 0) return 0;
+  if (recent.length === 0) return 0;
 
-  const avgOthers = others.reduce((sum, s) => sum + s.total, 0) / others.length;
-  if (avgOthers === 0) return 25;
+  const recentAvg = recent.reduce((s, r) => s + r.total, 0) / recent.length;
+  const allAvg = racePerformances.reduce((s, r) => s + r.total, 0) / racePerformances.length;
 
-  const ratio = current.total / avgOthers;
+  if (allAvg === 0) return 0;
+
+  const ratio = recentAvg / allAvg;
   return Math.min(25, Math.max(0, (ratio - 1) * 25));
 }
 
-// ── Signal 3: Ceiling Gap (0-20) ────────────────────────────────────
+// ── Signal 3: Comeback (0-20) ─────────────────────────────��─────────
+// Ceiling gap (peak vs prediction) gated by recovery evidence.
+// Only scores if trajectory or form show the rider is bouncing back.
 
-export function computeCeilingGap(
+export function computeComeback(
   seasons: readonly SeasonBreakdown[],
   prediction: number,
   birthDate: Date | null,
+  trajectoryScore: number,
+  formScore: number,
+  currentDate: Date = new Date(),
 ): number {
-  const age = computeAge(birthDate);
+  const age = computeAge(birthDate, currentDate);
   if (age > 33) return 0;
   if (seasons.length === 0) return 0;
   if (prediction <= 0) return 0;
 
   const peak = Math.max(...seasons.map((s) => s.total));
   const ratio = peak / prediction;
-  return Math.min(20, Math.max(0, (ratio - 1) * 5));
+  const gapScore = Math.min(20, Math.max(0, (ratio - 1) * 5));
+
+  const hasRecoveryEvidence = trajectoryScore > 5 || formScore > 5;
+  return hasRecoveryEvidence ? gapScore : 0;
 }
 
-// ── Signal 4: Route Fit (0-15) ──────────────────────────────────────
+// ── Signal 4: Route Fit (0-15) ──────────────────────────���───────────
 
 export function computeRouteFit(
   categoryScores: CoreCategoryScores | null,
@@ -143,16 +164,29 @@ export function computeRouteFit(
   return Math.min(15, Math.max(0, dot * 15));
 }
 
-// ── Signal 5: Variance (0-15) ───────────────────────────────────────
+// ── Signal 5: Variance (0-15) ──────────────────────────────���────────
+// Normalized by pts/race per season to avoid penalizing riders
+// with fewer races in a given year.
 
-export function computeVariance(seasons: readonly SeasonBreakdown[]): number {
-  const nonZero = seasons.filter((s) => s.total > 0).map((s) => s.total);
-  if (nonZero.length < 2) return 7.5;
+export function computeVariance(racePerformances: readonly RacePerformance[]): number {
+  const byYear = new Map<number, number[]>();
+  for (const r of racePerformances) {
+    const existing = byYear.get(r.year);
+    if (existing) existing.push(r.total);
+    else byYear.set(r.year, [r.total]);
+  }
 
-  const mean = nonZero.reduce((a, b) => a + b, 0) / nonZero.length;
+  const seasonAverages = [...byYear.values()]
+    .map((totals) => totals.reduce((a, b) => a + b, 0) / totals.length)
+    .filter((avg) => avg > 0);
+
+  if (seasonAverages.length < 2) return 7.5;
+
+  const mean = seasonAverages.reduce((a, b) => a + b, 0) / seasonAverages.length;
   if (mean === 0) return 0;
 
-  const variance = nonZero.reduce((sum, v) => sum + (v - mean) ** 2, 0) / nonZero.length;
+  const variance =
+    seasonAverages.reduce((sum, v) => sum + (v - mean) ** 2, 0) / seasonAverages.length;
   const cv = Math.sqrt(variance) / mean;
 
   return Math.min(15, Math.max(0, cv * 15));
@@ -162,7 +196,7 @@ export function computeVariance(seasons: readonly SeasonBreakdown[]): number {
 
 export function computeBpiIndex(signals: BreakoutSignals): number {
   const raw =
-    signals.trajectory + signals.recency + signals.ceiling + signals.routeFit + signals.variance;
+    signals.trajectory + signals.form + signals.comeback + signals.routeFit + signals.variance;
   return Math.min(100, Math.max(0, Math.round(raw)));
 }
 
@@ -209,43 +243,37 @@ export function computeUpsideP80(seasons: readonly SeasonBreakdown[], prediction
 
 // ── Flag Evaluation ─────────────────────────────────────────────────
 
-export function evaluateFlags(input: ComputeBreakoutInput): BreakoutFlag[] {
+export function evaluateFlags(
+  input: ComputeBreakoutInput,
+  signals: BreakoutSignals,
+): BreakoutFlag[] {
   const flags: BreakoutFlag[] = [];
   const age = computeAge(input.birthDate);
   const seasons = input.seasonBreakdown;
 
-  const currentSeason =
-    seasons.length > 0 ? seasons.reduce((a, b) => (a.year > b.year ? a : b)) : null;
-  const otherSeasons = currentSeason ? seasons.filter((s) => s.year !== currentSeason.year) : [];
-  const avgOthers =
-    otherSeasons.length > 0
-      ? otherSeasons.reduce((sum, s) => sum + s.total, 0) / otherSeasons.length
-      : 0;
-  const peakTotal = seasons.length > 0 ? Math.max(...seasons.map((s) => s.total)) : 0;
-
   const cs = input.categoryScores;
   const totalPts = cs ? cs.gc + cs.stage + cs.mountain + cs.sprint : 0;
 
-  // EMERGING_TALENT
+  // EMERGING_TALENT — young rider with steep career growth
   if (age < 25 && seasons.length <= 3) {
     const slope = computeRawSlope(seasons);
     if (slope > 30) flags.push(EMERGING_TALENT);
   }
 
-  // HOT_STREAK
-  if (currentSeason && otherSeasons.length > 0 && currentSeason.total > 2 * avgOthers) {
+  // HOT_STREAK — strong recent form (form signal > 12.5 ≈ recent avg 1.5× career)
+  if (signals.form > 12.5) {
     flags.push(HOT_STREAK);
   }
 
-  // DEEP_VALUE
+  // DEEP_VALUE — cheap rider with high efficiency and meaningful prediction
   const ptsPerHillio = input.priceHillios > 0 ? input.prediction / input.priceHillios : 0;
-  if (input.priceHillios <= 100 && ptsPerHillio > input.medianPtsPerHillio) {
+  if (input.priceHillios <= 100 && input.prediction >= 20 && ptsPerHillio > input.p75PtsPerHillio) {
     flags.push(DEEP_VALUE);
   }
 
-  // CEILING_PLAY
-  if (input.prediction > 0 && peakTotal > 5 * input.prediction && age < 30) {
-    flags.push(CEILING_PLAY);
+  // COMEBACK — significant ceiling gap with recovery evidence
+  if (signals.comeback > 10) {
+    flags.push(COMEBACK_FLAG);
   }
 
   // SPRINT_OPPORTUNITY
@@ -274,7 +302,6 @@ export function evaluateFlags(input: ComputeBreakoutInput): BreakoutFlag[] {
   }
 
   // RACE_SPECIALIST — historical median in this race exceeds prediction
-  // Median rewards consistency: one great edition among failures won't trigger it
   const raceHist = input.sameRaceHistory ?? [];
   if (raceHist.length >= 2 && input.prediction > 0) {
     const sorted = [...raceHist].map((h) => h.total).sort((a, b) => a - b);
@@ -292,25 +319,34 @@ export function evaluateFlags(input: ComputeBreakoutInput): BreakoutFlag[] {
 // ── Compose ─────────────────────────────────────────────────────────
 
 export function computeBreakout(input: ComputeBreakoutInput): BreakoutResult {
+  const trajectoryScore = computeTrajectory(input.seasonBreakdown, input.birthDate);
+  const formScore = computeForm(input.racePerformances);
+
   const signals: BreakoutSignals = {
-    trajectory: computeTrajectory(input.seasonBreakdown, input.birthDate),
-    recency: computeRecencyBurst(input.seasonBreakdown),
-    ceiling: computeCeilingGap(input.seasonBreakdown, input.prediction, input.birthDate),
+    trajectory: trajectoryScore,
+    form: formScore,
+    comeback: computeComeback(
+      input.seasonBreakdown,
+      input.prediction,
+      input.birthDate,
+      trajectoryScore,
+      formScore,
+    ),
     routeFit: computeRouteFit(input.categoryScores, input.profileSummary),
-    variance: computeVariance(input.seasonBreakdown),
+    variance: computeVariance(input.racePerformances),
   };
 
   return {
     index: computeBpiIndex(signals),
     upsideP80: computeUpsideP80(input.seasonBreakdown, input.prediction),
-    flags: evaluateFlags(input),
+    flags: evaluateFlags(input, signals),
     signals,
   };
 }
 
-// ── Median helper ───────────────────────────────────────────────────
+// ── P75 helper ──────────────────────────────────────────────────────
 
-export function computeMedianPtsPerHillio(
+export function computeP75PtsPerHillio(
   riders: readonly { pointsPerHillio: number | null }[],
 ): number {
   const values = riders
@@ -319,6 +355,6 @@ export function computeMedianPtsPerHillio(
     .sort((a, b) => a - b);
 
   if (values.length === 0) return 0;
-  const mid = Math.floor(values.length / 2);
-  return values.length % 2 === 0 ? (values[mid - 1] + values[mid]) / 2 : values[mid];
+  const idx = Math.floor(values.length * 0.75);
+  return values[Math.min(idx, values.length - 1)];
 }

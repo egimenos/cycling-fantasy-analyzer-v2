@@ -21,16 +21,16 @@ const SIGNAL_CONFIGS: SignalConfig[] = [
     description: 'Career trend direction — rising, stable, or declining',
   },
   {
-    key: 'recency',
-    label: 'Recency',
+    key: 'form',
+    label: 'Form',
     max: 25,
-    description: 'How much of their scoring comes from recent seasons',
+    description: 'Recent 90-day performance vs career average — current hot streak',
   },
   {
-    key: 'ceiling',
-    label: 'Ceiling Gap',
+    key: 'comeback',
+    label: 'Comeback',
     max: 20,
-    description: 'Distance between current level and historical peak',
+    description: 'Gap to historical peak with evidence of recovery',
   },
   {
     key: 'routeFit',
@@ -48,11 +48,12 @@ const SIGNAL_CONFIGS: SignalConfig[] = [
 
 const FLAG_DESCRIPTIONS: Record<string, string> = {
   EMERGING_TALENT: 'Young rider with steep upward career trajectory',
-  HOT_STREAK: 'Current season is 2x+ their historical average',
-  DEEP_VALUE: 'Cheap rider with above-median points per hillio',
-  CEILING_PLAY: 'Historical peak far exceeds current prediction',
+  HOT_STREAK: 'Strong recent form — last 90 days well above career average',
+  DEEP_VALUE: 'Top-quartile efficiency at low price with meaningful prediction',
+  COMEBACK: 'Historical peak far exceeds prediction with recovery signs',
   SPRINT_OPPORTUNITY: 'Sprint profile on a flat-friendly course',
   BREAKAWAY_HUNTER: 'Mountain points on a budget — breakaway potential',
+  RACE_SPECIALIST: 'Historically outperforms predictions in this race',
 };
 
 function SignalBar({ config, value }: { config: SignalConfig; value: number }) {
