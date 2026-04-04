@@ -107,6 +107,7 @@ make dev           # starts all services
 ## Git Discipline
 
 - **Never commit directly to `main`.** Always create a feature branch and open a pull request. Branch naming: `feat/<short-description>`, `fix/<short-description>`, `refactor/<short-description>`, etc. Push the branch and create a PR via `gh pr create` before merging.
+- **Branch-first rule**: Before editing any tracked file, check `git branch --show-current`. If you are on `main`, create and switch to a new branch first (`git checkout -b <type>/<description>`). This applies at the start of every session — never assume a previous session left you on the right branch.
 - Conventional commit messages enforced by commitlint.
 - Never rewrite history on shared branches.
 - Never commit agent directories (`.claude/`, `.codex/`, `.cursor/`).

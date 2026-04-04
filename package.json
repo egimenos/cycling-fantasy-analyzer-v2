@@ -32,6 +32,15 @@
     ],
     "*.{json,md,yaml,yml}": [
       "prettier --write"
+    ],
+    "apps/api/src/**/*.ts": [
+      "bash -c 'cd apps/api && npx tsc --noEmit'"
+    ],
+    "apps/web/src/**/*.{ts,tsx}": [
+      "bash -c 'cd apps/web && npx tsc --noEmit'"
+    ],
+    "packages/shared-types/src/**/*.ts": [
+      "bash -c 'cd packages/shared-types && npx tsc --noEmit'"
     ]
   },
   "packageManager": "pnpm@8.15.5"
