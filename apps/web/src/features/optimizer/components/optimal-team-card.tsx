@@ -1,17 +1,13 @@
-import type { AnalyzedRider, TeamSelection } from '@cycling-analyzer/shared-types';
+import type { TeamSelection } from '@cycling-analyzer/shared-types';
 import { Bike, Crown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import { formatNumber, cn } from '@/shared/lib/utils';
-
-function getEffectiveScore(rider: AnalyzedRider): number | null {
-  return rider.mlPredictedScore ?? rider.totalProjectedPts;
-}
+import { getEffectiveScore } from '@/shared/lib/rider-utils';
+import { CategoryBreakdown } from '@/shared/ui/category-breakdown';
 
 interface OptimalTeamCardProps {
   team: TeamSelection;
-  budget?: number;
   variant?: 'primary' | 'secondary';
-  title?: string;
 }
 
 export function OptimalTeamCard({ team, variant = 'primary' }: OptimalTeamCardProps) {
@@ -29,7 +25,7 @@ export function OptimalTeamCard({ team, variant = 'primary' }: OptimalTeamCardPr
               <li
                 data-testid={`optimization-rider-card-${rider.rawName}`}
                 className={cn(
-                  'p-5 flex items-center gap-4 group transition-all relative overflow-hidden cursor-default',
+                  'p-3 md:p-5 flex items-center gap-3 md:gap-4 group transition-all relative overflow-hidden cursor-default',
                   isLeader
                     ? 'bg-gradient-to-br from-surface-container-high to-tertiary/[0.06] border-l-2 border-tertiary hover:brightness-110'
                     : 'bg-surface-container-high hover:bg-surface-bright',
@@ -83,33 +79,8 @@ export function OptimalTeamCard({ team, variant = 'primary' }: OptimalTeamCardPr
               </li>
             </TooltipTrigger>
             {breakdown && (
-              <TooltipContent className="p-0 bg-surface-container-highest border-outline-variant/20">
-                <div className="px-3 py-2 grid grid-cols-4 gap-3 text-center min-w-[200px]">
-                  <div>
-                    <div className="text-[9px] font-mono text-gc uppercase">GC</div>
-                    <div className="font-mono font-bold text-gc text-sm">
-                      {breakdown.gc.toFixed(1)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[9px] font-mono text-stage uppercase">STG</div>
-                    <div className="font-mono font-bold text-stage text-sm">
-                      {breakdown.stage.toFixed(1)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[9px] font-mono text-mountain uppercase">MTN</div>
-                    <div className="font-mono font-bold text-mountain text-sm">
-                      {breakdown.mountain.toFixed(1)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[9px] font-mono text-sprint uppercase">SPR</div>
-                    <div className="font-mono font-bold text-sprint text-sm">
-                      {breakdown.sprint.toFixed(1)}
-                    </div>
-                  </div>
-                </div>
+              <TooltipContent className="p-2 bg-surface-container-highest border-outline-variant/20 min-w-[200px]">
+                <CategoryBreakdown breakdown={breakdown} variant="compact" />
               </TooltipContent>
             )}
           </Tooltip>

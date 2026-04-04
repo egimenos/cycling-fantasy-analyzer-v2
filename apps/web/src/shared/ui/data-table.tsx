@@ -57,7 +57,11 @@ export function DataTable<TData>({
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className={cn(header.column.getCanSort() && 'cursor-pointer select-none')}
+                    className={cn(
+                      header.column.getCanSort() && 'cursor-pointer select-none',
+                      (header.column.columnDef.meta as Record<string, string> | undefined)
+                        ?.className,
+                    )}
                     onClick={header.column.getToggleSortingHandler()}
                     onKeyDown={
                       header.column.getCanSort()
@@ -126,7 +130,13 @@ export function DataTable<TData>({
                     data-state={row.getIsExpanded() ? 'expanded' : undefined}
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
+                      <TableCell
+                        key={cell.id}
+                        className={
+                          (cell.column.columnDef.meta as Record<string, string> | undefined)
+                            ?.className
+                        }
+                      >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
@@ -134,7 +144,7 @@ export function DataTable<TData>({
                   {row.getIsExpanded() && renderExpandedRow && (
                     <TableRow className="hover:bg-transparent">
                       <TableCell colSpan={columns.length} className="p-0">
-                        <div className="border-t border-outline-variant/10 bg-surface-container-low p-6">
+                        <div className="border-t border-outline-variant/10 bg-surface-container-low p-3 md:p-6">
                           {renderExpandedRow(row)}
                         </div>
                       </TableCell>

@@ -48,10 +48,10 @@ function RootLayout() {
             data-testid="nav-bar"
             className="fixed top-0 w-full z-50 bg-surface-dim/70 backdrop-blur-md border-b border-outline-variant/15 shadow-sm shadow-black/20"
           >
-            <div className="flex justify-between items-center px-6 h-16">
-              <div className="flex items-center gap-3">
-                <img src="/logo.svg" alt="" className="h-8 w-8" />
-                <span className="text-xl font-black tracking-tighter text-on-surface uppercase italic font-headline">
+            <div className="flex justify-between items-center px-4 md:px-5 lg:px-8 xl:px-12 h-14 md:h-16">
+              <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                <img src="/logo.svg" alt="" className="h-7 w-7 md:h-8 md:w-8 flex-shrink-0" />
+                <span className="text-base md:text-xl font-black tracking-tighter text-on-surface uppercase italic font-headline truncate">
                   CYCLING FANTASY OPTIMIZER
                 </span>
                 <span className="hidden md:inline-block text-[9px] font-mono text-outline/50 uppercase tracking-widest ml-2 border border-outline-variant/15 px-1.5 py-0.5 rounded-sm">
@@ -72,7 +72,7 @@ function RootLayout() {
             <div className="h-px bg-gradient-to-r from-transparent via-secondary/30 to-transparent" />
           </nav>
         </header>
-        <main id="main-content" className="pt-16">
+        <main id="main-content" className="pt-14 md:pt-16">
           <Outlet />
         </main>
         <Toaster richColors position="top-right" />

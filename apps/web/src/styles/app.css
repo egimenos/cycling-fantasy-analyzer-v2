@@ -292,6 +292,21 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
+
+  /* Reduce stagger delays on mobile for faster perceived load */
+  [data-animated-rows] tbody tr {
+    animation-duration: 0.25s;
+  }
+  [data-animated-rows] tbody tr:nth-child(n+6) {
+    animation-delay: 125ms;
+  }
+}
+
+/* iOS safe area support */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

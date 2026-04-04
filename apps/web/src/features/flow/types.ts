@@ -1,3 +1,5 @@
+import { Settings, BarChart3, Zap, Users } from 'lucide-react';
+
 export type FlowStep = 'setup' | 'dashboard' | 'optimization' | 'roster';
 
 export const FLOW_STEPS: readonly FlowStep[] = [
@@ -12,6 +14,13 @@ export const FLOW_STEP_LABELS: Record<FlowStep, string> = {
   dashboard: 'Dashboard',
   optimization: 'Optimization',
   roster: 'Roster',
+};
+
+export const FLOW_STEP_ICONS: Record<FlowStep, typeof Settings> = {
+  setup: Settings,
+  dashboard: BarChart3,
+  optimization: Zap,
+  roster: Users,
 };
 
 export interface FlowState {

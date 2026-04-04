@@ -15,6 +15,10 @@ import { Lock, Unlock, Ban, ExternalLink, Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import { BpiBadge, FlagChip } from './bpi-badge';
 import { BreakoutDetailPanel } from './breakout-detail-panel';
+import { RiderCardList } from './rider-card-list';
+import { useIsDesktop } from '@/shared/hooks/use-media-query';
+import { getEffectiveScore } from '@/shared/lib/rider-utils';
+import { CategoryBreakdown } from '@/shared/ui/category-breakdown';
 
 interface RiderTableProps {
   data: AnalyzeResponse;
@@ -25,11 +29,8 @@ interface RiderTableProps {
   onToggleExclude: (riderName: string) => void;
   onToggleSelect: (riderName: string) => void;
   canSelect: (riderName: string) => boolean;
-}
-
-function getEffectiveScore(rider: AnalyzedRider, hasML: boolean): number | null {
-  if (hasML && rider.mlPredictedScore !== null) return rider.mlPredictedScore;
-  return rider.totalProjectedPts;
+  /** When set externally (e.g. mobile bottom nav), overrides internal filter state */
+  externalFilter?: RiderFilter;
 }
 
 function findMaxEffectiveScore(riders: AnalyzedRider[], hasML: boolean): number {
@@ -66,15 +67,17 @@ function createColumns(
         const disabled =
           row.original.unmatched || isExcluded || isLocked || (!isSelected && !canSelect(name));
         return (
-          <input
-            type="checkbox"
-            checked={isSelected || isLocked}
-            disabled={disabled}
-            onChange={() => onToggleSelect(name)}
-            onClick={(e) => e.stopPropagation()}
-            className="h-4 w-4 bg-surface-dim border-outline-variant rounded-none checked:bg-primary"
-            aria-label={`Select ${name}`}
-          />
+          <label className="flex items-center justify-center min-w-[44px] min-h-[44px] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isSelected || isLocked}
+              disabled={disabled}
+              onChange={() => onToggleSelect(name)}
+              onClick={(e) => e.stopPropagation()}
+              className="h-4 w-4 bg-surface-dim border-outline-variant rounded-none checked:bg-primary"
+              aria-label={`Select ${name}`}
+            />
+          </label>
         );
       },
     },
@@ -102,7 +105,7 @@ function createColumns(
           <div className="flex flex-wrap items-center gap-0.5">
             <span
               className={cn(
-                'max-w-[160px] truncate font-headline font-bold text-sm',
+                'max-w-[100px] md:max-w-[160px] truncate font-headline font-bold text-sm',
                 isExcluded && 'line-through opacity-50',
               )}
               title={name}
@@ -121,6 +124,7 @@ function createColumns(
       accessorKey: 'rawTeam',
       header: 'Team',
       enableSorting: true,
+      meta: { className: 'hidden md:table-cell' },
       cell: ({ getValue }) => (
         <span className="text-xs font-mono text-outline uppercase">{getValue<string>()}</span>
       ),
@@ -210,6 +214,7 @@ function createColumns(
       id: 'matchStatus',
       header: 'Match',
       enableSorting: false,
+      meta: { className: 'hidden md:table-cell' },
       cell: ({ row }) => {
         const isExcluded = excludedIds.has(row.original.rawName);
         if (isExcluded) {
@@ -233,7 +238,8 @@ function createColumns(
     {
       id: 'actions',
       header: '',
-      size: 80,
+      size: 100,
+      minSize: 90,
       enableSorting: false,
       cell: ({ row }) => {
         const name = row.original.rawName;
@@ -241,14 +247,14 @@ function createColumns(
         const isExcluded = excludedIds.has(name);
         if (row.original.unmatched) return null;
         return (
-          <div className="flex justify-end gap-3 text-outline">
+          <div className="flex justify-end gap-1 md:gap-2 text-outline pr-1">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleLock(name);
               }}
               className={cn(
-                'p-1.5 rounded-sm cursor-pointer hover:text-primary hover:bg-surface-container-highest transition-colors',
+                'p-2.5 md:p-1.5 rounded-sm cursor-pointer hover:text-primary hover:bg-surface-container-highest transition-colors',
                 isLocked && 'text-secondary',
               )}
               aria-label={isLocked ? `Unlock ${name}` : `Lock ${name}`}
@@ -261,7 +267,7 @@ function createColumns(
                 onToggleExclude(name);
               }}
               className={cn(
-                'p-1.5 rounded-sm cursor-pointer hover:text-error hover:bg-surface-container-highest transition-colors',
+                'p-2.5 md:p-1.5 rounded-sm cursor-pointer hover:text-error hover:bg-surface-container-highest transition-colors',
                 isExcluded && 'text-error',
               )}
               aria-label={isExcluded ? `Include ${name}` : `Exclude ${name}`}
@@ -289,28 +295,7 @@ function PerformanceContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boo
             {isML ? 'ML Predicted Breakdown' : 'Category Scores'}
             {isML && <MlBadge />}
           </h4>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-surface-container-high p-3 rounded-sm border-l-2 border-gc">
-              <p className="text-[9px] text-outline uppercase font-mono">GC</p>
-              <p className="font-mono font-bold text-gc text-lg">{breakdown.gc.toFixed(1)}</p>
-            </div>
-            <div className="bg-surface-container-high p-3 rounded-sm border-l-2 border-stage">
-              <p className="text-[9px] text-outline uppercase font-mono">Stage</p>
-              <p className="font-mono font-bold text-stage text-lg">{breakdown.stage.toFixed(1)}</p>
-            </div>
-            <div className="bg-surface-container-high p-3 rounded-sm border-l-2 border-mountain">
-              <p className="text-[9px] text-outline uppercase font-mono">MTN</p>
-              <p className="font-mono font-bold text-mountain text-lg">
-                {breakdown.mountain.toFixed(1)}
-              </p>
-            </div>
-            <div className="bg-surface-container-high p-3 rounded-sm border-l-2 border-sprint">
-              <p className="text-[9px] text-outline uppercase font-mono">SPR</p>
-              <p className="font-mono font-bold text-sprint text-lg">
-                {breakdown.sprint.toFixed(1)}
-              </p>
-            </div>
-          </div>
+          <CategoryBreakdown breakdown={breakdown} />
         </div>
       )}
 
@@ -483,7 +468,7 @@ function ExpandedRowContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boo
   );
 }
 
-type RiderFilter =
+export type RiderFilter =
   | 'all'
   | 'selected'
   | 'locked'
@@ -537,8 +522,12 @@ export function RiderTable({
   onToggleExclude,
   onToggleSelect,
   canSelect,
+  externalFilter,
 }: RiderTableProps) {
-  const [filter, setFilter] = useState<RiderFilter>('all');
+  const [internalFilter, setInternalFilter] = useState<RiderFilter>('all');
+  const filter = externalFilter ?? internalFilter;
+  const setFilter = setInternalFilter;
+  const isDesktop = useIsDesktop();
 
   if (data.riders.length === 0) {
     return <EmptyState title="No riders" description="Submit riders to see analysis results." />;
@@ -626,7 +615,7 @@ export function RiderTable({
                 data-testid={`dashboard-filter-${value}`}
                 onClick={() => setFilter(isActive && value !== 'all' ? 'all' : value)}
                 className={cn(
-                  'px-3 py-1 rounded-sm text-[10px] font-mono uppercase tracking-wider border transition-colors',
+                  'px-3 py-2 md:py-1 rounded-sm text-[11px] md:text-[10px] font-mono uppercase tracking-wider border transition-colors',
                   isActive
                     ? activeClass
                     : 'bg-transparent text-outline border-outline-variant/20 hover:text-on-surface hover:border-outline-variant/40',
@@ -658,7 +647,7 @@ export function RiderTable({
             Show all riders
           </button>
         </div>
-      ) : (
+      ) : isDesktop ? (
         <div data-animated-rows>
           <DataTable<AnalyzedRider>
             columns={columns}
@@ -675,6 +664,19 @@ export function RiderTable({
             }}
           />
         </div>
+      ) : (
+        <RiderCardList
+          riders={filteredRiders}
+          lockedIds={lockedIds}
+          excludedIds={excludedIds}
+          selectedNames={selectedNames}
+          onToggleLock={onToggleLock}
+          onToggleExclude={onToggleExclude}
+          onToggleSelect={onToggleSelect}
+          canSelect={canSelect}
+          hasML={hasML}
+          maxScore={maxScore}
+        />
       )}
     </div>
   );

@@ -77,65 +77,59 @@ export function RaceProfileSummary({
   return (
     <div className="bg-surface-container-low border border-outline-variant/15 rounded-sm">
       {/* Top bar: race name, counts, status */}
-      <div className="flex flex-wrap items-center justify-between gap-4 py-4 px-6">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-tertiary" />
-            <h2
-              data-testid="race-profile-name"
-              className="font-headline font-extrabold text-lg text-on-surface"
-            >
-              {profile.raceName}
-            </h2>
-            <Badge
-              data-testid="race-profile-type"
-              variant="secondary"
-              className="text-[10px] uppercase tracking-wider"
-            >
-              {raceTypeLabel}
-            </Badge>
-          </div>
-
-          {(totalRiders !== undefined || profile.totalStages > 0) && (
-            <>
-              <div className="h-6 w-px bg-outline-variant/20 hidden md:block" />
-              <div className="flex gap-4">
-                {totalRiders !== undefined && (
-                  <div
-                    data-testid="race-profile-rider-count"
-                    className="flex items-baseline gap-1.5"
-                  >
-                    <span className="font-mono text-xl font-bold text-primary">{totalRiders}</span>
-                    <span className="text-[10px] font-mono text-outline uppercase">riders</span>
-                  </div>
-                )}
-                {matchedRiders !== undefined && (
-                  <div
-                    data-testid="race-profile-matched-count"
-                    className="flex items-baseline gap-1.5"
-                  >
-                    <span className="font-mono text-xl font-bold text-secondary">
-                      {matchedRiders}
-                    </span>
-                    <span className="text-[10px] font-mono text-outline uppercase">matched</span>
-                  </div>
-                )}
-                {profile.totalStages > 0 && totalRiders === undefined && (
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-mono text-lg font-bold text-on-surface-variant">
-                      {profile.totalStages}
-                    </span>
-                    <span className="text-[10px] font-mono text-outline uppercase">stages</span>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 md:gap-4 py-3 md:py-4 px-4 md:px-6">
+        {/* Race name + type */}
+        <div className="flex items-center gap-2 min-w-0">
+          <Trophy className="h-4 w-4 md:h-5 md:w-5 text-tertiary flex-shrink-0" />
+          <h2
+            data-testid="race-profile-name"
+            className="font-headline font-extrabold text-sm md:text-lg text-on-surface truncate"
+          >
+            {profile.raceName}
+          </h2>
+          <Badge
+            data-testid="race-profile-type"
+            variant="secondary"
+            className="text-[9px] md:text-[10px] uppercase tracking-wider flex-shrink-0"
+          >
+            {raceTypeLabel}
+          </Badge>
         </div>
 
+        {/* Stats — inline on desktop, compact on mobile */}
+        {(totalRiders !== undefined || profile.totalStages > 0) && (
+          <div className="flex gap-3 md:gap-4 items-baseline">
+            <div className="h-6 w-px bg-outline-variant/20 hidden md:block" />
+            {totalRiders !== undefined && (
+              <div data-testid="race-profile-rider-count" className="flex items-baseline gap-1">
+                <span className="font-mono text-base md:text-xl font-bold text-primary">
+                  {totalRiders}
+                </span>
+                <span className="text-[10px] font-mono text-outline uppercase">riders</span>
+              </div>
+            )}
+            {matchedRiders !== undefined && (
+              <div data-testid="race-profile-matched-count" className="flex items-baseline gap-1">
+                <span className="font-mono text-base md:text-xl font-bold text-secondary">
+                  {matchedRiders}
+                </span>
+                <span className="text-[10px] font-mono text-outline uppercase">matched</span>
+              </div>
+            )}
+            {profile.totalStages > 0 && totalRiders === undefined && (
+              <div className="flex items-baseline gap-1">
+                <span className="font-mono text-base md:text-lg font-bold text-on-surface-variant">
+                  {profile.totalStages}
+                </span>
+                <span className="text-[10px] font-mono text-outline uppercase">stages</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Analyzed badge — hidden on mobile to save space */}
         {isAnalyzed && (
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] font-mono text-outline uppercase">Status:</span>
+          <div className="hidden md:flex items-center gap-3 ml-auto">
             <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 rounded-sm">
               <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
               <span className="text-xs font-bold uppercase tracking-tighter">Analyzed</span>
@@ -146,11 +140,11 @@ export function RaceProfileSummary({
 
       {/* Stage profile distribution */}
       {badges.length > 0 && (
-        <div className="px-6 pb-4 flex flex-wrap gap-2">
+        <div className="px-4 md:px-6 pb-3 md:pb-4 flex flex-wrap gap-1.5 md:gap-2">
           {badges.map((b) => (
             <span
               key={b.key}
-              className={`inline-flex items-center gap-1.5 rounded-sm border px-2 py-0.5 text-xs font-mono font-medium ${b.className}`}
+              className={`inline-flex items-center gap-1 md:gap-1.5 rounded-sm border px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs font-mono font-medium ${b.className}`}
             >
               <span className="font-bold">{b.count}</span>
               {b.label}

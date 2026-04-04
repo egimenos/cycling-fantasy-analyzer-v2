@@ -25,7 +25,7 @@ test.describe('Roster Tab', () => {
 
   test('should show captain badge on first rider', async ({ rosterPage }) => {
     await expect(rosterPage.captainBadge).toBeVisible();
-    await expect(rosterPage.captainBadge).toContainText('CAPTAIN');
+    await expect(rosterPage.captainBadge).toContainText('CPT');
   });
 
   test('should display all metrics in sidebar', async ({ rosterPage }) => {

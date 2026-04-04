@@ -45,7 +45,10 @@ export function SetupTab({
   profileState,
 }: SetupTabProps) {
   return (
-    <div data-testid="tab-content-setup" className="grid grid-cols-1 lg:grid-cols-12 gap-12 pt-2">
+    <div
+      data-testid="tab-content-setup"
+      className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 pt-2"
+    >
       <div className="lg:col-span-5 flex flex-col gap-6">
         <RiderInput
           onAnalyze={onAnalyze}
@@ -75,6 +78,7 @@ export function SetupTab({
         </div>
 
         {error ? (
+          /* Error state — always visible */
           <div className="flex-1 min-h-[500px] rounded-sm bg-error-container/[0.06] border border-error/20 flex flex-col items-center justify-center p-12 relative overflow-hidden animate-fade-in">
             {/* Diagonal hazard stripes */}
             <div
@@ -135,7 +139,7 @@ export function SetupTab({
             <TableSkeleton rows={10} />
           </div>
         ) : (
-          <div className="flex-1 min-h-[500px] rounded-sm bg-surface-container-low/30 border border-dashed border-outline-variant/20 flex flex-col items-center justify-center p-12 relative overflow-hidden">
+          <div className="hidden lg:flex flex-1 min-h-[500px] rounded-sm bg-surface-container-low/30 border border-dashed border-outline-variant/20 flex-col items-center justify-center p-8 md:p-12 relative overflow-hidden">
             {/* Atmospheric road line */}
             <div className="absolute inset-0 flex justify-center pointer-events-none">
               <div className="w-px h-full bg-gradient-to-b from-transparent via-outline-variant/10 to-transparent" />
@@ -161,34 +165,32 @@ export function SetupTab({
           </div>
         )}
 
-        <div className="mt-6 bg-surface-container-high/40 p-5 rounded-sm border border-outline-variant/10 animate-fade-in">
-          <div className="flex justify-between items-center">
-            <div className="flex gap-8 items-center">
-              <div className="flex flex-col">
-                <span className="text-[10px] text-outline uppercase font-mono tracking-tighter">
-                  Selected Riders
-                </span>
-                <span className="text-lg font-mono font-bold text-outline">-- / 9</span>
-              </div>
-              <div className="h-8 w-px bg-outline-variant/15" />
-              <div className="flex flex-col">
-                <span className="text-[10px] text-outline uppercase font-mono tracking-tighter">
-                  Budget
-                </span>
-                <span className="text-lg font-mono font-bold text-outline">
-                  0 / {budget}
-                  <span className="text-[10px] ml-0.5 text-outline/50">H</span>
-                </span>
-              </div>
-              <div className="h-8 w-px bg-outline-variant/15" />
-              <div className="flex flex-col">
-                <span className="text-[10px] text-outline uppercase font-mono tracking-tighter">
-                  Projected Score
-                </span>
-                <span className="text-lg font-mono font-bold text-outline">—</span>
-              </div>
+        <div className="mt-4 md:mt-6 bg-surface-container-high/40 p-3 md:p-5 rounded-sm border border-outline-variant/10 animate-fade-in">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-0 md:flex md:justify-between md:items-center">
+            <div className="flex flex-col">
+              <span className="text-[10px] md:text-xs text-outline uppercase font-mono tracking-tighter">
+                Selected Riders
+              </span>
+              <span className="text-base md:text-lg font-mono font-bold text-outline">-- / 9</span>
             </div>
-            <div className="flex gap-3 items-center bg-surface-container-highest/50 px-3 py-1.5 rounded-sm">
+            <div className="hidden md:block h-8 w-px bg-outline-variant/15" />
+            <div className="flex flex-col">
+              <span className="text-[10px] md:text-xs text-outline uppercase font-mono tracking-tighter">
+                Budget
+              </span>
+              <span className="text-base md:text-lg font-mono font-bold text-outline">
+                0 / {budget}
+                <span className="text-[10px] ml-0.5 text-outline/50">H</span>
+              </span>
+            </div>
+            <div className="hidden md:block h-8 w-px bg-outline-variant/15" />
+            <div className="flex flex-col">
+              <span className="text-[10px] md:text-xs text-outline uppercase font-mono tracking-tighter">
+                Projected Score
+              </span>
+              <span className="text-base md:text-lg font-mono font-bold text-outline">—</span>
+            </div>
+            <div className="flex gap-2 items-center bg-surface-container-highest/50 px-2 md:px-3 py-1.5 rounded-sm justify-center md:justify-start">
               <span className="w-1.5 h-1.5 rounded-full bg-secondary/40 animate-pulse" />
               <span className="text-[10px] text-on-surface-variant uppercase font-mono tracking-wider font-medium">
                 System Ready

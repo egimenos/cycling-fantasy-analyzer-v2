@@ -1,6 +1,6 @@
 import { OptimizerPanel } from '@/features/optimizer/components/optimizer-panel';
 import type { useOptimize } from '@/features/optimizer/hooks/use-optimize';
-import { Trophy } from 'lucide-react';
+import { Zap } from 'lucide-react';
 
 export interface OptimizationTabProps {
   optimizeState: ReturnType<typeof useOptimize>['state'];
@@ -16,7 +16,7 @@ export function OptimizationTab({ optimizeState, budget, onApplyToRoster }: Opti
         className="flex flex-col items-center justify-center py-24 animate-fade-in"
       >
         <div className="w-20 h-20 rounded-full bg-gradient-to-br from-tertiary/15 to-primary/10 flex items-center justify-center mb-6 ring-1 ring-tertiary/20">
-          <Trophy className="h-10 w-10 text-tertiary/60" />
+          <Zap className="h-10 w-10 text-tertiary/60" />
         </div>
         <h3 className="text-xl font-headline font-extrabold text-on-surface mb-2 tracking-tight">
           No Results Yet

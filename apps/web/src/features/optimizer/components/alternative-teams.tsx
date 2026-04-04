@@ -11,10 +11,9 @@ import { OptimalTeamCard } from './optimal-team-card';
 
 interface AlternativeTeamsProps {
   teams: TeamSelection[];
-  budget: number;
 }
 
-export function AlternativeTeams({ teams, budget }: AlternativeTeamsProps) {
+export function AlternativeTeams({ teams }: AlternativeTeamsProps) {
   if (teams.length === 0) {
     return (
       <p className="py-4 text-center text-sm text-muted-foreground">
@@ -40,12 +39,7 @@ export function AlternativeTeams({ teams, budget }: AlternativeTeamsProps) {
               </span>
             </AccordionTrigger>
             <AccordionContent>
-              <OptimalTeamCard
-                team={team}
-                budget={budget}
-                variant="secondary"
-                title={`Alternative Team #${index + 1}`}
-              />
+              <OptimalTeamCard team={team} variant="secondary" />
             </AccordionContent>
           </AccordionItem>
         );
