@@ -301,6 +301,8 @@ function HomePageContent() {
               selectedRace={selectedRace}
               onRaceSelect={handleRaceSelect}
               gmvImportState={gmvImportState}
+              analyzeResult={analyzeState.status === 'success' ? analyzeState.data : undefined}
+              onReset={handleFullReset}
             />
           </div>
         )}
