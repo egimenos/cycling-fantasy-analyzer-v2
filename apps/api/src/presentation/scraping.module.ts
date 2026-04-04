@@ -6,6 +6,10 @@ import { ScraperHealthService } from '../infrastructure/scraping/health/scraper-
 import { PCS_SCRAPER_PORT } from '../application/scraping/ports/pcs-scraper.port';
 import { RACE_RESULT_PARSER_PORT } from '../application/scraping/ports/race-result-parser.port';
 import { RaceResultParserAdapter } from '../infrastructure/scraping/race-result-parser.adapter';
+import { RACE_LIST_PARSER_PORT } from '../application/scraping/ports/race-list-parser.port';
+import { RaceListParserAdapter } from '../infrastructure/scraping/race-list-parser.adapter';
+import { CheckRaceScrapedUseCase } from '../application/scraping/check-race-scraped.use-case';
+import { DiscoverRacesUseCase } from '../application/scraping/discover-races.use-case';
 import { TriggerScrapeUseCase } from '../application/scraping/trigger-scrape.use-case';
 import { GetScrapeJobsUseCase } from '../application/scraping/get-scrape-jobs.use-case';
 import { TriggerScrapeCommand } from './cli/trigger-scrape.command';
@@ -27,6 +31,12 @@ import { SeedDatabaseCommand } from './cli/seed-database.command';
       useFactory: (pcsClient: PcsClientAdapter) => new ScraperHealthService(pcsClient),
       inject: [PCS_SCRAPER_PORT],
     },
+    {
+      provide: RACE_LIST_PARSER_PORT,
+      useClass: RaceListParserAdapter,
+    },
+    CheckRaceScrapedUseCase,
+    DiscoverRacesUseCase,
     TriggerScrapeUseCase,
     GetScrapeJobsUseCase,
     TriggerScrapeCommand,
