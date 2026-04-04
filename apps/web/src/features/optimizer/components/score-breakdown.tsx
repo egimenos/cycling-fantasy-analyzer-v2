@@ -49,13 +49,13 @@ export function ScoreBreakdown({ breakdown }: ScoreBreakdownProps) {
   return (
     <div
       data-testid="optimization-score-breakdown"
-      className="bg-surface-container-low p-8 rounded-sm"
+      className="bg-surface-container-low p-4 md:p-8 rounded-sm"
     >
-      <div className="flex justify-between items-end mb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-4">
         <span className="text-xs font-mono uppercase tracking-widest text-on-surface-variant">
           Point Distribution Analysis
         </span>
-        <div className="flex gap-4 text-[10px] font-mono uppercase tracking-widest">
+        <div className="flex flex-wrap gap-3 md:gap-4 text-[10px] font-mono uppercase tracking-widest">
           {CATEGORY_CONFIG.map(({ key, label, colorDot }) => {
             const pct = total > 0 ? (breakdown[key] / total) * 100 : 0;
             return (

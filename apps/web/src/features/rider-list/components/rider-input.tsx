@@ -106,7 +106,7 @@ export function RiderInput({
         </h1>
       </header>
 
-      <div className="bg-surface-container-low rounded-sm p-8 flex flex-col gap-6 shadow-xl border border-outline-variant/15">
+      <div className="bg-surface-container-low rounded-sm p-4 md:p-8 flex flex-col gap-5 md:gap-6 shadow-xl border border-outline-variant/15">
         {/* Race URL */}
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center">

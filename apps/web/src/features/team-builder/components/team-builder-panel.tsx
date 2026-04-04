@@ -81,7 +81,6 @@ export function TeamBuilderPanel({
         </div>
 
         <ul className="space-y-2 overflow-y-auto max-h-[40vh] pr-1">
-          {/* Selected rider cards */}
           {selectedRiders.map((rider) => {
             const isLocked = lockedIds?.has(rider.rawName) ?? false;
             return (
@@ -106,7 +105,7 @@ export function TeamBuilderPanel({
                 {!isLocked && (
                   <button
                     onClick={() => onRemoveRider(rider.rawName)}
-                    className="text-outline hover:text-error transition-colors flex-shrink-0"
+                    className="p-2 -mr-1 text-outline hover:text-error transition-colors flex-shrink-0"
                     aria-label={`Remove ${rider.rawName}`}
                   >
                     <X className="h-4 w-4" />
@@ -116,7 +115,6 @@ export function TeamBuilderPanel({
             );
           })}
 
-          {/* Empty slots */}
           {Array.from({ length: emptySlots }).map((_, i) => (
             <li
               key={`empty-${i}`}
@@ -152,7 +150,6 @@ export function TeamBuilderPanel({
               style={{ width: `${Math.min(usagePercent, 100)}%` }}
             />
           </div>
-          {/* Tick marks at 25/50/75% */}
           <div className="absolute inset-0 flex justify-between px-0 pointer-events-none">
             <div className="w-px" />
             <div
@@ -197,7 +194,6 @@ export function TeamBuilderPanel({
           </p>
         )}
 
-        {/* CTAs */}
         {isTeamComplete && onReviewTeam ? (
           <button
             data-testid="dashboard-review-btn"

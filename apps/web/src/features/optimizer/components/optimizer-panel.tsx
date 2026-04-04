@@ -40,12 +40,12 @@ export function OptimizerPanel({ data, budget, onApplyToRoster }: OptimizerPanel
           <span className="text-secondary font-mono text-xs tracking-widest uppercase mb-2 block">
             Optimization Results
           </span>
-          <h1 className="text-5xl font-extrabold font-headline tracking-tighter text-on-surface">
+          <h1 className="text-2xl md:text-4xl lg:text-5xl font-extrabold font-headline tracking-tighter text-on-surface">
             OPTIMAL CONFIGURATION
           </h1>
         </div>
         <div
-          className="flex items-center gap-8 bg-surface-container-low p-6 rounded-sm animate-scale-in"
+          className="flex items-center gap-4 md:gap-8 bg-surface-container-low p-4 md:p-6 rounded-sm animate-scale-in w-full md:w-auto"
           style={{ animationDelay: '150ms' }}
         >
           <div className="text-right">
@@ -54,7 +54,7 @@ export function OptimizerPanel({ data, budget, onApplyToRoster }: OptimizerPanel
             </div>
             <div
               data-testid="optimization-projected-total"
-              className="text-4xl font-mono font-bold text-secondary tracking-tighter text-glow-secondary"
+              className="text-2xl md:text-4xl font-mono font-bold text-secondary tracking-tighter text-glow-secondary"
             >
               {formatNumber(Math.round(animatedScore))}
             </div>
@@ -66,7 +66,7 @@ export function OptimizerPanel({ data, budget, onApplyToRoster }: OptimizerPanel
             </div>
             <div
               data-testid="optimization-budget-efficiency"
-              className="text-4xl font-mono font-bold text-tertiary tracking-tighter text-glow-tertiary"
+              className="text-2xl md:text-4xl font-mono font-bold text-tertiary tracking-tighter text-glow-tertiary"
             >
               {animatedEfficiency.toFixed(1)}
               <span className="text-xl">%</span>
@@ -77,7 +77,7 @@ export function OptimizerPanel({ data, budget, onApplyToRoster }: OptimizerPanel
 
       {/* Primary Lineup Header + CTA */}
       <div
-        className="flex items-center justify-between animate-fade-in-up"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in-up"
         style={{ animationDelay: '100ms' }}
       >
         <h2
@@ -89,7 +89,7 @@ export function OptimizerPanel({ data, budget, onApplyToRoster }: OptimizerPanel
         <button
           data-testid="optimization-apply-btn"
           onClick={onApplyToRoster}
-          className="bg-primary-fixed text-primary-foreground px-8 py-3 rounded-sm font-headline font-extrabold uppercase tracking-tighter shadow-xl shadow-primary/10 hover:brightness-110 active:scale-95 transition-all"
+          className="bg-primary-fixed text-primary-foreground px-6 md:px-8 py-3 rounded-sm font-headline font-extrabold uppercase tracking-tighter shadow-xl shadow-primary/10 hover:brightness-110 active:scale-95 transition-all w-full sm:w-auto text-center"
         >
           Apply to Roster
         </button>

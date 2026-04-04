@@ -29,7 +29,7 @@ export function OptimalTeamCard({ team, variant = 'primary' }: OptimalTeamCardPr
               <li
                 data-testid={`optimization-rider-card-${rider.rawName}`}
                 className={cn(
-                  'p-5 flex items-center gap-4 group transition-all relative overflow-hidden cursor-default',
+                  'p-3 md:p-5 flex items-center gap-3 md:gap-4 group transition-all relative overflow-hidden cursor-default',
                   isLeader
                     ? 'bg-gradient-to-br from-surface-container-high to-tertiary/[0.06] border-l-2 border-tertiary hover:brightness-110'
                     : 'bg-surface-container-high hover:bg-surface-bright',

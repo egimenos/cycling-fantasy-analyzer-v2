@@ -69,11 +69,11 @@ export function TeamSummary({
             </p>
           </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 w-full md:w-auto">
           <button
             data-testid="roster-reset-btn"
             onClick={onReset}
-            className="bg-surface-container-high hover:bg-surface-container-highest transition-colors px-6 py-2 rounded-sm text-sm font-bold flex items-center gap-2"
+            className="bg-surface-container-high hover:bg-surface-container-highest transition-colors px-4 md:px-6 py-2.5 md:py-2 rounded-sm text-sm font-bold flex items-center justify-center gap-2 flex-1 md:flex-initial"
           >
             <RotateCcw className="h-4 w-4" />
             Reset
@@ -81,10 +81,10 @@ export function TeamSummary({
           <button
             data-testid="roster-copy-btn"
             onClick={() => void handleCopy()}
-            className="bg-primary-fixed text-primary-foreground px-6 py-2 rounded-sm text-sm font-bold flex items-center gap-2 hover:brightness-110 transition-all"
+            className="bg-primary-fixed text-primary-foreground px-4 md:px-6 py-2.5 md:py-2 rounded-sm text-sm font-bold flex items-center justify-center gap-2 hover:brightness-110 transition-all flex-1 md:flex-initial"
           >
             <Copy className="h-4 w-4" />
-            {copied ? 'Copied!' : 'Copy to Clipboard'}
+            {copied ? 'Copied!' : 'Copy'}
           </button>
         </div>
       </div>
@@ -129,7 +129,7 @@ export function TeamSummary({
                   </div>
                   <span className="text-xs text-on-surface-variant">{rider.rawTeam}</span>
                 </div>
-                <div className="grid grid-cols-3 gap-8 text-right pr-4 flex-shrink-0">
+                <div className="grid grid-cols-3 gap-3 md:gap-8 text-right pr-2 md:pr-4 flex-shrink-0">
                   <div>
                     <div className="text-[10px] text-on-primary-container font-mono uppercase">
                       Cost
@@ -167,7 +167,7 @@ export function TeamSummary({
 
         {/* Right: Metrics Sidebar */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-surface-container-low p-8 rounded-sm space-y-10 border-t-2 border-secondary animate-slide-in-right">
+          <div className="bg-surface-container-low p-5 md:p-8 rounded-sm space-y-8 md:space-y-10 border-t-2 border-secondary animate-slide-in-right">
             <h3 className="font-headline text-xl font-extrabold tracking-tight">Roster Metrics</h3>
 
             {/* Total Projected Score */}
@@ -178,7 +178,7 @@ export function TeamSummary({
               <div className="flex items-baseline gap-2">
                 <span
                   data-testid="roster-total-score"
-                  className="font-headline text-5xl font-black text-on-surface tracking-tighter text-glow-secondary"
+                  className="font-headline text-3xl md:text-5xl font-black text-on-surface tracking-tighter text-glow-secondary"
                 >
                   {formatNumber(Math.round(animatedScore))}
                 </span>
@@ -205,7 +205,7 @@ export function TeamSummary({
             {/* Remaining + Avg/Rider */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-surface-container-high p-4 rounded-sm">
-                <span className="font-mono text-[9px] uppercase text-on-primary-container block mb-1">
+                <span className="font-mono text-[11px] md:text-[9px] uppercase text-on-primary-container block mb-1">
                   Remaining
                 </span>
                 <span
@@ -216,7 +216,7 @@ export function TeamSummary({
                 </span>
               </div>
               <div className="bg-surface-container-high p-4 rounded-sm">
-                <span className="font-mono text-[9px] uppercase text-on-primary-container block mb-1">
+                <span className="font-mono text-[11px] md:text-[9px] uppercase text-on-primary-container block mb-1">
                   Avg/Rider
                 </span>
                 <span
