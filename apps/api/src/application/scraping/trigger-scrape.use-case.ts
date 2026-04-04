@@ -18,21 +18,8 @@ import { RaceType } from '../../domain/shared/race-type.enum';
 import { RaceClass } from '../../domain/shared/race-class.enum';
 import { ParcoursType } from '../../domain/shared/parcours-type.enum';
 import { PcsScraperPort, PCS_SCRAPER_PORT } from './ports/pcs-scraper.port';
-import { extractClassificationUrls } from '../../infrastructure/scraping/parsers/classification-extractor';
-import {
-  parseGcResults,
-  parseStageResults,
-  parseMountainClassification,
-  parseSprintClassification,
-} from '../../infrastructure/scraping/parsers/stage-race.parser';
-import { parseClassicResults } from '../../infrastructure/scraping/parsers/classic.parser';
-import { parseRaceDate } from '../../infrastructure/scraping/parsers/race-date.parser';
-import { ParsedResult } from '../../infrastructure/scraping/parsers/parsed-result.type';
-import { parseStageClassifications } from '../../infrastructure/scraping/parsers/stage-classifications.parser';
-import {
-  validateClassificationResults,
-  validateStageRaceCompleteness,
-} from '../../infrastructure/scraping/validation/parse-validator';
+import { RaceResultParserPort, RACE_RESULT_PARSER_PORT } from './ports/race-result-parser.port';
+import type { ParsedResult } from './ports/scraping.types';
 
 export interface RaceMetadata {
   readonly name: string;
@@ -66,6 +53,8 @@ export class TriggerScrapeUseCase {
   constructor(
     @Inject(PCS_SCRAPER_PORT)
     private readonly pcsClient: PcsScraperPort,
+    @Inject(RACE_RESULT_PARSER_PORT)
+    private readonly parser: RaceResultParserPort,
     @Inject(RIDER_REPOSITORY_PORT)
     private readonly riderRepo: RiderRepositoryPort,
     @Inject(RACE_RESULT_REPOSITORY_PORT)
@@ -140,10 +129,10 @@ export class TriggerScrapeUseCase {
     this.logger.log(`Scraping classic: ${path}`);
 
     const html = await this.pcsClient.fetchPage(path);
-    const results = parseClassicResults(html);
+    const results = this.parser.parseClassicResults(html);
 
     // Extract race date from the result page
-    const raceDate = parseRaceDate(html);
+    const raceDate = this.parser.parseRaceDate(html);
     if (!raceDate) {
       this.logger.warn(`Could not extract race date for classic ${slug} ${year}`);
     }
@@ -157,7 +146,7 @@ export class TriggerScrapeUseCase {
       );
     }
 
-    const validation = validateClassificationResults(resultsWithDate, {
+    const validation = this.parser.validateClassificationResults(resultsWithDate, {
       raceSlug: slug,
       classificationType: 'GC',
       expectedMinRiders: 80,
@@ -185,7 +174,7 @@ export class TriggerScrapeUseCase {
     this.logger.log(`Scraping stage race GC: ${gcPath}`);
 
     const gcHtml = await this.pcsClient.fetchPage(gcPath);
-    const classificationUrls = extractClassificationUrls(gcHtml);
+    const classificationUrls = this.parser.extractClassificationUrls(gcHtml);
 
     const allResults: ParsedResult[] = [];
     const classifications: { type: string; stageNumber?: number }[] = [];
@@ -219,7 +208,7 @@ export class TriggerScrapeUseCase {
       );
 
       // Extract race date from each page
-      const pageDate = parseRaceDate(html);
+      const pageDate = this.parser.parseRaceDate(html);
 
       // Track the latest stage date for use on GC/classification results
       if (classUrl.classificationType === 'STAGE' && pageDate) {
@@ -251,7 +240,7 @@ export class TriggerScrapeUseCase {
         continue;
       }
 
-      const validation = validateClassificationResults(resultsWithDate, {
+      const validation = this.parser.validateClassificationResults(resultsWithDate, {
         raceSlug,
         classificationType: classUrl.classificationType,
         stageNumber: classUrl.stageNumber ?? undefined,
@@ -282,7 +271,10 @@ export class TriggerScrapeUseCase {
       // For stage pages, also extract daily classifications from hidden tabs
       if (classUrl.classificationType === 'STAGE' && classUrl.stageNumber != null) {
         try {
-          const stageClassifications = parseStageClassifications(html, classUrl.stageNumber);
+          const stageClassifications = this.parser.parseStageClassifications(
+            html,
+            classUrl.stageNumber,
+          );
 
           const classificationResults = [
             ...stageClassifications.dailyGC,
@@ -332,7 +324,7 @@ export class TriggerScrapeUseCase {
 
     const skippedStageCount = skippedClassifications.filter((c) => c.startsWith('STAGE')).length;
 
-    const completeness = validateStageRaceCompleteness(
+    const completeness = this.parser.validateStageRaceCompleteness(
       classifications,
       raceSlug,
       metadata.expectedStages,
@@ -363,13 +355,13 @@ export class TriggerScrapeUseCase {
   ): ParsedResult[] {
     switch (classificationType) {
       case 'GC':
-        return parseGcResults(html);
+        return this.parser.parseGcResults(html);
       case 'STAGE':
-        return parseStageResults(html, stageNumber!, stageNameText);
+        return this.parser.parseStageResults(html, stageNumber!, stageNameText);
       case 'SPRINT':
-        return parseSprintClassification(html);
+        return this.parser.parseSprintClassification(html);
       case 'MOUNTAIN':
-        return parseMountainClassification(html);
+        return this.parser.parseMountainClassification(html);
       default:
         this.logger.warn(`Unknown classification type: ${classificationType}`);
         return [];

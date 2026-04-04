@@ -7,6 +7,14 @@ import {
   RiderNotFoundError,
   BudgetExceededByLockedRidersError,
 } from '../../../domain/optimizer/errors';
+import {
+  EmptyPriceListError,
+  MlServiceUnavailableError,
+  EmptyStartlistError,
+  MlPredictionFailedError,
+  RaceUrlParseError,
+  RaceProfileNotFoundError,
+} from '../../../domain/analyze/errors';
 
 describe('AllExceptionsFilter', () => {
   let filter: AllExceptionsFilter;
@@ -95,6 +103,42 @@ describe('AllExceptionsFilter', () => {
       callFilter(new InsufficientRidersError(5, 9));
 
       expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.UNPROCESSABLE_ENTITY);
+    });
+
+    it('should map EmptyPriceListError to 422', () => {
+      callFilter(new EmptyPriceListError());
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.UNPROCESSABLE_ENTITY);
+    });
+
+    it('should map MlServiceUnavailableError to 422', () => {
+      callFilter(new MlServiceUnavailableError());
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.UNPROCESSABLE_ENTITY);
+    });
+
+    it('should map EmptyStartlistError to 422', () => {
+      callFilter(new EmptyStartlistError('tour-de-france', 2026));
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.UNPROCESSABLE_ENTITY);
+    });
+
+    it('should map MlPredictionFailedError to 422', () => {
+      callFilter(new MlPredictionFailedError('tour-de-france', 2026));
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.UNPROCESSABLE_ENTITY);
+    });
+
+    it('should map RaceUrlParseError to 404', () => {
+      callFilter(new RaceUrlParseError('https://example.com'));
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
+    });
+
+    it('should map RaceProfileNotFoundError to 404', () => {
+      callFilter(new RaceProfileNotFoundError('unknown-race', 2026));
+
+      expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
     });
   });
 

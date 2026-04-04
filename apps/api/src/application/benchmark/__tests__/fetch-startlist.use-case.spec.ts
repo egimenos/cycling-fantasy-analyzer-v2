@@ -2,48 +2,16 @@ import { FetchStartlistUseCase } from '../fetch-startlist.use-case';
 import { StartlistRepositoryPort } from '../../../domain/startlist/startlist.repository.port';
 import { RiderRepositoryPort } from '../../../domain/rider/rider.repository.port';
 import { PcsScraperPort } from '../../scraping/ports/pcs-scraper.port';
+import { StartlistParserPort } from '../ports/startlist-parser.port';
 import { StartlistEntry } from '../../../domain/startlist/startlist-entry.entity';
 import { Rider } from '../../../domain/rider/rider.entity';
-
-// Minimal HTML that the startlist parser can parse (ul.startlist_v4 format)
-function buildStartlistHtml(
-  riders: Array<{ name: string; slug: string; team: string; bib: number }>,
-): string {
-  if (riders.length === 0) return '<html><body></body></html>';
-
-  // Group riders by team
-  const teams = new Map<string, typeof riders>();
-  for (const r of riders) {
-    const group = teams.get(r.team) ?? [];
-    group.push(r);
-    teams.set(r.team, group);
-  }
-
-  let teamBlocks = '';
-  for (const [teamName, teamRiders] of teams) {
-    const riderItems = teamRiders
-      .map(
-        (r) => `<li><span class="bib">${r.bib}</span> <a href="rider/${r.slug}">${r.name}</a></li>`,
-      )
-      .join('\n');
-
-    teamBlocks += `
-      <li>
-        <div class="ridersCont">
-          <a class="team" href="team/some-team">${teamName}</a>
-          <ul>${riderItems}</ul>
-        </div>
-      </li>`;
-  }
-
-  return `<html><body><ul class="startlist_v4">${teamBlocks}</ul></body></html>`;
-}
 
 describe('FetchStartlistUseCase', () => {
   let useCase: FetchStartlistUseCase;
   let startlistRepo: jest.Mocked<StartlistRepositoryPort>;
   let riderRepo: jest.Mocked<RiderRepositoryPort>;
   let pcsClient: jest.Mocked<PcsScraperPort>;
+  let parser: jest.Mocked<StartlistParserPort>;
 
   beforeEach(() => {
     startlistRepo = {
@@ -62,8 +30,11 @@ describe('FetchStartlistUseCase', () => {
     pcsClient = {
       fetchPage: jest.fn(),
     };
+    parser = {
+      parseStartlist: jest.fn().mockReturnValue([]),
+    };
 
-    useCase = new FetchStartlistUseCase(startlistRepo, riderRepo, pcsClient);
+    useCase = new FetchStartlistUseCase(startlistRepo, riderRepo, pcsClient, parser);
   });
 
   describe('cache hit', () => {
@@ -107,11 +78,21 @@ describe('FetchStartlistUseCase', () => {
     it('scrapes PCS, creates riders, and persists startlist entries', async () => {
       startlistRepo.existsForRace.mockResolvedValue(false);
 
-      const html = buildStartlistHtml([
-        { name: 'Tadej Pogacar', slug: 'tadej-pogacar', team: 'UAE Team Emirates', bib: 1 },
-        { name: 'Jonas Vingegaard', slug: 'jonas-vingegaard', team: 'Visma-Lease a Bike', bib: 11 },
+      parser.parseStartlist.mockReturnValue([
+        {
+          riderName: 'Tadej Pogacar',
+          riderSlug: 'tadej-pogacar',
+          teamName: 'UAE Team Emirates',
+          bibNumber: 1,
+        },
+        {
+          riderName: 'Jonas Vingegaard',
+          riderSlug: 'jonas-vingegaard',
+          teamName: 'Visma-Lease a Bike',
+          bibNumber: 11,
+        },
       ]);
-      pcsClient.fetchPage.mockResolvedValue(html);
+      pcsClient.fetchPage.mockResolvedValue('<html></html>');
 
       // Both riders are new (not in DB)
       riderRepo.findByPcsSlugs.mockResolvedValue([]);
@@ -150,12 +131,27 @@ describe('FetchStartlistUseCase', () => {
     it('only creates riders that do not exist in DB', async () => {
       startlistRepo.existsForRace.mockResolvedValue(false);
 
-      const html = buildStartlistHtml([
-        { name: 'Tadej Pogacar', slug: 'tadej-pogacar', team: 'UAE Team Emirates', bib: 1 },
-        { name: 'Jonas Vingegaard', slug: 'jonas-vingegaard', team: 'Visma-Lease a Bike', bib: 11 },
-        { name: 'Primoz Roglic', slug: 'primoz-roglic', team: 'Red Bull-BORA-hansgrohe', bib: 21 },
+      parser.parseStartlist.mockReturnValue([
+        {
+          riderName: 'Tadej Pogacar',
+          riderSlug: 'tadej-pogacar',
+          teamName: 'UAE Team Emirates',
+          bibNumber: 1,
+        },
+        {
+          riderName: 'Jonas Vingegaard',
+          riderSlug: 'jonas-vingegaard',
+          teamName: 'Visma-Lease a Bike',
+          bibNumber: 11,
+        },
+        {
+          riderName: 'Primoz Roglic',
+          riderSlug: 'primoz-roglic',
+          teamName: 'Red Bull-BORA-hansgrohe',
+          bibNumber: 21,
+        },
       ]);
-      pcsClient.fetchPage.mockResolvedValue(html);
+      pcsClient.fetchPage.mockResolvedValue('<html></html>');
 
       // Only Pogacar exists in DB
       const existingRider = Rider.create({

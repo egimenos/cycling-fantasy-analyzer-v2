@@ -8,9 +8,9 @@ import {
   RIDER_REPOSITORY_PORT,
 } from '../../domain/rider/rider.repository.port';
 import { PcsScraperPort, PCS_SCRAPER_PORT } from '../scraping/ports/pcs-scraper.port';
+import { StartlistParserPort, STARTLIST_PARSER_PORT } from './ports/startlist-parser.port';
 import { StartlistEntry } from '../../domain/startlist/startlist-entry.entity';
 import { Rider } from '../../domain/rider/rider.entity';
-import { parseStartlist } from '../../infrastructure/scraping/parsers/startlist.parser';
 
 export interface FetchStartlistInput {
   readonly raceSlug: string;
@@ -33,6 +33,8 @@ export class FetchStartlistUseCase {
     private readonly riderRepo: RiderRepositoryPort,
     @Inject(PCS_SCRAPER_PORT)
     private readonly pcsClient: PcsScraperPort,
+    @Inject(STARTLIST_PARSER_PORT)
+    private readonly parser: StartlistParserPort,
   ) {}
 
   async execute(input: FetchStartlistInput): Promise<FetchStartlistOutput> {
@@ -50,7 +52,7 @@ export class FetchStartlistUseCase {
     const path = `race/${input.raceSlug}/${input.year}/startlist`;
     this.logger.log(`Scraping startlist: ${path}`);
     const html = await this.pcsClient.fetchPage(path);
-    const parsed = parseStartlist(html);
+    const parsed = this.parser.parseStartlist(html);
 
     if (parsed.length === 0) {
       this.logger.warn(`Empty startlist for ${input.raceSlug} ${input.year}`);

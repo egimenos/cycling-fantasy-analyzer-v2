@@ -1,15 +1,13 @@
 import * as cheerio from 'cheerio';
 
-export type DiscoveredRaceType = 'STAGE_RACE' | 'ONE_DAY';
-
-export interface DiscoveredRace {
-  readonly urlPath: string;
-  readonly slug: string;
-  readonly name: string;
-  readonly raceType: DiscoveredRaceType;
-  readonly classText: string;
-  readonly startDate: string | null;
-}
+export type {
+  DiscoveredRaceType,
+  DiscoveredRace,
+} from '../../../application/scraping/ports/race-list-parser.port';
+import type {
+  DiscoveredRace,
+  DiscoveredRaceType,
+} from '../../../application/scraping/ports/race-list-parser.port';
 
 export function parseRaceList(html: string): DiscoveredRace[] {
   const $ = cheerio.load(html);

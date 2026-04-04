@@ -1,4 +1,10 @@
-import { Injectable, Inject, Logger, UnprocessableEntityException } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
+import {
+  EmptyPriceListError,
+  MlServiceUnavailableError,
+  EmptyStartlistError,
+  MlPredictionFailedError,
+} from '../../domain/analyze/errors';
 import {
   RiderMatcherPort,
   RIDER_MATCHER_PORT,
@@ -25,9 +31,7 @@ import { Rider } from '../../domain/rider/rider.entity';
 import { mapPriceListEntries, PriceListEntry, PriceListEntryDto } from './price-list-entry';
 import type { ProfileSummary, BreakoutResult, RaceHistory } from '@cycling-analyzer/shared-types';
 import { computeBreakout, computeMedianPtsPerHillio } from '../../domain/breakout';
-import { RaceResult } from '../../domain/race-result/race-result.entity';
-import { ResultCategory } from '../../domain/shared/result-category.enum';
-import { getPointsForPosition } from '../../domain/scoring/scoring-weights.config';
+import { buildSameRaceHistory } from '../../domain/scoring/race-history.service';
 
 export interface AnalyzeInput {
   riders: PriceListEntryDto[];
@@ -76,70 +80,6 @@ export interface AnalyzeResponse {
   unmatchedCount: number;
 }
 
-function countSprintsPerStage(yearResults: readonly RaceResult[]): Map<number, number> {
-  const counts = new Map<number, Set<string>>();
-  for (const r of yearResults) {
-    if (r.category !== ResultCategory.SPRINT_INTERMEDIATE || r.stageNumber === null) continue;
-    const existing = counts.get(r.stageNumber);
-    const sprintKey = r.sprintName ?? `km${r.kmMarker ?? 0}`;
-    if (existing) existing.add(sprintKey);
-    else counts.set(r.stageNumber, new Set([sprintKey]));
-  }
-  const result = new Map<number, number>();
-  for (const [stage, names] of counts) result.set(stage, names.size);
-  return result;
-}
-
-function buildSameRaceHistory(results: readonly RaceResult[], raceSlug: string): RaceHistory[] {
-  // Group by year
-  const byYear = new Map<number, RaceResult[]>();
-  for (const r of results) {
-    if (r.raceSlug !== raceSlug) continue;
-    const existing = byYear.get(r.year);
-    if (existing) existing.push(r);
-    else byYear.set(r.year, [r]);
-  }
-
-  const history: RaceHistory[] = [];
-  for (const [year, yearResults] of byYear) {
-    let gc = 0;
-    let stage = 0;
-    let mountain = 0;
-    let sprint = 0;
-
-    const sprintsPerStage = countSprintsPerStage(yearResults);
-
-    for (const r of yearResults) {
-      const pts = getPointsForPosition(r.category as ResultCategory, r.position, r.raceType, {
-        climbCategory: r.climbCategory,
-        sprintCount: r.stageNumber !== null ? (sprintsPerStage.get(r.stageNumber) ?? 1) : 1,
-      });
-      switch (r.category) {
-        case ResultCategory.GC:
-        case ResultCategory.GC_DAILY:
-        case ResultCategory.REGULARIDAD_DAILY:
-          gc += pts;
-          break;
-        case ResultCategory.STAGE:
-          stage += pts;
-          break;
-        case ResultCategory.MOUNTAIN:
-        case ResultCategory.MOUNTAIN_PASS:
-          mountain += pts;
-          break;
-        case ResultCategory.SPRINT:
-        case ResultCategory.SPRINT_INTERMEDIATE:
-          sprint += pts;
-          break;
-      }
-    }
-
-    history.push({ year, gc, stage, mountain, sprint, total: gc + stage + mountain + sprint });
-  }
-
-  return history.sort((a, b) => b.year - a.year);
-}
-
 @Injectable()
 export class AnalyzePriceListUseCase {
   private readonly logger = new Logger(AnalyzePriceListUseCase.name);
@@ -158,7 +98,7 @@ export class AnalyzePriceListUseCase {
     const entries = mapPriceListEntries(input.riders);
 
     if (entries.length === 0) {
-      throw new UnprocessableEntityException('Zero valid riders after filtering');
+      throw new EmptyPriceListError();
     }
 
     const allRiders = await this.riderRepo.findAll();
@@ -389,9 +329,7 @@ export class AnalyzePriceListUseCase {
 
     const modelVersion = await this.mlScoring.getModelVersion();
     if (!modelVersion) {
-      throw new UnprocessableEntityException(
-        'ML service is unavailable. Please ensure the ML container is running and try again.',
-      );
+      throw new MlServiceUnavailableError();
     }
 
     // Check cache first
@@ -428,10 +366,7 @@ export class AnalyzePriceListUseCase {
       year: input.year!,
     });
     if (startlistEntries.length === 0) {
-      throw new UnprocessableEntityException(
-        `No startlist found for ${input.raceSlug}/${input.year}. ` +
-          'Check the race URL — PCS may not have published the startlist yet.',
-      );
+      throw new EmptyStartlistError(input.raceSlug!, input.year!);
     }
     this.logger.log(
       `Startlist ready for ${input.raceSlug}/${input.year}: ${startlistEntries.length} riders`,
@@ -457,9 +392,7 @@ export class AnalyzePriceListUseCase {
       input.raceType,
     );
     if (!predictions) {
-      throw new UnprocessableEntityException(
-        `ML prediction failed for ${input.raceSlug}/${input.year}. The ML service could not generate predictions for this race.`,
-      );
+      throw new MlPredictionFailedError(input.raceSlug!, input.year!);
     }
 
     this.logger.log(

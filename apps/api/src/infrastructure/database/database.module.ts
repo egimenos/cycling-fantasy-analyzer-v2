@@ -8,6 +8,8 @@ import { RiderRepositoryAdapter } from './rider.repository.adapter';
 import { RaceResultRepositoryAdapter } from './race-result.repository.adapter';
 import { ScrapeJobRepositoryAdapter } from './scrape-job.repository.adapter';
 import { MlScoreRepositoryAdapter } from './ml-score.repository.adapter';
+import { STARTLIST_REPOSITORY_PORT } from '../../domain/startlist/startlist.repository.port';
+import { StartlistRepositoryAdapter } from './startlist.repository.adapter';
 
 @Module({
   providers: [
@@ -28,12 +30,17 @@ import { MlScoreRepositoryAdapter } from './ml-score.repository.adapter';
       provide: ML_SCORE_REPOSITORY_PORT,
       useClass: MlScoreRepositoryAdapter,
     },
+    {
+      provide: STARTLIST_REPOSITORY_PORT,
+      useClass: StartlistRepositoryAdapter,
+    },
   ],
   exports: [
     RIDER_REPOSITORY_PORT,
     RACE_RESULT_REPOSITORY_PORT,
     SCRAPE_JOB_REPOSITORY_PORT,
     ML_SCORE_REPOSITORY_PORT,
+    STARTLIST_REPOSITORY_PORT,
     drizzleProvider,
   ],
 })

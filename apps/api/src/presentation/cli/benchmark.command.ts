@@ -1,10 +1,7 @@
-import { Inject, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { Command, CommandRunner, Option } from 'nest-commander';
-import {
-  RaceResultRepositoryPort,
-  RaceSummary,
-  RACE_RESULT_REPOSITORY_PORT,
-} from '../../domain/race-result/race-result.repository.port';
+import { RaceSummary } from '../../domain/race-result/race-result.repository.port';
+import { ListBenchmarkRacesUseCase } from '../../application/benchmark/list-benchmark-races.use-case';
 import { RunBenchmarkUseCase } from '../../application/benchmark/run-benchmark.use-case';
 import { RunBenchmarkSuiteUseCase } from '../../application/benchmark/run-benchmark-suite.use-case';
 import { BenchmarkResult } from '../../domain/benchmark/benchmark-result';
@@ -21,8 +18,7 @@ export class BenchmarkCommand extends CommandRunner {
   private readonly logger = new Logger(BenchmarkCommand.name);
 
   constructor(
-    @Inject(RACE_RESULT_REPOSITORY_PORT)
-    private readonly raceResultRepo: RaceResultRepositoryPort,
+    private readonly listRaces: ListBenchmarkRacesUseCase,
     private readonly runBenchmark: RunBenchmarkUseCase,
     private readonly runBenchmarkSuite: RunBenchmarkSuiteUseCase,
   ) {
@@ -30,7 +26,7 @@ export class BenchmarkCommand extends CommandRunner {
   }
 
   async run(_passedParams: string[], options: BenchmarkOptions): Promise<void> {
-    const races = await this.raceResultRepo.findDistinctRacesWithDate();
+    const races = await this.listRaces.execute();
 
     if (races.length === 0) {
       this.logger.error('No races with date data found. Run seed first.');

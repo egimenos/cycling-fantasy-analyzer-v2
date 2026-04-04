@@ -1,19 +1,11 @@
-import { ParsedResult } from '../parsers/parsed-result.type';
-import { DiscoveredRace } from '../parsers/race-list.parser';
+import type { ParsedResult } from '../parsers/parsed-result.type';
+import type { DiscoveredRace } from '../parsers/race-list.parser';
+import type {
+  ValidationResult,
+  ClassificationValidationContext,
+} from '../../../application/scraping/ports/scraping.types';
 
-export interface ValidationResult {
-  readonly valid: boolean;
-  readonly warnings: string[];
-  readonly errors: string[];
-}
-
-export interface ClassificationValidationContext {
-  readonly raceSlug: string;
-  readonly classificationType: string;
-  readonly stageNumber?: number;
-  readonly expectedMinRiders?: number;
-  readonly expectedMaxRiders?: number;
-}
+export type { ValidationResult, ClassificationValidationContext };
 
 const RIDER_SLUG_REGEX = /^[a-z0-9-]+$/;
 
@@ -94,10 +86,8 @@ export function validateClassificationResults(
   return { valid: errors.length === 0, warnings, errors };
 }
 
-export interface StageRaceCompletenessInput {
-  readonly type: string;
-  readonly stageNumber?: number;
-}
+export type { StageRaceCompletenessInput } from '../../../application/scraping/ports/scraping.types';
+import type { StageRaceCompletenessInput } from '../../../application/scraping/ports/scraping.types';
 
 export function validateStageRaceCompleteness(
   classifications: StageRaceCompletenessInput[],

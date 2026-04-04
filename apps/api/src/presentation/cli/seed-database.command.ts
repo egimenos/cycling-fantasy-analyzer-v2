@@ -1,21 +1,13 @@
-import { Inject, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { Command, CommandRunner, Option } from 'nest-commander';
 import { TriggerScrapeUseCase } from '../../application/scraping/trigger-scrape.use-case';
+import { CheckRaceScrapedUseCase } from '../../application/scraping/check-race-scraped.use-case';
 import {
-  PcsScraperPort,
-  PCS_SCRAPER_PORT,
-} from '../../application/scraping/ports/pcs-scraper.port';
-import {
-  ScrapeJobRepositoryPort,
-  SCRAPE_JOB_REPOSITORY_PORT,
-} from '../../domain/scrape-job/scrape-job.repository.port';
-import {
-  parseRaceList,
+  DiscoverRacesUseCase,
   DiscoveredRace,
-} from '../../infrastructure/scraping/parsers/race-list.parser';
+} from '../../application/scraping/discover-races.use-case';
 import { RaceType } from '../../domain/shared/race-type.enum';
 import { RaceClass } from '../../domain/shared/race-class.enum';
-import { ScrapeStatus } from '../../domain/shared/scrape-status.enum';
 
 interface SeedDatabaseOptions {
   years: number;
@@ -51,10 +43,8 @@ export class SeedDatabaseCommand extends CommandRunner {
 
   constructor(
     private readonly triggerScrape: TriggerScrapeUseCase,
-    @Inject(PCS_SCRAPER_PORT)
-    private readonly pcsClient: PcsScraperPort,
-    @Inject(SCRAPE_JOB_REPOSITORY_PORT)
-    private readonly scrapeJobRepo: ScrapeJobRepositoryPort,
+    private readonly checkRaceScraped: CheckRaceScrapedUseCase,
+    private readonly discoverRaces: DiscoverRacesUseCase,
   ) {
     super();
   }
@@ -109,12 +99,8 @@ export class SeedDatabaseCommand extends CommandRunner {
         }
 
         // Skip already scraped
-        const existing = await this.scrapeJobRepo.findByRaceAndYear(
-          race.slug,
-          year,
-          ScrapeStatus.SUCCESS,
-        );
-        if (existing) {
+        const alreadyScraped = await this.checkRaceScraped.execute(race.slug, year);
+        if (alreadyScraped) {
           this.logger.log(`  ${label} — already scraped, skipping`);
           totalSkipped++;
           continue;
@@ -210,18 +196,7 @@ export class SeedDatabaseCommand extends CommandRunner {
   }
 
   private async discoverRacesForYear(year: number, circuits: string[]): Promise<DiscoveredRace[]> {
-    const all: DiscoveredRace[] = [];
-
-    for (const circuit of circuits) {
-      const url = `races.php?year=${year}&circuit=${circuit}&filter=Filter`;
-      this.logger.debug(`Fetching calendar: ${url}`);
-
-      const html = await this.pcsClient.fetchPage(url);
-      const races = parseRaceList(html);
-      all.push(...races);
-    }
-
-    return all;
+    return this.discoverRaces.execute(year, circuits);
   }
 
   private deduplicateBySlug(races: DiscoveredRace[]): DiscoveredRace[] {
