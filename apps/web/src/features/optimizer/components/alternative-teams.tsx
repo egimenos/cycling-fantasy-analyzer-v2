@@ -5,8 +5,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/shared/ui/accordion';
-import { MlBadge } from '@/shared/ui/ml-badge';
-import { computeMlTotal } from '@/features/team-builder/hooks/use-team-builder';
 import { OptimalTeamCard } from './optimal-team-card';
 
 interface AlternativeTeamsProps {
@@ -24,26 +22,18 @@ export function AlternativeTeams({ teams }: AlternativeTeamsProps) {
 
   return (
     <Accordion type="multiple">
-      {teams.map((team, index) => {
-        const mlTotal = computeMlTotal(team.riders);
-        return (
-          <AccordionItem key={index} value={`alt-${index}`}>
-            <AccordionTrigger>
-              <span className="flex items-center gap-2">
-                Alternative Team #{index + 1} — {team.totalProjectedPts.toFixed(1)} pts
-                {mlTotal !== null && (
-                  <span className="flex items-center gap-1">
-                    (ML: {mlTotal.toFixed(1)} pts) <MlBadge />
-                  </span>
-                )}
-              </span>
-            </AccordionTrigger>
-            <AccordionContent>
-              <OptimalTeamCard team={team} variant="secondary" />
-            </AccordionContent>
-          </AccordionItem>
-        );
-      })}
+      {teams.map((team, index) => (
+        <AccordionItem key={index} value={`alt-${index}`}>
+          <AccordionTrigger>
+            <span className="flex items-center gap-2">
+              Alternative Team #{index + 1} — {team.totalProjectedPts.toFixed(1)} pts
+            </span>
+          </AccordionTrigger>
+          <AccordionContent>
+            <OptimalTeamCard team={team} variant="secondary" />
+          </AccordionContent>
+        </AccordionItem>
+      ))}
     </Accordion>
   );
 }

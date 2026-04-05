@@ -154,7 +154,7 @@ Alternatively, use the Dokploy UI log viewer (Project > Service > Logs).
 
 1. Check startup logs for migration errors: `docker logs cycling-api --tail 50`
 2. Verify `DATABASE_URL` is correct and PostgreSQL is reachable
-3. Verify ML service is healthy (API depends on it for predictions)
+3. Verify ML service is healthy (API requires it for all scoring — there is no fallback)
 4. Check disk space: `df -h`
 5. Check for missing required environment variables in Dokploy env settings
 

@@ -45,21 +45,6 @@ class AnalyzedRiderDto {
 
   @Allow()
   categoryScores!: Record<string, number> | null;
-
-  @Allow()
-  seasonsUsed!: number | null;
-
-  @Allow()
-  seasonBreakdown!: unknown;
-
-  @Allow()
-  scoringMethod!: string;
-
-  @Allow()
-  mlPredictedScore!: number | null;
-
-  @Allow()
-  mlBreakdown!: Record<string, number> | null;
 }
 
 class OptimizeRequestDto {
@@ -99,8 +84,6 @@ export class OptimizeController {
         name: r.rawName,
         priceHillios: r.priceHillios,
         totalProjectedPts: r.totalProjectedPts!,
-        mlPredictedScore: r.mlPredictedScore ?? undefined,
-        mlBreakdown: (r.mlBreakdown as ScoredRider['mlBreakdown']) ?? undefined,
         categoryScores: r.categoryScores as ScoredRider['categoryScores'],
       }));
 

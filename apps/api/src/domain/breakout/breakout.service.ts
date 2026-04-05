@@ -1,11 +1,15 @@
 import type {
-  SeasonBreakdown,
   ProfileSummary,
   BreakoutSignals,
   BreakoutResult,
   BreakoutFlag,
 } from '@cycling-analyzer/shared-types';
-import type { ComputeBreakoutInput, CoreCategoryScores, RacePerformance } from './breakout.types';
+import type {
+  ComputeBreakoutInput,
+  CoreCategoryScores,
+  RacePerformance,
+  YearlyTotal,
+} from './breakout.types';
 
 const EMERGING_TALENT: BreakoutFlag = 'EMERGING_TALENT' as BreakoutFlag;
 const HOT_STREAK: BreakoutFlag = 'HOT_STREAK' as BreakoutFlag;
@@ -24,7 +28,7 @@ export function computeAge(birthDate: Date | null, currentDate: Date = new Date(
   return (currentDate.getTime() - birthDate.getTime()) / (365.25 * 86_400_000);
 }
 
-export function computeRawSlope(seasons: readonly SeasonBreakdown[]): number {
+export function computeRawSlope(seasons: readonly YearlyTotal[]): number {
   if (seasons.length < 2) return 0;
   const sorted = [...seasons].sort((a, b) => a.year - b.year);
   const n = sorted.length;
@@ -48,7 +52,7 @@ export function computeRawSlope(seasons: readonly SeasonBreakdown[]): number {
 // partial-season depression of the slope.
 
 export function computeTrajectory(
-  seasons: readonly SeasonBreakdown[],
+  seasons: readonly YearlyTotal[],
   birthDate: Date | null,
   currentDate: Date = new Date(),
 ): number {
@@ -70,7 +74,6 @@ export function computeTrajectory(
 
 // ── Signal 2: Form (0-30) ───────────────────────────────────────────
 // Rolling 90-day window: compares recent pts/race vs career pts/race.
-// Replaces the broken calendar-year Recency signal.
 
 export function computeForm(
   racePerformances: readonly RacePerformance[],
@@ -183,7 +186,7 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-export function computeUpsideP80(seasons: readonly SeasonBreakdown[], prediction: number): number {
+export function computeUpsideP80(seasons: readonly YearlyTotal[], prediction: number): number {
   if (seasons.length < 3) {
     return prediction > 0 ? Math.round(prediction * 1.8) : 0;
   }
@@ -222,14 +225,14 @@ export function evaluateFlags(
 ): BreakoutFlag[] {
   const flags: BreakoutFlag[] = [];
   const age = computeAge(input.birthDate);
-  const seasons = input.seasonBreakdown;
+  const yearlyTotals = input.yearlyTotals;
 
   const cs = input.categoryScores;
   const totalPts = cs ? cs.gc + cs.stage + cs.mountain + cs.sprint : 0;
 
   // EMERGING_TALENT — young rider with steep career growth
-  if (age < 25 && seasons.length <= 3) {
-    const slope = computeRawSlope(seasons);
+  if (age < 25 && yearlyTotals.length <= 3) {
+    const slope = computeRawSlope(yearlyTotals);
     if (slope > 30) flags.push(EMERGING_TALENT);
   }
 
@@ -287,7 +290,7 @@ export function evaluateFlags(
 // ── Compose ─────────────────────────────────────────────────────────
 
 export function computeBreakout(input: ComputeBreakoutInput): BreakoutResult {
-  const trajectoryScore = computeTrajectory(input.seasonBreakdown, input.birthDate);
+  const trajectoryScore = computeTrajectory(input.yearlyTotals, input.birthDate);
   const formScore = computeForm(input.racePerformances);
 
   const signals: BreakoutSignals = {
@@ -299,7 +302,7 @@ export function computeBreakout(input: ComputeBreakoutInput): BreakoutResult {
 
   return {
     index: computeBpiIndex(signals),
-    upsideP80: computeUpsideP80(input.seasonBreakdown, input.prediction),
+    upsideP80: computeUpsideP80(input.yearlyTotals, input.prediction),
     flags: evaluateFlags(input, signals),
     signals,
   };

@@ -1,4 +1,4 @@
-import type { SeasonBreakdown, ProfileSummary, RaceHistory } from '@cycling-analyzer/shared-types';
+import type { ProfileSummary, RaceHistory } from '@cycling-analyzer/shared-types';
 
 export interface CoreCategoryScores {
   readonly gc: number;
@@ -14,8 +14,14 @@ export interface RacePerformance {
   readonly total: number;
 }
 
+/** Minimal per-year total, derived from aggregated race performances. */
+export interface YearlyTotal {
+  readonly year: number;
+  readonly total: number;
+}
+
 export interface ComputeBreakoutInput {
-  readonly seasonBreakdown: readonly SeasonBreakdown[];
+  readonly yearlyTotals: readonly YearlyTotal[];
   readonly racePerformances: readonly RacePerformance[];
   readonly prediction: number;
   readonly priceHillios: number;

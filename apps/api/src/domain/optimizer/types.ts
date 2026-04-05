@@ -3,13 +3,6 @@ export interface ScoredRider {
   readonly name: string;
   readonly priceHillios: number;
   readonly totalProjectedPts: number;
-  readonly mlPredictedScore?: number;
-  readonly mlBreakdown?: {
-    readonly gc: number;
-    readonly stage: number;
-    readonly mountain: number;
-    readonly sprint: number;
-  };
   readonly categoryScores: {
     readonly gc: number;
     readonly stage: number;

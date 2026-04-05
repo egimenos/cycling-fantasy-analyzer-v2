@@ -17,7 +17,6 @@ interface RiderCardListProps {
   onToggleExclude: (name: string) => void;
   onToggleSelect: (name: string) => void;
   canSelect: (name: string) => boolean;
-  hasML: boolean;
   maxScore: number;
 }
 
@@ -30,7 +29,6 @@ export function RiderCardList({
   onToggleExclude,
   onToggleSelect,
   canSelect,
-  hasML,
   maxScore,
 }: RiderCardListProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -45,12 +43,11 @@ export function RiderCardList({
         const isExpanded = expandedId === name;
         const disabled =
           rider.unmatched || isExcluded || isLocked || (!isSelected && !canSelect(name));
-        const score = getEffectiveScore(rider, hasML);
+        const score = getEffectiveScore(rider);
         const value = calculateValue(score, rider.priceHillios);
         const flags = rider.breakout?.flags;
         const bpi = rider.breakout?.index ?? null;
         const scoreRatio = score !== null && maxScore > 0 ? score / maxScore : 0;
-        const breakdown = rider.mlBreakdown ?? rider.categoryScores;
 
         return (
           <li
@@ -211,20 +208,20 @@ export function RiderCardList({
             {/* Expanded detail */}
             {isExpanded && !rider.unmatched && (
               <div className="border-t border-outline-variant/10 p-4 bg-surface-container-low animate-fade-in">
-                {breakdown && (
+                {rider.categoryScores && (
                   <div className="mb-3">
                     <h4 className="text-[11px] font-mono text-outline uppercase mb-2 flex items-center gap-1.5">
-                      {rider.mlBreakdown ? 'ML Predicted' : 'Category Scores'}
-                      {rider.mlBreakdown && <MlBadge />}
+                      ML Predicted Breakdown
+                      <MlBadge />
                     </h4>
-                    <CategoryBreakdown breakdown={breakdown} />
+                    <CategoryBreakdown breakdown={rider.categoryScores} />
                   </div>
                 )}
 
                 {rider.breakout && (
                   <BreakoutDetailPanel
                     breakout={rider.breakout}
-                    prediction={rider.mlPredictedScore ?? rider.totalProjectedPts ?? 0}
+                    prediction={rider.totalProjectedPts ?? 0}
                   />
                 )}
 

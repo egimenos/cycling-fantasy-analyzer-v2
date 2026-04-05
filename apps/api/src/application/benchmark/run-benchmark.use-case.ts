@@ -9,8 +9,8 @@ import {
 } from '../../domain/rider/rider.repository.port';
 import { MlScoringPort, ML_SCORING_PORT } from '../../domain/scoring/ml-scoring.port';
 import { RaceType } from '../../domain/shared/race-type.enum';
-import { computeRiderScore } from '../../domain/scoring/scoring.service';
 import { computeSpearmanRho, computeRankings } from '../../domain/scoring/spearman-correlation';
+import { buildSameRaceHistory } from '../../domain/scoring/race-history.service';
 import { BenchmarkResult, RiderBenchmarkEntry } from '../../domain/benchmark/benchmark-result';
 import { FetchStartlistUseCase } from './fetch-startlist.use-case';
 
@@ -43,85 +43,80 @@ export class RunBenchmarkUseCase {
     });
     const riderIds = entries.map((e) => e.riderId);
 
-    // 2. Get the race date cutoff from actual results
+    // 2. Get actual race results
     const actualResults = await this.resultRepo.findByRace(input.raceSlug, input.year);
-    const raceDates = actualResults
-      .filter((r) => r.raceDate !== null)
-      .map((r) => r.raceDate as Date);
 
-    const earliestDate =
-      raceDates.length > 0 ? new Date(Math.min(...raceDates.map((d) => d.getTime()))) : null;
-
-    if (!earliestDate) {
-      throw new Error(`No race dates found for ${input.raceSlug} ${input.year}. Run seed first.`);
-    }
-
-    // 3. Fetch historical results (before this race)
-    const historicalResults = await this.resultRepo.findByRiderIdsBeforeDate(
-      riderIds,
-      earliestDate,
-    );
-
-    // 4. Build rider name lookup
+    // 3. Build rider name lookup
     const allRiders = riderIds.length > 0 ? await this.riderRepo.findByIds(riderIds) : [];
     const riderNameMap = new Map(allRiders.map((r) => [r.id, r.fullName]));
 
-    // 5. Compute scores per rider
+    // 4. Compute actual fantasy points per rider from race results
     const riderEntries: RiderBenchmarkEntry[] = [];
     for (const riderId of riderIds) {
-      const riderHistorical = historicalResults.filter((r) => r.riderId === riderId);
       const riderActual = actualResults.filter((r) => r.riderId === riderId);
-
-      const predicted = computeRiderScore(riderId, riderHistorical, input.raceType, input.year);
-      const actual = computeRiderScore(riderId, riderActual, input.raceType, input.year, 1);
+      const history = buildSameRaceHistory(riderActual, input.raceSlug);
+      const actualPts = history[0]?.total ?? 0;
 
       riderEntries.push({
         riderId,
         riderName: riderNameMap.get(riderId) ?? 'Unknown',
-        predictedPts: predicted.totalProjectedPts,
-        actualPts: actual.totalProjectedPts,
-        predictedRank: 0, // Filled below
-        actualRank: 0, // Filled below
+        predictedPts: 0, // Filled from ML below
+        actualPts,
+        predictedRank: 0,
+        actualRank: 0,
       });
     }
 
-    // 6. Compute rankings
-    const predictedScores = riderEntries.map((e) => e.predictedPts);
+    // 5. Compute actual rankings
     const actualScores = riderEntries.map((e) => e.actualPts);
-    const predictedRanks = computeRankings(predictedScores);
     const actualRanks = computeRankings(actualScores);
 
-    const rankedEntries: RiderBenchmarkEntry[] = riderEntries.map((e, i) => ({
-      ...e,
-      predictedRank: predictedRanks[i],
-      actualRank: actualRanks[i],
-    }));
-
-    // 7. Compute rules-based Spearman rho
-    const rulesRho = computeSpearmanRho(predictedScores, actualScores);
-
-    // 8. ML predictions (stage races only)
+    // 6. ML predictions
     let mlRho: number | null = null;
-    if (input.raceType === RaceType.GRAND_TOUR || input.raceType === RaceType.MINI_TOUR) {
-      try {
-        const mlPredictions = await this.mlScoring.predictRace(input.raceSlug, input.year);
-        if (mlPredictions) {
-          const mlScoreMap = new Map(mlPredictions.map((p) => [p.riderId, p.predictedScore]));
-          const mlScores = riderIds.map((id) => mlScoreMap.get(id) ?? 0);
-          mlRho = computeSpearmanRho(mlScores, actualScores);
+    try {
+      const mlPredictions = await this.mlScoring.predictRace(
+        input.raceSlug,
+        input.year,
+        undefined,
+        undefined,
+        input.raceType,
+      );
+      if (mlPredictions) {
+        const mlScoreMap = new Map(mlPredictions.map((p) => [p.riderId, p.predictedScore]));
+
+        // Fill predicted scores from ML
+        for (const entry of riderEntries) {
+          (entry as { predictedPts: number }).predictedPts = mlScoreMap.get(entry.riderId) ?? 0;
         }
-      } catch {
-        this.logger.warn(
-          `ML scoring unavailable for ${input.raceSlug} ${input.year} — skipping ML rho`,
+
+        const predictedScores = riderEntries.map((e) => e.predictedPts);
+        const predictedRanks = computeRankings(predictedScores);
+
+        // Fill rankings
+        const rankedEntries = riderEntries.map((e, i) => {
+          (e as { predictedRank: number }).predictedRank = predictedRanks[i];
+          (e as { actualRank: number }).actualRank = actualRanks[i];
+          return e;
+        });
+
+        mlRho = computeSpearmanRho(
+          rankedEntries.map((e) => e.predictedPts),
+          actualScores,
         );
       }
+    } catch {
+      this.logger.warn(
+        `ML scoring unavailable for ${input.raceSlug} ${input.year} — skipping ML rho`,
+      );
     }
 
-    // 9. Hybrid rho: ML for stage races, rules for classics
-    const hybridRho = mlRho !== null ? mlRho : rulesRho;
+    // Fill actual ranks even when ML is unavailable
+    for (let i = 0; i < riderEntries.length; i++) {
+      (riderEntries[i] as { actualRank: number }).actualRank = actualRanks[i];
+    }
 
     this.logger.log(
-      `Benchmark ${input.raceSlug} ${input.year}: ${riderEntries.length} riders, rulesRho=${rulesRho?.toFixed(4) ?? 'null'}, mlRho=${mlRho?.toFixed(4) ?? 'null'}, hybridRho=${hybridRho?.toFixed(4) ?? 'null'}`,
+      `Benchmark ${input.raceSlug} ${input.year}: ${riderEntries.length} riders, mlRho=${mlRho?.toFixed(4) ?? 'null'}`,
     );
 
     return {
@@ -129,10 +124,8 @@ export class RunBenchmarkUseCase {
       raceName: input.raceName,
       year: input.year,
       raceType: input.raceType,
-      riderResults: rankedEntries,
-      rulesSpearmanRho: rulesRho,
+      riderResults: riderEntries,
       mlSpearmanRho: mlRho,
-      hybridSpearmanRho: hybridRho,
       riderCount: riderEntries.length,
     };
   }

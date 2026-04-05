@@ -2,7 +2,7 @@ import { RaceResult } from '../race-result/race-result.entity';
 import { ResultCategory } from '../shared/result-category.enum';
 import { getPointsForPosition } from './scoring-weights.config';
 import type { RaceHistory } from '@cycling-analyzer/shared-types';
-import type { RacePerformance } from '../breakout/breakout.types';
+import type { RacePerformance, YearlyTotal } from '../breakout/breakout.types';
 
 /**
  * Counts unique sprint intermediate locations per stage from race results.
@@ -115,4 +115,18 @@ export function buildRacePerformances(results: readonly RaceResult[]): RacePerfo
   }
 
   return performances.sort((a, b) => b.raceDate.getTime() - a.raceDate.getTime());
+}
+
+/**
+ * Aggregates race performances into per-year totals for BPI trajectory signals.
+ * Groups by year and sums total fantasy points across all races in that year.
+ */
+export function buildYearlyTotals(performances: readonly RacePerformance[]): YearlyTotal[] {
+  const byYear = new Map<number, number>();
+  for (const p of performances) {
+    byYear.set(p.year, (byYear.get(p.year) ?? 0) + p.total);
+  }
+  return [...byYear.entries()]
+    .map(([year, total]) => ({ year, total }))
+    .sort((a, b) => a.year - b.year);
 }

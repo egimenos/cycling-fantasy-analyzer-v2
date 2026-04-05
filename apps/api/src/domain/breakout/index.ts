@@ -12,4 +12,4 @@ export {
   computeRawSlope,
 } from './breakout.service';
 
-export type { ComputeBreakoutInput, RacePerformance } from './breakout.types';
+export type { ComputeBreakoutInput, RacePerformance, YearlyTotal } from './breakout.types';

@@ -1,5 +1,5 @@
-import type { SeasonBreakdown, ProfileSummary } from '@cycling-analyzer/shared-types';
-import type { CoreCategoryScores, RacePerformance } from '../breakout.types';
+import type { ProfileSummary } from '@cycling-analyzer/shared-types';
+import type { CoreCategoryScores, RacePerformance, YearlyTotal } from '../breakout.types';
 
 // Use string values directly since Jest can't resolve ESM enum from shared-types
 const BreakoutFlag = {
@@ -27,8 +27,8 @@ import type { ComputeBreakoutInput } from '../breakout.types';
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-function makeSeason(year: number, total: number): SeasonBreakdown {
-  return { year, gc: 0, stage: 0, mountain: 0, sprint: 0, total, weight: 1 };
+function makeSeason(year: number, total: number): YearlyTotal {
+  return { year, total };
 }
 
 function makePerf(raceSlug: string, year: number, daysAgo: number, total: number): RacePerformance {
@@ -355,7 +355,7 @@ describe('computeUpsideP80', () => {
 
 describe('evaluateFlags', () => {
   const baseInput: ComputeBreakoutInput = {
-    seasonBreakdown: [],
+    yearlyTotals: [],
     racePerformances: [],
     prediction: 100,
     priceHillios: 200,
@@ -371,7 +371,7 @@ describe('evaluateFlags', () => {
       const input: ComputeBreakoutInput = {
         ...baseInput,
         birthDate: youngBirthDate,
-        seasonBreakdown: [makeSeason(2024, 100), makeSeason(2023, 30)],
+        yearlyTotals: [makeSeason(2024, 100), makeSeason(2023, 30)],
       };
       const flags = evaluateFlags(input, neutralSignals);
       expect(flags).toContain(BreakoutFlag.EmergingTalent);
@@ -381,7 +381,7 @@ describe('evaluateFlags', () => {
       const input: ComputeBreakoutInput = {
         ...baseInput,
         birthDate: midBirthDate,
-        seasonBreakdown: [makeSeason(2024, 100), makeSeason(2023, 30)],
+        yearlyTotals: [makeSeason(2024, 100), makeSeason(2023, 30)],
       };
       expect(evaluateFlags(input, neutralSignals)).not.toContain(BreakoutFlag.EmergingTalent);
     });
@@ -390,7 +390,7 @@ describe('evaluateFlags', () => {
       const input: ComputeBreakoutInput = {
         ...baseInput,
         birthDate: youngBirthDate,
-        seasonBreakdown: [
+        yearlyTotals: [
           makeSeason(2024, 200),
           makeSeason(2023, 150),
           makeSeason(2022, 100),
@@ -528,7 +528,7 @@ describe('evaluateFlags', () => {
 describe('computeBreakout', () => {
   it('returns all fields with correct types', () => {
     const input: ComputeBreakoutInput = {
-      seasonBreakdown: [makeSeason(2024, 150), makeSeason(2023, 100), makeSeason(2022, 50)],
+      yearlyTotals: [makeSeason(2024, 150), makeSeason(2023, 100), makeSeason(2022, 50)],
       racePerformances: [
         makePerf('r1', 2024, 10, 150),
         makePerf('r2', 2023, 200, 100),
@@ -555,7 +555,7 @@ describe('computeBreakout', () => {
 
   it('handles empty data', () => {
     const input: ComputeBreakoutInput = {
-      seasonBreakdown: [],
+      yearlyTotals: [],
       racePerformances: [],
       prediction: 0,
       priceHillios: 50,
@@ -572,7 +572,7 @@ describe('computeBreakout', () => {
 
   it('handles all-zero data', () => {
     const input: ComputeBreakoutInput = {
-      seasonBreakdown: [makeSeason(2024, 0), makeSeason(2023, 0), makeSeason(2022, 0)],
+      yearlyTotals: [makeSeason(2024, 0), makeSeason(2023, 0), makeSeason(2022, 0)],
       racePerformances: [
         makePerf('r1', 2024, 10, 0),
         makePerf('r2', 2023, 200, 0),

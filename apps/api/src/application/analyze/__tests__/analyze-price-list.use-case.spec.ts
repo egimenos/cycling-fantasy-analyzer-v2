@@ -5,7 +5,6 @@ import { RiderRepositoryPort } from '../../../domain/rider/rider.repository.port
 import { RaceResultRepositoryPort } from '../../../domain/race-result/race-result.repository.port';
 import { MlScoringPort } from '../../../domain/scoring/ml-scoring.port';
 import { MlScoreRepositoryPort } from '../../../domain/ml-score/ml-score.repository.port';
-import { ScoringService } from '../../../domain/scoring/scoring.service';
 import { Rider } from '../../../domain/rider/rider.entity';
 import { RaceResult } from '../../../domain/race-result/race-result.entity';
 import { RaceType } from '../../../domain/shared/race-type.enum';
@@ -85,7 +84,6 @@ describe('AnalyzePriceListUseCase', () => {
   let mockResultRepo: jest.Mocked<RaceResultRepositoryPort>;
   let mockMlScoring: jest.Mocked<MlScoringPort>;
   let mockMlScoreRepo: jest.Mocked<MlScoreRepositoryPort>;
-  let scoringService: ScoringService;
 
   beforeEach(() => {
     mockMatcher = {
@@ -126,8 +124,6 @@ describe('AnalyzePriceListUseCase', () => {
       deleteAll: jest.fn().mockResolvedValue(0),
     };
 
-    scoringService = new ScoringService();
-
     const mockFetchStartlist = {
       execute: jest.fn().mockResolvedValue({ entries: [], fromCache: true }),
     } as unknown as FetchStartlistUseCase;
@@ -136,7 +132,6 @@ describe('AnalyzePriceListUseCase', () => {
       mockMatcher,
       mockRiderRepo,
       mockResultRepo,
-      scoringService,
       mockMlScoring,
       mockMlScoreRepo,
       mockFetchStartlist,
@@ -178,12 +173,45 @@ describe('AnalyzePriceListUseCase', () => {
       }),
     ]);
 
+    // Mock ML predictions (ML-only scoring)
+    mockMlScoring.getModelVersion.mockResolvedValue('v1');
+    mockMlScoreRepo.findByRace.mockResolvedValue([
+      {
+        id: '1',
+        riderId: 'r1',
+        raceSlug: 'tour-de-france',
+        year: currentYear,
+        predictedScore: 200,
+        modelVersion: 'v1',
+        gcPts: 120,
+        stagePts: 50,
+        mountainPts: 20,
+        sprintPts: 10,
+        createdAt: new Date(),
+      },
+      {
+        id: '2',
+        riderId: 'r2',
+        raceSlug: 'tour-de-france',
+        year: currentYear,
+        predictedScore: 150,
+        modelVersion: 'v1',
+        gcPts: 80,
+        stagePts: 40,
+        mountainPts: 20,
+        sprintPts: 10,
+        createdAt: new Date(),
+      },
+    ]);
+
     const result = await useCase.execute({
       riders: [
         { name: 'POGACAR Tadej', team: 'UAE', price: 300 },
         { name: 'VINGEGAARD Jonas', team: 'Visma', price: 280 },
       ],
       raceType: RaceType.GRAND_TOUR,
+      raceSlug: 'tour-de-france',
+      year: currentYear,
       budget: 2000,
     });
 
@@ -211,12 +239,32 @@ describe('AnalyzePriceListUseCase', () => {
       createMockRaceResult({ riderId: 'r1', year: currentYear }),
     ]);
 
+    // Mock ML predictions for the matched rider
+    mockMlScoring.getModelVersion.mockResolvedValue('v1');
+    mockMlScoreRepo.findByRace.mockResolvedValue([
+      {
+        id: '1',
+        riderId: 'r1',
+        raceSlug: 'tour-de-france',
+        year: currentYear,
+        predictedScore: 100,
+        modelVersion: 'v1',
+        gcPts: 60,
+        stagePts: 20,
+        mountainPts: 10,
+        sprintPts: 10,
+        createdAt: new Date(),
+      },
+    ]);
+
     const result = await useCase.execute({
       riders: [
         { name: 'POGACAR Tadej', team: 'UAE', price: 300 },
         { name: 'UNKNOWN RIDER', team: '', price: 100 },
       ],
       raceType: RaceType.GRAND_TOUR,
+      raceSlug: 'tour-de-france',
+      year: currentYear,
       budget: 2000,
     });
 

@@ -3,7 +3,6 @@ import type { OptimizeResponse } from '@cycling-analyzer/shared-types';
 import { OptimalTeamCard } from './optimal-team-card';
 import { ScoreBreakdown } from './score-breakdown';
 import { AlternativeTeams } from './alternative-teams';
-import { computeMlTotal } from '@/features/team-builder/hooks/use-team-builder';
 import { formatNumber } from '@/shared/lib/utils';
 import { useAnimatedNumber } from '@/shared/hooks/use-animated-number';
 import { Zap } from 'lucide-react';
@@ -16,10 +15,8 @@ interface OptimizerPanelProps {
 
 export function OptimizerPanel({ data, budget, onApplyToRoster }: OptimizerPanelProps) {
   const { optimalTeam } = data;
-  const mlTotal = computeMlTotal(optimalTeam.riders);
-  const projectedTotal = mlTotal ?? optimalTeam.totalProjectedPts;
   const efficiencyNum = budget > 0 ? (optimalTeam.totalCostHillios / budget) * 100 : 0;
-  const animatedScore = useAnimatedNumber(projectedTotal, 1000);
+  const animatedScore = useAnimatedNumber(optimalTeam.totalProjectedPts, 1000);
   const animatedEfficiency = useAnimatedNumber(efficiencyNum, 1000);
 
   const resultsRef = useRef<HTMLDivElement>(null);

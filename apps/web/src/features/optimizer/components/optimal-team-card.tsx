@@ -18,7 +18,7 @@ export function OptimalTeamCard({ team, variant = 'primary' }: OptimalTeamCardPr
       {team.riders.map((rider, index) => {
         const score = getEffectiveScore(rider);
         const isLeader = index === 0 && isPrimary;
-        const breakdown = rider.mlBreakdown ?? rider.categoryScores;
+        const breakdown = rider.categoryScores;
         return (
           <Tooltip key={rider.rawName}>
             <TooltipTrigger asChild>

@@ -8,7 +8,6 @@ interface TeamBuilderPanelProps {
   selectedRiders: AnalyzedRider[];
   totalCost: number;
   totalScore: number;
-  mlTotalScore: number | null;
   budgetRemaining: number;
   budget: number;
   isTeamComplete: boolean;
@@ -26,7 +25,6 @@ export function TeamBuilderPanel({
   selectedRiders,
   totalCost,
   totalScore,
-  mlTotalScore,
   budgetRemaining,
   budget,
   isTeamComplete,
@@ -40,8 +38,7 @@ export function TeamBuilderPanel({
   const emptySlots = MAX_RIDERS - selectedRiders.length;
   const usagePercent = budget > 0 ? (totalCost / budget) * 100 : 0;
   const isOverBudget = budgetRemaining < 0;
-  const displayScore = mlTotalScore ?? totalScore;
-  const animatedScore = useAnimatedNumber(displayScore);
+  const animatedScore = useAnimatedNumber(totalScore);
   const animatedBudget = useAnimatedNumber(budgetRemaining);
 
   return (
@@ -176,13 +173,13 @@ export function TeamBuilderPanel({
         <div className="flex justify-between items-center">
           <span className="text-xs text-outline font-mono uppercase flex items-center gap-1.5">
             Projected Score
-            {mlTotalScore !== null && <MlBadge />}
+            <MlBadge />
           </span>
           <span
             data-testid="dashboard-projected-score"
             className="font-mono font-bold text-2xl text-secondary text-glow-secondary"
           >
-            {displayScore > 0
+            {totalScore > 0
               ? animatedScore.toLocaleString(undefined, { maximumFractionDigits: 0 })
               : '—'}
           </span>

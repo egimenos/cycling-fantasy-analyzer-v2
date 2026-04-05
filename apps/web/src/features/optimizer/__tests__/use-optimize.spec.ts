@@ -32,11 +32,6 @@ const sampleRider: AnalyzedRider = {
     sprint_intermediate: 0,
     regularidad_daily: 0,
   },
-  seasonsUsed: 2,
-  seasonBreakdown: null,
-  scoringMethod: 'rules' as const,
-  mlPredictedScore: null,
-  mlBreakdown: null,
   breakout: null,
   sameRaceHistory: null,
 };

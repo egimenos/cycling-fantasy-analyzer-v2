@@ -168,50 +168,26 @@ describe('RunBenchmarkUseCase', () => {
         }),
       ]);
 
-      // Historical results (before the race) for predictions
-      resultRepo.findByRiderIdsBeforeDate.mockResolvedValue([
-        // Rider A had a strong 2024 season (same race type)
-        makeResult({
-          riderId: 'rider-a',
-          raceSlug: 'other-classic',
-          year: 2024,
-          category: ResultCategory.GC,
-          position: 1,
-          raceType: RaceType.CLASSIC,
-          raceDate: new Date('2024-04-10'),
-        }),
-        makeResult({
-          riderId: 'rider-a',
-          raceSlug: 'another-classic',
-          year: 2024,
-          category: ResultCategory.GC,
-          position: 3,
-          raceType: RaceType.CLASSIC,
-          raceDate: new Date('2024-04-20'),
-        }),
-        // Rider B had a moderate 2024 season
-        makeResult({
-          riderId: 'rider-b',
-          raceSlug: 'other-classic',
-          year: 2024,
-          category: ResultCategory.GC,
-          position: 8,
-          raceType: RaceType.CLASSIC,
-          raceDate: new Date('2024-04-10'),
-        }),
-        // Rider C had a weaker 2024 season
-        makeResult({
-          riderId: 'rider-c',
-          raceSlug: 'other-classic',
-          year: 2024,
-          category: ResultCategory.GC,
-          position: 20,
-          raceType: RaceType.CLASSIC,
-          raceDate: new Date('2024-04-10'),
-        }),
-      ]);
-
       riderRepo.findByIds.mockResolvedValue([riderA, riderB, riderC]);
+
+      // ML predictions with scores that match the actual ranking order
+      mlScoring.predictRace.mockResolvedValue([
+        {
+          riderId: 'rider-a',
+          predictedScore: 200,
+          breakdown: { gc: 200, stage: 0, mountain: 0, sprint: 0 },
+        },
+        {
+          riderId: 'rider-b',
+          predictedScore: 100,
+          breakdown: { gc: 100, stage: 0, mountain: 0, sprint: 0 },
+        },
+        {
+          riderId: 'rider-c',
+          predictedScore: 50,
+          breakdown: { gc: 50, stage: 0, mountain: 0, sprint: 0 },
+        },
+      ]);
 
       const result = await useCase.execute({
         raceSlug: 'milano-sanremo',
@@ -228,13 +204,9 @@ describe('RunBenchmarkUseCase', () => {
       expect(result.riderCount).toBe(3);
       expect(result.riderResults).toHaveLength(3);
 
-      // Verify that Spearman rho is a valid number (not null)
-      expect(result.rulesSpearmanRho).not.toBeNull();
-      expect(typeof result.rulesSpearmanRho).toBe('number');
-
-      // Classic race: ML rho should be null, hybrid should equal rules
-      expect(result.mlSpearmanRho).toBeNull();
-      expect(result.hybridSpearmanRho).toBe(result.rulesSpearmanRho);
+      // Verify that ML Spearman rho is a valid number (not null)
+      expect(result.mlSpearmanRho).not.toBeNull();
+      expect(typeof result.mlSpearmanRho).toBe('number');
 
       // Verify that predicted and actual scores are computed
       for (const entry of result.riderResults) {
@@ -244,7 +216,7 @@ describe('RunBenchmarkUseCase', () => {
         expect(typeof entry.actualPts).toBe('number');
       }
 
-      // Rider A should have the highest predicted score (best historical)
+      // Rider A should have the highest predicted score (best ML prediction)
       const riderAEntry = result.riderResults.find((r) => r.riderId === 'rider-a');
       const riderCEntry = result.riderResults.find((r) => r.riderId === 'rider-c');
       expect(riderAEntry).toBeDefined();
@@ -256,17 +228,11 @@ describe('RunBenchmarkUseCase', () => {
 
       // Verify rider names were resolved
       expect(riderAEntry!.riderName).toBe('Rider Alpha');
-
-      // Verify date cutoff was applied correctly
-      expect(resultRepo.findByRiderIdsBeforeDate).toHaveBeenCalledWith(
-        ['rider-a', 'rider-b', 'rider-c'],
-        raceDate,
-      );
     });
   });
 
-  describe('no historical data', () => {
-    it('rider with no prior results gets predictedPts = 0', async () => {
+  describe('ML unavailable', () => {
+    it('rider gets predictedPts = 0 when ML returns null', async () => {
       fetchStartlist.execute.mockResolvedValue({
         entries: [makeStartlistEntry('rider-new')],
         fromCache: true,
@@ -285,11 +251,9 @@ describe('RunBenchmarkUseCase', () => {
         }),
       ]);
 
-      // No historical results
-      resultRepo.findByRiderIdsBeforeDate.mockResolvedValue([]);
-
       riderRepo.findByIds.mockResolvedValue([makeRider('rider-new', 'New Rider')]);
 
+      // ML returns null (default mock)
       const result = await useCase.execute({
         raceSlug: 'milano-sanremo',
         year: 2025,
@@ -303,19 +267,18 @@ describe('RunBenchmarkUseCase', () => {
       expect(entry.actualPts).toBeGreaterThan(0);
       expect(entry.riderName).toBe('New Rider');
 
-      // With only 1 rider, Spearman should be null (n < 2)
-      expect(result.rulesSpearmanRho).toBeNull();
+      // ML unavailable, so Spearman rho is null
+      expect(result.mlSpearmanRho).toBeNull();
     });
   });
 
-  describe('no race dates', () => {
-    it('throws an error when no results have raceDate', async () => {
+  describe('ML error handling', () => {
+    it('sets mlSpearmanRho to null when ML service throws', async () => {
       fetchStartlist.execute.mockResolvedValue({
         entries: [makeStartlistEntry('rider-1')],
         fromCache: true,
       } as FetchStartlistOutput);
 
-      // Results exist but none have a raceDate
       resultRepo.findByRace.mockResolvedValue([
         makeResult({
           riderId: 'rider-1',
@@ -323,18 +286,23 @@ describe('RunBenchmarkUseCase', () => {
           year: 2025,
           category: ResultCategory.GC,
           position: 1,
-          raceDate: null,
         }),
       ]);
 
-      await expect(
-        useCase.execute({
-          raceSlug: 'milano-sanremo',
-          year: 2025,
-          raceType: RaceType.CLASSIC,
-          raceName: 'Milano-Sanremo',
-        }),
-      ).rejects.toThrow('No race dates found for milano-sanremo 2025');
+      riderRepo.findByIds.mockResolvedValue([makeRider('rider-1', 'Test Rider')]);
+
+      // ML service throws an error
+      mlScoring.predictRace.mockRejectedValue(new Error('ML service down'));
+
+      const result = await useCase.execute({
+        raceSlug: 'milano-sanremo',
+        year: 2025,
+        raceType: RaceType.CLASSIC,
+        raceName: 'Milano-Sanremo',
+      });
+
+      expect(result.mlSpearmanRho).toBeNull();
+      expect(result.riderCount).toBe(1);
     });
   });
 
@@ -380,28 +348,6 @@ describe('RunBenchmarkUseCase', () => {
           dnf: false,
           raceType: RaceType.GRAND_TOUR,
           raceDate,
-        }),
-      ]);
-
-      // Some historical data for both riders
-      resultRepo.findByRiderIdsBeforeDate.mockResolvedValue([
-        makeResult({
-          riderId: 'rider-finisher',
-          raceSlug: 'giro',
-          year: 2024,
-          category: ResultCategory.GC,
-          position: 1,
-          raceType: RaceType.GRAND_TOUR,
-          raceDate: new Date('2024-06-01'),
-        }),
-        makeResult({
-          riderId: 'rider-dnf',
-          raceSlug: 'giro',
-          year: 2024,
-          category: ResultCategory.GC,
-          position: 3,
-          raceType: RaceType.GRAND_TOUR,
-          raceDate: new Date('2024-06-01'),
         }),
       ]);
 

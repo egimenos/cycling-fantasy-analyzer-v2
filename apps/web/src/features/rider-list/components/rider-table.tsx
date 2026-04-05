@@ -33,10 +33,10 @@ interface RiderTableProps {
   externalFilter?: RiderFilter;
 }
 
-function findMaxEffectiveScore(riders: AnalyzedRider[], hasML: boolean): number {
+function findMaxEffectiveScore(riders: AnalyzedRider[]): number {
   let max = 0;
   for (const r of riders) {
-    const score = getEffectiveScore(r, hasML);
+    const score = getEffectiveScore(r);
     if (score !== null && score > max) max = score;
   }
   return max || 100;
@@ -50,7 +50,6 @@ function createColumns(
   onToggleExclude: (name: string) => void,
   onToggleSelect: (name: string) => void,
   canSelect: (name: string) => boolean,
-  hasML: boolean,
   maxScore: number,
 ): ColumnDef<AnalyzedRider, unknown>[] {
   return [
@@ -149,29 +148,26 @@ function createColumns(
     },
     {
       id: 'effectiveScore',
-      accessorFn: (row) => getEffectiveScore(row, hasML),
-      header: () =>
-        hasML ? (
-          <span className="inline-flex items-center gap-1.5">
-            Score
-            <MlBadge />
-          </span>
-        ) : (
-          'Score'
-        ),
+      accessorFn: (row) => getEffectiveScore(row),
+      header: () => (
+        <span className="inline-flex items-center gap-1.5">
+          Score
+          <MlBadge />
+        </span>
+      ),
       enableSorting: true,
       cell: ({ row }) => {
         if (row.original.unmatched) {
           return <span className="text-on-primary-container font-mono">---</span>;
         }
-        const score = getEffectiveScore(row.original, hasML);
+        const score = getEffectiveScore(row.original);
         return <ScoreBadge score={score} maxScore={maxScore} />;
       },
     },
     {
       id: 'value',
       accessorFn: (row) => {
-        const score = getEffectiveScore(row, hasML);
+        const score = getEffectiveScore(row);
         return score !== null && row.priceHillios > 0 ? score / row.priceHillios : null;
       },
       header: 'Value',
@@ -281,76 +277,22 @@ function createColumns(
   ];
 }
 
-function PerformanceContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boolean }) {
-  // Use ML breakdown for stage races when available, rules-based otherwise
-  const breakdown = rider.mlBreakdown ?? rider.categoryScores;
-  const isML = rider.mlBreakdown !== null;
-
+function PerformanceContent({ rider }: { rider: AnalyzedRider }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-      {/* Category Scores — ML or rules-based */}
-      {breakdown && (
+      {rider.categoryScores && (
         <div className="space-y-4">
           <h4 className="inline-flex items-center gap-1.5 text-[10px] font-mono text-outline uppercase">
-            {isML ? 'ML Predicted Breakdown' : 'Category Scores'}
-            {isML && <MlBadge />}
+            ML Predicted Breakdown
+            <MlBadge />
           </h4>
-          <CategoryBreakdown breakdown={breakdown} />
+          <CategoryBreakdown breakdown={rider.categoryScores} />
         </div>
       )}
 
-      {/* Season History */}
-      <div className={breakdown ? 'col-span-3' : 'col-span-4'}>
-        {hasML && rider.mlPredictedScore !== null && !isML && (
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-xs text-on-surface-variant">ML Predicted:</span>
-            <span className="text-sm font-mono font-medium">
-              {rider.mlPredictedScore.toFixed(1)} pts
-            </span>
-            <MlBadge />
-          </div>
-        )}
-
-        {rider.seasonBreakdown && rider.seasonBreakdown.length > 0 && (
-          <div>
-            <h4 className="text-[10px] font-mono text-outline uppercase mb-4">
-              Season Performance History
-            </h4>
-            <div className="bg-surface-container-high rounded-sm overflow-hidden border border-outline-variant/10">
-              <table className="w-full text-xs font-mono">
-                <thead className="bg-surface-container-highest/50 text-outline">
-                  <tr>
-                    <th className="p-3 text-left">Season</th>
-                    <th className="p-3 text-right">GC</th>
-                    <th className="p-3 text-right">Stage</th>
-                    <th className="p-3 text-right">Mtn</th>
-                    <th className="p-3 text-right">Sprint</th>
-                    <th className="p-3 text-right">Total</th>
-                    <th className="p-3 text-right">Weight</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-outline-variant/10">
-                  {rider.seasonBreakdown.map((s) => (
-                    <tr key={s.year}>
-                      <td className="p-3 font-bold">{s.year}</td>
-                      <td className="p-3 text-right">{s.gc.toFixed(1)}</td>
-                      <td className="p-3 text-right">{s.stage.toFixed(1)}</td>
-                      <td className="p-3 text-right">{s.mountain.toFixed(1)}</td>
-                      <td className="p-3 text-right">{s.sprint.toFixed(1)}</td>
-                      <td className="p-3 text-right font-bold">{s.total.toFixed(1)}</td>
-                      <td className="p-3 text-right text-on-primary-container">
-                        &times;{s.weight}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
+      <div className={rider.categoryScores ? 'col-span-3' : 'col-span-4'}>
         {rider.sameRaceHistory && rider.sameRaceHistory.length > 0 && (
-          <div className="mt-4">
+          <div>
             <h4 className="text-[10px] font-mono text-outline uppercase mb-4">Same Race History</h4>
             <div className="bg-surface-container-high rounded-sm overflow-hidden border border-outline-variant/10">
               <table className="w-full text-xs font-mono">
@@ -414,7 +356,7 @@ function PerformanceContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boo
   );
 }
 
-function ExpandedRowContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boolean }) {
+function ExpandedRowContent({ rider }: { rider: AnalyzedRider }) {
   const [activeTab, setActiveTab] = useState<'performance' | 'breakout'>('performance');
 
   if (rider.unmatched) {
@@ -457,12 +399,9 @@ function ExpandedRowContent({ rider, hasML }: { rider: AnalyzedRider; hasML: boo
       )}
 
       {activeTab === 'performance' || !showTabs ? (
-        <PerformanceContent rider={rider} hasML={hasML} />
+        <PerformanceContent rider={rider} />
       ) : (
-        <BreakoutDetailPanel
-          breakout={rider.breakout!}
-          prediction={rider.mlPredictedScore ?? rider.totalProjectedPts ?? 0}
-        />
+        <BreakoutDetailPanel breakout={rider.breakout!} prediction={rider.totalProjectedPts ?? 0} />
       )}
     </div>
   );
@@ -533,9 +472,7 @@ export function RiderTable({
     return <EmptyState title="No riders" description="Submit riders to see analysis results." />;
   }
 
-  const hasML = data.riders.some((r) => r.scoringMethod === 'hybrid');
-
-  const maxScore = useMemo(() => findMaxEffectiveScore(data.riders, hasML), [data.riders, hasML]);
+  const maxScore = useMemo(() => findMaxEffectiveScore(data.riders), [data.riders]);
 
   const filteredRiders = useMemo(
     () =>
@@ -585,7 +522,6 @@ export function RiderTable({
         onToggleExclude,
         onToggleSelect,
         canSelect,
-        hasML,
         maxScore,
       ),
     [
@@ -596,7 +532,6 @@ export function RiderTable({
       onToggleExclude,
       onToggleSelect,
       canSelect,
-      hasML,
       maxScore,
     ],
   );
@@ -654,7 +589,7 @@ export function RiderTable({
             data={filteredRiders}
             initialSorting={[{ id: 'effectiveScore', desc: true }]}
             renderExpandedRow={(row: Row<AnalyzedRider>) => (
-              <ExpandedRowContent rider={row.original} hasML={hasML} />
+              <ExpandedRowContent rider={row.original} />
             )}
             getRowClassName={(row: Row<AnalyzedRider>) => {
               if (excludedIds.has(row.original.rawName)) return 'opacity-40 grayscale';
@@ -674,7 +609,6 @@ export function RiderTable({
           onToggleExclude={onToggleExclude}
           onToggleSelect={onToggleSelect}
           canSelect={canSelect}
-          hasML={hasML}
           maxScore={maxScore}
         />
       )}
