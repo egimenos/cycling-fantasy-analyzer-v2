@@ -6,7 +6,7 @@
  */
 import { createServer } from 'node:http';
 
-const PORT = 8000;
+const PORT = parseInt(process.env.ML_SERVICE_PORT ?? '8000', 10);
 
 /** Generate a deterministic score from a rider ID (hash-like) */
 function scoreFromId(riderId) {
