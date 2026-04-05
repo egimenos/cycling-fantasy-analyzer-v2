@@ -112,6 +112,12 @@ export class SetupPage {
     await this.page
       .getByTestId('tab-content-dashboard')
       .waitFor({ state: 'visible', timeout: TIMEOUTS.API_RESPONSE });
+    // Wait for rider table to have at least one row before returning
+    await this.page
+      .getByTestId('dashboard-rider-table')
+      .locator('table tbody tr')
+      .first()
+      .waitFor({ state: 'visible', timeout: TIMEOUTS.API_RESPONSE });
   }
 
   async isAnalyzeDisabled(): Promise<boolean> {
