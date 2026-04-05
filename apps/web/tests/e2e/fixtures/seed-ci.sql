@@ -115,3 +115,28 @@ INSERT INTO race_results (rider_id, race_slug, race_name, race_type, race_class,
   ('a0000000-0000-0000-0000-000000000005', 'itzulia-basque-country', 'Itzulia Basque Country', 'mini_tour', 'UWT', 2025, 'gc', 4, '2025-04-12'),
   ('a0000000-0000-0000-0000-000000000007', 'itzulia-basque-country', 'Itzulia Basque Country', 'mini_tour', 'UWT', 2025, 'gc', 5, '2025-04-12'),
   ('a0000000-0000-0000-0000-000000000017', 'itzulia-basque-country', 'Itzulia Basque Country', 'mini_tour', 'UWT', 2025, 'gc', 6, '2025-04-12');
+
+-- ── ML score cache ──────────────────────────────────────────────────────────────
+-- Pre-cached ML predictions for Tour de France 2026 so E2E tests don't need
+-- to call the real ML service. Model version must match the mock server (mock-v1).
+INSERT INTO ml_scores (rider_id, race_slug, year, predicted_score, model_version, gc_pts, stage_pts, mountain_pts, sprint_pts) VALUES
+  ('a0000000-0000-0000-0000-000000000001', 'tour-de-france', 2025, 240, 'mock-v1', 120, 72, 24, 24),
+  ('a0000000-0000-0000-0000-000000000002', 'tour-de-france', 2025, 230, 'mock-v1', 115, 69, 23, 23),
+  ('a0000000-0000-0000-0000-000000000003', 'tour-de-france', 2025, 220, 'mock-v1', 110, 66, 22, 22),
+  ('a0000000-0000-0000-0000-000000000004', 'tour-de-france', 2025, 210, 'mock-v1', 105, 63, 21, 21),
+  ('a0000000-0000-0000-0000-000000000005', 'tour-de-france', 2025, 200, 'mock-v1', 100, 60, 20, 20),
+  ('a0000000-0000-0000-0000-000000000006', 'tour-de-france', 2025, 190, 'mock-v1', 95, 57, 19, 19),
+  ('a0000000-0000-0000-0000-000000000007', 'tour-de-france', 2025, 180, 'mock-v1', 90, 54, 18, 18),
+  ('a0000000-0000-0000-0000-000000000008', 'tour-de-france', 2025, 170, 'mock-v1', 85, 51, 17, 17),
+  ('a0000000-0000-0000-0000-000000000009', 'tour-de-france', 2025, 160, 'mock-v1', 80, 48, 16, 16),
+  ('a0000000-0000-0000-0000-000000000010', 'tour-de-france', 2025, 150, 'mock-v1', 75, 45, 15, 15),
+  ('a0000000-0000-0000-0000-000000000011', 'tour-de-france', 2025, 140, 'mock-v1', 70, 42, 14, 14),
+  ('a0000000-0000-0000-0000-000000000012', 'tour-de-france', 2025, 130, 'mock-v1', 65, 39, 13, 13),
+  ('a0000000-0000-0000-0000-000000000013', 'tour-de-france', 2025, 120, 'mock-v1', 60, 36, 12, 12),
+  ('a0000000-0000-0000-0000-000000000014', 'tour-de-france', 2025, 110, 'mock-v1', 55, 33, 11, 11),
+  ('a0000000-0000-0000-0000-000000000015', 'tour-de-france', 2025, 100, 'mock-v1', 50, 30, 10, 10),
+  ('a0000000-0000-0000-0000-000000000016', 'tour-de-france', 2025, 90, 'mock-v1', 45, 27, 9, 9),
+  ('a0000000-0000-0000-0000-000000000017', 'tour-de-france', 2025, 80, 'mock-v1', 40, 24, 8, 8),
+  ('a0000000-0000-0000-0000-000000000018', 'tour-de-france', 2025, 70, 'mock-v1', 35, 21, 7, 7),
+  ('a0000000-0000-0000-0000-000000000019', 'tour-de-france', 2025, 60, 'mock-v1', 30, 18, 6, 6),
+  ('a0000000-0000-0000-0000-000000000020', 'tour-de-france', 2025, 50, 'mock-v1', 25, 15, 5, 5);
