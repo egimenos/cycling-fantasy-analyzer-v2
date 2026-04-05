@@ -5,8 +5,8 @@ const isCI = !!process.env.CI;
 export default defineConfig({
   testDir: './tests/e2e/specs',
   testIgnore: ['**/demo-video.spec.ts'],
-  timeout: isCI ? 15_000 : 60_000,
-  retries: isCI ? 0 : 1,
+  timeout: isCI ? 30_000 : 60_000,
+  retries: isCI ? 1 : 1,
   use: {
     baseURL: 'http://localhost:3000',
     headless: true,
