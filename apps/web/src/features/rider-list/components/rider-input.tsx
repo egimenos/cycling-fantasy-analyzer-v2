@@ -84,7 +84,9 @@ export function RiderInput({
   const [showManual, setShowManual] = useState(false);
 
   const raceType =
-    profileState.status === 'success' ? profileState.data.raceType : RaceType.GRAND_TOUR;
+    profileState.status === 'success'
+      ? profileState.data.raceType
+      : (selectedRace?.raceType ?? RaceType.GRAND_TOUR);
 
   const parsedRiders = useMemo(() => parseRiderLines(text), [text]);
   const lineCount = text.split('\n').filter((l) => l.trim().length > 0).length;
@@ -115,8 +117,13 @@ export function RiderInput({
     if (parsedRiders.length === 0) return;
     const profileSummary =
       profileState.status === 'success' ? profileState.data.profileSummary : undefined;
-    const raceSlug = profileState.status === 'success' ? profileState.data.raceSlug : undefined;
-    const year = profileState.status === 'success' ? profileState.data.year : undefined;
+    // raceSlug/year come from the selected race (combobox) — don't gate on profile success
+    const raceSlug =
+      selectedRace?.raceSlug ??
+      (profileState.status === 'success' ? profileState.data.raceSlug : undefined);
+    const year =
+      selectedRace?.year ??
+      (profileState.status === 'success' ? profileState.data.year : undefined);
     onAnalyze(parsedRiders, raceType, budget, profileSummary, raceSlug, year);
   };
 
