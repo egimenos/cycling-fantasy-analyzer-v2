@@ -29,7 +29,7 @@ describe('OptimizeController', () => {
     categoryScores: { gc: 10, stage: 10, mountain: 10, sprint: 10 },
     seasonsUsed: 3,
     seasonBreakdown: [],
-    scoringMethod: 'rules' as const,
+    scoringMethod: 'none' as const,
     mlPredictedScore: null,
     mlBreakdown: null,
     breakout: null,

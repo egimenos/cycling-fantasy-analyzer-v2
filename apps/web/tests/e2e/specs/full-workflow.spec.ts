@@ -17,6 +17,7 @@ test.describe('Full End-to-End Workflow', () => {
 
     // 1. SETUP
     await setupPage.goto();
+    await setupPage.selectRace('Tour de France');
     await setupPage.fillRiders(validPriceList);
     await setupPage.setBudget(2000);
     await setupPage.clickAnalyze();

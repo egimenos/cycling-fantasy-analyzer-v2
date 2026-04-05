@@ -32,7 +32,7 @@ function makeRider(overrides: Partial<AnalyzedRider> = {}): AnalyzedRider {
     seasonsUsed: 3,
     seasonBreakdown: null,
     unmatched: false,
-    scoringMethod: 'rules' as const,
+    scoringMethod: 'none' as const,
     mlPredictedScore: null,
     mlBreakdown: null,
     breakout: null,

@@ -17,7 +17,6 @@ interface RiderCardListProps {
   onToggleExclude: (name: string) => void;
   onToggleSelect: (name: string) => void;
   canSelect: (name: string) => boolean;
-  hasML: boolean;
   maxScore: number;
 }
 
@@ -30,7 +29,6 @@ export function RiderCardList({
   onToggleExclude,
   onToggleSelect,
   canSelect,
-  hasML,
   maxScore,
 }: RiderCardListProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -45,7 +43,7 @@ export function RiderCardList({
         const isExpanded = expandedId === name;
         const disabled =
           rider.unmatched || isExcluded || isLocked || (!isSelected && !canSelect(name));
-        const score = getEffectiveScore(rider, hasML);
+        const score = getEffectiveScore(rider);
         const value = calculateValue(score, rider.priceHillios);
         const flags = rider.breakout?.flags;
         const bpi = rider.breakout?.index ?? null;

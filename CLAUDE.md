@@ -25,7 +25,7 @@
 - The ML service is an internal sidecar — not exposed externally.
 - Stage race models: 9 sub-models (GC, stage profiles, ITT, mountains, sprint).
 - Classics model: independent LightGBM pipeline with 51 features.
-- ML scoring is optional — the API falls back to rules-based scoring when unavailable.
+- ML scoring is required — there is no rules-based fallback. The ML service must be running for the API to produce scores.
 - Feature extraction caches parquet files in `ml/cache/` (gitignored).
 - Models hot-reload via `model_version.txt` check on each request.
 

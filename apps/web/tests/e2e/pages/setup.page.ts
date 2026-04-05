@@ -105,6 +105,7 @@ export class SetupPage {
   }
 
   async analyzeValidRiders(riderText: string, budget = 2000): Promise<void> {
+    await this.selectRace('Tour de France');
     await this.fillRiders(riderText);
     await this.setBudget(budget);
     await this.clickAnalyze();

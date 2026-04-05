@@ -1,6 +1,6 @@
 {
-  "id": "9b725f62-3dbb-472f-9cef-a7a82d96ea77",
-  "prevId": "cd5f9b1f-4c9a-4b99-ba39-364ab428e347",
+  "id": "6f1b2490-50c5-441f-8d0f-c91b50e571f5",
+  "prevId": "9b725f62-3dbb-472f-9cef-a7a82d96ea77",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -44,6 +44,34 @@
           "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
+        },
+        "gc_pts": {
+          "name": "gc_pts",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "stage_pts": {
+          "name": "stage_pts",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "mountain_pts": {
+          "name": "mountain_pts",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "sprint_pts": {
+          "name": "sprint_pts",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
         },
         "created_at": {
           "name": "created_at",
@@ -102,8 +130,12 @@
           "name": "ml_scores_rider_id_riders_id_fk",
           "tableFrom": "ml_scores",
           "tableTo": "riders",
-          "columnsFrom": ["rider_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "rider_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -113,7 +145,12 @@
         "ml_scores_unique": {
           "name": "ml_scores_unique",
           "nullsNotDistinct": false,
-          "columns": ["rider_id", "race_slug", "year", "model_version"]
+          "columns": [
+            "rider_id",
+            "race_slug",
+            "year",
+            "model_version"
+          ]
         }
       },
       "policies": {},
@@ -266,8 +303,12 @@
           "name": "race_results_rider_id_riders_id_fk",
           "tableFrom": "race_results",
           "tableTo": "riders",
-          "columnsFrom": ["rider_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "rider_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -353,7 +394,9 @@
         "riders_pcs_slug_unique": {
           "name": "riders_pcs_slug_unique",
           "nullsNotDistinct": false,
-          "columns": ["pcs_slug"]
+          "columns": [
+            "pcs_slug"
+          ]
         }
       },
       "policies": {},
@@ -502,8 +545,12 @@
           "name": "startlist_entries_rider_id_riders_id_fk",
           "tableFrom": "startlist_entries",
           "tableTo": "riders",
-          "columnsFrom": ["rider_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "rider_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -513,7 +560,11 @@
         "startlist_entries_unique": {
           "name": "startlist_entries_unique",
           "nullsNotDistinct": false,
-          "columns": ["race_slug", "year", "rider_id"]
+          "columns": [
+            "race_slug",
+            "year",
+            "rider_id"
+          ]
         }
       },
       "policies": {},
@@ -525,17 +576,31 @@
     "public.parcours_type": {
       "name": "parcours_type",
       "schema": "public",
-      "values": ["p1", "p2", "p3", "p4", "p5"]
+      "values": [
+        "p1",
+        "p2",
+        "p3",
+        "p4",
+        "p5"
+      ]
     },
     "public.race_class": {
       "name": "race_class",
       "schema": "public",
-      "values": ["UWT", "Pro", "1"]
+      "values": [
+        "UWT",
+        "Pro",
+        "1"
+      ]
     },
     "public.race_type": {
       "name": "race_type",
       "schema": "public",
-      "values": ["grand_tour", "classic", "mini_tour"]
+      "values": [
+        "grand_tour",
+        "classic",
+        "mini_tour"
+      ]
     },
     "public.result_category": {
       "name": "result_category",
@@ -554,7 +619,12 @@
     "public.scrape_status": {
       "name": "scrape_status",
       "schema": "public",
-      "values": ["pending", "running", "success", "failed"]
+      "values": [
+        "pending",
+        "running",
+        "success",
+        "failed"
+      ]
     }
   },
   "schemas": {},

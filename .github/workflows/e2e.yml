@@ -49,6 +49,9 @@ jobs:
       - run: cd apps/api && npx drizzle-kit migrate
       - run: psql $DATABASE_URL -f apps/web/tests/e2e/fixtures/seed-ci.sql
 
+      # Start ML mock server (lightweight Node script on port 8000)
+      - run: node apps/web/tests/e2e/fixtures/ml-mock-server.mjs > /tmp/ml-mock.log 2>&1 &
+
       # Start API server in background (skip OTel instrumentation to avoid
       # require-in-the-middle breaking pnpm's strict module resolution)
       - run: cd apps/api && node dist/main > /tmp/api.log 2>&1 &

@@ -8,6 +8,7 @@ import {
   computeCategoryScore,
   computeStageScore,
   computeRiderScore,
+  computeSeasonBreakdown,
   ScoringService,
 } from '../scoring.service';
 import { createRaceResult } from './fixtures';
@@ -481,6 +482,46 @@ describe('computeRiderScore', () => {
     expect(score.categoryScores.sprint).toBe(0);
   });
 
+  it('should not bleed stage/mountain/sprint from stage races into Classic scoring', () => {
+    const results = [
+      // Classic win
+      createRaceResult({
+        raceType: RaceType.CLASSIC,
+        raceSlug: 'e3-harelbeke',
+        category: ResultCategory.GC,
+        position: 1,
+        year: 2024,
+      }),
+      // Stage race results that should NOT contribute to classic scoring
+      createRaceResult({
+        raceType: RaceType.GRAND_TOUR,
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+        year: 2024,
+      }),
+      createRaceResult({
+        raceType: RaceType.GRAND_TOUR,
+        category: ResultCategory.MOUNTAIN,
+        position: 1,
+        year: 2024,
+      }),
+      createRaceResult({
+        raceType: RaceType.GRAND_TOUR,
+        category: ResultCategory.SPRINT,
+        position: 1,
+        year: 2024,
+      }),
+    ];
+    const score = computeRiderScore('rider-1', results, RaceType.CLASSIC, 2024);
+    // Only GC: classic 200 + GT GC cross-type (none here, only stage/mtn/spr)
+    expect(score.categoryScores.gc).toBe(200);
+    expect(score.categoryScores.stage).toBe(0);
+    expect(score.categoryScores.mountain).toBe(0);
+    expect(score.categoryScores.sprint).toBe(0);
+    expect(score.totalProjectedPts).toBe(200);
+  });
+
   it('should return all zeros for rider with no data', () => {
     const score = computeRiderScore('rider-1', [], RaceType.GRAND_TOUR, 2024);
     expect(score.totalProjectedPts).toBe(0);
@@ -621,6 +662,40 @@ describe('ScoringService', () => {
     const score = service.computeRiderScore('rider-1', results, RaceType.CLASSIC, 2024);
     // Classic GC pos1 = 200
     expect(score.totalProjectedPts).toBe(200);
+  });
+});
+
+describe('computeSeasonBreakdown', () => {
+  it('should zero out stage/mountain/sprint for classics in season breakdown', () => {
+    const results = [
+      createRaceResult({
+        raceType: RaceType.CLASSIC,
+        raceSlug: 'e3-harelbeke',
+        category: ResultCategory.GC,
+        position: 1,
+        year: 2024,
+      }),
+      createRaceResult({
+        raceType: RaceType.GRAND_TOUR,
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+        year: 2024,
+      }),
+      createRaceResult({
+        raceType: RaceType.GRAND_TOUR,
+        category: ResultCategory.MOUNTAIN,
+        position: 1,
+        year: 2024,
+      }),
+    ];
+    const breakdown = computeSeasonBreakdown(results, RaceType.CLASSIC, 2024, 1);
+    expect(breakdown).toHaveLength(1);
+    expect(breakdown[0].gc).toBe(200);
+    expect(breakdown[0].stage).toBe(0);
+    expect(breakdown[0].mountain).toBe(0);
+    expect(breakdown[0].sprint).toBe(0);
+    expect(breakdown[0].total).toBe(200);
   });
 });
 

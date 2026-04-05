@@ -143,6 +143,27 @@ describe('AnalyzePriceListUseCase', () => {
     );
   });
 
+  /** Enable ML with cached predictions for given rider IDs */
+  function setupMlCache(riderScores: { riderId: string; score: number }[]) {
+    const year = new Date().getFullYear();
+    mockMlScoring.getModelVersion.mockResolvedValue('v1');
+    mockMlScoreRepo.findByRace.mockResolvedValue(
+      riderScores.map((rs, i) => ({
+        id: String(i),
+        riderId: rs.riderId,
+        raceSlug: 'tour-de-france',
+        year,
+        predictedScore: rs.score,
+        modelVersion: 'v1',
+        gcPts: rs.score,
+        stagePts: 0,
+        mountainPts: 0,
+        sprintPts: 0,
+        createdAt: new Date(),
+      })),
+    );
+  }
+
   it('should return analyzed riders sorted by score descending', async () => {
     const rider1 = createMockRider({
       id: 'r1',
@@ -178,12 +199,19 @@ describe('AnalyzePriceListUseCase', () => {
       }),
     ]);
 
+    setupMlCache([
+      { riderId: 'r1', score: 200 },
+      { riderId: 'r2', score: 150 },
+    ]);
+
     const result = await useCase.execute({
       riders: [
         { name: 'POGACAR Tadej', team: 'UAE', price: 300 },
         { name: 'VINGEGAARD Jonas', team: 'Visma', price: 280 },
       ],
       raceType: RaceType.GRAND_TOUR,
+      raceSlug: 'tour-de-france',
+      year: currentYear,
       budget: 2000,
     });
 
@@ -191,11 +219,8 @@ describe('AnalyzePriceListUseCase', () => {
     expect(result.totalMatched).toBe(2);
     expect(result.unmatchedCount).toBe(0);
     expect(result.riders).toHaveLength(2);
-    expect(result.riders[0].totalProjectedPts).not.toBeNull();
-    expect(result.riders[1].totalProjectedPts).not.toBeNull();
-    expect(result.riders[0].totalProjectedPts!).toBeGreaterThanOrEqual(
-      result.riders[1].totalProjectedPts!,
-    );
+    expect(result.riders[0].totalProjectedPts).toBe(200);
+    expect(result.riders[1].totalProjectedPts).toBe(150);
   });
 
   it('should handle partially unmatched riders', async () => {
@@ -210,6 +235,7 @@ describe('AnalyzePriceListUseCase', () => {
     mockResultRepo.findByRiderIds.mockResolvedValue([
       createMockRaceResult({ riderId: 'r1', year: currentYear }),
     ]);
+    setupMlCache([{ riderId: 'r1', score: 100 }]);
 
     const result = await useCase.execute({
       riders: [
@@ -217,6 +243,8 @@ describe('AnalyzePriceListUseCase', () => {
         { name: 'UNKNOWN RIDER', team: '', price: 100 },
       ],
       raceType: RaceType.GRAND_TOUR,
+      raceSlug: 'tour-de-france',
+      year: currentYear,
       budget: 2000,
     });
 
@@ -228,7 +256,7 @@ describe('AnalyzePriceListUseCase', () => {
     const unmatchedRider = result.riders.find((r) => r.unmatched);
 
     expect(matchedRider).toBeDefined();
-    expect(matchedRider!.totalProjectedPts).not.toBeNull();
+    expect(matchedRider!.totalProjectedPts).toBe(100);
     expect(unmatchedRider).toBeDefined();
     expect(unmatchedRider!.totalProjectedPts).toBeNull();
     expect(unmatchedRider!.categoryScores).toBeNull();
@@ -252,6 +280,8 @@ describe('AnalyzePriceListUseCase', () => {
       unmatched: true,
     });
     mockResultRepo.findByRiderIds.mockResolvedValue([]);
+    // ML cache with a dummy entry so fetchMlPredictions doesn't hit startlist
+    setupMlCache([{ riderId: 'nobody', score: 50 }]);
 
     const result = await useCase.execute({
       riders: [
@@ -259,6 +289,8 @@ describe('AnalyzePriceListUseCase', () => {
         { name: 'Unknown B', team: '', price: 200 },
       ],
       raceType: RaceType.GRAND_TOUR,
+      raceSlug: 'tour-de-france',
+      year: new Date().getFullYear(),
       budget: 2000,
     });
 
@@ -282,10 +314,13 @@ describe('AnalyzePriceListUseCase', () => {
       unmatched: false,
     });
     mockResultRepo.findByRiderIds.mockResolvedValue([]);
+    setupMlCache([{ riderId: 'r1', score: 100 }]);
 
     const result = await useCase.execute({
       riders: [{ name: 'POGACAR', team: 'UAE', price: 300 }],
       raceType: RaceType.GRAND_TOUR,
+      raceSlug: 'tour-de-france',
+      year: new Date().getFullYear(),
       budget: 2000,
     });
 
@@ -307,6 +342,10 @@ describe('AnalyzePriceListUseCase', () => {
       .mockResolvedValueOnce({ matchedRiderId: 'r1', confidence: 0.9, unmatched: false })
       .mockResolvedValueOnce({ matchedRiderId: 'r2', confidence: 0.9, unmatched: false });
     mockResultRepo.findByRiderIds.mockResolvedValue([]);
+    setupMlCache([
+      { riderId: 'r1', score: 100 },
+      { riderId: 'r2', score: 80 },
+    ]);
 
     await useCase.execute({
       riders: [
@@ -314,6 +353,8 @@ describe('AnalyzePriceListUseCase', () => {
         { name: 'Rider B', team: '', price: 200 },
       ],
       raceType: RaceType.GRAND_TOUR,
+      raceSlug: 'tour-de-france',
+      year: new Date().getFullYear(),
       budget: 2000,
     });
 
