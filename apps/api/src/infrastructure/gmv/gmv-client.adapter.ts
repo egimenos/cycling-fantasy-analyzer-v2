@@ -11,38 +11,51 @@ export class GmvClientAdapter {
 
   async fetchPostsFromApi(): Promise<GmvPost[]> {
     try {
-      const url = `${GMV_WP_API_URL}?categories=${GMV_CATEGORIES}&per_page=100&_fields=id,title,link,date`;
-      this.logger.debug(`Fetching GMV posts: ${url}`);
+      const allPosts: GmvPost[] = [];
+      let page = 1;
+      let totalPages = 1;
 
-      const response = await fetch(url, {
-        signal: AbortSignal.timeout(10_000),
-      });
+      do {
+        const url = `${GMV_WP_API_URL}?categories=${GMV_CATEGORIES}&per_page=100&page=${page}&_fields=id,title,link,date`;
+        this.logger.debug(`Fetching GMV posts page ${page}: ${url}`);
 
-      if (!response.ok) {
-        this.logger.error(`GMV API returned ${response.status}`);
-        return [];
-      }
+        const response = await fetch(url, {
+          signal: AbortSignal.timeout(10_000),
+        });
 
-      const rawPosts = (await response.json()) as Array<{
-        id: number;
-        title: { rendered: string };
-        link: string;
-        date: string;
-      }>;
+        if (!response.ok) {
+          this.logger.error(`GMV API returned ${response.status} on page ${page}`);
+          break;
+        }
 
-      const posts = rawPosts
-        .filter(
-          (p) => !EXCLUDED_TITLE_PATTERNS.some((pattern) => p.title.rendered.includes(pattern)),
-        )
-        .map((p) => ({
-          id: p.id,
-          title: this.decodeHtmlEntities(p.title.rendered),
-          url: p.link,
-          date: p.date,
-        }));
+        if (page === 1) {
+          totalPages = parseInt(response.headers.get('x-wp-totalpages') ?? '1', 10);
+        }
 
-      this.logger.debug(`Fetched ${posts.length} GMV price list posts`);
-      return posts;
+        const rawPosts = (await response.json()) as Array<{
+          id: number;
+          title: { rendered: string };
+          link: string;
+          date: string;
+        }>;
+
+        const posts = rawPosts
+          .filter(
+            (p) => !EXCLUDED_TITLE_PATTERNS.some((pattern) => p.title.rendered.includes(pattern)),
+          )
+          .map((p) => ({
+            id: p.id,
+            title: this.decodeHtmlEntities(p.title.rendered),
+            url: p.link,
+            date: p.date,
+          }));
+
+        allPosts.push(...posts);
+        page++;
+      } while (page <= totalPages);
+
+      this.logger.debug(`Fetched ${allPosts.length} GMV price list posts (${totalPages} pages)`);
+      return allPosts;
     } catch (error) {
       this.logger.warn(`GMV API unavailable: ${(error as Error).message}`);
       return [];
