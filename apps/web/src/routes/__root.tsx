@@ -51,11 +51,8 @@ function RootLayout() {
             <div className="flex justify-between items-center px-4 md:px-5 lg:px-8 xl:px-12 h-14 md:h-16">
               <div className="flex items-center gap-2 md:gap-3 min-w-0">
                 <img src="/logo.svg" alt="" className="h-7 w-7 md:h-8 md:w-8 flex-shrink-0" />
-                <span className="text-base md:text-xl font-black tracking-tighter text-on-surface uppercase italic font-headline truncate">
+                <span className="text-base md:text-xl font-black tracking-tighter text-on-surface uppercase italic font-headline">
                   CYCLING FANTASY OPTIMIZER
-                </span>
-                <span className="hidden md:inline-block text-[9px] font-mono text-outline/50 uppercase tracking-widest ml-2 border border-outline-variant/15 px-1.5 py-0.5 rounded-sm">
-                  v2
                 </span>
               </div>
               <div className="flex items-center gap-4">
