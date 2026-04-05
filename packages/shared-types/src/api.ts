@@ -17,23 +17,6 @@ export type CategoryScores = {
   [K in ResultCategory]: number;
 };
 
-export interface SeasonBreakdown {
-  year: number;
-  gc: number;
-  stage: number;
-  mountain: number;
-  sprint: number;
-  total: number;
-  weight: number;
-}
-
-export interface MlBreakdown {
-  gc: number;
-  stage: number;
-  mountain: number;
-  sprint: number;
-}
-
 export interface RaceHistory {
   year: number;
   gc: number;
@@ -42,8 +25,6 @@ export interface RaceHistory {
   sprint: number;
   total: number;
 }
-
-export type ScoringMethod = 'ml' | 'none';
 
 export enum BreakoutFlag {
   EmergingTalent = 'EMERGING_TALENT',
@@ -78,11 +59,6 @@ export interface AnalyzedRider {
   pointsPerHillio: number | null;
   totalProjectedPts: number | null;
   categoryScores: CategoryScores | null;
-  seasonsUsed: number | null;
-  seasonBreakdown: SeasonBreakdown[] | null;
-  scoringMethod: ScoringMethod;
-  mlPredictedScore: number | null;
-  mlBreakdown: MlBreakdown | null;
   breakout: BreakoutResult | null;
   sameRaceHistory: RaceHistory[] | null;
 }

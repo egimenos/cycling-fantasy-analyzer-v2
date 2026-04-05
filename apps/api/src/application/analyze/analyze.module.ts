@@ -4,7 +4,6 @@ import { MatchingModule } from '../../infrastructure/matching/matching.module';
 import { MlModule } from '../../infrastructure/ml/ml.module';
 import { GmvModule } from '../../infrastructure/gmv/gmv.module';
 import { ScrapingModule } from '../../presentation/scraping.module';
-import { ScoringService } from '../../domain/scoring/scoring.service';
 import { AnalyzePriceListUseCase } from './analyze-price-list.use-case';
 import { FetchRaceProfileUseCase } from './fetch-race-profile.use-case';
 import { FetchStartlistUseCase } from '../benchmark/fetch-startlist.use-case';
@@ -33,7 +32,6 @@ import { PriceListParserAdapter } from '../../infrastructure/scraping/price-list
     ImportPriceListUseCase,
     ListRacesUseCase,
     GmvAutoImportUseCase,
-    ScoringService,
     {
       provide: PRICE_LIST_FETCHER_PORT,
       useClass: PriceListFetcherAdapter,

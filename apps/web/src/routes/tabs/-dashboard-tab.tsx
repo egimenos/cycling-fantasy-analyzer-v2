@@ -168,7 +168,6 @@ export function DashboardTab({
               selectedRiders={teamBuilder.selectedRiders}
               totalCost={teamBuilder.totalCost}
               totalScore={teamBuilder.totalScore}
-              mlTotalScore={teamBuilder.mlTotalScore}
               budgetRemaining={teamBuilder.budgetRemaining}
               budget={budget}
               isTeamComplete={teamBuilder.isTeamComplete}

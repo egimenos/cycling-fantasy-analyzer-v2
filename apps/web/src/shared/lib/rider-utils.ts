@@ -1,6 +1,6 @@
 import type { AnalyzedRider } from '@cycling-analyzer/shared-types';
 
-/** Returns the projected score (ML-only, null when unavailable) */
+/** Returns the ML predicted score, or null when unavailable */
 export function getEffectiveScore(rider: AnalyzedRider): number | null {
   return rider.totalProjectedPts;
 }

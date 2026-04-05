@@ -1,16 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import type { AnalyzedRider } from '@cycling-analyzer/shared-types';
 
-/**
- * Compute aggregate ML predicted score for a set of riders.
- * Returns null when no rider carries an ML prediction (e.g. classic races or ML unavailable).
- */
-export function computeMlTotal(riders: AnalyzedRider[]): number | null {
-  const mlRiders = riders.filter((r) => r.mlPredictedScore !== null);
-  if (mlRiders.length === 0) return null;
-  return mlRiders.reduce((sum, r) => sum + (r.mlPredictedScore ?? 0), 0);
-}
-
 export function useTeamBuilder(budget: number, riders: AnalyzedRider[]) {
   const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set());
 
@@ -28,8 +18,6 @@ export function useTeamBuilder(budget: number, riders: AnalyzedRider[]) {
     () => selectedRiders.reduce((sum, r) => sum + (r.totalProjectedPts ?? 0), 0),
     [selectedRiders],
   );
-
-  const mlTotalScore = useMemo(() => computeMlTotal(selectedRiders), [selectedRiders]);
 
   const budgetRemaining = budget - totalCost;
   const isTeamComplete = selectedNames.size === 9;
@@ -81,7 +69,6 @@ export function useTeamBuilder(budget: number, riders: AnalyzedRider[]) {
     selectedNames,
     totalCost,
     totalScore,
-    mlTotalScore,
     budgetRemaining,
     isTeamComplete,
     addRider,

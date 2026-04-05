@@ -23,10 +23,8 @@ import {
   MlScoreRepositoryPort,
   ML_SCORE_REPOSITORY_PORT,
 } from '../../domain/ml-score/ml-score.repository.port';
-import { ScoringService, SeasonBreakdown } from '../../domain/scoring/scoring.service';
 import { RaceType } from '../../domain/shared/race-type.enum';
 import { FetchStartlistUseCase } from '../benchmark/fetch-startlist.use-case';
-import { ProfileDistribution } from '../../domain/scoring/profile-distribution';
 import { Rider } from '../../domain/rider/rider.entity';
 import { mapPriceListEntries, PriceListEntry, PriceListEntryDto } from './price-list-entry';
 import type { ProfileSummary, BreakoutResult, RaceHistory } from '@cycling-analyzer/shared-types';
@@ -35,6 +33,7 @@ import {
   buildSameRaceHistory,
   buildRacePerformances,
 } from '../../domain/scoring/race-history.service';
+import { buildYearlyTotals } from '../../domain/scoring/race-history.service';
 
 export interface AnalyzeInput {
   riders: PriceListEntryDto[];
@@ -67,11 +66,6 @@ export interface AnalyzedRider {
     mountain: number;
     sprint: number;
   } | null;
-  seasonsUsed: number | null;
-  seasonBreakdown: SeasonBreakdown[] | null;
-  scoringMethod: 'ml' | 'none';
-  mlPredictedScore: number | null;
-  mlBreakdown: { gc: number; stage: number; mountain: number; sprint: number } | null;
   breakout: BreakoutResult | null;
   sameRaceHistory: RaceHistory[] | null;
 }
@@ -91,7 +85,6 @@ export class AnalyzePriceListUseCase {
     @Inject(RIDER_MATCHER_PORT) private readonly matcher: RiderMatcherPort,
     @Inject(RIDER_REPOSITORY_PORT) private readonly riderRepo: RiderRepositoryPort,
     @Inject(RACE_RESULT_REPOSITORY_PORT) private readonly resultRepo: RaceResultRepositoryPort,
-    private readonly scoringService: ScoringService,
     @Inject(ML_SCORING_PORT) private readonly mlScoring: MlScoringPort,
     @Inject(ML_SCORE_REPOSITORY_PORT) private readonly mlScoreRepo: MlScoreRepositoryPort,
     private readonly fetchStartlist: FetchStartlistUseCase,
@@ -128,6 +121,7 @@ export class AnalyzePriceListUseCase {
       .filter((r) => r.match.matchedRiderId !== null)
       .map((r) => r.match.matchedRiderId as string);
 
+    // Fetch race results for same-race history and BPI computation
     const raceResults =
       matchedRiderIds.length > 0 ? await this.resultRepo.findByRiderIds(matchedRiderIds) : [];
 
@@ -142,30 +136,20 @@ export class AnalyzePriceListUseCase {
       }
     }
 
-    const currentYear = new Date().getFullYear();
-    const maxSeasons = 5;
-    const profileDistribution = input.profileSummary
-      ? ProfileDistribution.fromProfileSummary(input.profileSummary)
-      : null;
-
-    interface ScoredEntry {
+    interface MatchedEntry {
       entry: PriceListEntry;
       matchedRider: MatchedRiderInfo | null;
       matchConfidence: number;
       unmatched: boolean;
-      riderScore: ReturnType<ScoringService['computeRiderScore']> | null;
-      seasonBreakdown: SeasonBreakdown[] | null;
     }
 
-    const scoredEntries: ScoredEntry[] = matchResults.map(({ entry, match }) => {
+    const matchedEntries: MatchedEntry[] = matchResults.map(({ entry, match }) => {
       if (match.unmatched || match.matchedRiderId === null) {
         return {
           entry,
           matchedRider: null,
           matchConfidence: match.confidence,
           unmatched: true,
-          riderScore: null,
-          seasonBreakdown: null,
         };
       }
 
@@ -176,26 +160,8 @@ export class AnalyzePriceListUseCase {
           matchedRider: null,
           matchConfidence: match.confidence,
           unmatched: true,
-          riderScore: null,
-          seasonBreakdown: null,
         };
       }
-
-      const results = resultsByRider.get(rider.id) ?? [];
-      const riderScore = this.scoringService.computeRiderScore(
-        rider.id,
-        results,
-        input.raceType,
-        currentYear,
-        maxSeasons,
-        profileDistribution ?? undefined,
-      );
-      const seasonBreakdown = this.scoringService.computeSeasonBreakdown(
-        results,
-        input.raceType,
-        currentYear,
-        maxSeasons,
-      );
 
       return {
         entry,
@@ -207,17 +173,14 @@ export class AnalyzePriceListUseCase {
         },
         matchConfidence: match.confidence,
         unmatched: false,
-        composite: null,
-        riderScore,
-        seasonBreakdown,
       };
     });
 
-    // --- ML prediction enrichment for stage races ---
+    // --- ML prediction enrichment ---
     const mlPredictions = await this.fetchMlPredictions(input);
 
-    const analyzedRiders: AnalyzedRider[] = scoredEntries.map((s) => {
-      if (s.unmatched || s.riderScore === null) {
+    const analyzedRiders: AnalyzedRider[] = matchedEntries.map((s) => {
+      if (s.unmatched || !s.matchedRider) {
         return {
           rawName: s.entry.rawName,
           rawTeam: s.entry.rawTeam,
@@ -228,27 +191,24 @@ export class AnalyzePriceListUseCase {
           pointsPerHillio: null,
           totalProjectedPts: null,
           categoryScores: null,
-          seasonsUsed: null,
-          seasonBreakdown: null,
-          scoringMethod: 'none' as const,
-          mlPredictedScore: null,
-          mlBreakdown: null,
           breakout: null,
           sameRaceHistory: null,
         };
       }
 
-      const riderId = s.matchedRider?.id ?? '';
+      const riderId = s.matchedRider.id;
       const riderResults = resultsByRider.get(riderId) ?? [];
       const sameRaceHistory = input.raceSlug
         ? buildSameRaceHistory(riderResults, input.raceSlug)
         : null;
 
-      const mlEntry = mlPredictions.get(riderId) ?? null;
-      const mlScore = mlEntry?.score ?? null;
-      const mlBreakdown = mlEntry?.breakdown ?? null;
+      const mlResult = mlPredictions.get(riderId);
+      const totalProjectedPts = mlResult?.score ?? null;
+      const categoryScores = mlResult?.breakdown ?? null;
       const pointsPerHillio =
-        mlScore !== null && s.entry.priceHillios > 0 ? mlScore / s.entry.priceHillios : null;
+        totalProjectedPts !== null && s.entry.priceHillios > 0
+          ? totalProjectedPts / s.entry.priceHillios
+          : null;
 
       return {
         rawName: s.entry.rawName,
@@ -258,27 +218,23 @@ export class AnalyzePriceListUseCase {
         matchConfidence: s.matchConfidence,
         unmatched: false,
         pointsPerHillio,
-        totalProjectedPts: mlScore,
-        categoryScores: mlBreakdown,
-        seasonsUsed: s.riderScore.seasonsUsed,
-        seasonBreakdown: s.seasonBreakdown,
-        scoringMethod: mlScore !== null ? ('ml' as const) : ('none' as const),
-        mlPredictedScore: mlScore,
-        mlBreakdown,
+        totalProjectedPts,
+        categoryScores,
         breakout: null,
         sameRaceHistory: sameRaceHistory?.length ? sameRaceHistory : null,
       };
     });
 
-    // --- BPI computation (step 5.5) ---
+    // --- BPI computation ---
     const p75Pph = computeP75PtsPerHillio(analyzedRiders);
     for (const rider of analyzedRiders) {
       if (rider.unmatched || !rider.matchedRider) continue;
       const riderEntity = riderMap.get(rider.matchedRider.id);
       const riderResults = resultsByRider.get(rider.matchedRider.id) ?? [];
       const racePerformances = buildRacePerformances(riderResults);
+      const yearlyTotals = buildYearlyTotals(racePerformances);
       rider.breakout = computeBreakout({
-        seasonBreakdown: rider.seasonBreakdown ?? [],
+        yearlyTotals,
         racePerformances,
         prediction: rider.totalProjectedPts ?? 0,
         priceHillios: rider.priceHillios,

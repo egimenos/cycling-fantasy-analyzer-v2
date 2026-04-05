@@ -145,13 +145,13 @@ make benchmark-suite     # multiple races with aggregate ρ
 | 0.4 – 0.6 | Moderate — room for weight tuning        |
 | < 0.4     | Weak — algorithm needs rethinking        |
 
-**Tuning workflow**: Change a weight in `scoring-weights.config.ts` → re-run `make benchmark-suite` → see if ρ goes up or down.
+**Tuning workflow**: Adjust features in `ml/src/features/`, retrain with `make retrain`, re-run `make benchmark-suite` → see if ρ goes up or down.
 
-## ML Scoring (Optional)
+## ML Scoring
 
-The project includes a Python ML microservice that improves scoring accuracy using Random Forest and LightGBM models. Stage races (mini tours and grand tours) use a 4-source decomposition model (GC, stage, mountain, sprint). Classics use an independent LightGBM model with 51 domain-specific features (type affinity, same-race history, Glicko-2 ratings, seasonal pipeline momentum). When available, scoring uses a hybrid approach (ML + rules-based).
+The project uses a Python ML microservice as the sole scoring engine. Stage races (mini tours and grand tours) use a 4-source decomposition model (GC, stage, mountain, sprint). Classics use an independent LightGBM model with 51 domain-specific features (type affinity, same-race history, Glicko-2 ratings, seasonal pipeline momentum).
 
-**ML scoring is optional.** The API falls back to rules-based scoring when the ML service is unavailable.
+**ML scoring is required.** The ML service must be running for the API to produce scores. There is no rules-based fallback.
 
 ### Setup
 

@@ -105,9 +105,16 @@ test.describe('Breakout Potential Index', () => {
     test('should default to Performance tab', async ({ dashboardPage }) => {
       await dashboardPage.expandRider('POGACAR Tadej');
 
-      // Performance content should be visible (season table)
-      const seasonTable = dashboardPage.riderTable.locator('text=Season Performance History');
-      await expect(seasonTable).toBeVisible();
+      // Performance content should be visible (ML breakdown or same-race history)
+      const mlBreakdown = dashboardPage.riderTable.locator('text=ML Predicted Breakdown');
+      const sameRace = dashboardPage.riderTable.locator('text=Same Race History');
+      const matched = dashboardPage.riderTable.locator('text=Matched:');
+      // At least one performance element should be visible
+      const hasContent =
+        (await mlBreakdown.isVisible().catch(() => false)) ||
+        (await sameRace.isVisible().catch(() => false)) ||
+        (await matched.isVisible().catch(() => false));
+      expect(hasContent).toBe(true);
     });
 
     test('should switch to Breakout tab and show signal breakdown', async ({ dashboardPage }) => {
@@ -156,9 +163,8 @@ test.describe('Breakout Potential Index', () => {
 
       // Switch back to Performance
       await dashboardPage.riderTable.getByRole('button', { name: 'Performance' }).click();
-      await expect(
-        dashboardPage.riderTable.locator('text=Season Performance History'),
-      ).toBeVisible();
+      // BPI Signal Breakdown should no longer be visible (we're back on Performance)
+      await expect(dashboardPage.riderTable.locator('text=BPI Signal Breakdown')).not.toBeVisible();
     });
   });
 

@@ -1,6 +1,6 @@
 # ADR: Scoring Engine as Pure Domain Logic
 
-**Status:** Accepted
+**Status:** Superseded by [2026-04-05-remove-rule-based-scoring](2026-04-05-remove-rule-based-scoring.md) — the rule-based scoring engine has been removed; ML is now the sole scoring path.
 **Date:** 2026-03-15
 
 ## Context

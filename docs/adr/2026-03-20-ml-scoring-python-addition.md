@@ -1,6 +1,6 @@
 # ADR: ML Scoring with Python Microservice
 
-**Status:** Accepted
+**Status:** Superseded by [2026-04-05-remove-rule-based-scoring](2026-04-05-remove-rule-based-scoring.md)
 **Date:** 2026-03-20
 
 ## Context

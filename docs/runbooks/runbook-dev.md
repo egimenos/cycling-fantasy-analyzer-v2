@@ -9,7 +9,7 @@ Step-by-step guide to set up the dev environment, seed the database, and operate
 | Node.js | 20+         | LTS recommended                |
 | pnpm    | 8+          | Activate via `corepack enable` |
 | Docker  | 24+         | PostgreSQL + ML service        |
-| Python  | 3.12+       | ML scoring only (optional)     |
+| Python  | 3.12+       | ML scoring service (required)  |
 
 ---
 
@@ -219,9 +219,9 @@ CLI commands use `dist/cli.js` (compiled output), not TypeScript source directly
 
 ---
 
-## 6. ML Scoring (Optional)
+## 6. ML Scoring
 
-ML scoring enhances predictions for stage races (mini tours and grand tours) using a Random Forest model. It runs as an internal Python FastAPI microservice. The API falls back to rules-based scoring when the ML service is unavailable, so ML setup is entirely optional.
+The ML service is the sole scoring engine. It runs as an internal Python FastAPI microservice and must be running for the API to produce scores. There is no rules-based fallback.
 
 ### Python setup (one-time)
 
@@ -232,12 +232,12 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Train the model
+### Train the models
 
 ```bash
-# Train RF models using all historical data in the DB
+# Train all models using historical data in the DB
 make retrain
-# Output: ml/models/model_mini_tour.joblib, model_grand_tour.joblib, model_version.txt
+# Output: ml/models/ (stage race + classics models), model_version.txt
 ```
 
 Training requires a seeded database (`make seed` must have run first). Takes ~5-10 minutes.
@@ -250,7 +250,7 @@ make ml-up
 
 # Verify it's running
 curl http://localhost:8000/health
-# → {"status": "healthy", "model_version": "20260320T030000", "models_loaded": ["mini_tour", "grand_tour"]}
+# → {"status": "healthy", "model_version": "20260320T030000", "models_loaded": ["mini_tour", "grand_tour", "classic"]}
 ```
 
 Other ML service commands:
@@ -263,11 +263,11 @@ make ml-restart   # Restart (picks up new models after retrain)
 
 ### How it works
 
-1. User requests analysis of a stage race via the API
+1. User requests analysis via the API
 2. API checks `ml_scores` cache → if cached for current model version, returns immediately
 3. Cache miss → API calls ML service (`POST /predict`) → service extracts features, predicts, caches, returns
-4. API enriches response with `scoringMethod: "hybrid"` and `mlPredictedScore`
-5. For classic races: ML service is never called, `scoringMethod: "rules"`
+4. Stage races use a 4-source decomposition model (GC, stage, mountain, sprint)
+5. Classics use an independent LightGBM model with 51 domain-specific features
 
 ### Weekly retraining
 
@@ -308,8 +308,7 @@ curl http://localhost:8000/health  # Should return JSON
 make retrain                    # Train models first
 
 # Predictions seem wrong
-make benchmark-suite            # Compare rules vs ML rho
-# ML rho should be ~0.52 (mini tours) / ~0.59 (grand tours)
+make benchmark-suite            # Check ML rho
 ```
 
 ### Configuration
@@ -324,7 +323,7 @@ make benchmark-suite            # Compare rules vs ML rho
 
 ## 7. Scoring Benchmark
 
-The benchmark measures how well the scoring algorithm predicts real race outcomes using Spearman rank correlation (ρ). With ML scoring enabled, it shows three columns: rules-based, ML, and hybrid.
+The benchmark measures how well the ML scoring predicts real race outcomes using Spearman rank correlation (ρ).
 
 ```bash
 # Single race — interactive selection
@@ -334,25 +333,24 @@ make benchmark
 make benchmark-suite
 ```
 
-Output (with ML service running):
+Output:
 
 ```
-Race                    │ Type       │ ρ Rules │ ρ ML   │ ρ Hybrid
-Tour de Suisse 2025     │ mini_tour  │ 0.3812  │ 0.5185 │ 0.5185
-Tour de France 2025     │ grand_tour │ 0.4521  │ 0.5872 │ 0.5872
-Milano-Sanremo 2025     │ classic    │ 0.3521  │ n/a    │ 0.3521
-MEAN                    │            │ 0.3951  │ 0.5529 │ 0.4859
+Race                    │ Type       │ ρ ML
+Tour de Suisse 2025     │ mini_tour  │ 0.5185
+Tour de France 2025     │ grand_tour │ 0.5872
+Milano-Sanremo 2025     │ classic    │ 0.4210
+MEAN                    │            │ 0.5089
 ```
 
-If the ML service is down, ML and hybrid columns show "n/a" and the rules column works as before.
+The ML service must be running for the benchmark to work.
 
 **Tuning workflow:**
 
-1. Run `make benchmark-suite` → note baseline ρ (rules) and ML ρ
-2. Adjust a weight in `apps/api/src/domain/scoring/scoring-weights.config.ts`
+1. Run `make benchmark-suite` → note baseline ML ρ
+2. Adjust features in `ml/src/features/`, retrain with `make retrain`
 3. Re-run `make benchmark-suite` → compare ρ
 4. Keep if improved, revert if not
-5. For ML tuning: adjust features in `ml/src/features.py`, retrain with `make retrain`, re-benchmark
 
 ---
 

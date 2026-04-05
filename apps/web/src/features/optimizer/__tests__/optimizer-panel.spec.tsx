@@ -25,11 +25,6 @@ function makeRider(name: string, price = 100): AnalyzedRider {
       sprint_intermediate: 0,
       regularidad_daily: 0,
     },
-    seasonsUsed: 2,
-    seasonBreakdown: null,
-    scoringMethod: 'none' as const,
-    mlPredictedScore: null,
-    mlBreakdown: null,
     breakout: null,
     sameRaceHistory: null,
   };

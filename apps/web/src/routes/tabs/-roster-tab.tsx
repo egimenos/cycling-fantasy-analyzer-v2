@@ -38,7 +38,6 @@ export function RosterTab({ teamBuilder, budget, onReset }: RosterTabProps) {
         riders={teamBuilder.selectedRiders}
         totalCost={teamBuilder.totalCost}
         totalScore={teamBuilder.totalScore}
-        mlTotalScore={teamBuilder.mlTotalScore}
         budget={budget}
         onReset={onReset}
       />

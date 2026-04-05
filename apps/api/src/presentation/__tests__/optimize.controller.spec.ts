@@ -27,11 +27,6 @@ describe('OptimizeController', () => {
     pointsPerHillio: 0.5,
     totalProjectedPts: 50,
     categoryScores: { gc: 10, stage: 10, mountain: 10, sprint: 10 },
-    seasonsUsed: 3,
-    seasonBreakdown: [],
-    scoringMethod: 'none' as const,
-    mlPredictedScore: null,
-    mlBreakdown: null,
     breakout: null,
   };
 
@@ -40,7 +35,6 @@ describe('OptimizeController', () => {
     name: 'Pogacar Tadej',
     priceHillios: 100,
     totalProjectedPts: 50,
-    mlPredictedScore: undefined,
     categoryScores: { gc: 10, stage: 10, mountain: 10, sprint: 10 },
   };
 

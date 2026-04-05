@@ -13,21 +13,13 @@ interface TeamSummaryProps {
   riders: AnalyzedRider[];
   totalCost: number;
   totalScore: number;
-  mlTotalScore: number | null;
   budget: number;
   onReset: () => void;
 }
 
-export function TeamSummary({
-  riders,
-  totalCost,
-  totalScore,
-  mlTotalScore,
-  budget,
-  onReset,
-}: TeamSummaryProps) {
+export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: TeamSummaryProps) {
   const [copied, setCopied] = useState(false);
-  const displayScore = mlTotalScore ?? totalScore;
+  const displayScore = totalScore;
   const remaining = budget - totalCost;
   const avgCost = riders.length > 0 ? totalCost / riders.length : 0;
   const usagePercent = budget > 0 ? (totalCost / budget) * 100 : 0;
@@ -107,7 +99,7 @@ export function TeamSummary({
             {riders.map((rider, index) => {
               const score = getEffectiveScore(rider);
               const value = calculateValue(score, rider.priceHillios);
-              const breakdown = rider.mlBreakdown ?? rider.categoryScores;
+              const breakdown = rider.categoryScores;
               const bpi = rider.breakout?.index ?? null;
               const flags = rider.breakout?.flags;
 

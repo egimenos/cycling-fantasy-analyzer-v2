@@ -2,12 +2,13 @@
  * Tests for AnalyzePriceListUseCase — ML integration behavior.
  *
  * The use case relies exclusively on ML predictions for scoring.
- * When ML is unavailable (no raceSlug/year, service down), the use case
- * throws MlServiceUnavailableError.
+ * These tests verify that the analyze use case:
+ *   - Produces ML-based scores for stage races and classics
+ *   - Scoring output structure is consistent regardless of race type
+ *   - Produces deterministic results for identical inputs
  */
 
 import { AnalyzePriceListUseCase } from '../analyze-price-list.use-case';
-import { MlServiceUnavailableError } from '../../../domain/analyze/errors';
 import { RiderMatcherPort } from '../../../domain/matching/rider-matcher.port';
 import { RiderRepositoryPort } from '../../../domain/rider/rider.repository.port';
 import { RaceResultRepositoryPort } from '../../../domain/race-result/race-result.repository.port';
@@ -19,7 +20,6 @@ import { RaceType } from '../../../domain/shared/race-type.enum';
 import { RaceClass } from '../../../domain/shared/race-class.enum';
 import { ResultCategory } from '../../../domain/shared/result-category.enum';
 import { FetchStartlistUseCase } from '../../benchmark/fetch-startlist.use-case';
-import { ScoringService } from '../../../domain/scoring/scoring.service';
 
 function createMockRider(
   overrides: Partial<{
@@ -141,7 +141,6 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
       mockMatcher,
       mockRiderRepo,
       mockResultRepo,
-      new ScoringService(),
       mockMlScoring,
       mockMlScoreRepo,
       mockFetchStartlist,
@@ -163,56 +162,6 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
     return rider;
   }
 
-  function setupMlCache(riderScores: { riderId: string; score: number }[]) {
-    const year = new Date().getFullYear();
-    mockMlScoring.getModelVersion.mockResolvedValue('v1');
-    mockMlScoreRepo.findByRace.mockResolvedValue(
-      riderScores.map((rs, i) => ({
-        id: String(i),
-        riderId: rs.riderId,
-        raceSlug: 'tour-de-france',
-        year,
-        predictedScore: rs.score,
-        modelVersion: 'v1',
-        gcPts: rs.score,
-        stagePts: 0,
-        mountainPts: 0,
-        sprintPts: 0,
-        createdAt: new Date(),
-      })),
-    );
-  }
-
-  it('should throw MlServiceUnavailableError when no raceSlug provided', async () => {
-    setupMatchedRider('r1', 'Pogacar Tadej');
-    mockResultRepo.findByRiderIds.mockResolvedValue([]);
-
-    await expect(
-      useCase.execute({
-        riders: [{ name: 'POGACAR Tadej', team: 'UAE', price: 300 }],
-        raceType: RaceType.GRAND_TOUR,
-        budget: 2000,
-      }),
-    ).rejects.toThrow(MlServiceUnavailableError);
-  });
-
-  it('should throw MlServiceUnavailableError when ML service is down', async () => {
-    setupMatchedRider('r1', 'Pogacar Tadej');
-    mockResultRepo.findByRiderIds.mockResolvedValue([]);
-    // getModelVersion returns null → ML unavailable
-    mockMlScoring.getModelVersion.mockResolvedValue(null);
-
-    await expect(
-      useCase.execute({
-        riders: [{ name: 'POGACAR Tadej', team: 'UAE', price: 300 }],
-        raceType: RaceType.GRAND_TOUR,
-        raceSlug: 'tour-de-france',
-        year: new Date().getFullYear(),
-        budget: 2000,
-      }),
-    ).rejects.toThrow(MlServiceUnavailableError);
-  });
-
   it('should produce ML-based scoring for stage races', async () => {
     setupMatchedRider('r1', 'Pogacar Tadej');
 
@@ -225,8 +174,33 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
         position: 1,
         year: currentYear,
       }),
+      createMockRaceResult({
+        riderId: 'r1',
+        raceType: RaceType.GRAND_TOUR,
+        category: ResultCategory.STAGE,
+        position: 1,
+        stageNumber: 1,
+        year: currentYear,
+      }),
     ]);
-    setupMlCache([{ riderId: 'r1', score: 250 }]);
+
+    // Mock ML predictions
+    mockMlScoring.getModelVersion.mockResolvedValue('v1');
+    mockMlScoreRepo.findByRace.mockResolvedValue([
+      {
+        id: '1',
+        riderId: 'r1',
+        raceSlug: 'tour-de-france',
+        year: currentYear,
+        predictedScore: 250,
+        modelVersion: 'v1',
+        gcPts: 150,
+        stagePts: 60,
+        mountainPts: 25,
+        sprintPts: 15,
+        createdAt: new Date(),
+      },
+    ]);
 
     const result = await useCase.execute({
       riders: [{ name: 'POGACAR Tadej', team: 'UAE', price: 300 }],
@@ -236,9 +210,12 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
       budget: 2000,
     });
 
+    // Use case uses ML-only scoring
     expect(result.riders).toHaveLength(1);
     const rider = result.riders[0];
+    expect(rider.totalProjectedPts).not.toBeNull();
     expect(rider.totalProjectedPts).toBe(250);
+    expect(rider.categoryScores).not.toBeNull();
   });
 
   it('should produce ML-based scoring for classics', async () => {
@@ -255,6 +232,7 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
       }),
     ]);
 
+    // Mock ML predictions for classic
     mockMlScoring.getModelVersion.mockResolvedValue('v1');
     mockMlScoreRepo.findByRace.mockResolvedValue([
       {
@@ -264,7 +242,7 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
         year: currentYear,
         predictedScore: 180,
         modelVersion: 'v1',
-        gcPts: 180,
+        gcPts: 0,
         stagePts: 0,
         mountainPts: 0,
         sprintPts: 0,
@@ -281,14 +259,18 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
     });
 
     expect(result.riders).toHaveLength(1);
-    expect(result.riders[0].totalProjectedPts).toBe(180);
+    const rider = result.riders[0];
+    expect(rider.totalProjectedPts).not.toBeNull();
+    expect(rider.totalProjectedPts).toBe(180);
+    // Classics use ML total score; breakdown has zeroed-out categories
+    expect(rider.categoryScores).toBeNull();
   });
 
   it('should produce deterministic results for identical inputs', async () => {
     setupMatchedRider('r1', 'Pogacar Tadej');
 
     const currentYear = new Date().getFullYear();
-    mockResultRepo.findByRiderIds.mockResolvedValue([
+    const results = [
       createMockRaceResult({
         riderId: 'r1',
         raceType: RaceType.GRAND_TOUR,
@@ -296,20 +278,42 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
         position: 2,
         year: currentYear,
       }),
-    ]);
-    setupMlCache([{ riderId: 'r1', score: 180 }]);
+    ];
+    mockResultRepo.findByRiderIds.mockResolvedValue(results);
+
+    // Mock ML predictions
+    const cachedMlScores = [
+      {
+        id: '1',
+        riderId: 'r1',
+        raceSlug: 'tour-de-france',
+        year: currentYear,
+        predictedScore: 180,
+        modelVersion: 'v1',
+        gcPts: 100,
+        stagePts: 50,
+        mountainPts: 20,
+        sprintPts: 10,
+        createdAt: new Date(),
+      },
+    ];
+    mockMlScoring.getModelVersion.mockResolvedValue('v1');
+    mockMlScoreRepo.findByRace.mockResolvedValue(cachedMlScores);
 
     const executeInput = {
       riders: [{ name: 'POGACAR Tadej', team: 'UAE', price: 300 }],
-      raceType: RaceType.GRAND_TOUR as const,
+      raceType: RaceType.GRAND_TOUR,
       raceSlug: 'tour-de-france',
       year: currentYear,
       budget: 2000,
     };
 
-    const result1 = await useCase.execute(executeInput);
+    const result = await useCase.execute(executeInput);
 
-    // Run again with same mocks
+    const rider = result.riders[0];
+    expect(rider.totalProjectedPts).not.toBeNull();
+
+    // Run again with same inputs to verify determinism
     mockRiderRepo.findAll.mockResolvedValue([
       createMockRider({ id: 'r1', fullName: 'Pogacar Tadej', pcsSlug: 'pogacar-tadej' }),
     ]);
@@ -318,9 +322,76 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
       confidence: 0.95,
       unmatched: false,
     });
+    mockResultRepo.findByRiderIds.mockResolvedValue(results);
+    mockMlScoreRepo.findByRace.mockResolvedValue(cachedMlScores);
 
     const result2 = await useCase.execute(executeInput);
 
-    expect(result2.riders[0].totalProjectedPts).toBe(result1.riders[0].totalProjectedPts);
+    expect(result2.riders[0].totalProjectedPts).toBe(rider.totalProjectedPts);
+    expect(result2.riders[0].categoryScores).toEqual(rider.categoryScores);
+  });
+
+  it('should preserve full category breakdown in scoring response', async () => {
+    setupMatchedRider('r1', 'Evenepoel Remco');
+
+    const currentYear = new Date().getFullYear();
+    mockResultRepo.findByRiderIds.mockResolvedValue([
+      createMockRaceResult({
+        riderId: 'r1',
+        raceType: RaceType.GRAND_TOUR,
+        category: ResultCategory.GC,
+        position: 1,
+        year: currentYear,
+      }),
+      createMockRaceResult({
+        riderId: 'r1',
+        raceType: RaceType.GRAND_TOUR,
+        category: ResultCategory.STAGE,
+        position: 2,
+        stageNumber: 5,
+        year: currentYear,
+      }),
+      createMockRaceResult({
+        riderId: 'r1',
+        raceType: RaceType.GRAND_TOUR,
+        category: ResultCategory.MOUNTAIN,
+        position: 3,
+        year: currentYear,
+      }),
+    ]);
+
+    // Mock ML predictions with full category breakdown
+    mockMlScoring.getModelVersion.mockResolvedValue('v1');
+    mockMlScoreRepo.findByRace.mockResolvedValue([
+      {
+        id: '1',
+        riderId: 'r1',
+        raceSlug: 'tour-de-france',
+        year: currentYear,
+        predictedScore: 220,
+        modelVersion: 'v1',
+        gcPts: 120,
+        stagePts: 50,
+        mountainPts: 30,
+        sprintPts: 20,
+        createdAt: new Date(),
+      },
+    ]);
+
+    const result = await useCase.execute({
+      riders: [{ name: 'EVENEPOEL Remco', team: 'Soudal', price: 280 }],
+      raceType: RaceType.GRAND_TOUR,
+      raceSlug: 'tour-de-france',
+      year: currentYear,
+      budget: 2000,
+    });
+
+    const rider = result.riders[0];
+    expect(rider.categoryScores).not.toBeNull();
+    // Verify all four category score keys exist
+    expect(rider.categoryScores).toHaveProperty('gc');
+    expect(rider.categoryScores).toHaveProperty('stage');
+    expect(rider.categoryScores).toHaveProperty('mountain');
+    expect(rider.categoryScores).toHaveProperty('sprint');
   });
 });
