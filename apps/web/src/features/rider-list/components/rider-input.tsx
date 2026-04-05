@@ -36,6 +36,8 @@ interface RiderInputProps {
   raceCatalogLoading: boolean;
   selectedRace: RaceListItem | null;
   onRaceSelect: (race: RaceListItem | null) => void;
+  upcomingOnly: boolean;
+  onUpcomingChange: (value: boolean) => void;
   gmvImportState: GmvImportState;
   // Manual fallback props
   raceUrl: string;
@@ -73,6 +75,8 @@ export function RiderInput({
   raceCatalogLoading,
   selectedRace,
   onRaceSelect,
+  upcomingOnly,
+  onUpcomingChange,
   gmvImportState,
   raceUrl,
   onRaceUrlChange: setRaceUrl,
@@ -150,6 +154,8 @@ export function RiderInput({
             isLoading={raceCatalogLoading}
             selectedRace={selectedRace}
             onSelect={onRaceSelect}
+            upcomingOnly={upcomingOnly}
+            onUpcomingChange={onUpcomingChange}
             gmvImportState={gmvImportState}
           />
           {profileState.status === 'loading' && (

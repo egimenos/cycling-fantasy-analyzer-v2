@@ -17,6 +17,8 @@ interface RaceSelectorProps {
   isLoading: boolean;
   selectedRace: RaceListItem | null;
   onSelect: (race: RaceListItem | null) => void;
+  upcomingOnly: boolean;
+  onUpcomingChange: (value: boolean) => void;
   gmvImportState: GmvImportState;
 }
 
@@ -25,6 +27,8 @@ export function RaceSelector({
   isLoading,
   selectedRace,
   onSelect,
+  upcomingOnly,
+  onUpcomingChange,
   gmvImportState,
 }: RaceSelectorProps) {
   const [open, setOpen] = useState(false);
@@ -51,20 +55,47 @@ export function RaceSelector({
 
   return (
     <div className="space-y-2">
-      {/* Type filter pills */}
-      <div className="flex flex-wrap gap-1.5">
-        <FilterPill active={typeFilter === null} onClick={() => setTypeFilter(null)}>
-          All
-        </FilterPill>
-        {Object.entries(RACE_TYPE_LABELS).map(([value, label]) => (
-          <FilterPill
-            key={value}
-            active={typeFilter === value}
-            onClick={() => setTypeFilter(typeFilter === value ? null : value)}
-          >
-            {label}
+      {/* Filters row */}
+      <div className="flex items-center justify-between gap-2">
+        {/* Type filter pills */}
+        <div className="flex flex-wrap gap-1.5">
+          <FilterPill active={typeFilter === null} onClick={() => setTypeFilter(null)}>
+            All
           </FilterPill>
-        ))}
+          {Object.entries(RACE_TYPE_LABELS).map(([value, label]) => (
+            <FilterPill
+              key={value}
+              active={typeFilter === value}
+              onClick={() => setTypeFilter(typeFilter === value ? null : value)}
+            >
+              {label}
+            </FilterPill>
+          ))}
+        </div>
+
+        {/* Upcoming toggle */}
+        <label className="flex items-center gap-1.5 cursor-pointer select-none shrink-0">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-outline">
+            Upcoming
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={upcomingOnly}
+            onClick={() => onUpcomingChange(!upcomingOnly)}
+            className={cn(
+              'relative inline-flex h-4 w-7 items-center rounded-full transition-colors',
+              upcomingOnly ? 'bg-secondary' : 'bg-outline-variant/30',
+            )}
+          >
+            <span
+              className={cn(
+                'inline-block h-3 w-3 transform rounded-full bg-on-secondary transition-transform',
+                upcomingOnly ? 'translate-x-3.5' : 'translate-x-0.5',
+              )}
+            />
+          </button>
+        </label>
       </div>
 
       {/* Combobox */}

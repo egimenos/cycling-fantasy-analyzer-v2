@@ -71,9 +71,10 @@ function HomePageContent() {
   const [riderText, setRiderText] = useState('');
   const [gameUrl, setGameUrl] = useState('');
   const [selectedRace, setSelectedRace] = useState<RaceListItem | null>(null);
+  const [upcomingOnly, setUpcomingOnly] = useState(true);
   const riders = analyzeState.status === 'success' ? analyzeState.data.riders : EMPTY_RIDERS;
   const teamBuilder = useTeamBuilder(budget, riders);
-  const raceCatalog = useRaceCatalog();
+  const raceCatalog = useRaceCatalog(upcomingOnly);
   const { state: gmvImportState, importForRace, reset: resetGmvImport } = useGmvAutoImport();
 
   // Race profile: slug mode when race selected from combobox, URL mode for manual fallback
@@ -309,6 +310,8 @@ function HomePageContent() {
               raceCatalogLoading={raceCatalog.status === 'loading'}
               selectedRace={selectedRace}
               onRaceSelect={handleRaceSelect}
+              upcomingOnly={upcomingOnly}
+              onUpcomingChange={setUpcomingOnly}
               gmvImportState={gmvImportState}
               analyzeResult={analyzeState.status === 'success' ? analyzeState.data : undefined}
               onReset={handleFullReset}

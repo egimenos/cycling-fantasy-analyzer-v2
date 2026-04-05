@@ -38,6 +38,8 @@ export interface SetupTabProps {
   raceCatalogLoading: boolean;
   selectedRace: RaceListItem | null;
   onRaceSelect: (race: RaceListItem | null) => void;
+  upcomingOnly: boolean;
+  onUpcomingChange: (value: boolean) => void;
   gmvImportState: GmvImportState;
   analyzeResult?: AnalyzeResponse;
 }
@@ -61,6 +63,8 @@ export function SetupTab({
   raceCatalogLoading,
   selectedRace,
   onRaceSelect,
+  upcomingOnly,
+  onUpcomingChange,
   gmvImportState,
   analyzeResult,
 }: SetupTabProps) {
@@ -88,6 +92,8 @@ export function SetupTab({
           raceCatalogLoading={raceCatalogLoading}
           selectedRace={selectedRace}
           onRaceSelect={onRaceSelect}
+          upcomingOnly={upcomingOnly}
+          onUpcomingChange={onUpcomingChange}
           gmvImportState={gmvImportState}
         />
       </div>

@@ -8,14 +8,14 @@ type RaceCatalogState =
   | { status: 'success'; races: RaceListItem[] }
   | { status: 'error'; error: string };
 
-export function useRaceCatalog(): RaceCatalogState {
+export function useRaceCatalog(upcomingOnly: boolean): RaceCatalogState {
   const [state, setState] = useState<RaceCatalogState>({ status: 'idle' });
 
   useEffect(() => {
     const controller = new AbortController();
     setState({ status: 'loading' });
 
-    fetchRaces(undefined, controller.signal).then((result) => {
+    fetchRaces({ upcoming: upcomingOnly }, controller.signal).then((result) => {
       if (result.status === 'success') {
         setState({ status: 'success', races: result.data.races });
       } else {
@@ -25,7 +25,7 @@ export function useRaceCatalog(): RaceCatalogState {
     });
 
     return () => controller.abort();
-  }, []);
+  }, [upcomingOnly]);
 
   return state;
 }
