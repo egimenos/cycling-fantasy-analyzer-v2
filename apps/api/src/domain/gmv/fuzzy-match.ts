@@ -19,6 +19,7 @@ export function fuzzyMatchGmvPost(
 
   for (const term of searchTerms) {
     for (const post of posts) {
+      if (containsDifferentYear(post.title, year)) continue;
       const confidence = computeTokenOverlap(term, year, post.title);
       if (confidence >= CONFIDENCE_THRESHOLD && (!bestMatch || confidence > bestMatch.confidence)) {
         bestMatch = { post, confidence };
@@ -66,4 +67,11 @@ function normalize(text: string): string {
 
 function stripYear(text: string, year: number): string {
   return text.replace(String(year), '').trim();
+}
+
+/** Returns true if the text mentions a 4-digit year that is NOT the target year */
+function containsDifferentYear(text: string, targetYear: number): boolean {
+  const yearMatches = text.match(/\b(20\d{2})\b/g);
+  if (!yearMatches) return false;
+  return yearMatches.every((y) => Number(y) !== targetYear);
 }
