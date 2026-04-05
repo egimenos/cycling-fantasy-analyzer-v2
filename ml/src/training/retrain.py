@@ -64,10 +64,18 @@ def main():
     from ..domain.glicko import main as glicko_main
     glicko_main()
 
-    # Step 3: Build feature cache
+    # Step 3: Build feature cache (skip if valid)
     print("\n[3/7] Building feature cache...")
-    from ..features.cache_stage import main as cache_main
-    cache_main()
+    from ..features.cache_stage import main as cache_main, validate_cache, is_cached
+    if is_cached():
+        ok, msg = validate_cache()
+        if ok:
+            print(f"  Cache valid, skipping rebuild ({msg})")
+        else:
+            print(f"  Cache stale: {msg}")
+            cache_main()
+    else:
+        cache_main()
 
     # Step 4: Build stage targets
     print("\n[4/7] Building stage targets...")
