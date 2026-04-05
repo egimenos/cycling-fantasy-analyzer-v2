@@ -244,7 +244,7 @@ export class AnalyzePriceListUseCase {
         ? buildSameRaceHistory(riderResults, input.raceSlug)
         : null;
 
-      const mlEntry = mlPredictions?.get(riderId) ?? null;
+      const mlEntry = mlPredictions.get(riderId) ?? null;
       const mlScore = mlEntry?.score ?? null;
       const mlBreakdown = mlEntry?.breakdown ?? null;
       const pointsPerHillio =
@@ -314,25 +314,17 @@ export class AnalyzePriceListUseCase {
    * Ensures the race has a startlist in DB (scraped from PCS) so the ML
    * service can discover riders from its own data — no synthetic riderIds.
    */
-  private async fetchMlPredictions(input: AnalyzeInput): Promise<Map<
-    string,
-    {
-      score: number;
-      breakdown: { gc: number; stage: number; mountain: number; sprint: number } | null;
-    }
-  > | null> {
-    const isMlSupported =
-      input.raceType === RaceType.GRAND_TOUR ||
-      input.raceType === RaceType.MINI_TOUR ||
-      input.raceType === RaceType.CLASSIC;
-
-    if (!isMlSupported) {
-      return null;
-    }
-
+  private async fetchMlPredictions(input: AnalyzeInput): Promise<
+    Map<
+      string,
+      {
+        score: number;
+        breakdown: { gc: number; stage: number; mountain: number; sprint: number } | null;
+      }
+    >
+  > {
     if (!input.raceSlug || !input.year) {
-      this.logger.debug('Race without raceSlug/year — skipping ML predictions');
-      return null;
+      throw new MlServiceUnavailableError();
     }
 
     const modelVersion = await this.mlScoring.getModelVersion();
