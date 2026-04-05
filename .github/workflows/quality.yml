@@ -40,6 +40,28 @@ jobs:
       - run: cd apps/api && npx tsc --noEmit
       - run: cd apps/web && npx tsc --noEmit
 
+  migration-check:
+    name: Migration Drift Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify schema and migrations are in sync
+        run: |
+          cd apps/api
+          npx drizzle-kit generate 2>&1 | tee /tmp/drizzle-output.txt
+          if grep -q "Your SQL migration file" /tmp/drizzle-output.txt; then
+            echo "::error::Schema drift detected — run 'make db-generate' and commit the migration"
+            cat /tmp/drizzle-output.txt
+            exit 1
+          fi
+          echo "Schema and migrations are in sync"
+
   commitlint:
     name: Commitlint
     if: github.event_name == 'pull_request'

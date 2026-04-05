@@ -10,6 +10,7 @@ test.describe('Setup Tab', () => {
   }) => {
     await setupPage.goto();
 
+    await setupPage.selectRace('Tour de France');
     await setupPage.fillRiders(validPriceList);
     await setupPage.setBudget(2000);
 
@@ -121,6 +122,7 @@ test.describe('Setup Tab', () => {
     page,
   }) => {
     await setupPage.goto();
+    await setupPage.selectRace('Tour de France');
     await setupPage.fillRiders(validPriceList);
     await setupPage.setBudget(2000);
     await setupPage.clickAnalyze();
@@ -145,6 +147,7 @@ test.describe('Setup Tab', () => {
     page,
   }) => {
     await setupPage.goto();
+    await setupPage.selectRace('Tour de France');
     await setupPage.fillRiders(validPriceList);
     await setupPage.setBudget(2000);
     await setupPage.clickAnalyze();

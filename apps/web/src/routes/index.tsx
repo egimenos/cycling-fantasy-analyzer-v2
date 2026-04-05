@@ -26,15 +26,15 @@ import { useIsDesktop } from '@/shared/hooks/use-media-query';
 import type { RiderFilter } from '@/features/rider-list/components/rider-table';
 import { Bike, Unlink, TrendingUp, Trophy } from 'lucide-react';
 
-import { SetupTab } from './tabs/setup-tab';
+import { SetupTab } from './tabs/-setup-tab';
 
 const DashboardTab = lazy(() =>
-  import('./tabs/dashboard-tab').then((m) => ({ default: m.DashboardTab })),
+  import('./tabs/-dashboard-tab').then((m) => ({ default: m.DashboardTab })),
 );
 const OptimizationTab = lazy(() =>
-  import('./tabs/optimization-tab').then((m) => ({ default: m.OptimizationTab })),
+  import('./tabs/-optimization-tab').then((m) => ({ default: m.OptimizationTab })),
 );
-const RosterTab = lazy(() => import('./tabs/roster-tab').then((m) => ({ default: m.RosterTab })));
+const RosterTab = lazy(() => import('./tabs/-roster-tab').then((m) => ({ default: m.RosterTab })));
 
 const EMPTY_RIDERS: AnalyzedRider[] = [];
 
