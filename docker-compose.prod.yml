@@ -5,6 +5,8 @@ services:
       dockerfile: docker/Dockerfile.api
     container_name: cycling-api
     restart: unless-stopped
+    ports:
+      - '3001:3001'
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - PORT=${PORT}
