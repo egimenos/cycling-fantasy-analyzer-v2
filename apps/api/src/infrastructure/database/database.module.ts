@@ -4,12 +4,14 @@ import { RIDER_REPOSITORY_PORT } from '../../domain/rider/rider.repository.port'
 import { RACE_RESULT_REPOSITORY_PORT } from '../../domain/race-result/race-result.repository.port';
 import { SCRAPE_JOB_REPOSITORY_PORT } from '../../domain/scrape-job/scrape-job.repository.port';
 import { ML_SCORE_REPOSITORY_PORT } from '../../domain/ml-score/ml-score.repository.port';
+import { RACE_CATALOG_REPOSITORY_PORT } from '../../domain/race-catalog';
 import { RiderRepositoryAdapter } from './rider.repository.adapter';
 import { RaceResultRepositoryAdapter } from './race-result.repository.adapter';
 import { ScrapeJobRepositoryAdapter } from './scrape-job.repository.adapter';
 import { MlScoreRepositoryAdapter } from './ml-score.repository.adapter';
 import { STARTLIST_REPOSITORY_PORT } from '../../domain/startlist/startlist.repository.port';
 import { StartlistRepositoryAdapter } from './startlist.repository.adapter';
+import { RaceCatalogRepositoryAdapter } from './race-catalog.repository.adapter';
 
 @Module({
   providers: [
@@ -34,6 +36,10 @@ import { StartlistRepositoryAdapter } from './startlist.repository.adapter';
       provide: STARTLIST_REPOSITORY_PORT,
       useClass: StartlistRepositoryAdapter,
     },
+    {
+      provide: RACE_CATALOG_REPOSITORY_PORT,
+      useClass: RaceCatalogRepositoryAdapter,
+    },
   ],
   exports: [
     RIDER_REPOSITORY_PORT,
@@ -41,6 +47,7 @@ import { StartlistRepositoryAdapter } from './startlist.repository.adapter';
     SCRAPE_JOB_REPOSITORY_PORT,
     ML_SCORE_REPOSITORY_PORT,
     STARTLIST_REPOSITORY_PORT,
+    RACE_CATALOG_REPOSITORY_PORT,
     drizzleProvider,
   ],
 })

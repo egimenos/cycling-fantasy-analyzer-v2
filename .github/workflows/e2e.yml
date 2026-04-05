@@ -1,59 +1,11 @@
 name: E2E Tests
 
 on:
-  workflow_run:
-    workflows: ['Code Quality', 'Tests']
-    types: [completed]
-
-permissions:
-  actions: read
-  checks: write
-  statuses: write
-
-concurrency:
-  group: e2e-${{ github.event.workflow_run.head_branch }}
-  cancel-in-progress: true
+  workflow_call:
 
 jobs:
-  gate:
-    name: Check Prerequisites
-    runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success'
-    outputs:
-      should_run: ${{ steps.check.outputs.should_run }}
-    steps:
-      - name: Verify all prerequisite workflows passed
-        id: check
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const sha = context.payload.workflow_run.head_sha;
-            const triggeringWorkflow = context.payload.workflow_run.name;
-            const requiredWorkflows = ['Code Quality', 'Tests'];
-            const otherWorkflow = requiredWorkflows.find(w => w !== triggeringWorkflow);
-
-            const { data: runs } = await github.rest.actions.listWorkflowRunsForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head_sha: sha,
-            });
-
-            const otherRun = runs.workflow_runs.find(
-              r => r.name === otherWorkflow && r.conclusion === 'success'
-            );
-
-            if (otherRun) {
-              core.info(`Both "${triggeringWorkflow}" and "${otherWorkflow}" passed for ${sha}`);
-              core.setOutput('should_run', 'true');
-            } else {
-              core.info(`"${otherWorkflow}" has not passed yet for ${sha} — skipping`);
-              core.setOutput('should_run', 'false');
-            }
-
-  e2e:
+  playwright:
     name: Playwright
-    needs: gate
-    if: needs.gate.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -78,8 +30,6 @@ jobs:
       SKIP_EXTERNAL: 'true'
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:

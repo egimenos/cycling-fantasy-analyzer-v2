@@ -26,6 +26,14 @@ INSERT INTO riders (id, pcs_slug, full_name, normalized_name, current_team, nati
   ('a0000000-0000-0000-0000-000000000019', 'antonio-tiberi',      'Antonio Tiberi',      'antonio tiberi',      'Bahrain Victorious',             'IT'),
   ('a0000000-0000-0000-0000-000000000020', 'ben-oconnor',         'Ben O''Connor',       'ben o''connor',       'Decathlon AG2R La Mondiale',     'AU');
 
+-- ── Race catalog ───────────────────────────────────────────────────────────────
+-- The races table powers the combobox. start_date uses CURRENT_DATE + 1 so the
+-- race always appears as "upcoming" regardless of when CI runs.
+
+INSERT INTO races (slug, name, race_type, race_class, year, start_date) VALUES
+  ('tour-de-france', 'Tour de France', 'grand_tour', 'UWT', 2025, CURRENT_DATE + 1),
+  ('giro-d-italia',  'Giro d''Italia', 'grand_tour', 'UWT', 2025, CURRENT_DATE + 1);
+
 -- ── Race results ────────────────────────────────────────────────────────────────
 -- Minimal realistic results: 2 races × ~3 categories each per rider.
 -- Tour de France 2025 (grand_tour) + Giro d'Italia 2025 (grand_tour)

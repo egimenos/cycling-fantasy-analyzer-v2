@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality
+    uses: ./.github/workflows/quality.yml
+
+  tests:
+    name: Tests
+    uses: ./.github/workflows/test.yml
+
+  e2e:
+    name: E2E
+    needs: [quality, tests]
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/e2e.yml

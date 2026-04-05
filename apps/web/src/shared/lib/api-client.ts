@@ -96,12 +96,13 @@ export function importPriceList(
 }
 
 export function fetchRaces(
-  params?: { minYear?: number; raceType?: string },
+  params?: { minYear?: number; raceType?: string; upcoming?: boolean },
   signal?: AbortSignal,
 ): Promise<ApiResult<RaceListResponse>> {
   const searchParams = new URLSearchParams();
   if (params?.minYear) searchParams.set('minYear', String(params.minYear));
   if (params?.raceType) searchParams.set('raceType', params.raceType);
+  if (params?.upcoming !== undefined) searchParams.set('upcoming', String(params.upcoming));
   const query = searchParams.toString();
   return apiGet<RaceListResponse>(`/api/races${query ? `?${query}` : ''}`, signal);
 }

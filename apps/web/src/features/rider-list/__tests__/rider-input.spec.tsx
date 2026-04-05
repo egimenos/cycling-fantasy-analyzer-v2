@@ -50,6 +50,8 @@ function RiderInputWrapper({
       raceCatalogLoading={false}
       selectedRace={null}
       onRaceSelect={() => {}}
+      upcomingOnly={true}
+      onUpcomingChange={() => {}}
       gmvImportState={{ status: 'idle' }}
     />
   );

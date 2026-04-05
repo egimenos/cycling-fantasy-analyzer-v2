@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import { Command, CommandRunner, Option } from 'nest-commander';
 import { TriggerScrapeUseCase } from '../../application/scraping/trigger-scrape.use-case';
 import { CheckRaceScrapedUseCase } from '../../application/scraping/check-race-scraped.use-case';
@@ -6,6 +6,11 @@ import {
   DiscoverRacesUseCase,
   DiscoveredRace,
 } from '../../application/scraping/discover-races.use-case';
+import {
+  RACE_CATALOG_REPOSITORY_PORT,
+  RaceCatalogRepositoryPort,
+  CatalogRace,
+} from '../../domain/race-catalog';
 import { RaceType } from '../../domain/shared/race-type.enum';
 import { RaceClass } from '../../domain/shared/race-class.enum';
 
@@ -45,6 +50,8 @@ export class SeedDatabaseCommand extends CommandRunner {
     private readonly triggerScrape: TriggerScrapeUseCase,
     private readonly checkRaceScraped: CheckRaceScrapedUseCase,
     private readonly discoverRaces: DiscoverRacesUseCase,
+    @Inject(RACE_CATALOG_REPOSITORY_PORT)
+    private readonly raceCatalogRepo: RaceCatalogRepositoryPort,
   ) {
     super();
   }
@@ -75,6 +82,18 @@ export class SeedDatabaseCommand extends CommandRunner {
       const deduplicated = this.deduplicateBySlug(filtered);
 
       this.logger.log(`${year}: discovered ${deduplicated.length} races`);
+
+      // Upsert all discovered races into the race catalog (past + future)
+      const catalogEntries: CatalogRace[] = deduplicated.map((race) => ({
+        slug: race.slug,
+        name: race.name,
+        raceType: this.mapRaceType(race),
+        raceClass: this.mapRaceClass(race.classText),
+        year,
+        startDate: race.startDate,
+      }));
+      const catalogCount = await this.raceCatalogRepo.upsertMany(catalogEntries);
+      this.logger.log(`${year}: upserted ${catalogCount} races into catalog`);
 
       if (options.dryRun) {
         for (const race of deduplicated) {

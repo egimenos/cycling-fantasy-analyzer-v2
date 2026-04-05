@@ -21,6 +21,7 @@ export class RaceCatalogController {
   async getRaces(
     @Query('minYear') minYear?: string,
     @Query('raceType') raceType?: string,
+    @Query('upcoming') upcoming?: string,
   ): Promise<RaceListResponse> {
     const parsedYear = minYear ? parseInt(minYear, 10) : undefined;
     if (parsedYear !== undefined && (isNaN(parsedYear) || parsedYear < 2000)) {
@@ -34,9 +35,12 @@ export class RaceCatalogController {
       );
     }
 
+    const upcomingOnly = upcoming === undefined ? undefined : upcoming !== 'false';
+
     return this.listRaces.execute({
       minYear: parsedYear,
       raceType: raceType as RaceType | undefined,
+      upcomingOnly,
     });
   }
 

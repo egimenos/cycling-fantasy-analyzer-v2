@@ -1,14 +1,7 @@
 name: Code Quality
 
 on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
-
-concurrency:
-  group: quality-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_call:
 
 jobs:
   lint:
