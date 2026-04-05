@@ -12,7 +12,6 @@ import { DRIZZLE, DrizzleDatabase } from './drizzle.provider';
 import { eq } from 'drizzle-orm';
 
 const UPCOMING_WINDOW_DAYS = 14;
-const RECENT_LOOKBACK_DAYS = 21;
 
 @Injectable()
 export class RaceCatalogRepositoryAdapter implements RaceCatalogRepositoryPort {
@@ -29,12 +28,7 @@ export class RaceCatalogRepositoryAdapter implements RaceCatalogRepositoryPort {
     }
     if (filter?.upcomingOnly) {
       const today = sql`CURRENT_DATE`;
-      conditions.push(
-        gte(
-          races.startDate,
-          sql`${today} - interval '${sql.raw(String(RECENT_LOOKBACK_DAYS))} days'`,
-        ),
-      );
+      conditions.push(gte(races.startDate, today));
       conditions.push(
         lte(
           races.startDate,
