@@ -123,6 +123,33 @@ def load_startlist_for_race(
     return startlist_df
 
 
+def load_glicko_ratings(db_url: str) -> pd.DataFrame:
+    """Load Glicko-2 rating snapshots from the rider_ratings table.
+
+    Args:
+        db_url: PostgreSQL connection string.
+
+    Returns:
+        DataFrame with rider_id, race_slug, year, race_date and all rating columns.
+    """
+    conn = psycopg2.connect(db_url)
+
+    ratings_df = pd.read_sql("""
+        SELECT rider_id, race_slug, year, race_date,
+               gc_mu, gc_rd, stage_mu, stage_rd,
+               stage_flat_mu, stage_flat_rd,
+               stage_hilly_mu, stage_hilly_rd,
+               stage_mountain_mu, stage_mountain_rd,
+               stage_itt_mu, stage_itt_rd
+        FROM rider_ratings
+        ORDER BY race_date
+    """, conn)
+
+    conn.close()
+    print(f"Loaded {len(ratings_df):,} Glicko rating snapshots")
+    return ratings_df
+
+
 def get_race_info(
     db_url: str, race_slug: str, year: int
 ) -> Optional[dict]:

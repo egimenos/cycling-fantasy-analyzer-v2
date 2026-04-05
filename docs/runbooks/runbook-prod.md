@@ -81,23 +81,42 @@ docker exec cycling-api node dist/cli.js seed-database --years 5
 
 **Retraining:**
 
+The retraining pipeline runs inside the ML service container. It has two modes:
+
 ```bash
+# Standard retrain (~5 min): reuses feature cache if valid, only re-trains models
+docker exec cycling-ml-service python -m src.training.retrain
+
+# Full retrain (~45 min): rebuilds feature cache from scratch
+# Triggered automatically when cache is missing or schema hash changes
+# To force: delete a cache file first
+docker exec cycling-ml-service rm /app/cache/features_2024.parquet
 docker exec cycling-ml-service python -m src.training.retrain
 ```
 
-After retraining, restart the ML service to reload models:
+The pipeline steps are:
 
-```bash
-# From Dokploy UI: select cycling-ml-service > Restart
-# Or via CLI:
-docker restart cycling-ml-service
-```
+1. Load data from database
+2. Compute Glicko-2 ratings (always runs, ~30s)
+3. Build feature cache (skipped if valid, ~30 min if rebuilding)
+4. Build stage targets
+5. Build stage features
+6. Build classification history features
+7. Train 9 stage race sub-models
+8. Train classics model (LightGBM)
+
+Models are saved to the `ml-models` Docker volume and hot-reloaded by the ML service automatically (no restart needed). The service detects new `model_version.txt` on the next `/predict` request.
+
+**Feature cache files** (in `ml-cache` volume) are critical for both training and supply estimation. They persist across redeploys. If missing, the ML service cannot estimate mountain/sprint point supply, resulting in near-zero mountain and sprint predictions.
 
 **Checking model status:**
 
 ```bash
 docker exec cycling-ml-service curl -s http://localhost:8000/health
 # Expected: {"status": "healthy", "model_version": "...", "models_loaded": [...]}
+
+# Verify cache files exist
+docker exec cycling-ml-service ls -la /app/cache/features_*.parquet
 ```
 
 **Clearing prediction cache:**
@@ -109,6 +128,15 @@ DELETE FROM ml_scores;
 # Clear cache for a specific race
 DELETE FROM ml_scores WHERE race_slug = 'tour-de-france' AND year = 2026;
 ```
+
+**When to retrain:**
+
+| Scenario                              | Action                                                     |
+| ------------------------------------- | ---------------------------------------------------------- |
+| New races scraped (weekly)            | Standard retrain (~5 min)                                  |
+| Feature columns changed (code change) | Full retrain (~45 min, auto-detected via schema hash)      |
+| Fresh environment (first deploy)      | Full retrain (~45 min), or copy cache/models from local    |
+| Model quality issues                  | Full retrain with `rm /app/cache/features_*.parquet` first |
 
 ### Scraping
 
