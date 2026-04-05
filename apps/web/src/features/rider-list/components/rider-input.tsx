@@ -132,18 +132,18 @@ export function RiderInput({
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="mb-2">
+    <div className="flex flex-col gap-3 lg:min-h-0 lg:flex-1">
+      <header className="flex-shrink-0">
         <span className="text-secondary font-mono text-xs tracking-widest uppercase mb-1 flex items-center gap-1.5">
           <Settings className="h-3.5 w-3.5" />
           Analysis Engine
         </span>
-        <h1 className="text-3xl font-headline font-extrabold text-on-surface tracking-tight">
+        <h1 className="text-2xl lg:text-xl font-headline font-extrabold text-on-surface tracking-tight">
           Roster Setup
         </h1>
       </header>
 
-      <div className="bg-surface-container-low rounded-sm p-4 md:p-8 flex flex-col gap-5 md:gap-6 shadow-xl border border-outline-variant/15">
+      <div className="bg-surface-container-low rounded-sm p-4 md:p-5 flex flex-col gap-4 shadow-xl border border-outline-variant/15 lg:overflow-y-auto lg:min-h-0 lg:flex-1">
         {/* Race Selector */}
         <div className="flex flex-col gap-2">
           <label className="text-xs font-body uppercase tracking-wider text-on-primary-container font-semibold">
@@ -255,7 +255,7 @@ export function RiderInput({
           )}
         </div>
 
-        <div className="h-px bg-outline-variant/10 my-2" />
+        <div className="h-px bg-outline-variant/10" />
 
         {/* Manual Rider Input */}
         <div className="flex flex-col gap-2">
@@ -271,7 +271,7 @@ export function RiderInput({
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder={`Tadej Pogacar, UAD, 500\nJonas Vingegaard, TVL, 480`}
-            rows={8}
+            rows={3}
             className="font-mono text-sm"
           />
           <div
@@ -313,29 +313,29 @@ export function RiderInput({
             />
           </div>
         </div>
-
-        {/* Analyze CTA */}
-        <Button
-          data-testid="setup-analyze-btn"
-          variant="cta"
-          size="lg"
-          onClick={handleSubmit}
-          disabled={parsedRiders.length === 0 || isLoading}
-          className="mt-4 w-full py-4"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Analyzing...
-            </>
-          ) : (
-            <>
-              <BarChart3 className="h-4 w-4" />
-              Analyze Riders
-            </>
-          )}
-        </Button>
       </div>
+
+      {/* Analyze CTA — outside card so it's always visible */}
+      <Button
+        data-testid="setup-analyze-btn"
+        variant="cta"
+        size="lg"
+        onClick={handleSubmit}
+        disabled={parsedRiders.length === 0 || isLoading}
+        className="w-full py-3 flex-shrink-0"
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Analyzing...
+          </>
+        ) : (
+          <>
+            <BarChart3 className="h-4 w-4" />
+            Analyze Riders
+          </>
+        )}
+      </Button>
     </div>
   );
 }

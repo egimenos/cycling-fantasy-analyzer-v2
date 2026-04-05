@@ -73,9 +73,9 @@ export function SetupTab({
   return (
     <div
       data-testid="tab-content-setup"
-      className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 pt-2"
+      className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 pt-2 lg:h-[calc(100dvh-10rem)] lg:max-h-[calc(100dvh-10rem)]"
     >
-      <div className="lg:col-span-5 flex flex-col gap-6">
+      <div className="lg:col-span-5 flex flex-col lg:min-h-0">
         <RiderInput
           onAnalyze={onAnalyze}
           isLoading={isLoading}
@@ -98,7 +98,7 @@ export function SetupTab({
         />
       </div>
 
-      <div className="lg:col-span-7 flex flex-col">
+      <div className="lg:col-span-7 flex flex-col lg:min-h-0">
         <div className="flex justify-between items-end mb-4 px-2">
           <div className="flex flex-col">
             <span className="text-outline font-mono text-xs uppercase tracking-tight">
@@ -118,7 +118,7 @@ export function SetupTab({
 
         {error ? (
           /* Error state */
-          <div className="flex-1 min-h-[500px] rounded-sm bg-error-container/[0.06] border border-error/20 flex flex-col items-center justify-center p-12 relative overflow-hidden animate-fade-in">
+          <div className="flex-1 rounded-sm bg-error-container/[0.06] border border-error/20 flex flex-col items-center justify-center p-8 relative overflow-hidden animate-fade-in">
             <div
               className="absolute inset-0 opacity-[0.03] pointer-events-none"
               style={{
@@ -167,7 +167,7 @@ export function SetupTab({
             </div>
           </div>
         ) : isLoading ? (
-          <div className="flex-1 min-h-[500px] flex flex-col gap-4">
+          <div className="flex-1 flex flex-col gap-4">
             <div className="flex items-center gap-3 px-1">
               <LoadingSpinner />
               <span className="text-sm text-on-surface-variant">Analyzing riders...</span>
@@ -176,7 +176,7 @@ export function SetupTab({
           </div>
         ) : hasResult ? (
           /* Analysis complete — show summary */
-          <div className="hidden lg:flex flex-1 min-h-[500px] rounded-sm bg-surface-container-low/30 border border-secondary/20 flex-col items-center justify-center p-8 md:p-12 relative overflow-hidden">
+          <div className="hidden lg:flex flex-1 rounded-sm bg-surface-container-low/30 border border-secondary/20 flex-col items-center justify-center p-6 relative overflow-hidden">
             <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-secondary/[0.04] to-transparent pointer-events-none" />
 
             <div className="relative z-10 flex flex-col items-center text-center max-w-md animate-fade-in">
@@ -237,7 +237,7 @@ export function SetupTab({
           </div>
         ) : (
           /* Idle state — awaiting input */
-          <div className="hidden lg:flex flex-1 min-h-[500px] rounded-sm bg-surface-container-low/30 border border-dashed border-outline-variant/20 flex-col items-center justify-center p-8 md:p-12 relative overflow-hidden">
+          <div className="hidden lg:flex flex-1 rounded-sm bg-surface-container-low/30 border border-dashed border-outline-variant/20 flex-col items-center justify-center p-6 relative overflow-hidden">
             <div className="absolute inset-0 flex justify-center pointer-events-none">
               <div className="w-px h-full bg-gradient-to-b from-transparent via-outline-variant/10 to-transparent" />
             </div>
@@ -262,7 +262,7 @@ export function SetupTab({
           </div>
         )}
 
-        <div className="mt-4 md:mt-6 bg-surface-container-high/40 p-3 md:p-5 rounded-sm border border-outline-variant/10 animate-fade-in">
+        <div className="mt-3 bg-surface-container-high/40 p-3 md:p-4 rounded-sm border border-outline-variant/10 animate-fade-in">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-0 md:flex md:justify-between md:items-center">
             <div className="flex flex-col">
               <span className="text-[10px] md:text-xs text-outline uppercase font-mono tracking-tighter">
