@@ -31,7 +31,7 @@ export function HistoryTable({ title, rows }: HistoryTableProps) {
 
       {/* Desktop: compact table */}
       <div className="hidden sm:block">
-        <div className="bg-surface-container-high rounded-sm overflow-hidden border border-outline-variant/10">
+        <div className="bg-surface-container-high rounded-sm overflow-hidden border border-outline-variant/10 w-fit">
           <table className="text-xs font-mono">
             <thead className="bg-surface-container-highest/50">
               <tr>
