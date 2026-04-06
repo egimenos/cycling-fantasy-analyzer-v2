@@ -4,21 +4,12 @@ import {
   RiderMatchResult,
   RiderTarget,
 } from '../../domain/matching/rider-matcher.port';
+import { normalizeText } from '../../domain/shared/normalize-text';
 
 interface NormalizedTarget {
   id: string;
   normalizedName: string;
   currentTeam: string;
-}
-
-function normalizeText(str: string): string {
-  return str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 export class FuzzysortMatcherAdapter implements RiderMatcherPort {

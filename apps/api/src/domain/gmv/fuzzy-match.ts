@@ -1,5 +1,6 @@
 import { GmvPost } from './gmv-post';
 import { getSearchTerms } from './race-name-aliases';
+import { normalizeText } from '../shared/normalize-text';
 
 const CONFIDENCE_THRESHOLD = 0.7;
 
@@ -56,13 +57,7 @@ function tokenize(text: string): string[] {
 }
 
 function normalize(text: string): string {
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return normalizeText(text);
 }
 
 function stripYear(text: string, year: number): string {

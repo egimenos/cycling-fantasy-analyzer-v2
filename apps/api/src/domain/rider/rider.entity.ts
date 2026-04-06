@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { normalizeText } from '../shared/normalize-text';
 
 export interface RiderProps {
   readonly id: string;
@@ -81,12 +82,6 @@ export class Rider {
   }
 
   private static normalizeName(name: string): string {
-    return name
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    return normalizeText(name);
   }
 }
