@@ -1,9 +1,9 @@
 import type { TeamSelection } from '@cycling-analyzer/shared-types';
-import { Bike, Crown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import { formatNumber, cn } from '@/shared/lib/utils';
 import { getEffectiveScore } from '@/shared/lib/rider-utils';
 import { CategoryBreakdown } from '@/shared/ui/category-breakdown';
+import { RiderAvatar } from '@/shared/ui/rider-avatar';
 
 interface OptimalTeamCardProps {
   team: TeamSelection;
@@ -36,20 +36,21 @@ export function OptimalTeamCard({ team, variant = 'primary' }: OptimalTeamCardPr
                   #{String(index + 1).padStart(2, '0')}
                 </div>
 
-                <div
-                  className={cn(
-                    'w-14 h-14 rounded-sm flex-shrink-0 flex items-center justify-center',
-                    isLeader
-                      ? 'bg-tertiary/15 ring-1 ring-tertiary/30'
-                      : 'bg-surface-container-highest',
-                  )}
-                >
-                  {isLeader ? (
-                    <Crown className="h-6 w-6 text-tertiary" />
-                  ) : (
-                    <Bike className="h-6 w-6 text-on-primary-container" />
-                  )}
-                </div>
+                {rider.matchedRider ? (
+                  <RiderAvatar
+                    avatarUrl={rider.matchedRider.avatarUrl}
+                    fullName={rider.matchedRider.fullName}
+                    nationality={rider.matchedRider.nationality}
+                    size="md"
+                  />
+                ) : (
+                  <RiderAvatar
+                    avatarUrl={null}
+                    fullName={rider.rawName}
+                    nationality={null}
+                    size="md"
+                  />
+                )}
                 <div className="flex-grow min-w-0">
                   <div
                     className={cn(
