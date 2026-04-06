@@ -55,6 +55,8 @@ interface MatchedRiderInfo {
   pcsSlug: string;
   fullName: string;
   currentTeam: string;
+  avatarUrl: string | null;
+  nationality: string | null;
 }
 
 export interface AnalyzedRider {
@@ -177,6 +179,8 @@ export class AnalyzePriceListUseCase {
           pcsSlug: rider.pcsSlug,
           fullName: rider.fullName,
           currentTeam: rider.currentTeam ?? '',
+          avatarUrl: rider.avatarUrl,
+          nationality: rider.nationality,
         },
         matchConfidence: match.confidence,
         unmatched: false,

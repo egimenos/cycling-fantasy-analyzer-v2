@@ -24,6 +24,7 @@ describe('FetchStartlistUseCase', () => {
       findByPcsSlugs: jest.fn(),
       findByIds: jest.fn(),
       findAll: jest.fn(),
+      findMissingAvatars: jest.fn(),
       save: jest.fn(),
       saveMany: jest.fn(),
     };

@@ -1,11 +1,12 @@
 import type { AnalyzedRider } from '@cycling-analyzer/shared-types';
 import { formatNumber, cn } from '@/shared/lib/utils';
 import { getEffectiveScore, calculateValue } from '@/shared/lib/rider-utils';
-import { CheckCircle, Copy, RotateCcw, Bike, Crown } from 'lucide-react';
+import { CheckCircle, Copy, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { useAnimatedNumber } from '@/shared/hooks/use-animated-number';
 import { useIsDesktop } from '@/shared/hooks/use-media-query';
 import { CategoryBreakdown } from '@/shared/ui/category-breakdown';
+import { RiderAvatar } from '@/shared/ui/rider-avatar';
 import { FlagChip } from '@/features/rider-list/components/bpi-badge';
 import { toast } from 'sonner';
 
@@ -111,14 +112,22 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
                     data-testid={`roster-rider-${rider.rawName}`}
                     className="bg-surface-container-high rounded-sm flex items-center gap-4 px-4 py-2.5 group hover:bg-surface-container-highest transition-all"
                   >
-                    {/* Rank icon */}
-                    <div className="w-8 h-8 rounded-sm bg-surface-container-highest flex items-center justify-center flex-shrink-0">
-                      {index === 0 ? (
-                        <Crown className="h-4 w-4 text-tertiary" />
+                    {/* Avatar + Rank */}
+                    <div className="relative flex-shrink-0">
+                      {rider.matchedRider ? (
+                        <RiderAvatar
+                          avatarUrl={rider.matchedRider.avatarUrl}
+                          fullName={rider.matchedRider.fullName}
+                          nationality={rider.matchedRider.nationality}
+                          size="sm"
+                        />
                       ) : (
-                        <span className="text-[10px] font-mono font-bold text-outline">
-                          {String(index + 1).padStart(2, '0')}
-                        </span>
+                        <RiderAvatar
+                          avatarUrl={null}
+                          fullName={rider.rawName}
+                          nationality={null}
+                          size="sm"
+                        />
                       )}
                     </div>
 
@@ -214,13 +223,21 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
                   className="bg-surface-container-high rounded-sm overflow-hidden group hover:bg-surface-container-highest transition-all"
                 >
                   <div className="flex items-center gap-3 p-3">
-                    <div className="w-10 h-10 rounded-sm bg-surface-container-highest flex items-center justify-center flex-shrink-0">
-                      {index === 0 ? (
-                        <Crown className="h-5 w-5 text-tertiary" />
-                      ) : (
-                        <Bike className="h-5 w-5 text-on-primary-container" />
-                      )}
-                    </div>
+                    {rider.matchedRider ? (
+                      <RiderAvatar
+                        avatarUrl={rider.matchedRider.avatarUrl}
+                        fullName={rider.matchedRider.fullName}
+                        nationality={rider.matchedRider.nationality}
+                        size="md"
+                      />
+                    ) : (
+                      <RiderAvatar
+                        avatarUrl={null}
+                        fullName={rider.rawName}
+                        nationality={null}
+                        size="md"
+                      />
+                    )}
                     <div className="flex-grow min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-headline font-bold text-on-surface truncate">

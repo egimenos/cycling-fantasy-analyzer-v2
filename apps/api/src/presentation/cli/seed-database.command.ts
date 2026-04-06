@@ -7,6 +7,7 @@ import {
   DiscoveredRace,
 } from '../../application/scraping/discover-races.use-case';
 import { FetchStartlistUseCase } from '../../application/benchmark/fetch-startlist.use-case';
+import { ResolveAvatarsUseCase } from '../../application/avatar/resolve-avatars.use-case';
 import {
   RACE_CATALOG_REPOSITORY_PORT,
   RaceCatalogRepositoryPort,
@@ -21,6 +22,7 @@ interface SeedDatabaseOptions {
   class: string;
   dryRun: boolean;
   skipStartlists: boolean;
+  skipAvatars: boolean;
 }
 
 interface SeedFailure {
@@ -60,6 +62,7 @@ export class SeedDatabaseCommand extends CommandRunner {
     private readonly checkRaceScraped: CheckRaceScrapedUseCase,
     private readonly discoverRaces: DiscoverRacesUseCase,
     private readonly fetchStartlist: FetchStartlistUseCase,
+    private readonly resolveAvatarsUseCase: ResolveAvatarsUseCase,
     @Inject(RACE_CATALOG_REPOSITORY_PORT)
     private readonly raceCatalogRepo: RaceCatalogRepositoryPort,
   ) {
@@ -179,6 +182,9 @@ export class SeedDatabaseCommand extends CommandRunner {
     // Phase 2: Fetch startlists for all races with results
     const startlistStats = await this.fetchStartlists(racesWithResults, options);
 
+    // Phase 3: Resolve rider avatars from Wikidata
+    const avatarStats = await this.resolveAvatars(options);
+
     this.printSummary(
       totalRaces,
       totalRecords,
@@ -187,6 +193,7 @@ export class SeedDatabaseCommand extends CommandRunner {
       totalWarnings,
       failures,
       startlistStats,
+      avatarStats,
     );
   }
 
@@ -233,6 +240,25 @@ export class SeedDatabaseCommand extends CommandRunner {
     return stats;
   }
 
+  private async resolveAvatars(
+    options: SeedDatabaseOptions,
+  ): Promise<{ resolved: number; total: number }> {
+    if (options.skipAvatars || options.dryRun) {
+      if (options.skipAvatars) {
+        this.logger.log('Avatar resolution skipped (--skip-avatars)');
+      }
+      return { resolved: 0, total: 0 };
+    }
+
+    this.logger.log('');
+    this.logger.log('=== AVATARS ===');
+
+    const result = await this.resolveAvatarsUseCase.execute();
+    this.logger.log(`Resolved ${result.resolved} of ${result.total} riders missing avatars`);
+
+    return result;
+  }
+
   private printSummary(
     totalRaces: number,
     totalRecords: number,
@@ -241,6 +267,7 @@ export class SeedDatabaseCommand extends CommandRunner {
     totalWarnings: number,
     failures: SeedFailure[],
     startlistStats: StartlistStats,
+    avatarStats: { resolved: number; total: number },
   ): void {
     this.logger.log('');
     this.logger.log('=== SEED SUMMARY ===');
@@ -256,6 +283,10 @@ export class SeedDatabaseCommand extends CommandRunner {
     this.logger.log(`Cached:            ${startlistStats.cached}`);
     this.logger.log(`Empty:             ${startlistStats.empty}`);
     this.logger.log(`Failed:            ${startlistStats.failed}`);
+    this.logger.log('');
+    this.logger.log('--- Avatars ---');
+    this.logger.log(`Resolved:          ${avatarStats.resolved}`);
+    this.logger.log(`Missing:           ${avatarStats.total - avatarStats.resolved}`);
 
     if (failures.length > 0) {
       const grouped = new Map<SeedFailure['type'], SeedFailure[]>();
@@ -359,6 +390,15 @@ export class SeedDatabaseCommand extends CommandRunner {
     defaultValue: false,
   })
   parseSkipStartlists(val: string): boolean {
+    return val === 'true' || val === '' || val === undefined;
+  }
+
+  @Option({
+    flags: '--skip-avatars',
+    description: 'Skip avatar resolution from Wikidata',
+    defaultValue: false,
+  })
+  parseSkipAvatars(val: string): boolean {
     return val === 'true' || val === '' || val === undefined;
   }
 }

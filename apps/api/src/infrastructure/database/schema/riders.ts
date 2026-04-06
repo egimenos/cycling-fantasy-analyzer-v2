@@ -7,6 +7,7 @@ export const riders = pgTable('riders', {
   normalizedName: varchar('normalized_name', { length: 255 }).notNull(),
   currentTeam: varchar('current_team', { length: 255 }),
   nationality: char('nationality', { length: 2 }),
+  avatarUrl: varchar('avatar_url', { length: 512 }),
   birthDate: date('birth_date', { mode: 'date' }),
   lastScrapedAt: timestamp('last_scraped_at', { withTimezone: true }),
 });

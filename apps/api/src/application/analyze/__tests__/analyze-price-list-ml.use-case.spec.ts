@@ -29,6 +29,7 @@ function createMockRider(
     normalizedName: string;
     currentTeam: string | null;
     nationality: string | null;
+    avatarUrl: string | null;
     birthDate: Date | null;
     lastScrapedAt: Date | null;
   }> = {},
@@ -40,6 +41,7 @@ function createMockRider(
     normalizedName: overrides.normalizedName ?? 'pogacar tadej',
     currentTeam: overrides.currentTeam ?? 'UAE Team Emirates',
     nationality: overrides.nationality ?? 'SI',
+    avatarUrl: overrides.avatarUrl ?? null,
     birthDate: overrides.birthDate ?? null,
     lastScrapedAt: overrides.lastScrapedAt ?? null,
   });
@@ -105,6 +107,7 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
       findByPcsSlug: jest.fn(),
       findByPcsSlugs: jest.fn(),
       findByIds: jest.fn(),
+      findMissingAvatars: jest.fn(),
       save: jest.fn(),
       saveMany: jest.fn(),
     };

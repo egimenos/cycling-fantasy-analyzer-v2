@@ -2,7 +2,8 @@ import type { AnalyzedRider } from '@cycling-analyzer/shared-types';
 import { MlBadge } from '@/shared/ui/ml-badge';
 import { cn } from '@/shared/lib/utils';
 import { useAnimatedNumber } from '@/shared/hooks/use-animated-number';
-import { X, User, Lock, UserPlus } from 'lucide-react';
+import { RiderAvatar } from '@/shared/ui/rider-avatar';
+import { X, Lock, UserPlus } from 'lucide-react';
 
 interface TeamBuilderPanelProps {
   selectedRiders: AnalyzedRider[];
@@ -85,12 +86,23 @@ export function TeamBuilderPanel({
                 key={rider.rawName}
                 className="flex items-center gap-3 bg-surface-container-low p-2.5 border border-outline-variant/10 rounded-sm animate-scale-in"
               >
-                <div className="w-10 h-10 bg-surface-container-highest rounded-sm flex-shrink-0 flex items-center justify-center">
-                  {isLocked ? (
-                    <Lock className="h-4 w-4 text-secondary" />
+                <div className="relative flex-shrink-0">
+                  {rider.matchedRider ? (
+                    <RiderAvatar
+                      avatarUrl={rider.matchedRider.avatarUrl}
+                      fullName={rider.matchedRider.fullName}
+                      nationality={rider.matchedRider.nationality}
+                      size="md"
+                    />
                   ) : (
-                    <User className="h-5 w-5 text-outline" />
+                    <RiderAvatar
+                      avatarUrl={null}
+                      fullName={rider.rawName}
+                      nationality={null}
+                      size="md"
+                    />
                   )}
+                  {isLocked && <Lock className="absolute -top-1 -right-1 h-3 w-3 text-secondary" />}
                 </div>
                 <div className="flex-grow min-w-0">
                   <p className="text-xs font-bold font-headline truncate">{rider.rawName}</p>

@@ -19,6 +19,7 @@ describe('Rider', () => {
       expect(rider.normalizedName).toBe('tadej pogacar');
       expect(rider.currentTeam).toBe('UAE Team Emirates');
       expect(rider.nationality).toBe('SI');
+      expect(rider.avatarUrl).toBeNull();
       expect(rider.lastScrapedAt).toBeNull();
     });
   });
@@ -32,6 +33,8 @@ describe('Rider', () => {
         normalizedName: 'jonas vingegaard',
         currentTeam: 'Visma-Lease a Bike',
         nationality: 'DK',
+        avatarUrl:
+          'https://commons.wikimedia.org/wiki/Special:FilePath/Jonas_Vingegaard.jpg?width=200',
         birthDate: null,
         lastScrapedAt: new Date('2024-07-01'),
       };
@@ -39,7 +42,29 @@ describe('Rider', () => {
       const rider = Rider.reconstitute(props);
       expect(rider.id).toBe(props.id);
       expect(rider.fullName).toBe('Jonas Vingegaard');
+      expect(rider.avatarUrl).toBe(
+        'https://commons.wikimedia.org/wiki/Special:FilePath/Jonas_Vingegaard.jpg?width=200',
+      );
       expect(rider.lastScrapedAt).toEqual(new Date('2024-07-01'));
+    });
+  });
+
+  describe('updateAvatarUrl', () => {
+    it('should return a new rider with updated avatar URL', () => {
+      const rider = Rider.create({
+        pcsSlug: 'tadej-pogacar',
+        fullName: 'Tadej Pogačar',
+        currentTeam: 'UAE Team Emirates',
+        nationality: 'SI',
+        birthDate: null,
+        lastScrapedAt: null,
+      });
+
+      const url = 'https://commons.wikimedia.org/wiki/Special:FilePath/Pogacar.jpg?width=200';
+      const updated = rider.updateAvatarUrl(url);
+      expect(updated.avatarUrl).toBe(url);
+      expect(updated.id).toBe(rider.id);
+      expect(rider.avatarUrl).toBeNull();
     });
   });
 

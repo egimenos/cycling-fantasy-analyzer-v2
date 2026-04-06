@@ -20,6 +20,7 @@ import { useIsDesktop } from '@/shared/hooks/use-media-query';
 import { getEffectiveScore } from '@/shared/lib/rider-utils';
 import { CategoryBreakdown } from '@/shared/ui/category-breakdown';
 import { HistoryTable } from '@/shared/ui/history-table';
+import { RiderAvatar } from '@/shared/ui/rider-avatar';
 
 interface RiderTableProps {
   data: AnalyzeResponse;
@@ -101,21 +102,32 @@ function createColumns(
         const isLocked = lockedIds.has(row.original.rawName);
         const isExcluded = excludedIds.has(row.original.rawName);
         const flags = row.original.breakout?.flags;
+        const matched = row.original.matchedRider;
         return (
-          <div className="flex flex-wrap items-center gap-0.5">
-            <span
-              className={cn(
-                'max-w-[100px] md:max-w-[160px] truncate font-headline font-bold text-sm',
-                isExcluded && 'line-through opacity-50',
-              )}
-              title={name}
-            >
-              {name}
-              {isLocked && <Lock className="inline ml-1.5 h-3 w-3 text-secondary" />}
-            </span>
-            {flags?.map((flag) => (
-              <FlagChip key={flag} flag={flag} />
-            ))}
+          <div className="flex items-center gap-2">
+            {matched && (
+              <RiderAvatar
+                avatarUrl={matched.avatarUrl}
+                fullName={matched.fullName}
+                nationality={matched.nationality}
+                size="sm"
+              />
+            )}
+            <div className="flex flex-wrap items-center gap-0.5">
+              <span
+                className={cn(
+                  'max-w-[100px] md:max-w-[160px] truncate font-headline font-bold text-sm',
+                  isExcluded && 'line-through opacity-50',
+                )}
+                title={name}
+              >
+                {name}
+                {isLocked && <Lock className="inline ml-1.5 h-3 w-3 text-secondary" />}
+              </span>
+              {flags?.map((flag) => (
+                <FlagChip key={flag} flag={flag} />
+              ))}
+            </div>
           </div>
         );
       },

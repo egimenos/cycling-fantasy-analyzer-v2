@@ -11,6 +11,8 @@ export interface MatchedRider {
   pcsSlug: string;
   fullName: string;
   currentTeam: string;
+  avatarUrl: string | null;
+  nationality: string | null;
 }
 
 export type CategoryScores = {
