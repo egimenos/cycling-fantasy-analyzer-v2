@@ -75,11 +75,13 @@ describe('useTeamBuilder', () => {
     expect(result.current.selectedRiders).toHaveLength(0);
   });
 
-  it('prevents adding when over budget', () => {
-    const { result } = renderHook(() => useTeamBuilder(250, riders));
+  it('prevents adding when over budget (including slot reservation)', () => {
+    // Budget 550: Alice (100) + 8 empty slots × 50 = 500 ≤ 550 → allowed
+    // Then Bob (200): 300 total + 7 empty slots × 50 = 650 > 550 → blocked
+    const { result } = renderHook(() => useTeamBuilder(550, riders));
 
     act(() => result.current.addRider('Alice')); // 100
-    act(() => result.current.addRider('Bob')); // 200 → total 300 > 250
+    act(() => result.current.addRider('Bob')); // would be 300 + 7×50 = 650 > 550
 
     expect(result.current.selectedRiders).toHaveLength(1);
     expect(result.current.selectedRiders[0].rawName).toBe('Alice');
@@ -116,11 +118,50 @@ describe('useTeamBuilder', () => {
   });
 
   it('canSelect returns false when budget would be exceeded', () => {
-    const { result } = renderHook(() => useTeamBuilder(150, riders));
+    // Budget 900: Alice (100) + 8×50 = 500 ≤ 900 → can add
+    // After Alice: 100 used, 800 left. Bob (200): 300 + 7×50 = 650 ≤ 900 → allowed
+    // Charlie (300): 400 + 6×50 = 700 ≤ 900 → allowed
+    // But a rider costing 600: 700 + 5×50 = 950 > 900 → blocked
+    const expensiveRiders = [...riders, makeRider('Expensive', 600, 100)];
+    const { result } = renderHook(() => useTeamBuilder(900, expensiveRiders));
 
-    act(() => result.current.addRider('Alice')); // 100 used, 50 left
+    act(() => result.current.addRider('Alice')); // 100
+    act(() => result.current.addRider('Bob')); // 300
 
-    expect(result.current.canSelect('Bob')).toBe(false); // Bob costs 200
+    expect(result.current.canSelect('Charlie')).toBe(true); // 600 + 6×50 = 900 ≤ 900
+    expect(result.current.canSelect('Expensive')).toBe(false); // 900 + 5×50 = 1150 > 900
+  });
+
+  it('canSelect reserves budget for remaining empty slots (MIN_RIDER_PRICE=50)', () => {
+    // Budget 700, 5 riders selected (cost 50 each = 250 used, 450 remaining)
+    // 4 slots left. Picking a rider leaves 3 slots → need 3×50 = 150 reserved
+    // Max affordable = 450 - 150 = 300
+    const manyRiders = [
+      ...Array.from({ length: 5 }, (_, i) => makeRider(`Sel${i}`, 50, 10)),
+      makeRider('Affordable', 300, 80),
+      makeRider('TooExpensive', 301, 90),
+    ];
+    const { result } = renderHook(() => useTeamBuilder(700, manyRiders));
+
+    for (let i = 0; i < 5; i++) {
+      act(() => result.current.addRider(`Sel${i}`));
+    }
+
+    expect(result.current.canSelect('Affordable')).toBe(true);
+    expect(result.current.canSelect('TooExpensive')).toBe(false);
+  });
+
+  it('addRider blocks picks that would starve remaining slots', () => {
+    // Budget 500, 0 selected, 9 slots. Picking leaves 8 → reserve 8×50 = 400
+    // Max affordable = 500 - 400 = 100
+    const testRiders = [makeRider('Cheap', 100, 50), makeRider('Expensive', 101, 80)];
+    const { result } = renderHook(() => useTeamBuilder(500, testRiders));
+
+    act(() => result.current.addRider('Expensive')); // 101 + 8×50 = 501 > 500
+    expect(result.current.selectedRiders).toHaveLength(0);
+
+    act(() => result.current.addRider('Cheap')); // 100 + 8×50 = 500 ≤ 500
+    expect(result.current.selectedRiders).toHaveLength(1);
   });
 
   it('calculates budgetRemaining correctly', () => {

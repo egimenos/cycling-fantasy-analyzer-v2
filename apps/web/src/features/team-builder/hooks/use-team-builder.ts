@@ -1,6 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
 import type { AnalyzedRider } from '@cycling-analyzer/shared-types';
 
+const MAX_RIDERS = 9;
+const MIN_RIDER_PRICE = 50;
+
 export function useTeamBuilder(budget: number, riders: AnalyzedRider[]) {
   const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set());
 
@@ -20,15 +23,16 @@ export function useTeamBuilder(budget: number, riders: AnalyzedRider[]) {
   );
 
   const budgetRemaining = budget - totalCost;
-  const isTeamComplete = selectedNames.size === 9;
+  const isTeamComplete = selectedNames.size === MAX_RIDERS;
 
   const addRider = useCallback(
     (riderName: string) => {
-      if (selectedNames.size >= 9) return;
+      if (selectedNames.size >= MAX_RIDERS) return;
       const rider = riders.find((r) => r.rawName === riderName);
       if (!rider || rider.unmatched) return;
       const newCost = totalCost + rider.priceHillios;
-      if (newCost > budget) return;
+      const slotsAfterPick = MAX_RIDERS - selectedNames.size - 1;
+      if (newCost + slotsAfterPick * MIN_RIDER_PRICE > budget) return;
       setSelectedNames((prev) => new Set([...prev, riderName]));
     },
     [selectedNames.size, riders, totalCost, budget],
@@ -46,7 +50,7 @@ export function useTeamBuilder(budget: number, riders: AnalyzedRider[]) {
 
   /** Replace the entire selection at once (e.g. from optimizer results). */
   const setTeam = useCallback((riderNames: string[]) => {
-    setSelectedNames(new Set(riderNames.slice(0, 9)));
+    setSelectedNames(new Set(riderNames.slice(0, MAX_RIDERS)));
   }, []);
 
   const isSelected = useCallback(
@@ -56,10 +60,11 @@ export function useTeamBuilder(budget: number, riders: AnalyzedRider[]) {
 
   const canSelect = useCallback(
     (riderName: string) => {
-      if (selectedNames.size >= 9) return false;
+      if (selectedNames.size >= MAX_RIDERS) return false;
       const rider = riders.find((r) => r.rawName === riderName);
       if (!rider || rider.unmatched) return false;
-      return totalCost + rider.priceHillios <= budget;
+      const slotsAfterPick = MAX_RIDERS - selectedNames.size - 1;
+      return totalCost + rider.priceHillios + slotsAfterPick * MIN_RIDER_PRICE <= budget;
     },
     [selectedNames.size, riders, totalCost, budget],
   );
