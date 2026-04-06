@@ -293,7 +293,7 @@ function PerformanceContent({ rider }: { rider: AnalyzedRider }) {
 
       <div className={cn('space-y-4', rider.categoryScores ? 'col-span-3' : 'col-span-4')}>
         {(rider.sameRaceHistory?.length || rider.seasonBreakdowns?.length) && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <div className="flex flex-col lg:flex-row gap-4 items-start">
             {rider.sameRaceHistory && rider.sameRaceHistory.length > 0 && (
               <HistoryTable title="Same Race History" rows={rider.sameRaceHistory} />
             )}
