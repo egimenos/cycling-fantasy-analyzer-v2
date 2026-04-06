@@ -108,7 +108,7 @@ pnpm exec playwright test --ui                   # Open Playwright UI
 | `make seed-full`                                  | Seed database (last 5 years)                 |
 | `make scrape RACE=<slug> YEAR=<year> TYPE=<type>` | Scrape a single race                         |
 
-The seed command discovers races from PCS calendar pages, deduplicates, and skips already-scraped races. Safe to re-run. The `TYPE` parameter accepts `classic`, `grand_tour`, or `mini_tour`.
+The seed command discovers races from PCS calendar pages, deduplicates, and skips already-scraped races. After scraping results, it also fetches startlists for all seeded races (use `--skip-startlists` to disable). Safe to re-run — both results and startlists are cached. The `TYPE` parameter accepts `classic`, `grand_tour`, or `mini_tour`.
 
 ### ML Service
 

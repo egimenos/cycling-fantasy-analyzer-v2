@@ -6,6 +6,7 @@ import {
   DiscoverRacesUseCase,
   DiscoveredRace,
 } from '../../application/scraping/discover-races.use-case';
+import { FetchStartlistUseCase } from '../../application/benchmark/fetch-startlist.use-case';
 import {
   RACE_CATALOG_REPOSITORY_PORT,
   RaceCatalogRepositoryPort,
@@ -19,6 +20,7 @@ interface SeedDatabaseOptions {
   circuit: string;
   class: string;
   dryRun: boolean;
+  skipStartlists: boolean;
 }
 
 interface SeedFailure {
@@ -26,6 +28,13 @@ interface SeedFailure {
   year: number;
   reason: string;
   type: 'http' | 'no_results' | 'validation' | 'unknown';
+}
+
+interface StartlistStats {
+  fetched: number;
+  cached: number;
+  empty: number;
+  failed: number;
 }
 
 function classifyFailure(slug: string, year: number, msg: string): SeedFailure {
@@ -50,6 +59,7 @@ export class SeedDatabaseCommand extends CommandRunner {
     private readonly triggerScrape: TriggerScrapeUseCase,
     private readonly checkRaceScraped: CheckRaceScrapedUseCase,
     private readonly discoverRaces: DiscoverRacesUseCase,
+    private readonly fetchStartlist: FetchStartlistUseCase,
     @Inject(RACE_CATALOG_REPOSITORY_PORT)
     private readonly raceCatalogRepo: RaceCatalogRepositoryPort,
   ) {
@@ -75,6 +85,7 @@ export class SeedDatabaseCommand extends CommandRunner {
     let totalFutureSkipped = 0;
     let totalWarnings = 0;
     const failures: SeedFailure[] = [];
+    const racesWithResults: { slug: string; year: number }[] = [];
 
     for (const year of years) {
       const discovered = await this.discoverRacesForYear(year, circuits);
@@ -122,6 +133,7 @@ export class SeedDatabaseCommand extends CommandRunner {
         if (alreadyScraped) {
           this.logger.log(`  ${label} — already scraped, skipping`);
           totalSkipped++;
+          racesWithResults.push({ slug: race.slug, year });
           continue;
         }
 
@@ -144,6 +156,7 @@ export class SeedDatabaseCommand extends CommandRunner {
           this.logger.log(`  ${label} — ${result.status} (${result.recordsUpserted} records)`);
           totalRecords += result.recordsUpserted;
           totalRaces++;
+          racesWithResults.push({ slug: race.slug, year });
 
           if (result.warnings.length > 0) {
             totalWarnings += result.warnings.length;
@@ -163,6 +176,9 @@ export class SeedDatabaseCommand extends CommandRunner {
       `Race date backfill: all ${totalRecords} records from ${totalRaces} newly scraped races include raceDate via upsert`,
     );
 
+    // Phase 2: Fetch startlists for all races with results
+    const startlistStats = await this.fetchStartlists(racesWithResults, options);
+
     this.printSummary(
       totalRaces,
       totalRecords,
@@ -170,7 +186,51 @@ export class SeedDatabaseCommand extends CommandRunner {
       totalFutureSkipped,
       totalWarnings,
       failures,
+      startlistStats,
     );
+  }
+
+  private async fetchStartlists(
+    racesWithResults: { slug: string; year: number }[],
+    options: SeedDatabaseOptions,
+  ): Promise<StartlistStats> {
+    const stats: StartlistStats = { fetched: 0, cached: 0, empty: 0, failed: 0 };
+
+    if (options.skipStartlists || options.dryRun) {
+      if (options.skipStartlists) {
+        this.logger.log('Startlist scraping skipped (--skip-startlists)');
+      }
+      return stats;
+    }
+
+    this.logger.log('');
+    this.logger.log(`=== STARTLISTS (${racesWithResults.length} races) ===`);
+
+    for (let i = 0; i < racesWithResults.length; i++) {
+      const { slug, year } = racesWithResults[i];
+      const label = `[startlist] ${i + 1}/${racesWithResults.length}: ${slug} ${year}`;
+
+      try {
+        const result = await this.fetchStartlist.execute({ raceSlug: slug, year });
+
+        if (result.fromCache) {
+          stats.cached++;
+          this.logger.log(`  ${label} — cached (${result.entries.length} riders)`);
+        } else if (result.entries.length === 0) {
+          stats.empty++;
+          this.logger.log(`  ${label} — empty startlist`);
+        } else {
+          stats.fetched++;
+          this.logger.log(`  ${label} — fetched ${result.entries.length} riders`);
+        }
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        this.logger.error(`  ${label} — FAILED: ${msg}`);
+        stats.failed++;
+      }
+    }
+
+    return stats;
   }
 
   private printSummary(
@@ -180,6 +240,7 @@ export class SeedDatabaseCommand extends CommandRunner {
     totalFutureSkipped: number,
     totalWarnings: number,
     failures: SeedFailure[],
+    startlistStats: StartlistStats,
   ): void {
     this.logger.log('');
     this.logger.log('=== SEED SUMMARY ===');
@@ -189,6 +250,12 @@ export class SeedDatabaseCommand extends CommandRunner {
     this.logger.log(`Skipped (future):  ${totalFutureSkipped}`);
     this.logger.log(`Warnings:          ${totalWarnings}`);
     this.logger.log(`Failed:            ${failures.length}`);
+    this.logger.log('');
+    this.logger.log('--- Startlists ---');
+    this.logger.log(`Fetched:           ${startlistStats.fetched}`);
+    this.logger.log(`Cached:            ${startlistStats.cached}`);
+    this.logger.log(`Empty:             ${startlistStats.empty}`);
+    this.logger.log(`Failed:            ${startlistStats.failed}`);
 
     if (failures.length > 0) {
       const grouped = new Map<SeedFailure['type'], SeedFailure[]>();
@@ -283,6 +350,15 @@ export class SeedDatabaseCommand extends CommandRunner {
     defaultValue: false,
   })
   parseDryRun(val: string): boolean {
+    return val === 'true' || val === '' || val === undefined;
+  }
+
+  @Option({
+    flags: '--skip-startlists',
+    description: 'Skip startlist scraping (only scrape race results)',
+    defaultValue: false,
+  })
+  parseSkipStartlists(val: string): boolean {
     return val === 'true' || val === '' || val === undefined;
   }
 }

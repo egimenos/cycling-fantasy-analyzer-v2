@@ -91,13 +91,13 @@ you're doing.
 
 ## Troubleshooting
 
-| Issue                        | Cause                                      | Fix                                           |
-| ---------------------------- | ------------------------------------------ | --------------------------------------------- |
-| Glicko ratings look wrong    | New race type or slug not in prestige dict | Check `RACE_PRESTIGE` in glicko2.py           |
-| Cache build fails            | Missing startlist data for a year          | Check `startlist_entries` table has data      |
-| Stage targets row count off  | Unclassifiable stages (parcours_type=NULL) | Normal — ~2% dropped, check EDA               |
-| Team capture drops below 40% | Prices may be incorrect or missing         | Check `rider_prices` table for the test races |
-| rho drops on specific source | Check if that source's features changed    | Run per-source benchmark to isolate           |
+| Issue                        | Cause                                      | Fix                                                                               |
+| ---------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------- |
+| Glicko ratings look wrong    | New race type or slug not in prestige dict | Check `RACE_PRESTIGE` in glicko2.py                                               |
+| Cache build fails            | Missing startlist data for a year          | `make seed` now fetches startlists automatically; check `startlist_entries` table |
+| Stage targets row count off  | Unclassifiable stages (parcours_type=NULL) | Normal — ~2% dropped, check EDA                                                   |
+| Team capture drops below 40% | Prices may be incorrect or missing         | Check `rider_prices` table for the test races                                     |
+| rho drops on specific source | Check if that source's features changed    | Run per-source benchmark to isolate                                               |
 
 ## Notes
 
