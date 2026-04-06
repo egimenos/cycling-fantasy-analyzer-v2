@@ -26,6 +26,15 @@ export interface RaceHistory {
   total: number;
 }
 
+export interface SeasonBreakdown {
+  year: number;
+  gc: number;
+  stage: number;
+  mountain: number;
+  sprint: number;
+  total: number;
+}
+
 export enum BreakoutFlag {
   EmergingTalent = 'EMERGING_TALENT',
   HotStreak = 'HOT_STREAK',
@@ -61,6 +70,7 @@ export interface AnalyzedRider {
   categoryScores: CategoryScores | null;
   breakout: BreakoutResult | null;
   sameRaceHistory: RaceHistory[] | null;
+  seasonBreakdowns: SeasonBreakdown[] | null;
 }
 
 export interface AnalyzeRequest {

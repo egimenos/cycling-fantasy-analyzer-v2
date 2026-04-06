@@ -34,6 +34,7 @@ const sampleRider: AnalyzedRider = {
   },
   breakout: null,
   sameRaceHistory: null,
+  seasonBreakdowns: null,
 };
 
 const sampleResponse: OptimizeResponse = {

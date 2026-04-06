@@ -32,6 +32,7 @@ function makeRider(overrides: Partial<AnalyzedRider> = {}): AnalyzedRider {
     unmatched: false,
     breakout: null,
     sameRaceHistory: null,
+    seasonBreakdowns: null,
     ...overrides,
   };
 }

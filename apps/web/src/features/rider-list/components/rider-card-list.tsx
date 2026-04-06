@@ -7,6 +7,7 @@ import { Lock, Unlock, Ban } from 'lucide-react';
 import { BreakoutDetailPanel } from './breakout-detail-panel';
 import { MlBadge } from '@/shared/ui/ml-badge';
 import { CategoryBreakdown } from '@/shared/ui/category-breakdown';
+import { HistoryTable } from '@/shared/ui/history-table';
 
 interface RiderCardListProps {
   riders: AnalyzedRider[];
@@ -215,6 +216,18 @@ export function RiderCardList({
                       <MlBadge />
                     </h4>
                     <CategoryBreakdown breakdown={rider.categoryScores} />
+                  </div>
+                )}
+
+                {rider.sameRaceHistory && rider.sameRaceHistory.length > 0 && (
+                  <div className="mb-3">
+                    <HistoryTable title="Same Race History" rows={rider.sameRaceHistory} />
+                  </div>
+                )}
+
+                {rider.seasonBreakdowns && rider.seasonBreakdowns.length > 0 && (
+                  <div className="mb-3">
+                    <HistoryTable title="Season Totals" rows={rider.seasonBreakdowns} />
                   </div>
                 )}
 
