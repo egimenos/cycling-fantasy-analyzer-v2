@@ -58,7 +58,7 @@ pnpm dev
 
 ## 2. Initial Database Seed
 
-The `seed-database` command auto-discovers races from the PCS (ProCyclingStats) calendar, scrapes them, and persists results + riders.
+The `seed-database` command auto-discovers races from the PCS (ProCyclingStats) calendar, scrapes results + riders, and then fetches startlists for all seeded races.
 
 ```bash
 cd apps/api
@@ -74,6 +74,9 @@ node dist/cli.js seed-database --years 5
 
 # Preview: see which races would be discovered without scraping
 node dist/cli.js seed-database --dry-run
+
+# Results only, skip startlists
+node dist/cli.js seed-database --skip-startlists
 ```
 
 ### What happens internally
@@ -84,7 +87,8 @@ node dist/cli.js seed-database --dry-run
 4. For each race, checks `scrape_jobs` — if a job with `status=success` exists, skips it
 5. Scrapes the race (classic: 1 request; stage race: GC + classifications)
 6. Batch-upserts riders and persists results in a transaction
-7. Prints a final summary
+7. **Phase 2:** Fetches startlists for all races with results (skips already-cached startlists)
+8. Prints a final summary
 
 ### Estimated times
 
