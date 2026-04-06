@@ -181,6 +181,16 @@ def predict_classic_race(
     raw_preds = model.predict(X)
     preds = np.maximum(inverse_fn(raw_preds), 0)
 
+    # Normalize predictions so the total pool equals sum(GC_CLASSIC) = 765.
+    # The model predicts raw GC_CLASSIC points whose magnitude varies by race
+    # (higher for prestigious races with clear favourites).  For fantasy value
+    # comparisons across races the totals must be on the same scale.  765 is
+    # the exact sum of GC_CLASSIC top-10 points — the real fantasy pool.
+    total_pool = float(sum(GC_CLASSIC.values()))
+    pred_sum = float(preds.sum())
+    if pred_sum > 0:
+        preds = preds * (total_pool / pred_sum)
+
     # Build response in stage-race-compatible format
     rider_names = dict(zip(race_riders["rider_id"], race_riders.get("rider_name", race_riders["rider_id"])))
     predictions = []
