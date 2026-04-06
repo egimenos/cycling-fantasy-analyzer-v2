@@ -4,3 +4,4 @@ export { ResultCategory } from './result-category.enum';
 export { ScrapeStatus } from './scrape-status.enum';
 export { HealthStatus } from './health-status.enum';
 export { ParcoursType } from './parcours-type.enum';
+export { normalizeText } from './normalize-text';

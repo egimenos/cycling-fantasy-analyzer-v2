@@ -44,6 +44,48 @@ describe('FuzzysortMatcherAdapter', () => {
     expect(result.unmatched).toBe(false);
   });
 
+  it('should handle Scandinavian characters (Ø, Æ, Å)', async () => {
+    const scandinavianRiders: RiderTarget[] = [
+      { id: 'r1', normalizedName: 'tjotta martin', currentTeam: 'uno-x' },
+      { id: 'r2', normalizedName: 'traeen torstein', currentTeam: 'uno-x' },
+      { id: 'r3', normalizedName: 'orn kristoff felix', currentTeam: 'lotto' },
+      { id: 'r4', normalizedName: 'hakansson simon', currentTeam: 'uno-x' },
+    ];
+    adapter.loadRiders(scandinavianRiders);
+
+    const r1 = await adapter.matchRider('TJØTTA Martin', 'UNO-X');
+    expect(r1.matchedRiderId).toBe('r1');
+    expect(r1.unmatched).toBe(false);
+
+    const r2 = await adapter.matchRider('TRÆEN Torstein', 'UNO-X');
+    expect(r2.matchedRiderId).toBe('r2');
+    expect(r2.unmatched).toBe(false);
+
+    const r3 = await adapter.matchRider('ØRN-KRISTOFF Felix', 'LOTTO');
+    expect(r3.matchedRiderId).toBe('r3');
+    expect(r3.unmatched).toBe(false);
+
+    const r4 = await adapter.matchRider('HÅKANSSON Simon', 'UNO-X');
+    expect(r4.matchedRiderId).toBe('r4');
+    expect(r4.unmatched).toBe(false);
+  });
+
+  it('should handle Polish ł and German ß', async () => {
+    const riders: RiderTarget[] = [
+      { id: 'r1', normalizedName: 'kwiatkowski michal', currentTeam: 'ineos' },
+      { id: 'r2', normalizedName: 'grossschartner felix', currentTeam: 'uae' },
+    ];
+    adapter.loadRiders(riders);
+
+    const r1 = await adapter.matchRider('KWIATKOWSKI Michał', 'INEOS');
+    expect(r1.matchedRiderId).toBe('r1');
+    expect(r1.unmatched).toBe(false);
+
+    const r2 = await adapter.matchRider('GROßSCHARTNER Felix', 'UAE');
+    expect(r2.matchedRiderId).toBe('r2');
+    expect(r2.unmatched).toBe(false);
+  });
+
   it('should return unmatched for completely unrelated name', async () => {
     const result = await adapter.matchRider('ZZZZZ XXXXX', '');
 
