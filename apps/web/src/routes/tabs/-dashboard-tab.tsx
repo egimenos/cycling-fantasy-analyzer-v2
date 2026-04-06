@@ -130,7 +130,7 @@ export function DashboardTab({
           {teamBuilder.isTeamComplete ? (
             <button
               onClick={onReviewTeam}
-              className="flex-1 py-4 bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30 font-headline font-bold uppercase tracking-wider text-sm rounded-sm text-center"
+              className="flex-1 py-2.5 bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30 font-headline font-bold uppercase tracking-wider text-xs rounded-sm text-center"
             >
               Review Team &rarr;
             </button>
@@ -138,7 +138,7 @@ export function DashboardTab({
             <button
               onClick={onOptimize}
               disabled={isOptimizing}
-              className="flex-1 py-4 bg-surface-container-highest text-on-surface font-headline font-bold uppercase tracking-wider text-sm rounded-sm text-center active:scale-[0.98] transition-all disabled:opacity-50"
+              className="flex-1 py-2.5 bg-surface-container-highest text-on-surface font-headline font-bold uppercase tracking-wider text-xs rounded-sm text-center active:scale-[0.98] transition-all disabled:opacity-50"
             >
               {isOptimizing ? 'Optimizing...' : 'Optimize'}
             </button>

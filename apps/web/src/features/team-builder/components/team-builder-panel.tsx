@@ -45,10 +45,10 @@ export function TeamBuilderPanel({
   return (
     <div
       data-testid="dashboard-team-builder"
-      className="bg-surface-container-high p-6 rounded-sm border border-outline-variant/10 flex flex-col gap-6 sticky top-24 max-h-[calc(100vh-8rem)] overflow-hidden animate-slide-in-right"
+      className="bg-surface-container-high p-6 rounded-sm border border-outline-variant/10 flex flex-col sticky top-24 max-h-[calc(100vh-8rem)] overflow-hidden animate-slide-in-right"
     >
       {/* Header */}
-      <header className="space-y-1">
+      <header className="space-y-1 flex-shrink-0">
         <div className="flex items-center justify-between">
           <h2 className="font-headline font-extrabold text-xl tracking-tight">TEAM BUILDER</h2>
           {selectedRiders.length > 0 && (
@@ -66,8 +66,8 @@ export function TeamBuilderPanel({
         </p>
       </header>
 
-      {/* Roster Count + Rider List */}
-      <div className="space-y-4">
+      {/* Roster Count + Rider List (scrollable) */}
+      <div className="flex-1 min-h-0 mt-6 space-y-4 overflow-y-auto pr-1">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-mono text-outline uppercase">Active Roster</span>
           <span
@@ -78,7 +78,7 @@ export function TeamBuilderPanel({
           </span>
         </div>
 
-        <ul className="space-y-2 overflow-y-auto max-h-[40vh] pr-1">
+        <ul className="space-y-2">
           {selectedRiders.map((rider) => {
             const isLocked = lockedIds?.has(rider.rawName) ?? false;
             return (
@@ -136,8 +136,8 @@ export function TeamBuilderPanel({
         </ul>
       </div>
 
-      {/* Budget Meter */}
-      <div className="space-y-3 pt-4 border-t border-outline-variant/10">
+      {/* Budget Meter (pinned to bottom) */}
+      <div className="space-y-3 pt-4 mt-6 border-t border-outline-variant/10 flex-shrink-0">
         <div className="flex items-center justify-between text-[10px] font-mono text-outline uppercase">
           <span>Remaining Budget</span>
           <span
@@ -180,8 +180,8 @@ export function TeamBuilderPanel({
         </p>
       </div>
 
-      {/* Projected Score + CTA */}
-      <div className="pt-4 space-y-4">
+      {/* Projected Score + CTA (pinned to bottom) */}
+      <div className="pt-4 mt-6 space-y-4 flex-shrink-0">
         <div className="flex justify-between items-center">
           <span className="text-xs text-outline font-mono uppercase flex items-center gap-1.5">
             Projected Score
