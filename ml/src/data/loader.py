@@ -155,6 +155,9 @@ def get_race_info(
 ) -> Optional[dict]:
     """Get race_type and race_date for a specific race.
 
+    Tries race_results first (past races with actual results), then falls
+    back to the races table (upcoming races with no results yet).
+
     Args:
         db_url: PostgreSQL connection string.
         race_slug: The race identifier.
@@ -165,6 +168,7 @@ def get_race_info(
     """
     conn = psycopg2.connect(db_url)
 
+    # Past races: get from actual results
     df = pd.read_sql("""
         SELECT DISTINCT rr.race_type, rr.race_date
         FROM race_results rr
@@ -172,6 +176,22 @@ def get_race_info(
           AND rr.year = %(year)s
           AND rr.race_date IS NOT NULL
         ORDER BY rr.race_date
+        LIMIT 1
+    """, conn, params={'race_slug': race_slug, 'year': year})
+
+    if len(df) > 0:
+        conn.close()
+        return {
+            'race_type': df.iloc[0]['race_type'],
+            'race_date': df.iloc[0]['race_date'],
+        }
+
+    # Upcoming races: fall back to races table
+    df = pd.read_sql("""
+        SELECT r.race_type, r.start_date AS race_date
+        FROM races r
+        WHERE r.slug = %(race_slug)s
+          AND r.year = %(year)s
         LIMIT 1
     """, conn, params={'race_slug': race_slug, 'year': year})
 
