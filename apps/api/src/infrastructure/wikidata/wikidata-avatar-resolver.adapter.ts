@@ -1,21 +1,29 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AvatarResolverPort, AvatarResult } from '../../domain/rider/avatar-resolver.port';
+import {
+  AvatarResolverPort,
+  AvatarResult,
+  RiderIdentifier,
+} from '../../domain/rider/avatar-resolver.port';
 
-const WIKIDATA_SPARQL_ENDPOINT = 'https://query.wikidata.org/sparql';
-const BATCH_SIZE = 100;
+const WIKIPEDIA_API = 'https://en.wikipedia.org/w/api.php';
+const BATCH_SIZE = 50; // Wikipedia API limit per request
 const BATCH_DELAY_MS = 1000;
-const THUMBNAIL_WIDTH = 200;
+const THUMBNAIL_SIZE = 200;
 const USER_AGENT =
   'CyclingFantasyAnalyzer/1.0 (https://github.com/egimenos/cycling-fantasy-analyzer-v2)';
 
-interface SparqlBinding {
-  pcsId: { value: string };
-  image: { value: string };
+interface WikipediaPage {
+  pageid?: number;
+  ns: number;
+  title: string;
+  thumbnail?: { source: string; width: number; height: number };
+  missing?: string;
 }
 
-interface SparqlResponse {
-  results: {
-    bindings: SparqlBinding[];
+interface WikipediaResponse {
+  query?: {
+    normalized?: { from: string; to: string }[];
+    pages: Record<string, WikipediaPage>;
   };
 }
 
@@ -23,11 +31,11 @@ interface SparqlResponse {
 export class WikidataAvatarResolverAdapter implements AvatarResolverPort {
   private readonly logger = new Logger(WikidataAvatarResolverAdapter.name);
 
-  async resolveAvatars(pcsSlugs: string[]): Promise<AvatarResult[]> {
-    if (pcsSlugs.length === 0) return [];
+  async resolveAvatars(riders: RiderIdentifier[]): Promise<AvatarResult[]> {
+    if (riders.length === 0) return [];
 
     const results: AvatarResult[] = [];
-    const batches = this.chunk(pcsSlugs, BATCH_SIZE);
+    const batches = this.chunk(riders, BATCH_SIZE);
 
     for (let i = 0; i < batches.length; i++) {
       if (i > 0) await this.delay(BATCH_DELAY_MS);
@@ -47,56 +55,68 @@ export class WikidataAvatarResolverAdapter implements AvatarResolverPort {
     return results;
   }
 
-  private async queryBatch(pcsSlugs: string[]): Promise<AvatarResult[]> {
-    const values = pcsSlugs.map((slug) => `"${slug}"`).join(' ');
-    const sparql = `
-      SELECT ?pcsId ?image WHERE {
-        VALUES ?pcsId { ${values} }
-        ?item wdt:P9509 ?pcsId .
-        ?item wdt:P18 ?image .
-      }
-    `;
+  private async queryBatch(riders: RiderIdentifier[]): Promise<AvatarResult[]> {
+    // Build a map from Wikipedia title -> pcsSlug for reverse lookup
+    const titleToSlug = new Map<string, string>();
+    const titles: string[] = [];
 
-    const url = `${WIKIDATA_SPARQL_ENDPOINT}?query=${encodeURIComponent(sparql)}&format=json`;
+    for (const rider of riders) {
+      const wikiTitle = this.nameToWikiTitle(rider.fullName);
+      titleToSlug.set(wikiTitle.toLowerCase(), rider.pcsSlug);
+      titles.push(wikiTitle);
+    }
 
-    const response = await fetch(url, {
-      headers: {
-        Accept: 'application/sparql-results+json',
-        'User-Agent': USER_AGENT,
-      },
+    const params = new URLSearchParams({
+      action: 'query',
+      titles: titles.join('|'),
+      prop: 'pageimages',
+      pithumbsize: String(THUMBNAIL_SIZE),
+      format: 'json',
+    });
+
+    const response = await fetch(`${WIKIPEDIA_API}?${params.toString()}`, {
+      headers: { 'User-Agent': USER_AGENT },
     });
 
     if (!response.ok) {
-      throw new Error(`Wikidata SPARQL returned ${response.status}: ${response.statusText}`);
+      throw new Error(`Wikipedia API returned ${response.status}: ${response.statusText}`);
     }
 
-    const data: SparqlResponse = await response.json();
+    const data: WikipediaResponse = await response.json();
+    if (!data.query?.pages) return [];
 
-    return data.results.bindings.map((binding) => ({
-      pcsSlug: binding.pcsId.value,
-      avatarUrl: this.toThumbnailUrl(binding.image.value),
-    }));
+    // Build a normalized title map to handle Wikipedia's title normalization
+    const normalizedMap = new Map<string, string>();
+    if (data.query.normalized) {
+      for (const { from, to } of data.query.normalized) {
+        normalizedMap.set(to.toLowerCase(), from);
+      }
+    }
+
+    const results: AvatarResult[] = [];
+
+    for (const page of Object.values(data.query.pages)) {
+      if (!page.thumbnail?.source || page.missing !== undefined) continue;
+
+      // Resolve the original title we sent (may differ from page.title due to normalization)
+      const originalTitle = normalizedMap.get(page.title.toLowerCase()) ?? page.title;
+      const pcsSlug = titleToSlug.get(originalTitle.toLowerCase());
+
+      if (pcsSlug) {
+        results.push({ pcsSlug, avatarUrl: page.thumbnail.source });
+      }
+    }
+
+    return results;
   }
 
   /**
-   * Convert a Wikimedia Commons file URL to a thumbnail URL.
-   * Input:  http://commons.wikimedia.org/wiki/Special:FilePath/Tadej_Pogačar.jpg
-   * Output: https://commons.wikimedia.org/wiki/Special:FilePath/Tadej_Pogačar.jpg?width=200
+   * Convert a rider's full name to a Wikipedia page title.
+   * "Tadej Pogačar" -> "Tadej_Pogačar"
+   * Preserves diacritics — Wikipedia handles them correctly.
    */
-  private toThumbnailUrl(commonsUrl: string): string {
-    // Wikidata returns URLs starting with http:// — upgrade to https://
-    const httpsUrl = commonsUrl.replace(/^http:\/\//, 'https://');
-
-    // If it's already a Special:FilePath URL, just append width
-    if (httpsUrl.includes('Special:FilePath')) {
-      return `${httpsUrl}?width=${THUMBNAIL_WIDTH}`;
-    }
-
-    // Fallback: extract filename and build the URL manually
-    const filename = decodeURIComponent(httpsUrl.split('/').pop() ?? '');
-    if (!filename) return httpsUrl;
-
-    return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(filename)}?width=${THUMBNAIL_WIDTH}`;
+  private nameToWikiTitle(fullName: string): string {
+    return fullName.trim().replace(/\s+/g, '_');
   }
 
   private chunk<T>(arr: T[], size: number): T[][] {

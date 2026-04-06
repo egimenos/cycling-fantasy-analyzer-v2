@@ -28,8 +28,11 @@ export class ResolveAvatarsUseCase {
 
     this.logger.log(`Resolving avatars for ${ridersWithoutAvatar.length} riders...`);
 
-    const slugs = ridersWithoutAvatar.map((r) => r.pcsSlug);
-    const results = await this.avatarResolver.resolveAvatars(slugs);
+    const identifiers = ridersWithoutAvatar.map((r) => ({
+      pcsSlug: r.pcsSlug,
+      fullName: r.fullName,
+    }));
+    const results = await this.avatarResolver.resolveAvatars(identifiers);
 
     const avatarMap = new Map(results.map((r) => [r.pcsSlug, r.avatarUrl]));
 
