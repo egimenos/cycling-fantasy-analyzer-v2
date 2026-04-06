@@ -87,6 +87,18 @@ describe('FuzzysortMatcherAdapter', () => {
     expect(result.unmatched).toBe(true);
   });
 
+  it('should match riders with apostrophes in their name', async () => {
+    const ridersWithApostrophe: RiderTarget[] = [
+      { id: 'r1', normalizedName: 'o connor ben', currentTeam: 'decathlon ag2r' },
+    ];
+    adapter.loadRiders(ridersWithApostrophe);
+
+    const result = await adapter.matchRider("Ben O'Connor", '');
+
+    expect(result.matchedRiderId).toBe('r1');
+    expect(result.unmatched).toBe(false);
+  });
+
   it('should distinguish between riders with similar names using different targets', async () => {
     const similarRiders: RiderTarget[] = [
       { id: 'r4', normalizedName: 'van aert wout', currentTeam: 'visma-lease a bike' },
