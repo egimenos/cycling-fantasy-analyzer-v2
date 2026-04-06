@@ -87,54 +87,89 @@ describe('computeRawSlope', () => {
 // ── Signal 1: Trajectory ────────────────────────────────────────────
 
 describe('computeTrajectory', () => {
-  it('returns 0 for 0 or 1 completed season', () => {
+  it('returns 0 for 0 completed seasons', () => {
     expect(computeTrajectory([], null, NOW)).toBe(0);
-    expect(computeTrajectory([makeSeason(2025, 100)], null, NOW)).toBe(0);
+    // Only current year data — no completed seasons
+    expect(computeTrajectory([makeSeason(2026, 100)], null, NOW)).toBe(0);
   });
 
-  it('excludes current year from regression', () => {
-    // 2026 is the incomplete year — only 2024 and 2025 are used
-    const seasons = [makeSeason(2024, 50), makeSeason(2025, 100), makeSeason(2026, 10)];
-    const withCurrent = computeTrajectory(seasons, null, NOW);
-    const withoutCurrent = computeTrajectory(
-      [makeSeason(2024, 50), makeSeason(2025, 100)],
-      null,
-      NOW,
-    );
-    expect(withCurrent).toBe(withoutCurrent);
+  describe('single completed season heuristic', () => {
+    it('scores young rider with strong first season', () => {
+      // total=100, factor 0.15, age<25 factor 1.5 -> 100*0.15*1.5 = 22.5
+      const seasons = [makeSeason(2025, 100)];
+      expect(computeTrajectory(seasons, youngBirthDate, NOW)).toBeCloseTo(22.5, 1);
+    });
+
+    it('scores default-age rider with first season', () => {
+      // total=100, factor 0.15, age 28 factor 0.5 -> 100*0.15*0.5 = 7.5
+      const seasons = [makeSeason(2025, 100)];
+      expect(computeTrajectory(seasons, null, NOW)).toBeCloseTo(7.5, 1);
+    });
+
+    it('clamps exceptional first season at 30', () => {
+      // total=300, factor 0.15, age<25 factor 1.5 -> 300*0.15*1.5 = 67.5 -> clamped
+      const seasons = [makeSeason(2025, 300)];
+      expect(computeTrajectory(seasons, youngBirthDate, NOW)).toBe(30);
+    });
+
+    it('returns 0 for zero-point first season', () => {
+      expect(computeTrajectory([makeSeason(2025, 0)], youngBirthDate, NOW)).toBe(0);
+    });
+
+    it('ignores current year when computing single-season heuristic', () => {
+      // Only 2025 is completed; 2026 is current year and excluded
+      const seasons = [makeSeason(2025, 100), makeSeason(2026, 50)];
+      const withCurrent = computeTrajectory(seasons, youngBirthDate, NOW);
+      const withoutCurrent = computeTrajectory([makeSeason(2025, 100)], youngBirthDate, NOW);
+      expect(withCurrent).toBe(withoutCurrent);
+    });
   });
 
-  it('returns 0 for negative slope', () => {
-    const seasons = [makeSeason(2024, 200), makeSeason(2025, 50)];
-    expect(computeTrajectory(seasons, null, NOW)).toBe(0);
-  });
+  describe('multi-season regression', () => {
+    it('excludes current year from regression', () => {
+      // 2026 is the incomplete year — only 2024 and 2025 are used
+      const seasons = [makeSeason(2024, 50), makeSeason(2025, 100), makeSeason(2026, 10)];
+      const withCurrent = computeTrajectory(seasons, null, NOW);
+      const withoutCurrent = computeTrajectory(
+        [makeSeason(2024, 50), makeSeason(2025, 100)],
+        null,
+        NOW,
+      );
+      expect(withCurrent).toBe(withoutCurrent);
+    });
 
-  it('applies age factor 1.5 for age < 25', () => {
-    const seasons = [makeSeason(2024, 50), makeSeason(2025, 60)];
-    // slope = 10, factor 1.5 -> 15
-    expect(computeTrajectory(seasons, youngBirthDate, NOW)).toBe(15);
-  });
+    it('returns 0 for negative slope', () => {
+      const seasons = [makeSeason(2024, 200), makeSeason(2025, 50)];
+      expect(computeTrajectory(seasons, null, NOW)).toBe(0);
+    });
 
-  it('applies age factor 1.0 for age 25-27', () => {
-    const seasons = [makeSeason(2024, 50), makeSeason(2025, 60)];
-    expect(computeTrajectory(seasons, midBirthDate, NOW)).toBe(10);
-  });
+    it('applies age factor 1.5 for age < 25', () => {
+      const seasons = [makeSeason(2024, 50), makeSeason(2025, 60)];
+      // slope = 10, factor 1.5 -> 15
+      expect(computeTrajectory(seasons, youngBirthDate, NOW)).toBe(15);
+    });
 
-  it('applies age factor 0.5 for age 28-31', () => {
-    const seasons = [makeSeason(2024, 50), makeSeason(2025, 60)];
-    // default age 28, factor 0.5 -> 5
-    expect(computeTrajectory(seasons, null, NOW)).toBe(5);
-  });
+    it('applies age factor 1.0 for age 25-27', () => {
+      const seasons = [makeSeason(2024, 50), makeSeason(2025, 60)];
+      expect(computeTrajectory(seasons, midBirthDate, NOW)).toBe(10);
+    });
 
-  it('applies age factor 0.2 for age 32+', () => {
-    const seasons = [makeSeason(2024, 50), makeSeason(2025, 60)];
-    expect(computeTrajectory(seasons, oldBirthDate, NOW)).toBe(2);
-  });
+    it('applies age factor 0.5 for age 28-31', () => {
+      const seasons = [makeSeason(2024, 50), makeSeason(2025, 60)];
+      // default age 28, factor 0.5 -> 5
+      expect(computeTrajectory(seasons, null, NOW)).toBe(5);
+    });
 
-  it('clamps at 30', () => {
-    const seasons = [makeSeason(2024, 0), makeSeason(2025, 200)];
-    // slope = 200, factor 1.5 -> 300 -> clamped to 30
-    expect(computeTrajectory(seasons, youngBirthDate, NOW)).toBe(30);
+    it('applies age factor 0.2 for age 32+', () => {
+      const seasons = [makeSeason(2024, 50), makeSeason(2025, 60)];
+      expect(computeTrajectory(seasons, oldBirthDate, NOW)).toBe(2);
+    });
+
+    it('clamps at 30', () => {
+      const seasons = [makeSeason(2024, 0), makeSeason(2025, 200)];
+      // slope = 200, factor 1.5 -> 300 -> clamped to 30
+      expect(computeTrajectory(seasons, youngBirthDate, NOW)).toBe(30);
+    });
   });
 });
 

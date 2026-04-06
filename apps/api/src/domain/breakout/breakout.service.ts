@@ -20,6 +20,10 @@ const RACE_SPECIALIST: BreakoutFlag = 'RACE_SPECIALIST' as BreakoutFlag;
 
 const DEFAULT_AGE = 28;
 const FORM_WINDOW_DAYS = 90;
+// Discount factor for single-season trajectory estimation.
+// Calibrated so a young rider (1.5× age factor) with a solid first season
+// (~100 pts) scores ~22/30, while exceptional seasons (~200+ pts) cap at 30.
+const SINGLE_SEASON_FACTOR = 0.15;
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -59,9 +63,6 @@ export function computeTrajectory(
   const currentYear = currentDate.getFullYear();
   const completedSeasons = seasons.filter((s) => s.year < currentYear);
 
-  const slope = computeRawSlope(completedSeasons);
-  if (slope <= 0) return 0;
-
   const age = computeAge(birthDate, currentDate);
   let ageFactor: number;
   if (age < 25) ageFactor = 1.5;
@@ -69,7 +70,24 @@ export function computeTrajectory(
   else if (age <= 31) ageFactor = 0.5;
   else ageFactor = 0.2;
 
-  return Math.min(30, Math.max(0, slope * ageFactor));
+  // 2+ completed seasons: standard linear regression
+  if (completedSeasons.length >= 2) {
+    const slope = computeRawSlope(completedSeasons);
+    if (slope <= 0) return 0;
+    return Math.min(30, Math.max(0, slope * ageFactor));
+  }
+
+  // 1 completed season: "from nothing to scored" is a trajectory signal.
+  // Use the season total as an implicit slope, discounted for single-point
+  // uncertainty. A young rider with 100 pts scores ~22/30.
+  if (completedSeasons.length === 1) {
+    const total = completedSeasons[0].total;
+    if (total <= 0) return 0;
+    return Math.min(30, Math.max(0, total * SINGLE_SEASON_FACTOR * ageFactor));
+  }
+
+  // 0 completed seasons: no historical data to assess trajectory
+  return 0;
 }
 
 // ── Signal 2: Form (0-30) ───────────────────────────────────────────
