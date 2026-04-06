@@ -29,6 +29,7 @@ describe('AnalyzeController', () => {
         categoryScores: { gc: 150, stage: 30, mountain: 10, sprint: 10 },
         breakout: null,
         sameRaceHistory: null,
+        seasonBreakdowns: null,
       },
     ],
     totalSubmitted: 1,

@@ -1,7 +1,7 @@
 import { RaceResult } from '../race-result/race-result.entity';
 import { ResultCategory } from '../shared/result-category.enum';
 import { getPointsForPosition } from './scoring-weights.config';
-import type { RaceHistory } from '@cycling-analyzer/shared-types';
+import type { RaceHistory, SeasonBreakdown } from '@cycling-analyzer/shared-types';
 import type { RacePerformance, YearlyTotal } from '../breakout/breakout.types';
 
 /**
@@ -76,6 +76,58 @@ export function buildSameRaceHistory(
   }
 
   return history.sort((a, b) => b.year - a.year);
+}
+
+/**
+ * Aggregates a rider's results across ALL races into per-season category totals.
+ * Same scoring logic as buildSameRaceHistory but without filtering by raceSlug.
+ */
+export function buildSeasonBreakdowns(results: readonly RaceResult[]): SeasonBreakdown[] {
+  const byYear = new Map<number, RaceResult[]>();
+  for (const r of results) {
+    const existing = byYear.get(r.year);
+    if (existing) existing.push(r);
+    else byYear.set(r.year, [r]);
+  }
+
+  const breakdowns: SeasonBreakdown[] = [];
+  for (const [year, yearResults] of byYear) {
+    let gc = 0;
+    let stage = 0;
+    let mountain = 0;
+    let sprint = 0;
+
+    const sprintsPerStage = countSprintsPerStage(yearResults);
+
+    for (const r of yearResults) {
+      const pts = getPointsForPosition(r.category as ResultCategory, r.position, r.raceType, {
+        climbCategory: r.climbCategory,
+        sprintCount: r.stageNumber !== null ? (sprintsPerStage.get(r.stageNumber) ?? 1) : 1,
+      });
+      switch (r.category) {
+        case ResultCategory.GC:
+        case ResultCategory.GC_DAILY:
+        case ResultCategory.REGULARIDAD_DAILY:
+          gc += pts;
+          break;
+        case ResultCategory.STAGE:
+          stage += pts;
+          break;
+        case ResultCategory.MOUNTAIN:
+        case ResultCategory.MOUNTAIN_PASS:
+          mountain += pts;
+          break;
+        case ResultCategory.SPRINT:
+        case ResultCategory.SPRINT_INTERMEDIATE:
+          sprint += pts;
+          break;
+      }
+    }
+
+    breakdowns.push({ year, gc, stage, mountain, sprint, total: gc + stage + mountain + sprint });
+  }
+
+  return breakdowns.sort((a, b) => b.year - a.year);
 }
 
 /**

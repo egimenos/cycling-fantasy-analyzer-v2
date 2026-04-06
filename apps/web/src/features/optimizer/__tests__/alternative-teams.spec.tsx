@@ -25,6 +25,7 @@ function makeRider(name: string): AnalyzedRider {
     },
     breakout: null,
     sameRaceHistory: null,
+    seasonBreakdowns: null,
   };
 }
 

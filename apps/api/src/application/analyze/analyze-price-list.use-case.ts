@@ -27,13 +27,19 @@ import { RaceType } from '../../domain/shared/race-type.enum';
 import { FetchStartlistUseCase } from '../benchmark/fetch-startlist.use-case';
 import { Rider } from '../../domain/rider/rider.entity';
 import { mapPriceListEntries, PriceListEntry, PriceListEntryDto } from './price-list-entry';
-import type { ProfileSummary, BreakoutResult, RaceHistory } from '@cycling-analyzer/shared-types';
+import type {
+  ProfileSummary,
+  BreakoutResult,
+  RaceHistory,
+  SeasonBreakdown,
+} from '@cycling-analyzer/shared-types';
 import { computeBreakout, computeP75PtsPerHillio } from '../../domain/breakout';
 import {
   buildSameRaceHistory,
+  buildSeasonBreakdowns,
   buildRacePerformances,
+  buildYearlyTotals,
 } from '../../domain/scoring/race-history.service';
-import { buildYearlyTotals } from '../../domain/scoring/race-history.service';
 
 export interface AnalyzeInput {
   riders: PriceListEntryDto[];
@@ -68,6 +74,7 @@ export interface AnalyzedRider {
   } | null;
   breakout: BreakoutResult | null;
   sameRaceHistory: RaceHistory[] | null;
+  seasonBreakdowns: SeasonBreakdown[] | null;
 }
 
 export interface AnalyzeResponse {
@@ -193,6 +200,7 @@ export class AnalyzePriceListUseCase {
           categoryScores: null,
           breakout: null,
           sameRaceHistory: null,
+          seasonBreakdowns: null,
         };
       }
 
@@ -201,6 +209,7 @@ export class AnalyzePriceListUseCase {
       const sameRaceHistory = input.raceSlug
         ? buildSameRaceHistory(riderResults, input.raceSlug)
         : null;
+      const seasonBreakdowns = buildSeasonBreakdowns(riderResults);
 
       const mlResult = mlPredictions.get(riderId);
       const totalProjectedPts = mlResult?.score ?? null;
@@ -222,6 +231,7 @@ export class AnalyzePriceListUseCase {
         categoryScores,
         breakout: null,
         sameRaceHistory: sameRaceHistory?.length ? sameRaceHistory : null,
+        seasonBreakdowns: seasonBreakdowns.length ? seasonBreakdowns : null,
       };
     });
 
