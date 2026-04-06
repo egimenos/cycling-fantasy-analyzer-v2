@@ -48,36 +48,36 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
       {/* Success Banner */}
       <div
         data-testid="roster-complete-banner"
-        className="bg-stage/10 border-l-4 border-stage p-6 rounded-sm flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-in-up"
+        className="bg-stage/10 border-l-4 border-stage p-3 md:p-6 rounded-sm flex flex-col md:flex-row justify-between items-center gap-3 md:gap-4 animate-fade-in-up"
       >
-        <div className="flex items-center gap-4">
-          <div className="bg-stage text-white p-2 rounded-full">
-            <CheckCircle className="h-5 w-5" />
+        <div className="flex items-center gap-3 md:gap-4">
+          <div className="bg-stage text-white p-1.5 md:p-2 rounded-full">
+            <CheckCircle className="h-4 w-4 md:h-5 md:w-5" />
           </div>
           <div>
-            <h1 className="font-headline text-2xl font-extrabold tracking-tight text-on-surface">
+            <h1 className="font-headline text-base md:text-2xl font-extrabold tracking-tight text-on-surface">
               Team Complete!
             </h1>
-            <p className="text-on-surface-variant text-sm">
+            <p className="text-on-surface-variant text-xs md:text-sm">
               Your roster is mathematically optimized for the upcoming stage.
             </p>
           </div>
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
+        <div className="flex gap-2 md:gap-3 w-full md:w-auto">
           <button
             data-testid="roster-reset-btn"
             onClick={onReset}
-            className="bg-surface-container-high hover:bg-surface-container-highest transition-colors px-4 md:px-6 py-2.5 md:py-2 rounded-sm text-sm font-bold flex items-center justify-center gap-2 flex-1 md:flex-initial"
+            className="bg-surface-container-high hover:bg-surface-container-highest transition-colors px-3 md:px-6 py-2 rounded-sm text-xs md:text-sm font-bold flex items-center justify-center gap-1.5 md:gap-2 flex-1 md:flex-initial"
           >
-            <RotateCcw className="h-4 w-4" />
+            <RotateCcw className="h-3.5 w-3.5 md:h-4 md:w-4" />
             Reset
           </button>
           <button
             data-testid="roster-copy-btn"
             onClick={() => void handleCopy()}
-            className="bg-primary-fixed text-primary-foreground px-4 md:px-6 py-2.5 md:py-2 rounded-sm text-sm font-bold flex items-center justify-center gap-2 hover:brightness-110 transition-all flex-1 md:flex-initial"
+            className="bg-primary-fixed text-primary-foreground px-3 md:px-6 py-2 rounded-sm text-xs md:text-sm font-bold flex items-center justify-center gap-1.5 md:gap-2 hover:brightness-110 transition-all flex-1 md:flex-initial"
           >
-            <Copy className="h-4 w-4" />
+            <Copy className="h-3.5 w-3.5 md:h-4 md:w-4" />
             {copied ? 'Copied!' : 'Copy'}
           </button>
         </div>
