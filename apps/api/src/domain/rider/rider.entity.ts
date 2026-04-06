@@ -7,6 +7,7 @@ export interface RiderProps {
   readonly normalizedName: string;
   readonly currentTeam: string | null;
   readonly nationality: string | null;
+  readonly avatarUrl: string | null;
   readonly birthDate: Date | null;
   readonly lastScrapedAt: Date | null;
 }
@@ -14,11 +15,12 @@ export interface RiderProps {
 export class Rider {
   private constructor(private readonly props: RiderProps) {}
 
-  static create(input: Omit<RiderProps, 'id' | 'normalizedName'>): Rider {
+  static create(input: Omit<RiderProps, 'id' | 'normalizedName' | 'avatarUrl'>): Rider {
     return new Rider({
       ...input,
       id: randomUUID(),
       normalizedName: Rider.normalizeName(input.fullName),
+      avatarUrl: null,
     });
   }
 
@@ -50,6 +52,10 @@ export class Rider {
     return this.props.nationality;
   }
 
+  get avatarUrl(): string | null {
+    return this.props.avatarUrl;
+  }
+
   get birthDate(): Date | null {
     return this.props.birthDate;
   }
@@ -60,6 +66,10 @@ export class Rider {
 
   updateTeam(team: string): Rider {
     return new Rider({ ...this.props, currentTeam: team });
+  }
+
+  updateAvatarUrl(url: string): Rider {
+    return new Rider({ ...this.props, avatarUrl: url });
   }
 
   markScraped(at: Date = new Date()): Rider {

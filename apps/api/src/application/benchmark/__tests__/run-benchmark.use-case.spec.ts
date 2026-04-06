@@ -62,6 +62,7 @@ function makeRider(id: string, name: string): Rider {
     normalizedName: name.toLowerCase(),
     currentTeam: 'Team A',
     nationality: null,
+    avatarUrl: null,
     birthDate: null,
     lastScrapedAt: new Date('2025-01-01'),
   });
@@ -103,6 +104,7 @@ describe('RunBenchmarkUseCase', () => {
       findByPcsSlugs: jest.fn(),
       findByIds: jest.fn(),
       findAll: jest.fn(),
+      findMissingAvatars: jest.fn(),
       save: jest.fn(),
       saveMany: jest.fn(),
     };

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { DatabaseModule } from '../infrastructure/database/database.module';
+import { WikidataModule } from '../infrastructure/wikidata/wikidata.module';
 import { PcsClientAdapter } from '../infrastructure/scraping/pcs-client.adapter';
 import { ScraperHealthService } from '../infrastructure/scraping/health/scraper-health.service';
 import { PCS_SCRAPER_PORT } from '../application/scraping/ports/pcs-scraper.port';
@@ -15,11 +16,12 @@ import { DiscoverRacesUseCase } from '../application/scraping/discover-races.use
 import { TriggerScrapeUseCase } from '../application/scraping/trigger-scrape.use-case';
 import { GetScrapeJobsUseCase } from '../application/scraping/get-scrape-jobs.use-case';
 import { FetchStartlistUseCase } from '../application/benchmark/fetch-startlist.use-case';
+import { ResolveAvatarsUseCase } from '../application/avatar/resolve-avatars.use-case';
 import { TriggerScrapeCommand } from './cli/trigger-scrape.command';
 import { SeedDatabaseCommand } from './cli/seed-database.command';
 
 @Module({
-  imports: [DatabaseModule, ScheduleModule.forRoot()],
+  imports: [DatabaseModule, WikidataModule, ScheduleModule.forRoot()],
   providers: [
     {
       provide: PCS_SCRAPER_PORT,
@@ -47,6 +49,7 @@ import { SeedDatabaseCommand } from './cli/seed-database.command';
     TriggerScrapeUseCase,
     GetScrapeJobsUseCase,
     FetchStartlistUseCase,
+    ResolveAvatarsUseCase,
     TriggerScrapeCommand,
     SeedDatabaseCommand,
   ],

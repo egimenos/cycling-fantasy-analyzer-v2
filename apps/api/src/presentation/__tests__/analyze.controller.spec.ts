@@ -21,6 +21,8 @@ describe('AnalyzeController', () => {
           pcsSlug: 'pogacar-tadej',
           fullName: 'Pogacar Tadej',
           currentTeam: 'UAE Team Emirates',
+          avatarUrl: null,
+          nationality: 'SI',
         },
         matchConfidence: 0.95,
         unmatched: false,

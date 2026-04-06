@@ -71,6 +71,13 @@
       "when": 1775395023761,
       "tag": "0009_steady_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1775481194162,
+      "tag": "0010_chubby_machine_man",
+      "breakpoints": true
     }
   ]
 }

@@ -8,6 +8,7 @@ import { BreakoutDetailPanel } from './breakout-detail-panel';
 import { MlBadge } from '@/shared/ui/ml-badge';
 import { CategoryBreakdown } from '@/shared/ui/category-breakdown';
 import { HistoryTable } from '@/shared/ui/history-table';
+import { RiderAvatar } from '@/shared/ui/rider-avatar';
 
 interface RiderCardListProps {
   riders: AnalyzedRider[];
@@ -87,7 +88,16 @@ export function RiderCardList({
                   </span>
                 </div>
 
-                {/* Name + team + flags */}
+                {/* Avatar + Name + team + flags */}
+                {rider.matchedRider && (
+                  <RiderAvatar
+                    avatarUrl={rider.matchedRider.avatarUrl}
+                    fullName={rider.matchedRider.fullName}
+                    nationality={rider.matchedRider.nationality}
+                    size="md"
+                    className="flex-shrink-0 mt-0.5"
+                  />
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="font-headline font-extrabold text-sm text-on-surface uppercase tracking-tight truncate">
                     {name}

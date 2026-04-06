@@ -1,0 +1,1 @@
+ALTER TABLE "riders" ADD COLUMN "avatar_url" varchar(512);

@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, isNull } from 'drizzle-orm';
 import { RiderRepositoryPort } from '../../domain/rider/rider.repository.port';
 import { Rider, RiderProps } from '../../domain/rider/rider.entity';
 import { riders } from './schema/riders';
@@ -38,6 +38,11 @@ export class RiderRepositoryAdapter implements RiderRepositoryPort {
     return rows.map((row) => this.toDomain(row));
   }
 
+  async findMissingAvatars(): Promise<Rider[]> {
+    const rows = await this.db.select().from(riders).where(isNull(riders.avatarUrl));
+    return rows.map((row) => this.toDomain(row));
+  }
+
   async save(rider: Rider): Promise<void> {
     const props = rider.toProps();
     await this.db
@@ -49,6 +54,7 @@ export class RiderRepositoryAdapter implements RiderRepositoryPort {
         normalizedName: props.normalizedName,
         currentTeam: props.currentTeam,
         nationality: props.nationality,
+        avatarUrl: props.avatarUrl,
         birthDate: props.birthDate,
         lastScrapedAt: props.lastScrapedAt,
       })
@@ -59,6 +65,7 @@ export class RiderRepositoryAdapter implements RiderRepositoryPort {
           normalizedName: props.normalizedName,
           currentTeam: props.currentTeam,
           nationality: props.nationality,
+          avatarUrl: props.avatarUrl,
           birthDate: props.birthDate,
           lastScrapedAt: props.lastScrapedAt,
         },
@@ -80,6 +87,7 @@ export class RiderRepositoryAdapter implements RiderRepositoryPort {
             normalizedName: props.normalizedName,
             currentTeam: props.currentTeam,
             nationality: props.nationality,
+            avatarUrl: props.avatarUrl,
             birthDate: props.birthDate,
             lastScrapedAt: props.lastScrapedAt,
           })
@@ -90,6 +98,7 @@ export class RiderRepositoryAdapter implements RiderRepositoryPort {
               normalizedName: props.normalizedName,
               currentTeam: props.currentTeam,
               nationality: props.nationality,
+              avatarUrl: props.avatarUrl,
               birthDate: props.birthDate,
               lastScrapedAt: props.lastScrapedAt,
             },
@@ -106,6 +115,7 @@ export class RiderRepositoryAdapter implements RiderRepositoryPort {
       normalizedName: row.normalizedName,
       currentTeam: row.currentTeam,
       nationality: row.nationality,
+      avatarUrl: row.avatarUrl ?? null,
       birthDate: row.birthDate ?? null,
       lastScrapedAt: row.lastScrapedAt,
     } satisfies RiderProps);

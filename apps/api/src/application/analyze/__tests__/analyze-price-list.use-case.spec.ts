@@ -20,6 +20,7 @@ function createMockRider(
     normalizedName: string;
     currentTeam: string | null;
     nationality: string | null;
+    avatarUrl: string | null;
     birthDate: Date | null;
     lastScrapedAt: Date | null;
   }> = {},
@@ -31,6 +32,7 @@ function createMockRider(
     normalizedName: overrides.normalizedName ?? 'pogacar tadej',
     currentTeam: overrides.currentTeam ?? 'UAE Team Emirates',
     nationality: overrides.nationality ?? 'SI',
+    avatarUrl: overrides.avatarUrl ?? null,
     birthDate: overrides.birthDate ?? null,
     lastScrapedAt: overrides.lastScrapedAt ?? null,
   });
@@ -96,6 +98,7 @@ describe('AnalyzePriceListUseCase', () => {
       findByPcsSlug: jest.fn(),
       findByPcsSlugs: jest.fn(),
       findByIds: jest.fn(),
+      findMissingAvatars: jest.fn(),
       save: jest.fn(),
       saveMany: jest.fn(),
     };
@@ -379,6 +382,8 @@ describe('AnalyzePriceListUseCase', () => {
       pcsSlug: 'pogacar-tadej',
       fullName: 'Pogacar Tadej',
       currentTeam: 'UAE Team Emirates',
+      avatarUrl: null,
+      nationality: 'SI',
     });
     expect(result.riders[0].matchConfidence).toBe(0.95);
   });

@@ -15,6 +15,8 @@ function makeRider(overrides: Partial<AnalyzedRider> = {}): AnalyzedRider {
       pcsSlug: 'tadej-pogacar',
       fullName: 'Tadej Pogačar',
       currentTeam: 'UAE Team Emirates',
+      avatarUrl: null,
+      nationality: 'SI',
     },
     matchConfidence: 0.95,
     pointsPerHillio: 0.12,

@@ -5,6 +5,7 @@ export interface RiderRepositoryPort {
   findByPcsSlugs(pcsSlugs: string[]): Promise<Rider[]>;
   findByIds(ids: string[]): Promise<Rider[]>;
   findAll(): Promise<Rider[]>;
+  findMissingAvatars(): Promise<Rider[]>;
   save(rider: Rider): Promise<void>;
   saveMany(riders: Rider[]): Promise<void>;
 }
