@@ -40,10 +40,17 @@ export class ResolveAvatarsUseCase {
       .filter((r) => avatarMap.has(r.pcsSlug))
       .map((r) => r.updateAvatarUrl(avatarMap.get(r.pcsSlug)!));
 
-    if (updatedRiders.length > 0) {
-      await this.riderRepo.saveMany(updatedRiders);
+    let saved = 0;
+    for (const rider of updatedRiders) {
+      try {
+        await this.riderRepo.save(rider);
+        saved++;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        this.logger.warn(`Failed to save avatar for ${rider.pcsSlug}: ${msg}`);
+      }
     }
 
-    return { resolved: updatedRiders.length, total: ridersWithoutAvatar.length };
+    return { resolved: saved, total: ridersWithoutAvatar.length };
   }
 }

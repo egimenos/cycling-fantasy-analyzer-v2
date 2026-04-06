@@ -98,6 +98,9 @@ export class WikidataAvatarResolverAdapter implements AvatarResolverPort {
     for (const page of Object.values(data.query.pages)) {
       if (!page.thumbnail?.source || page.missing !== undefined) continue;
 
+      // Skip URLs that exceed the DB column length (512 chars)
+      if (page.thumbnail.source.length > 512) continue;
+
       // Resolve the original title we sent (may differ from page.title due to normalization)
       const originalTitle = normalizedMap.get(page.title.toLowerCase()) ?? page.title;
       const pcsSlug = titleToSlug.get(originalTitle.toLowerCase());
@@ -111,12 +114,32 @@ export class WikidataAvatarResolverAdapter implements AvatarResolverPort {
   }
 
   /**
-   * Convert a rider's full name to a Wikipedia page title.
-   * "Tadej Pogačar" -> "Tadej_Pogačar"
-   * Preserves diacritics — Wikipedia handles them correctly.
+   * Convert a rider's full name (PCS "Lastname Firstname" format) to a
+   * Wikipedia page title ("Firstname Lastname").
+   *
+   * Handles patronymic prefixes: "van Aert Wout" → "Wout van Aert",
+   * "van der Poel Mathieu" → "Mathieu van der Poel".
    */
   private nameToWikiTitle(fullName: string): string {
-    return fullName.trim().replace(/\s+/g, '_');
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length <= 1) return fullName.trim().replace(/\s+/g, '_');
+
+    // Find where the lowercase patronymic prefix ends and the capitalized
+    // surname begins. E.g. ["van", "der", "Poel", "Mathieu"] — the surname
+    // starts at "Poel" (index 2), and "Mathieu" is the first name.
+    const PREFIXES = new Set(['van', 'de', 'den', 'der', 'di', 'da', 'dos', 'del', 'la', 'le']);
+
+    let surnameStart = 0;
+    while (surnameStart < parts.length - 1 && PREFIXES.has(parts[surnameStart].toLowerCase())) {
+      surnameStart++;
+    }
+
+    // Everything except the last token is the surname group; the last token
+    // is the first name (PCS convention: "Surname Firstname").
+    const firstName = parts[parts.length - 1];
+    const surname = parts.slice(0, parts.length - 1).join(' ');
+
+    return `${firstName} ${surname}`.replace(/\s+/g, '_');
   }
 
   private chunk<T>(arr: T[], size: number): T[][] {
