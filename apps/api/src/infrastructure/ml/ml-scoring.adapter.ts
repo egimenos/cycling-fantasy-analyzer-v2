@@ -13,7 +13,7 @@ const DEFAULT_BREAKDOWN: MlBreakdown = { gc: 0, stage: 0, mountain: 0, sprint: 0
 export class MlScoringAdapter implements MlScoringPort {
   private readonly logger = new Logger(MlScoringAdapter.name);
   private readonly baseUrl: string;
-  private readonly timeout = 120_000;
+  private readonly timeout = 240_000;
 
   constructor(@Inject(CorrelationStore) private readonly correlationStore: CorrelationStore) {
     this.baseUrl = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
