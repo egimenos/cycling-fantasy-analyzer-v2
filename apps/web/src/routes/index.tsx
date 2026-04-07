@@ -315,6 +315,8 @@ function HomePageContent() {
               gmvImportState={gmvImportState}
               analyzeResult={analyzeState.status === 'success' ? analyzeState.data : undefined}
               onReset={handleFullReset}
+              totalCost={teamBuilder.totalCost}
+              totalScore={teamBuilder.totalScore}
             />
           </div>
         )}

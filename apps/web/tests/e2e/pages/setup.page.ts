@@ -23,6 +23,10 @@ export class SetupPage {
   readonly analysisError: Locator;
   readonly emptyState: Locator;
 
+  // Summary
+  readonly summaryBudget: Locator;
+  readonly summaryProjectedScore: Locator;
+
   // Reset
   readonly resetBtn: Locator;
 
@@ -50,6 +54,10 @@ export class SetupPage {
     this.analyzingSpinner = page.getByTestId('setup-analyzing-spinner');
     this.analysisError = page.getByTestId('setup-analysis-error');
     this.emptyState = page.getByTestId('setup-empty-state');
+
+    // Summary
+    this.summaryBudget = page.getByTestId('setup-summary-budget');
+    this.summaryProjectedScore = page.getByTestId('setup-summary-projected-score');
 
     // Reset
     this.resetBtn = page.getByRole('button', { name: /start new analysis/i });
