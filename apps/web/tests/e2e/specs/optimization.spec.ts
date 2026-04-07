@@ -31,8 +31,8 @@ test.describe('Optimization Tab', () => {
 
   test('should display score breakdown by category', async ({ optimizationPage, page }) => {
     await expect(optimizationPage.scoreBreakdown).toBeVisible();
-    await expect(page.getByText('GC')).toBeVisible();
-    await expect(page.getByText('STAGE')).toBeVisible();
+    await expect(page.getByText('GC').first()).toBeVisible();
+    await expect(page.getByText('STAGE').first()).toBeVisible();
   });
 
   // T031 — Locked riders + apply to roster

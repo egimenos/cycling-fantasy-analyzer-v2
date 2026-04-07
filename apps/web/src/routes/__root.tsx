@@ -49,10 +49,15 @@ function RootLayout() {
             className="fixed top-0 w-full z-50 bg-surface-dim/70 backdrop-blur-md border-b border-outline-variant/15 shadow-sm shadow-black/20"
           >
             <div className="flex justify-between items-center px-4 md:px-5 lg:px-8 xl:px-12 h-14 md:h-16">
-              <div className="flex items-center gap-2 md:gap-3 min-w-0">
-                <img src="/logo.svg" alt="" className="h-7 w-7 md:h-8 md:w-8 flex-shrink-0" />
-                <span className="text-base md:text-xl font-black tracking-tighter text-on-surface uppercase italic font-headline">
-                  CYCLING FANTASY OPTIMIZER
+              <div className="flex items-center gap-2.5 md:gap-3.5 min-w-0">
+                <div className="relative flex-shrink-0">
+                  <img src="/logo.svg" alt="" className="h-8 w-8 md:h-9 md:w-9 relative z-10" />
+                  <div className="absolute inset-0 bg-secondary/15 rounded-full blur-md" />
+                </div>
+                <span className="text-base md:text-xl font-black tracking-tighter uppercase italic font-headline">
+                  <span className="text-secondary">CYCLING</span>{' '}
+                  <span className="text-on-surface">FANTASY</span>{' '}
+                  <span className="text-tertiary">OPTIMIZER</span>
                 </span>
               </div>
               <div className="flex items-center gap-4">

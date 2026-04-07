@@ -86,7 +86,7 @@ export function FlagChip({ flag }: { flag: string }) {
         <span
           tabIndex={0}
           className={cn(
-            'ml-1 inline-flex items-center rounded-sm px-1 py-0.5 text-[9px] font-mono font-bold uppercase border cursor-default',
+            'ml-1 inline-flex items-center rounded-sm px-1 py-0.5 text-[10px] font-mono font-bold uppercase border cursor-default',
             config.colorClass,
           )}
         >

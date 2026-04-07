@@ -73,9 +73,9 @@ export function SetupTab({
   return (
     <div
       data-testid="tab-content-setup"
-      className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 pt-2 lg:h-[calc(100dvh-10rem)] lg:max-h-[calc(100dvh-10rem)]"
+      className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 pt-2 lg:h-[calc(100dvh-12rem)] lg:max-h-[calc(100dvh-12rem)]"
     >
-      <div className="lg:col-span-5 flex flex-col lg:min-h-0">
+      <div className="lg:col-span-6 xl:col-span-5 flex flex-col lg:min-h-0">
         <RiderInput
           onAnalyze={onAnalyze}
           isLoading={isLoading}
@@ -98,7 +98,7 @@ export function SetupTab({
         />
       </div>
 
-      <div className="lg:col-span-7 flex flex-col lg:min-h-0">
+      <div className="lg:col-span-6 xl:col-span-7 flex flex-col lg:min-h-0">
         <div className="flex justify-between items-end mb-4 px-2">
           <div className="flex flex-col">
             <span className="text-outline font-mono text-xs uppercase tracking-tight">

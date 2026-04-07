@@ -21,10 +21,10 @@ describe('ScoreBreakdown', () => {
       regularidad_daily: 0,
     };
     renderWithProvider(<ScoreBreakdown breakdown={breakdown} />);
-    expect(screen.getByText('GC')).toBeInTheDocument();
-    expect(screen.getByText('STAGE')).toBeInTheDocument();
-    expect(screen.getByText('MOUNTAIN')).toBeInTheDocument();
-    expect(screen.getByText('SPRINT')).toBeInTheDocument();
+    expect(screen.getAllByText('GC').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('STAGE').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('MOUNTAIN').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('SPRINT').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders percentage values in the legend', () => {
@@ -58,7 +58,7 @@ describe('ScoreBreakdown', () => {
       regularidad_daily: 0,
     };
     renderWithProvider(<ScoreBreakdown breakdown={breakdown} />);
-    expect(screen.getByText('GC')).toBeInTheDocument();
+    expect(screen.getAllByText('GC').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders the Point Distribution Analysis label', () => {

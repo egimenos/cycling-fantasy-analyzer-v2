@@ -48,38 +48,41 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
       {/* Success Banner */}
       <div
         data-testid="roster-complete-banner"
-        className="bg-stage/10 border-l-4 border-stage p-3 md:p-6 rounded-sm flex flex-col md:flex-row justify-between items-center gap-3 md:gap-4 animate-fade-in-up"
+        className="bg-gradient-to-r from-stage/15 via-stage/10 to-transparent border border-stage/20 p-4 md:p-8 rounded-sm flex flex-col gap-4 md:gap-6 animate-fade-in-up relative overflow-hidden"
       >
-        <div className="flex items-center gap-3 md:gap-4">
-          <div className="bg-stage text-white p-1.5 md:p-2 rounded-full">
-            <CheckCircle className="h-4 w-4 md:h-5 md:w-5" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-stage/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative z-10">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="bg-stage text-white p-2 md:p-3 rounded-full shadow-lg shadow-stage/30">
+              <CheckCircle className="h-5 w-5 md:h-7 md:w-7" />
+            </div>
+            <div>
+              <h1 className="font-headline text-xl md:text-3xl font-extrabold tracking-tight text-on-surface">
+                Team Complete!
+              </h1>
+              <p className="text-on-surface-variant text-xs md:text-sm mt-0.5">
+                Your roster is mathematically optimized for the upcoming stage.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="font-headline text-base md:text-2xl font-extrabold tracking-tight text-on-surface">
-              Team Complete!
-            </h1>
-            <p className="text-on-surface-variant text-xs md:text-sm">
-              Your roster is mathematically optimized for the upcoming stage.
-            </p>
+          <div className="flex gap-2 md:gap-3 w-full md:w-auto">
+            <button
+              data-testid="roster-reset-btn"
+              onClick={onReset}
+              className="bg-surface-container-high hover:bg-surface-container-highest transition-colors px-3 md:px-6 py-2.5 rounded-sm text-xs md:text-sm font-bold flex items-center justify-center gap-1.5 md:gap-2 flex-1 md:flex-initial"
+            >
+              <RotateCcw className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              Reset
+            </button>
+            <button
+              data-testid="roster-copy-btn"
+              onClick={() => void handleCopy()}
+              className="bg-secondary text-secondary-foreground px-3 md:px-8 py-2.5 rounded-sm text-xs md:text-sm font-extrabold flex items-center justify-center gap-1.5 md:gap-2 shadow-lg shadow-secondary/25 hover:brightness-110 hover:shadow-secondary/40 hover:shadow-xl active:scale-[0.98] transition-all flex-1 md:flex-initial"
+            >
+              <Copy className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              {copied ? 'Copied!' : 'Copy Roster'}
+            </button>
           </div>
-        </div>
-        <div className="flex gap-2 md:gap-3 w-full md:w-auto">
-          <button
-            data-testid="roster-reset-btn"
-            onClick={onReset}
-            className="bg-surface-container-high hover:bg-surface-container-highest transition-colors px-3 md:px-6 py-2 rounded-sm text-xs md:text-sm font-bold flex items-center justify-center gap-1.5 md:gap-2 flex-1 md:flex-initial"
-          >
-            <RotateCcw className="h-3.5 w-3.5 md:h-4 md:w-4" />
-            Reset
-          </button>
-          <button
-            data-testid="roster-copy-btn"
-            onClick={() => void handleCopy()}
-            className="bg-primary-fixed text-primary-foreground px-3 md:px-6 py-2 rounded-sm text-xs md:text-sm font-bold flex items-center justify-center gap-1.5 md:gap-2 hover:brightness-110 transition-all flex-1 md:flex-initial"
-          >
-            <Copy className="h-3.5 w-3.5 md:h-4 md:w-4" />
-            {copied ? 'Copied!' : 'Copy'}
-          </button>
         </div>
       </div>
 
@@ -140,7 +143,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
                         {index === 0 && (
                           <span
                             data-testid="roster-captain-badge"
-                            className="bg-tertiary/20 text-tertiary text-[9px] px-1 font-bold rounded-sm border border-tertiary/30 flex-shrink-0"
+                            className="bg-tertiary/20 text-tertiary text-[10px] px-1 font-bold rounded-sm border border-tertiary/30 flex-shrink-0"
                           >
                             CPT
                           </span>
@@ -158,7 +161,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
 
                     {/* Cost */}
                     <div className="w-16 text-right flex-shrink-0">
-                      <span className="text-[9px] font-mono text-outline uppercase block">
+                      <span className="text-[10px] font-mono text-outline uppercase block">
                         Cost
                       </span>
                       <span className="font-mono font-bold text-primary text-sm">
@@ -168,7 +171,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
 
                     {/* Projected */}
                     <div className="w-14 text-right flex-shrink-0">
-                      <span className="text-[9px] font-mono text-outline uppercase block">
+                      <span className="text-[10px] font-mono text-outline uppercase block">
                         Proj
                       </span>
                       <span className="font-mono font-bold text-tertiary text-sm">
@@ -178,7 +181,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
 
                     {/* Value */}
                     <div className="w-14 text-right flex-shrink-0">
-                      <span className="text-[9px] font-mono text-outline uppercase block">
+                      <span className="text-[10px] font-mono text-outline uppercase block">
                         Value
                       </span>
                       <span className="font-mono font-bold text-stage text-sm">
@@ -257,7 +260,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
                   </div>
                   <div className="grid grid-cols-3 mx-3 mb-3 border border-outline-variant/10 rounded-sm overflow-hidden">
                     <div className="px-3 py-2 border-r border-outline-variant/10">
-                      <span className="text-[9px] font-mono text-outline uppercase block">
+                      <span className="text-[10px] font-mono text-outline uppercase block">
                         Cost
                       </span>
                       <span className="font-mono font-bold text-primary">
@@ -265,7 +268,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
                       </span>
                     </div>
                     <div className="px-3 py-2 border-r border-outline-variant/10">
-                      <span className="text-[9px] font-mono text-outline uppercase block">
+                      <span className="text-[10px] font-mono text-outline uppercase block">
                         Proj
                       </span>
                       <span className="font-mono font-bold text-tertiary">
@@ -273,7 +276,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
                       </span>
                     </div>
                     <div className="px-3 py-2">
-                      <span className="text-[9px] font-mono text-outline uppercase block">
+                      <span className="text-[10px] font-mono text-outline uppercase block">
                         Value
                       </span>
                       <span className="font-mono font-bold text-stage">
@@ -292,15 +295,16 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
           <div className="bg-surface-container-low p-5 md:p-8 rounded-sm space-y-8 md:space-y-10 border-t-2 border-secondary animate-slide-in-right">
             <h3 className="font-headline text-xl font-extrabold tracking-tight">Roster Metrics</h3>
 
-            {/* Total Projected Score */}
-            <div className="space-y-2">
+            {/* Total Projected Score — hero treatment */}
+            <div className="space-y-2 relative">
+              <div className="absolute -top-4 -right-4 w-24 h-24 bg-secondary/5 rounded-full blur-2xl pointer-events-none" />
               <label className="font-mono text-[10px] tracking-widest text-on-primary-container uppercase">
                 Total Proj. Score
               </label>
               <div className="flex items-baseline gap-2">
                 <span
                   data-testid="roster-total-score"
-                  className="font-headline text-3xl md:text-5xl font-black text-on-surface tracking-tighter text-glow-secondary"
+                  className="font-headline text-4xl md:text-6xl font-black text-on-surface tracking-tighter text-glow-secondary"
                 >
                   {formatNumber(Math.round(animatedScore))}
                 </span>
@@ -327,7 +331,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
             {/* Remaining + Avg/Rider */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-surface-container-high p-4 rounded-sm">
-                <span className="font-mono text-[11px] md:text-[9px] uppercase text-on-primary-container block mb-1">
+                <span className="font-mono text-[10px] uppercase text-on-primary-container block mb-1">
                   Remaining
                 </span>
                 <span
@@ -338,7 +342,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
                 </span>
               </div>
               <div className="bg-surface-container-high p-4 rounded-sm">
-                <span className="font-mono text-[11px] md:text-[9px] uppercase text-on-primary-container block mb-1">
+                <span className="font-mono text-[10px] uppercase text-on-primary-container block mb-1">
                   Avg/Rider
                 </span>
                 <span

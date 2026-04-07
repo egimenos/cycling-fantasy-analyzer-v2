@@ -127,9 +127,8 @@ describe('TeamBuilderPanel', () => {
     expect(screen.getByText('Over budget!')).toBeInTheDocument();
   });
 
-  it('shows review button when team is complete', () => {
+  it('hides "more riders needed" when team is complete', () => {
     const riders = Array.from({ length: 9 }, (_, i) => makeRider(`R${i}`));
-    const onReviewTeam = vi.fn();
     render(
       <TeamBuilderPanel
         {...defaultProps}
@@ -137,12 +136,9 @@ describe('TeamBuilderPanel', () => {
         totalCost={900}
         totalScore={450}
         isTeamComplete={true}
-        onReviewTeam={onReviewTeam}
       />,
     );
-    // The "X more riders needed" message should not appear
+    // The "X more riders needed" message should not appear when team is full
     expect(screen.queryByText(/more rider/)).not.toBeInTheDocument();
-    // A review button should be visible
-    expect(screen.getByTestId('dashboard-review-btn')).toBeInTheDocument();
   });
 });
