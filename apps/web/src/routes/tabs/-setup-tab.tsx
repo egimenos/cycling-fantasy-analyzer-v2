@@ -42,6 +42,8 @@ export interface SetupTabProps {
   onUpcomingChange: (value: boolean) => void;
   gmvImportState: GmvImportState;
   analyzeResult?: AnalyzeResponse;
+  totalCost: number;
+  totalScore: number;
 }
 
 export function SetupTab({
@@ -67,6 +69,8 @@ export function SetupTab({
   onUpcomingChange,
   gmvImportState,
   analyzeResult,
+  totalCost,
+  totalScore,
 }: SetupTabProps) {
   const hasResult = !!analyzeResult;
 
@@ -278,7 +282,7 @@ export function SetupTab({
                 Budget
               </span>
               <span className="text-base md:text-lg font-mono font-bold text-outline">
-                0 / {budget}
+                {hasResult ? totalCost : 0} / {budget}
                 <span className="text-[10px] ml-0.5 text-outline/50">H</span>
               </span>
             </div>
@@ -287,7 +291,9 @@ export function SetupTab({
               <span className="text-[10px] md:text-xs text-outline uppercase font-mono tracking-tighter">
                 Projected Score
               </span>
-              <span className="text-base md:text-lg font-mono font-bold text-outline">—</span>
+              <span className="text-base md:text-lg font-mono font-bold text-outline">
+                {hasResult && totalScore > 0 ? totalScore.toFixed(1) : '—'}
+              </span>
             </div>
             <div className="flex gap-2 items-center bg-surface-container-highest/50 px-2 md:px-3 py-1.5 rounded-sm justify-center md:justify-start">
               <span
