@@ -49,6 +49,18 @@ const FLAG_DESCRIPTIONS: Record<string, string> = {
   RACE_SPECIALIST: 'Historically outperforms predictions in this race',
 };
 
+function getSignalColor(pct: number): string {
+  if (pct >= 70) return 'bg-stage';
+  if (pct >= 40) return 'bg-tertiary';
+  return 'bg-outline-variant/50';
+}
+
+function getSignalTextColor(pct: number): string {
+  if (pct >= 70) return 'text-stage';
+  if (pct >= 40) return 'text-tertiary';
+  return 'text-outline';
+}
+
 function SignalBar({ config, value }: { config: SignalConfig; value: number }) {
   const isRouteFitNA = config.key === 'routeFit' && value === 0;
   const pct = Math.min((value / config.max) * 100, 100);
@@ -59,16 +71,18 @@ function SignalBar({ config, value }: { config: SignalConfig; value: number }) {
         <span className="text-[10px] font-mono text-outline uppercase tracking-wider">
           {config.label}
         </span>
-        <span className="text-[10px] font-mono text-on-surface-variant">
+        <span
+          className={`text-[10px] font-mono font-bold ${isRouteFitNA ? 'text-outline' : getSignalTextColor(pct)}`}
+        >
           {isRouteFitNA ? 'N/A' : `${value.toFixed(1)} / ${config.max}`}
         </span>
       </div>
       {isRouteFitNA ? (
         <p className="text-[10px] font-mono italic text-outline">N/A — no race profile provided</p>
       ) : (
-        <div className="h-2 w-full rounded-sm bg-surface-container-high overflow-hidden">
+        <div className="h-2.5 w-full rounded-sm bg-surface-container-high overflow-hidden">
           <div
-            className="h-full rounded-sm bg-primary transition-all"
+            className={`h-full rounded-sm transition-all ${getSignalColor(pct)}`}
             style={{ width: `${pct}%` }}
           />
         </div>

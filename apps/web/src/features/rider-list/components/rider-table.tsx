@@ -11,7 +11,7 @@ import { MlBadge } from '@/shared/ui/ml-badge';
 import { Badge } from '@/shared/ui/badge';
 import { EmptyState } from '@/shared/ui/empty-state';
 import { formatNumber, cn } from '@/shared/lib/utils';
-import { Lock, Unlock, Ban, ExternalLink, Info } from 'lucide-react';
+import { Lock, Unlock, Ban, ExternalLink, Info, BarChart3, TrendingUp } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import { BpiBadge, FlagChip } from './bpi-badge';
 import { BreakoutDetailPanel } from './breakout-detail-panel';
@@ -290,53 +290,178 @@ function createColumns(
   ];
 }
 
-function PerformanceContent({ rider }: { rider: AnalyzedRider }) {
+interface FieldStats {
+  avgScore: number;
+  medianScore: number;
+  maxScore: number;
+  /** Sorted scores for percentile calculation */
+  sortedScores: number[];
+}
+
+function computeFieldStats(riders: AnalyzedRider[]): FieldStats {
+  const scores = riders
+    .map((r) => getEffectiveScore(r))
+    .filter((s): s is number => s !== null && s > 0);
+  scores.sort((a, b) => a - b);
+  const sum = scores.reduce((a, b) => a + b, 0);
+  const avg = scores.length > 0 ? sum / scores.length : 0;
+  const median = scores.length > 0 ? scores[Math.floor(scores.length / 2)] : 0;
+  const max = scores.length > 0 ? scores[scores.length - 1] : 0;
+  return { avgScore: avg, medianScore: median, maxScore: max, sortedScores: scores };
+}
+
+function getPercentile(score: number, sortedScores: number[]): number {
+  if (sortedScores.length === 0) return 0;
+  const below = sortedScores.filter((s) => s < score).length;
+  return Math.round((below / sortedScores.length) * 100);
+}
+
+function FieldContextBar({ rider, fieldStats }: { rider: AnalyzedRider; fieldStats: FieldStats }) {
+  const score = getEffectiveScore(rider);
+  if (score === null || fieldStats.maxScore === 0) return null;
+
+  const percentile = getPercentile(score, fieldStats.sortedScores);
+  const pct = Math.min((score / fieldStats.maxScore) * 100, 100);
+  const avgPct = Math.min((fieldStats.avgScore / fieldStats.maxScore) * 100, 100);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-      {rider.categoryScores && (
-        <div className="space-y-4">
-          <h4 className="inline-flex items-center gap-1.5 text-[10px] font-mono text-outline uppercase">
-            ML Predicted Breakdown
-            <MlBadge />
-          </h4>
-          <CategoryBreakdown breakdown={rider.categoryScores} />
-        </div>
-      )}
-
-      <div className={cn('space-y-4', rider.categoryScores ? 'col-span-3' : 'col-span-4')}>
-        {(rider.sameRaceHistory?.length || rider.seasonBreakdowns?.length) && (
-          <div className="flex flex-col lg:flex-row gap-4 items-start">
-            {rider.sameRaceHistory && rider.sameRaceHistory.length > 0 && (
-              <HistoryTable title="Same Race History" rows={rider.sameRaceHistory} />
-            )}
-            {rider.seasonBreakdowns && rider.seasonBreakdowns.length > 0 && (
-              <HistoryTable title="Season Totals" rows={rider.seasonBreakdowns} />
-            )}
-          </div>
-        )}
-
-        {rider.matchedRider && (
-          <div className="flex items-center gap-3 text-xs text-on-primary-container mt-4">
-            <span>
-              Matched: {rider.matchedRider.fullName} ({rider.matchedRider.currentTeam}) —
-              confidence: {(rider.matchConfidence * 100).toFixed(0)}%
+    <div className="flex items-center gap-4 bg-surface-container/50 rounded-sm px-4 py-2.5 mb-4 border border-outline-variant/10">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2 flex-shrink-0 cursor-default">
+            <span className="text-[10px] font-mono text-outline uppercase inline-flex items-center gap-1">
+              Field Rank
+              <Info className="h-3 w-3 text-outline/60" />
             </span>
-            <a
-              href={`https://www.procyclingstats.com/rider/${rider.matchedRider.pcsSlug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-secondary hover:underline"
+            <span
+              className={cn(
+                'font-mono font-bold text-sm',
+                percentile >= 80
+                  ? 'text-stage'
+                  : percentile >= 50
+                    ? 'text-secondary'
+                    : 'text-outline',
+              )}
             >
-              PCS Profile <ExternalLink className="h-3 w-3" />
-            </a>
+              P{percentile}
+            </span>
           </div>
-        )}
+        </TooltipTrigger>
+        <TooltipContent className="max-w-[240px]">
+          Percentile rank among all {fieldStats.sortedScores.length} analyzed riders. P{percentile}{' '}
+          means this rider scores higher than {percentile}% of the field. The vertical marker shows
+          the field average ({fieldStats.avgScore.toFixed(0)} pts).
+        </TooltipContent>
+      </Tooltip>
+      <div className="flex-1 relative h-2 bg-surface-container-highest rounded-full overflow-visible">
+        {/* Average marker */}
+        <div
+          className="absolute top-0 h-2 w-0.5 bg-outline/40 z-10"
+          style={{ left: `${avgPct}%` }}
+          title={`Field avg: ${fieldStats.avgScore.toFixed(0)}`}
+        />
+        {/* Rider bar */}
+        <div
+          className={cn(
+            'h-full rounded-full transition-all',
+            percentile >= 80
+              ? 'bg-stage'
+              : percentile >= 50
+                ? 'bg-secondary'
+                : 'bg-outline-variant/50',
+          )}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <div className="flex items-center gap-3 flex-shrink-0 text-[10px] font-mono">
+        <span className="text-outline">
+          Avg{' '}
+          <span className="text-on-surface-variant font-bold">
+            {fieldStats.avgScore.toFixed(0)}
+          </span>
+        </span>
+        <span className="text-outline">
+          Rider{' '}
+          <span
+            className={cn(
+              'font-bold',
+              percentile >= 80
+                ? 'text-stage'
+                : percentile >= 50
+                  ? 'text-secondary'
+                  : 'text-on-surface-variant',
+            )}
+          >
+            {score.toFixed(0)}
+          </span>
+        </span>
       </div>
     </div>
   );
 }
 
-function ExpandedRowContent({ rider }: { rider: AnalyzedRider }) {
+function PerformanceContent({
+  rider,
+  fieldStats,
+}: {
+  rider: AnalyzedRider;
+  fieldStats: FieldStats;
+}) {
+  return (
+    <div className="space-y-4">
+      <FieldContextBar rider={rider} fieldStats={fieldStats} />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {rider.categoryScores && (
+          <div className="space-y-4">
+            <h4 className="inline-flex items-center gap-1.5 text-[10px] font-mono text-outline uppercase">
+              ML Predicted Breakdown
+              <MlBadge />
+            </h4>
+            <CategoryBreakdown breakdown={rider.categoryScores} />
+          </div>
+        )}
+
+        <div className={cn('space-y-4', rider.categoryScores ? 'col-span-3' : 'col-span-4')}>
+          {(rider.sameRaceHistory?.length || rider.seasonBreakdowns?.length) && (
+            <div className="flex flex-col lg:flex-row gap-4 items-start">
+              {rider.sameRaceHistory && rider.sameRaceHistory.length > 0 && (
+                <HistoryTable title="Same Race History" rows={rider.sameRaceHistory} />
+              )}
+              {rider.seasonBreakdowns && rider.seasonBreakdowns.length > 0 && (
+                <HistoryTable title="Season Totals" rows={rider.seasonBreakdowns} />
+              )}
+            </div>
+          )}
+
+          {rider.matchedRider && (
+            <div className="flex items-center gap-3 text-xs text-on-primary-container mt-4">
+              <span>
+                Matched: {rider.matchedRider.fullName} ({rider.matchedRider.currentTeam}) —
+                confidence: {(rider.matchConfidence * 100).toFixed(0)}%
+              </span>
+              <a
+                href={`https://www.procyclingstats.com/rider/${rider.matchedRider.pcsSlug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-secondary hover:underline"
+              >
+                PCS Profile <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExpandedRowContent({
+  rider,
+  fieldStats,
+}: {
+  rider: AnalyzedRider;
+  fieldStats: FieldStats;
+}) {
   const [activeTab, setActiveTab] = useState<'performance' | 'breakout'>('performance');
 
   if (rider.unmatched) {
@@ -352,34 +477,36 @@ function ExpandedRowContent({ rider }: { rider: AnalyzedRider }) {
   return (
     <div>
       {showTabs && (
-        <div className="flex gap-4 border-b border-outline-variant/20 mb-4">
+        <div className="inline-flex bg-surface-container-highest/60 rounded-sm p-0.5 mb-4 border border-outline-variant/10">
           <button
             onClick={() => setActiveTab('performance')}
             className={cn(
-              'pb-2 text-xs font-mono uppercase tracking-wider cursor-pointer',
+              'px-4 py-1.5 text-[11px] font-mono uppercase tracking-wider rounded-sm transition-all flex items-center gap-1.5',
               activeTab === 'performance'
-                ? 'border-b-2 border-primary text-primary font-bold'
+                ? 'bg-secondary text-secondary-foreground font-bold shadow-sm'
                 : 'text-outline hover:text-on-surface',
             )}
           >
+            <BarChart3 className="h-3 w-3" />
             Performance
           </button>
           <button
             onClick={() => setActiveTab('breakout')}
             className={cn(
-              'pb-2 text-xs font-mono uppercase tracking-wider cursor-pointer',
+              'px-4 py-1.5 text-[11px] font-mono uppercase tracking-wider rounded-sm transition-all flex items-center gap-1.5',
               activeTab === 'breakout'
-                ? 'border-b-2 border-primary text-primary font-bold'
+                ? 'bg-secondary text-secondary-foreground font-bold shadow-sm'
                 : 'text-outline hover:text-on-surface',
             )}
           >
+            <TrendingUp className="h-3 w-3" />
             Breakout
           </button>
         </div>
       )}
 
       {activeTab === 'performance' || !showTabs ? (
-        <PerformanceContent rider={rider} />
+        <PerformanceContent rider={rider} fieldStats={fieldStats} />
       ) : (
         <BreakoutDetailPanel breakout={rider.breakout!} prediction={rider.totalProjectedPts ?? 0} />
       )}
@@ -453,6 +580,7 @@ export function RiderTable({
   }
 
   const maxScore = useMemo(() => findMaxEffectiveScore(data.riders), [data.riders]);
+  const fieldStats = useMemo(() => computeFieldStats(data.riders), [data.riders]);
 
   const filteredRiders = useMemo(
     () =>
@@ -569,7 +697,7 @@ export function RiderTable({
             data={filteredRiders}
             initialSorting={[{ id: 'effectiveScore', desc: true }]}
             renderExpandedRow={(row: Row<AnalyzedRider>) => (
-              <ExpandedRowContent rider={row.original} />
+              <ExpandedRowContent rider={row.original} fieldStats={fieldStats} />
             )}
             getRowClassName={(row: Row<AnalyzedRider>) => {
               if (excludedIds.has(row.original.rawName)) return 'opacity-40 grayscale';

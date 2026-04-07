@@ -77,7 +77,7 @@ describe('OptimizerPanel', () => {
     const data = makeOptimizeResponse([makeRider('Rider A')]);
     renderWithProvider(<OptimizerPanel data={data} budget={2000} onApplyToRoster={vi.fn()} />);
     expect(screen.getByTestId('optimization-apply-btn')).toBeInTheDocument();
-    expect(screen.getByText('Apply to Roster')).toBeInTheDocument();
+    expect(screen.getByTestId('optimization-apply-btn').textContent).toContain('Apply to Roster');
   });
 
   it('calls onApplyToRoster when button is clicked', async () => {
@@ -86,7 +86,7 @@ describe('OptimizerPanel', () => {
     renderWithProvider(<OptimizerPanel data={data} budget={2000} onApplyToRoster={onApply} />);
 
     const user = userEvent.setup();
-    await user.click(screen.getByText('Apply to Roster'));
+    await user.click(screen.getByTestId('optimization-apply-btn'));
 
     expect(onApply).toHaveBeenCalledOnce();
   });

@@ -1,5 +1,6 @@
 import type { AnalyzedRider } from '@cycling-analyzer/shared-types';
 import { MlBadge } from '@/shared/ui/ml-badge';
+import { ProgressRing } from '@/shared/ui/progress-ring';
 import { cn } from '@/shared/lib/utils';
 import { useAnimatedNumber } from '@/shared/hooks/use-animated-number';
 import { RiderAvatar } from '@/shared/ui/rider-avatar';
@@ -15,9 +16,6 @@ interface TeamBuilderPanelProps {
   onRemoveRider: (riderName: string) => void;
   onClearAll: () => void;
   lockedIds?: Set<string>;
-  onOptimize?: () => void;
-  isOptimizing?: boolean;
-  onReviewTeam?: () => void;
 }
 
 const MAX_RIDERS = 9;
@@ -32,9 +30,6 @@ export function TeamBuilderPanel({
   onRemoveRider,
   onClearAll,
   lockedIds,
-  onOptimize,
-  isOptimizing = false,
-  onReviewTeam,
 }: TeamBuilderPanelProps) {
   const emptySlots = MAX_RIDERS - selectedRiders.length;
   const usagePercent = budget > 0 ? (totalCost / budget) * 100 : 0;
@@ -66,16 +61,19 @@ export function TeamBuilderPanel({
         </p>
       </header>
 
-      {/* Roster Count + Rider List (scrollable) */}
+      {/* Progress Ring + Rider List (scrollable) */}
       <div className="flex-1 min-h-0 mt-6 space-y-4 overflow-y-auto pr-1">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-mono text-outline uppercase">Active Roster</span>
-          <span
-            data-testid="dashboard-roster-count"
-            className="font-mono font-bold text-secondary text-sm"
-          >
-            {selectedRiders.length} / {MAX_RIDERS} riders
-          </span>
+        <div className="flex items-center gap-4">
+          <ProgressRing current={selectedRiders.length} total={MAX_RIDERS} size={72} />
+          <div className="flex flex-col">
+            <span
+              data-testid="dashboard-roster-count"
+              className="font-mono font-bold text-secondary text-sm"
+            >
+              {selectedRiders.length} / {MAX_RIDERS} riders
+            </span>
+            <span className="text-[10px] font-mono text-outline uppercase">Active Roster</span>
+          </div>
         </div>
 
         <ul className="space-y-2">
@@ -180,8 +178,8 @@ export function TeamBuilderPanel({
         </p>
       </div>
 
-      {/* Projected Score + CTA (pinned to bottom) */}
-      <div className="pt-4 mt-6 space-y-4 flex-shrink-0">
+      {/* Projected Score (pinned to bottom) */}
+      <div className="pt-4 mt-6 flex-shrink-0 border-t border-outline-variant/10">
         <div className="flex justify-between items-center">
           <span className="text-xs text-outline font-mono uppercase flex items-center gap-1.5">
             Projected Score
@@ -198,30 +196,9 @@ export function TeamBuilderPanel({
         </div>
 
         {!isTeamComplete && (
-          <p className="text-[10px] text-outline font-mono text-center">
+          <p className="text-[10px] text-outline font-mono text-center mt-2">
             {emptySlots} more rider{emptySlots !== 1 ? 's' : ''} needed
           </p>
-        )}
-
-        {isTeamComplete && onReviewTeam ? (
-          <button
-            data-testid="dashboard-review-btn"
-            onClick={onReviewTeam}
-            className="w-full py-3 bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30 font-headline font-bold uppercase tracking-wider text-sm rounded-sm hover:bg-green-500/30 transition-colors"
-          >
-            Review Team &rarr;
-          </button>
-        ) : (
-          onOptimize && (
-            <button
-              data-testid="dashboard-optimize-btn"
-              onClick={onOptimize}
-              disabled={isOptimizing}
-              className="w-full py-4 bg-gradient-to-br from-primary-fixed-dim to-primary-container text-on-surface font-headline font-extrabold uppercase tracking-widest text-sm rounded-sm hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-black/40 disabled:opacity-50 disabled:pointer-events-none"
-            >
-              {isOptimizing ? 'Optimizing...' : 'Get Optimal Team'}
-            </button>
-          )
         )}
       </div>
     </div>

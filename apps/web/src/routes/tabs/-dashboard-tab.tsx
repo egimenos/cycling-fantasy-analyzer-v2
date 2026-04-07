@@ -49,7 +49,7 @@ export function DashboardTab({
   return (
     <div
       data-testid="tab-content-dashboard"
-      className={isDesktop ? 'space-y-6' : 'space-y-4 pb-20'}
+      className={isDesktop ? 'space-y-6 pb-24' : 'space-y-4 pb-20'}
     >
       <h1 className="sr-only">Dashboard</h1>
       {/* Race Profile Bar */}
@@ -74,7 +74,7 @@ export function DashboardTab({
           {teamBuilder.isTeamComplete ? (
             <button
               onClick={onReviewTeam}
-              className="flex-1 py-2.5 bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30 font-headline font-bold uppercase tracking-wider text-xs rounded-sm text-center"
+              className="flex-1 py-2.5 bg-stage text-white font-headline font-bold uppercase tracking-wider text-xs rounded-sm text-center shadow-md shadow-stage/30 active:scale-[0.98] transition-all"
             >
               Review Team &rarr;
             </button>
@@ -82,7 +82,7 @@ export function DashboardTab({
             <button
               onClick={onOptimize}
               disabled={isOptimizing}
-              className="flex-1 py-2.5 bg-surface-container-highest text-on-surface font-headline font-bold uppercase tracking-wider text-xs rounded-sm text-center active:scale-[0.98] transition-all disabled:opacity-50"
+              className="flex-1 py-2.5 bg-secondary text-secondary-foreground font-headline font-bold uppercase tracking-wider text-xs rounded-sm text-center shadow-md shadow-secondary/25 active:scale-[0.98] transition-all disabled:opacity-50"
             >
               {isOptimizing ? 'Optimizing...' : 'Optimize'}
             </button>
@@ -107,7 +107,7 @@ export function DashboardTab({
         </section>
 
         {isDesktop && (
-          <aside className="w-[320px] flex-shrink-0" aria-label="Team Builder">
+          <aside className="w-[340px] flex-shrink-0" aria-label="Team Builder">
             <TeamBuilderPanel
               selectedRiders={teamBuilder.selectedRiders}
               totalCost={teamBuilder.totalCost}
@@ -118,9 +118,6 @@ export function DashboardTab({
               onRemoveRider={teamBuilder.removeRider}
               lockedIds={lockedIds}
               onClearAll={teamBuilder.clearAll}
-              onOptimize={onOptimize}
-              isOptimizing={isOptimizing}
-              onReviewTeam={onReviewTeam}
             />
           </aside>
         )}

@@ -362,6 +362,59 @@ function HomePageContent() {
         </Suspense>
       </div>
 
+      {/* Desktop: sticky bottom CTA bar — outside animated wrappers so position:fixed works */}
+      {isDesktop && tab === 'dashboard' && analyzeState.status === 'success' && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-surface-dim/90 backdrop-blur-md border-t border-outline-variant/15 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+          <div className="flex items-center justify-between px-8 xl:px-12 py-3 max-w-screen-2xl mx-auto gap-6">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-outline uppercase">Roster</span>
+                <span className="font-mono font-bold text-on-surface">
+                  {teamBuilder.selectedRiders.length}/9
+                </span>
+              </div>
+              <div className="h-5 w-px bg-outline-variant/20" />
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-outline uppercase">Budget</span>
+                <span className="font-mono font-bold text-on-surface">
+                  {teamBuilder.totalCost} / {budget}
+                </span>
+              </div>
+              <div className="h-5 w-px bg-outline-variant/20" />
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-outline uppercase">Score</span>
+                <span className="font-mono font-bold text-secondary">
+                  {teamBuilder.totalScore > 0
+                    ? teamBuilder.totalScore.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })
+                    : '—'}
+                </span>
+              </div>
+            </div>
+
+            {teamBuilder.isTeamComplete ? (
+              <button
+                data-testid="dashboard-review-btn"
+                onClick={handleReviewTeam}
+                className="px-10 py-3 bg-stage text-white font-headline font-extrabold uppercase tracking-wider text-sm rounded-sm shadow-lg shadow-stage/30 hover:brightness-110 hover:shadow-stage/50 hover:shadow-xl active:scale-[0.98] transition-all"
+              >
+                Review Team &rarr;
+              </button>
+            ) : (
+              <button
+                data-testid="dashboard-optimize-btn"
+                onClick={handleOptimize}
+                disabled={isOptimizing}
+                className="px-10 py-3 bg-secondary text-secondary-foreground font-headline font-extrabold uppercase tracking-widest text-sm rounded-sm shadow-lg shadow-secondary/25 hover:brightness-110 hover:shadow-secondary/40 hover:shadow-xl active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none"
+              >
+                {isOptimizing ? 'Optimizing...' : 'Get Optimal Team'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Mobile bottom nav — outside animated wrappers so position:fixed works */}
       {!isDesktop && tab === 'dashboard' && analyzeState.status === 'success' && (
         <nav className="fixed bottom-0 left-0 right-0 z-40 bg-surface-dim border-t border-outline-variant/15 flex justify-around py-2 safe-area-pb">

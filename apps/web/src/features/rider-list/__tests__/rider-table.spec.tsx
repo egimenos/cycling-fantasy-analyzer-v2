@@ -113,8 +113,8 @@ describe('RiderTable', () => {
 
     await user.click(screen.getByText('Tadej Pogačar'));
 
-    expect(screen.getByText('GC')).toBeInTheDocument();
-    expect(screen.getByText('40.0')).toBeInTheDocument();
+    expect(screen.getAllByText('GC').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('40.0').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/confidence: 95%/)).toBeInTheDocument();
   });
 

@@ -68,34 +68,49 @@ export function ScoreBreakdown({ breakdown }: ScoreBreakdownProps) {
           })}
         </div>
       </div>
-      <div className="h-8 w-full flex rounded-sm overflow-hidden bg-surface-container-highest">
-        {CATEGORY_CONFIG.map(({ key, label, colorBar, colorText }) => {
-          const pct = total > 0 ? (breakdown[key] / total) * 100 : 0;
-          if (pct === 0) return null;
-          return (
-            <Tooltip key={key}>
-              <TooltipTrigger asChild>
-                <div
-                  className={cn(
-                    'h-full hover:brightness-125 transition-all animate-bar-fill relative flex items-center justify-center cursor-default',
-                    colorBar,
-                  )}
-                  style={{ width: `${pct}%` }}
-                >
-                  {pct >= 12 && (
-                    <span className="text-[10px] font-mono font-bold text-white/80 drop-shadow-sm">
-                      {pct.toFixed(0)}%
-                    </span>
-                  )}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <span className={colorText}>{label}</span>: {breakdown[key].toFixed(1)} pts (
-                {pct.toFixed(1)}%)
-              </TooltipContent>
-            </Tooltip>
-          );
-        })}
+
+      <div className="space-y-3">
+        <div className="h-8 w-full flex rounded-sm overflow-hidden bg-surface-container-highest">
+          {CATEGORY_CONFIG.map(({ key, label, colorBar, colorText }) => {
+            const pct = total > 0 ? (breakdown[key] / total) * 100 : 0;
+            if (pct === 0) return null;
+            return (
+              <Tooltip key={key}>
+                <TooltipTrigger asChild>
+                  <div
+                    className={cn(
+                      'h-full hover:brightness-125 transition-all animate-bar-fill relative flex items-center justify-center cursor-default',
+                      colorBar,
+                    )}
+                    style={{ width: `${pct}%` }}
+                  >
+                    {pct >= 12 && (
+                      <span className="text-[10px] font-mono font-bold text-white/80 drop-shadow-sm">
+                        {pct.toFixed(0)}%
+                      </span>
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <span className={colorText}>{label}</span>: {breakdown[key].toFixed(1)} pts (
+                  {pct.toFixed(1)}%)
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+        {/* Per-category breakdown */}
+        <div className="grid grid-cols-4 gap-2">
+          {CATEGORY_CONFIG.map(({ key, label, colorDot, colorText }) => (
+            <div key={key} className="bg-surface-container-high/50 p-2.5 rounded-sm text-center">
+              <span className={cn('w-1.5 h-1.5 rounded-full inline-block mb-1', colorDot)} />
+              <div className={cn('text-lg font-mono font-bold', colorText)}>
+                {breakdown[key].toFixed(0)}
+              </div>
+              <div className="text-[9px] font-mono text-outline uppercase">{label}</div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

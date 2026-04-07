@@ -322,7 +322,7 @@ export function RiderInput({
         size="lg"
         onClick={handleSubmit}
         disabled={parsedRiders.length === 0 || isLoading}
-        className="w-full py-3 flex-shrink-0"
+        className="w-full py-3.5 flex-shrink-0"
       >
         {isLoading ? (
           <>
