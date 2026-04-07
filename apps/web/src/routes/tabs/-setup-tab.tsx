@@ -281,7 +281,10 @@ export function SetupTab({
               <span className="text-[10px] md:text-xs text-outline uppercase font-mono tracking-tighter">
                 Budget
               </span>
-              <span className="text-base md:text-lg font-mono font-bold text-outline">
+              <span
+                data-testid="setup-summary-budget"
+                className="text-base md:text-lg font-mono font-bold text-outline"
+              >
                 {hasResult ? totalCost : 0} / {budget}
                 <span className="text-[10px] ml-0.5 text-outline/50">H</span>
               </span>
@@ -291,7 +294,10 @@ export function SetupTab({
               <span className="text-[10px] md:text-xs text-outline uppercase font-mono tracking-tighter">
                 Projected Score
               </span>
-              <span className="text-base md:text-lg font-mono font-bold text-outline">
+              <span
+                data-testid="setup-summary-projected-score"
+                className="text-base md:text-lg font-mono font-bold text-outline"
+              >
                 {hasResult && totalScore > 0 ? totalScore.toFixed(1) : '—'}
               </span>
             </div>

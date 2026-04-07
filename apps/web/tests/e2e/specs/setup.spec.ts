@@ -136,6 +136,36 @@ test.describe('Setup Tab', () => {
     // Should show "Analysis Complete" (desktop only — hidden on mobile)
     await expect(page.getByRole('heading', { name: 'Analysis Complete', level: 3 })).toBeVisible();
     await expect(setupPage.resetBtn).toBeVisible();
+
+    // No riders selected yet — budget should show 0, projected score —
+    await expect(setupPage.summaryBudget).toContainText(/0 \/ 2000/);
+    await expect(setupPage.summaryProjectedScore).toHaveText('—');
+  });
+
+  // T025 — Budget and projected score reflect rider selection when returning to setup
+  test('should show budget and projected score from selected riders when returning to setup', async ({
+    setupPage,
+    dashboardPage,
+    navPage,
+    validPriceList,
+  }) => {
+    await setupPage.goto();
+    await setupPage.selectRace('Tour de France');
+    await setupPage.fillRiders(validPriceList);
+    await setupPage.setBudget(2000);
+    await setupPage.clickAnalyze();
+
+    // Wait for dashboard and select a rider
+    await expect(dashboardPage.riderTable).toBeVisible({ timeout: 30_000 });
+    await dashboardPage.selectRider('POGACAR Tadej');
+
+    // Navigate back to setup
+    await navPage.goToTab('setup');
+
+    // Budget should reflect the selected rider's cost (non-zero)
+    await expect(setupPage.summaryBudget).not.toContainText(/^0 \//);
+    // Projected Score should show a numeric value, not —
+    await expect(setupPage.summaryProjectedScore).not.toHaveText('—');
   });
 
   // Reset flow
