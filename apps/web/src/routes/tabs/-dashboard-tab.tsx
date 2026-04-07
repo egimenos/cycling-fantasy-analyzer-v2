@@ -66,7 +66,7 @@ export function DashboardTab({
       {!isDesktop && (
         <div className="flex items-center gap-3">
           <div className="bg-surface-container-low border border-outline-variant/10 rounded-sm px-4 py-3 flex-shrink-0">
-            <span className="text-[9px] font-mono text-outline uppercase block">Selected</span>
+            <span className="text-[10px] font-mono text-outline uppercase block">Selected</span>
             <span className="font-mono font-bold text-on-surface text-xl">
               {teamBuilder.selectedRiders.length}/{MAX_RIDERS}
             </span>

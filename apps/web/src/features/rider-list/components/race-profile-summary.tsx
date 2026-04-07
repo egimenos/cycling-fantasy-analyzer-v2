@@ -90,7 +90,7 @@ export function RaceProfileSummary({
           <Badge
             data-testid="race-profile-type"
             variant="secondary"
-            className="text-[9px] md:text-[10px] uppercase tracking-wider flex-shrink-0"
+            className="text-[10px] uppercase tracking-wider flex-shrink-0"
           >
             {raceTypeLabel}
           </Badge>

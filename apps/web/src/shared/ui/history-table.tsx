@@ -75,7 +75,7 @@ export function HistoryTable({ title, rows }: HistoryTableProps) {
             <div className="grid grid-cols-4 gap-2 text-center">
               {COLUMNS.filter((c) => c.key !== 'total').map((col) => (
                 <div key={col.key}>
-                  <span className={cn('text-[9px] font-mono uppercase block', col.text)}>
+                  <span className={cn('text-[10px] font-mono uppercase block', col.text)}>
                     {col.label}
                   </span>
                   <span className={cn('text-xs font-mono font-bold', col.text)}>

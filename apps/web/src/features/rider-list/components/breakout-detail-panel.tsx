@@ -117,12 +117,12 @@ export function BreakoutDetailPanel({ breakout, prediction }: BreakoutDetailPane
         <div className="bg-surface-container-high rounded-sm p-4 border border-outline-variant/10">
           <div className="flex items-center justify-center gap-4">
             <div className="text-center">
-              <p className="text-[9px] font-mono text-outline uppercase">Prediction</p>
+              <p className="text-[10px] font-mono text-outline uppercase">Prediction</p>
               <p className="font-mono font-bold text-lg">{prediction.toFixed(1)}</p>
             </div>
             <span className="text-outline text-lg">&rarr;</span>
             <div className="text-center">
-              <p className="text-[9px] font-mono text-outline uppercase">P80 Upside</p>
+              <p className="text-[10px] font-mono text-outline uppercase">P80 Upside</p>
               <p className="font-mono font-bold text-lg text-primary">
                 {breakout.upsideP80.toFixed(1)}
               </p>

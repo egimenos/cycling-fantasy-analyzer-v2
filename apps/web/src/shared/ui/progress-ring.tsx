@@ -61,7 +61,7 @@ export function ProgressRing({
         >
           {current}
         </span>
-        <span className="text-[9px] font-mono text-outline uppercase tracking-wider">
+        <span className="text-[10px] font-mono text-outline uppercase tracking-wider">
           of {total}
         </span>
       </div>

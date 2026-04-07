@@ -107,7 +107,7 @@ export function ScoreBreakdown({ breakdown }: ScoreBreakdownProps) {
               <div className={cn('text-lg font-mono font-bold', colorText)}>
                 {breakdown[key].toFixed(0)}
               </div>
-              <div className="text-[9px] font-mono text-outline uppercase">{label}</div>
+              <div className="text-[10px] font-mono text-outline uppercase">{label}</div>
             </div>
           ))}
         </div>

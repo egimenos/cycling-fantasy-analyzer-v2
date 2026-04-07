@@ -93,7 +93,7 @@
   /* On-surface text */
   --on-surface: #191c1e;
   --on-surface-variant: #44474a;
-  --on-primary-container: #6b7280;
+  --on-primary-container: #525860;
   --on-background: #191c1e;
 
   /* Primary / Secondary / Tertiary */
@@ -102,10 +102,10 @@
   --primary-container: #e0e4f0;
   --primary-fixed: #3b4a6b;
   --primary-fixed-dim: #2d3a54;
-  --secondary: #497cff;
+  --secondary: #2563eb;
   --secondary-foreground: #ffffff;
   --secondary-container: #dce4ff;
-  --tertiary: #c9930a;
+  --tertiary: #a16207;
   --tertiary-container: #fef3c7;
 
   /* Functional */
@@ -113,13 +113,13 @@
   --destructive-foreground: #ffffff;
   --error: #dc2626;
   --error-container: #fef2f2;
-  --outline: #9ca3af;
+  --outline: #64748b;
   --outline-variant: #c6c6cd;
 
   /* Category colors */
-  --color-gc: #497cff;
-  --color-stage: #16a34a;
-  --color-mountain: #ea580c;
+  --color-gc: #2563eb;
+  --color-stage: #15803d;
+  --color-mountain: #c2410c;
   --color-sprint: #dc2626;
 
   /* Border radius */

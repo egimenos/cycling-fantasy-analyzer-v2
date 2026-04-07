@@ -173,7 +173,7 @@ export function TeamBuilderPanel({
             />
           </div>
         </div>
-        <p className="text-[9px] text-outline italic">
+        <p className="text-[10px] text-outline italic">
           {isOverBudget ? 'Over budget!' : `Efficient build: ${usagePercent.toFixed(0)}% utilized`}
         </p>
       </div>

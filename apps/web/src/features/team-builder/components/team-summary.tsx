@@ -143,7 +143,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
                         {index === 0 && (
                           <span
                             data-testid="roster-captain-badge"
-                            className="bg-tertiary/20 text-tertiary text-[9px] px-1 font-bold rounded-sm border border-tertiary/30 flex-shrink-0"
+                            className="bg-tertiary/20 text-tertiary text-[10px] px-1 font-bold rounded-sm border border-tertiary/30 flex-shrink-0"
                           >
                             CPT
                           </span>
@@ -161,7 +161,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
 
                     {/* Cost */}
                     <div className="w-16 text-right flex-shrink-0">
-                      <span className="text-[9px] font-mono text-outline uppercase block">
+                      <span className="text-[10px] font-mono text-outline uppercase block">
                         Cost
                       </span>
                       <span className="font-mono font-bold text-primary text-sm">
@@ -171,7 +171,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
 
                     {/* Projected */}
                     <div className="w-14 text-right flex-shrink-0">
-                      <span className="text-[9px] font-mono text-outline uppercase block">
+                      <span className="text-[10px] font-mono text-outline uppercase block">
                         Proj
                       </span>
                       <span className="font-mono font-bold text-tertiary text-sm">
@@ -181,7 +181,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
 
                     {/* Value */}
                     <div className="w-14 text-right flex-shrink-0">
-                      <span className="text-[9px] font-mono text-outline uppercase block">
+                      <span className="text-[10px] font-mono text-outline uppercase block">
                         Value
                       </span>
                       <span className="font-mono font-bold text-stage text-sm">
@@ -260,7 +260,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
                   </div>
                   <div className="grid grid-cols-3 mx-3 mb-3 border border-outline-variant/10 rounded-sm overflow-hidden">
                     <div className="px-3 py-2 border-r border-outline-variant/10">
-                      <span className="text-[9px] font-mono text-outline uppercase block">
+                      <span className="text-[10px] font-mono text-outline uppercase block">
                         Cost
                       </span>
                       <span className="font-mono font-bold text-primary">
@@ -268,7 +268,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
                       </span>
                     </div>
                     <div className="px-3 py-2 border-r border-outline-variant/10">
-                      <span className="text-[9px] font-mono text-outline uppercase block">
+                      <span className="text-[10px] font-mono text-outline uppercase block">
                         Proj
                       </span>
                       <span className="font-mono font-bold text-tertiary">
@@ -276,7 +276,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
                       </span>
                     </div>
                     <div className="px-3 py-2">
-                      <span className="text-[9px] font-mono text-outline uppercase block">
+                      <span className="text-[10px] font-mono text-outline uppercase block">
                         Value
                       </span>
                       <span className="font-mono font-bold text-stage">
@@ -331,7 +331,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
             {/* Remaining + Avg/Rider */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-surface-container-high p-4 rounded-sm">
-                <span className="font-mono text-[11px] md:text-[9px] uppercase text-on-primary-container block mb-1">
+                <span className="font-mono text-[10px] uppercase text-on-primary-container block mb-1">
                   Remaining
                 </span>
                 <span
@@ -342,7 +342,7 @@ export function TeamSummary({ riders, totalCost, totalScore, budget, onReset }: 
                 </span>
               </div>
               <div className="bg-surface-container-high p-4 rounded-sm">
-                <span className="font-mono text-[11px] md:text-[9px] uppercase text-on-primary-container block mb-1">
+                <span className="font-mono text-[10px] uppercase text-on-primary-container block mb-1">
                   Avg/Rider
                 </span>
                 <span
