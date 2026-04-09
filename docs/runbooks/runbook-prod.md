@@ -2,7 +2,7 @@
 
 Practical reference for operating and troubleshooting the Cycling Analyzer in production. Deployed on Dokploy to a VPS.
 
-**Last updated**: 2026-04-03
+**Last updated**: 2026-04-09
 
 ---
 
@@ -259,11 +259,62 @@ Alternatively, use the Dokploy UI log viewer (Project > Service > Logs).
 
 ## 7. Scheduled Tasks Reference
 
-| Task          | Frequency           | Command                          | Where                | Notes                              |
-| ------------- | ------------------- | -------------------------------- | -------------------- | ---------------------------------- |
-| ML retraining | Weekly (Sunday 3am) | `python -m src.training.retrain` | `cycling-ml-service` | Restart container after            |
-| DB backup     | Daily               | Configured in Dokploy            | Dokploy DB service   | Verify S3 destination is valid     |
-| OS updates    | Monthly             | `apt update && apt upgrade`      | VPS via SSH          | Schedule during low-traffic window |
+| Task            | Frequency        | Command / Config               | Where              | Notes                                 |
+| --------------- | ---------------- | ------------------------------ | ------------------ | ------------------------------------- |
+| Weekly pipeline | Monday 04:00 UTC | `./scripts/weekly-pipeline.sh` | VPS (Dokploy task) | Seed + retrain + cache clear + notify |
+| DB backup       | Daily            | Configured in Dokploy          | Dokploy DB service | Verify S3 destination is valid        |
+| OS updates      | Monthly          | `apt update && apt upgrade`    | VPS via SSH        | Schedule during low-traffic window    |
+
+### Weekly Pipeline
+
+The weekly pipeline (`scripts/weekly-pipeline.sh`) automates the full data refresh cycle:
+
+1. **Seed database** — scrapes new race results, startlists (last 1 year by default)
+2. **Retrain ML models** — Glicko-2, feature cache, 9 stage sub-models + classics model
+3. **Restart ML service** — hot-reload new models, waits for health check
+4. **Clear prediction cache** — deletes cached `ml_scores` so predictions use new models
+
+**Telegram notifications** are sent after each run with a detailed breakdown of what happened.
+
+#### Dokploy Configuration
+
+1. Go to Dokploy dashboard > Project > Scheduled Tasks
+2. Add a new task:
+   - **Command**: `./scripts/weekly-pipeline.sh`
+   - **Schedule**: `0 4 * * 1` (Monday 04:00 UTC)
+3. Set environment variables in Dokploy:
+   - `TELEGRAM_BOT_TOKEN` — from @BotFather
+   - `TELEGRAM_CHAT_ID` — target chat/group ID
+
+#### Manual Execution
+
+```bash
+# On the VPS, from the project directory:
+./scripts/weekly-pipeline.sh
+
+# Dry run (prints commands without executing):
+DRY_RUN=true ./scripts/weekly-pipeline.sh
+
+# Override seed years:
+SEED_YEARS=3 ./scripts/weekly-pipeline.sh
+```
+
+#### Telegram Bot Setup
+
+1. Message [@BotFather](https://t.me/BotFather) on Telegram → `/newbot`
+2. Save the token as `TELEGRAM_BOT_TOKEN` in Dokploy env vars
+3. Get your chat ID: message the bot, then fetch `https://api.telegram.org/bot<TOKEN>/getUpdates`
+4. Save the chat ID as `TELEGRAM_CHAT_ID` in Dokploy env vars
+
+#### Troubleshooting
+
+| Issue                    | Check                                                         |
+| ------------------------ | ------------------------------------------------------------- |
+| No Telegram notification | Verify `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are set    |
+| Seed fails               | Check API container logs: `docker logs cycling-api --tail 50` |
+| Retrain fails            | Check ML logs: `docker logs cycling-ml-service --tail 50`     |
+| ML health check timeout  | Check RAM usage (`free -h`), 4GB VPS may OOM during retrain   |
+| Cache clear fails        | Non-critical — stale predictions are replaced on next query   |
 
 ---
 
@@ -292,6 +343,15 @@ Alternatively, use the Dokploy UI log viewer (Project > Service > Logs).
 | -------------- | ----------------------------------------- | ---------------------------------------- |
 | `DATABASE_URL` | `postgresql://user:pass@host:5432/dbname` | Same PostgreSQL connection string as API |
 
+### Weekly Pipeline (Dokploy scheduled task)
+
+| Variable             | Example          | Description                            |
+| -------------------- | ---------------- | -------------------------------------- |
+| `TELEGRAM_BOT_TOKEN` | `123456:ABC-DEF` | Bot token from @BotFather              |
+| `TELEGRAM_CHAT_ID`   | `-1001234567890` | Telegram chat/group ID for alerts      |
+| `SEED_YEARS`         | `1`              | Years to seed (default: 1)             |
+| `SKIP_AVATARS`       | `true`           | Skip avatar resolution (default: true) |
+
 ---
 
 ## 9. Useful Commands Quick Reference
@@ -314,3 +374,5 @@ Alternatively, use the Dokploy UI log viewer (Project > Service > Logs).
 | Check model files           | `docker exec cycling-ml-service ls -la /app/models/`                          |
 | Check disk space            | `df -h`                                                                       |
 | Restart a container         | `docker restart <container-name>`                                             |
+| Run weekly pipeline         | `./scripts/weekly-pipeline.sh`                                                |
+| Run pipeline (dry run)      | `DRY_RUN=true ./scripts/weekly-pipeline.sh`                                   |

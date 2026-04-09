@@ -75,6 +75,7 @@ make dev           # starts all services
 | `make clear-ml-cache`  | Clear cached ML predictions                     |
 | `make benchmark-suite` | Run multi-race benchmark with aggregate metrics |
 | `make seed`            | Seed DB (3 years, WT + ProSeries)               |
+| `make weekly-pipeline` | Run weekly seed + retrain + notify pipeline     |
 
 ### Testing
 

@@ -2,7 +2,7 @@
        db-up db-down db-generate db-migrate db-studio db-push db-psql \
        seed scrape benchmark benchmark-suite \
        retrain glicko ml-up ml-down ml-logs ml-restart \
-       clear-ml-cache
+       clear-ml-cache weekly-pipeline
 
 # ── Defaults ──────────────────────────────────────────────
 help: ## Show this help
@@ -112,3 +112,7 @@ else
 	@$(PSQL) -c "DELETE FROM ml_scores;" \
 		&& echo "All ML cache cleared"
 endif
+
+# ── Scheduled Pipeline ──────────────────────────────────────
+weekly-pipeline: ## Run weekly seed + retrain + notify pipeline (production containers)
+	./scripts/weekly-pipeline.sh
