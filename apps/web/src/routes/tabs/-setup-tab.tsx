@@ -6,9 +6,10 @@ import type {
 } from '@cycling-analyzer/shared-types';
 import { type RaceType } from '@cycling-analyzer/shared-types';
 import { RiderInput } from '@/features/rider-list/components/rider-input';
-import { LoadingSpinner } from '@/shared/ui/loading-spinner';
-import { TableSkeleton } from '@/shared/ui/table-skeleton';
+import { AnalysisProgress } from '@/features/rider-list/components/analysis-progress';
 import { TrendingUp, AlertTriangle, RefreshCw, CheckCircle2, RotateCcw } from 'lucide-react';
+import type { StepState } from '@/features/rider-list/hooks/use-analyze';
+import type { AnalysisStepId } from '@cycling-analyzer/shared-types';
 import type { useRaceProfile } from '@/features/rider-list/hooks/use-race-profile';
 import type { GmvImportState } from '@/features/rider-list/hooks/use-gmv-auto-import';
 
@@ -23,6 +24,8 @@ export interface SetupTabProps {
   ) => void;
   isLoading: boolean;
   error?: string;
+  analyzeSteps?: StepState[];
+  failedStep?: AnalysisStepId;
   onRetry?: () => void;
   onReset?: () => void;
   budget: number;
@@ -50,6 +53,8 @@ export function SetupTab({
   onAnalyze,
   isLoading,
   error,
+  analyzeSteps,
+  failedStep,
   onRetry,
   onReset,
   budget,
@@ -120,8 +125,16 @@ export function SetupTab({
           </div>
         </div>
 
-        {error ? (
-          /* Error state */
+        {error && analyzeSteps ? (
+          /* Error state with step progress */
+          <AnalysisProgress
+            steps={analyzeSteps}
+            error={error}
+            failedStep={failedStep}
+            onRetry={onRetry}
+          />
+        ) : error ? (
+          /* Error state without steps (fallback) */
           <div className="flex-1 rounded-sm bg-error-container/[0.06] border border-error/20 flex flex-col items-center justify-center p-8 relative overflow-hidden animate-fade-in">
             <div
               className="absolute inset-0 opacity-[0.03] pointer-events-none"
@@ -170,14 +183,10 @@ export function SetupTab({
               </div>
             </div>
           </div>
+        ) : isLoading && analyzeSteps ? (
+          <AnalysisProgress steps={analyzeSteps} />
         ) : isLoading ? (
-          <div className="flex-1 flex flex-col gap-4">
-            <div className="flex items-center gap-3 px-1">
-              <LoadingSpinner />
-              <span className="text-sm text-on-surface-variant">Analyzing riders...</span>
-            </div>
-            <TableSkeleton rows={10} />
-          </div>
+          <AnalysisProgress steps={[]} />
         ) : hasResult ? (
           /* Analysis complete — show summary */
           <div className="hidden lg:flex flex-1 rounded-sm bg-surface-container-low/30 border border-secondary/20 flex-col items-center justify-center p-6 relative overflow-hidden">

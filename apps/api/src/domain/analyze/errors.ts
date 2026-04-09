@@ -58,3 +58,10 @@ export class EmptyPriceListPageError extends Error {
     this.name = 'EmptyPriceListPageError';
   }
 }
+
+export class AnalysisCancelledError extends Error {
+  constructor() {
+    super('Analysis cancelled by client');
+    this.name = 'AnalysisCancelledError';
+  }
+}

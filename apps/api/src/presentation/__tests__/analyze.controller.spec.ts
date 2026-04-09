@@ -59,24 +59,40 @@ describe('AnalyzeController', () => {
     expect(controller).toBeDefined();
   });
 
-  it('should call use case with correct input and return response', async () => {
+  it('should call use case with correct input and stream SSE response', async () => {
     const dto = {
       riders: [{ name: 'POGACAR Tadej', team: 'UAE', price: 300 }],
       raceType: 'grand_tour' as const,
       budget: 2000,
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test DTO doesn't need full class instance
-    const result = await controller.analyze(dto as any);
+    const mockReq = { on: jest.fn() } as unknown as import('express').Request;
+    const written: string[] = [];
+    const mockRes = {
+      setHeader: jest.fn(),
+      flushHeaders: jest.fn(),
+      write: jest.fn((chunk: string) => written.push(chunk)),
+      end: jest.fn(),
+    } as unknown as import('express').Response;
 
-    expect(mockUseCase.execute).toHaveBeenCalledWith({
-      riders: dto.riders,
-      raceType: dto.raceType,
-      budget: dto.budget,
-      profileSummary: undefined,
-      raceSlug: undefined,
-      year: undefined,
-    });
-    expect(result).toEqual(sampleResponse);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test DTO doesn't need full class instance
+    await controller.analyze(dto as any, mockReq, mockRes);
+
+    expect(mockUseCase.execute).toHaveBeenCalledWith(
+      {
+        riders: dto.riders,
+        raceType: dto.raceType,
+        budget: dto.budget,
+        profileSummary: undefined,
+        raceSlug: undefined,
+        year: undefined,
+      },
+      expect.any(Object),
+    );
+    expect(mockRes.setHeader).toHaveBeenCalledWith('Content-Type', 'text/event-stream');
+    expect(mockRes.end).toHaveBeenCalled();
+    // The result event should have been written to the stream
+    const resultEvent = written.find((w) => w.startsWith('event: result'));
+    expect(resultEvent).toBeDefined();
   });
 });

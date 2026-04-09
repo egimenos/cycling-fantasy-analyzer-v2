@@ -1,6 +1,11 @@
+import { fetchEventSource } from '@microsoft/fetch-event-source';
 import type {
   AnalyzeRequest,
   AnalyzeResponse,
+  AnalysisProgressEvent,
+  AnalysisResultEvent,
+  AnalysisErrorEvent,
+  AnalysisSseEventType,
   OptimizeRequest,
   OptimizeResponse,
   RaceProfileResponse,
@@ -66,6 +71,45 @@ async function apiGet<TRes>(path: string, signal?: AbortSignal): Promise<ApiResu
 
 export function analyzeRiders(request: AnalyzeRequest): Promise<ApiResult<AnalyzeResponse>> {
   return apiPost<AnalyzeRequest, AnalyzeResponse>('/api/analyze', request);
+}
+
+export interface AnalyzeStreamCallbacks {
+  onProgress: (event: AnalysisProgressEvent) => void;
+  onResult: (result: AnalysisResultEvent) => void;
+  onError: (error: AnalysisErrorEvent | { message: string }) => void;
+  signal?: AbortSignal;
+}
+
+export async function analyzeRidersStream(
+  request: AnalyzeRequest,
+  callbacks: AnalyzeStreamCallbacks,
+): Promise<void> {
+  await fetchEventSource(`${API_BASE_URL}/api/analyze`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+    signal: callbacks.signal,
+    openWhenHidden: true,
+    onmessage(ev) {
+      const eventType = ev.event as AnalysisSseEventType;
+      const data = JSON.parse(ev.data);
+      switch (eventType) {
+        case 'progress':
+          callbacks.onProgress(data as AnalysisProgressEvent);
+          break;
+        case 'result':
+          callbacks.onResult(data as AnalysisResultEvent);
+          break;
+        case 'error':
+          callbacks.onError(data as AnalysisErrorEvent);
+          break;
+      }
+    },
+    onerror(err) {
+      callbacks.onError({ message: err?.message ?? 'Connection lost' });
+      throw err; // prevent auto-retry
+    },
+  });
 }
 
 export function optimizeTeam(request: OptimizeRequest): Promise<ApiResult<OptimizeResponse>> {

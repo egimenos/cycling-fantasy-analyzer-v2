@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Query, Body, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Query, Body, BadRequestException, Req, Res } from '@nestjs/common';
 import {
   IsString,
   IsNotEmpty,
@@ -12,15 +12,22 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { Request, Response } from 'express';
 import { RaceType } from '../domain/shared/race-type.enum';
-import {
-  AnalyzePriceListUseCase,
-  AnalyzeResponse,
-} from '../application/analyze/analyze-price-list.use-case';
+import { AnalyzePriceListUseCase } from '../application/analyze/analyze-price-list.use-case';
 import {
   ImportPriceListUseCase,
   ParsedPriceEntry,
 } from '../application/analyze/import-price-list.use-case';
+import {
+  EmptyPriceListError,
+  EmptyStartlistError,
+  MlServiceUnavailableError,
+  MlPredictionFailedError,
+  AnalysisCancelledError,
+} from '../domain/analyze/errors';
+import type { AnalysisStepId } from '@cycling-analyzer/shared-types';
+import { SseProgressNotifier } from './sse-progress-notifier';
 
 class PriceListEntryDto {
   @IsString()
@@ -106,15 +113,56 @@ export class AnalyzeController {
   ) {}
 
   @Post('analyze')
-  async analyze(@Body() dto: AnalyzeRequestDto): Promise<AnalyzeResponse> {
-    return this.analyzeUseCase.execute({
-      riders: dto.riders,
-      raceType: dto.raceType,
-      budget: dto.budget,
-      profileSummary: dto.profileSummary,
-      raceSlug: dto.raceSlug,
-      year: dto.year,
-    });
+  async analyze(
+    @Body() dto: AnalyzeRequestDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const notifier = new SseProgressNotifier(res, req);
+
+    try {
+      const result = await this.analyzeUseCase.execute(
+        {
+          riders: dto.riders,
+          raceType: dto.raceType,
+          budget: dto.budget,
+          profileSummary: dto.profileSummary,
+          raceSlug: dto.raceSlug,
+          year: dto.year,
+        },
+        notifier,
+      );
+
+      // The use case AnalyzeResponse uses a narrower categoryScores type than shared-types
+      // AnalysisResultEvent (which includes all ResultCategory keys). The extra keys are only
+      // relevant for detailed scoring; the SSE payload carries the same shape the client expects.
+      notifier.sendResult(
+        result as unknown as import('@cycling-analyzer/shared-types').AnalysisResultEvent,
+      );
+    } catch (error) {
+      if (error instanceof AnalysisCancelledError) {
+        // Client disconnected — silently close
+      } else {
+        const step = this.mapErrorToStep(error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        notifier.stepFailed(step, message);
+      }
+    } finally {
+      res.end();
+    }
+  }
+
+  private mapErrorToStep(error: unknown): AnalysisStepId {
+    if (error instanceof EmptyPriceListError) return 'matching_riders';
+    if (error instanceof EmptyStartlistError) return 'fetching_startlist';
+    if (error instanceof MlServiceUnavailableError) return 'ml_predictions';
+    if (error instanceof MlPredictionFailedError) return 'ml_predictions';
+    return 'building_results';
   }
 
   @Get('import-price-list')

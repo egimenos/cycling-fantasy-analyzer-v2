@@ -296,6 +296,8 @@ function HomePageContent() {
               onAnalyze={handleAnalyze}
               isLoading={isAnalyzing}
               error={analyzeState.status === 'error' ? analyzeState.error : undefined}
+              analyzeSteps={'steps' in analyzeState ? analyzeState.steps : undefined}
+              failedStep={analyzeState.status === 'error' ? analyzeState.failedStep : undefined}
               onRetry={retryAnalyze}
               budget={budget}
               riderText={riderText}
