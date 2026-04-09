@@ -59,15 +59,21 @@ export function useAnalyze() {
           });
         },
         onResult(result) {
+          // Mark all steps as completed first so the user sees them finish
           setState((prev) => {
-            const steps =
-              prev.status === 'loading'
-                ? prev.steps.map((s) =>
-                    s.status !== 'completed' ? { ...s, status: 'completed' as StepStatus } : s,
-                  )
-                : createInitialSteps();
-            return { status: 'success', data: result, steps };
+            if (prev.status !== 'loading') return prev;
+            const steps = prev.steps.map((s) =>
+              s.status !== 'completed' ? { ...s, status: 'completed' as StepStatus } : s,
+            );
+            return { ...prev, steps };
           });
+          // Brief delay before showing results so the last steps are visible
+          setTimeout(() => {
+            setState((prev) => {
+              const steps = 'steps' in prev ? prev.steps : createInitialSteps();
+              return { status: 'success', data: result, steps };
+            });
+          }, 600);
         },
         onError(error) {
           setState((prev) => {

@@ -62,6 +62,8 @@ describe('useAnalyze', () => {
   });
 
   it('transitions to success when result event received', async () => {
+    vi.useFakeTimers();
+
     mockStream.mockImplementationOnce(async (_req, callbacks) => {
       callbacks.onProgress({
         step: 'matching_riders',
@@ -85,11 +87,20 @@ describe('useAnalyze', () => {
       await result.current.analyze(sampleRequest);
     });
 
+    // After result event, steps are all completed but state is still loading (delay)
+    expect(result.current.state.status).toBe('loading');
+
+    await act(async () => {
+      vi.advanceTimersByTime(600);
+    });
+
     expect(result.current.state.status).toBe('success');
     if (result.current.state.status === 'success') {
       expect(result.current.state.data).toEqual(sampleResponse);
       expect(result.current.state.steps).toHaveLength(6);
     }
+
+    vi.useRealTimers();
   });
 
   it('sets error on failure event', async () => {
@@ -118,6 +129,8 @@ describe('useAnalyze', () => {
   });
 
   it('resets state', async () => {
+    vi.useFakeTimers();
+
     mockStream.mockImplementationOnce(async (_req, callbacks) => {
       callbacks.onResult(sampleResponse);
     });
@@ -128,6 +141,10 @@ describe('useAnalyze', () => {
       await result.current.analyze(sampleRequest);
     });
 
+    await act(async () => {
+      vi.advanceTimersByTime(600);
+    });
+
     expect(result.current.state.status).toBe('success');
 
     act(() => {
@@ -135,9 +152,13 @@ describe('useAnalyze', () => {
     });
 
     expect(result.current.state.status).toBe('idle');
+
+    vi.useRealTimers();
   });
 
   it('retries last request', async () => {
+    vi.useFakeTimers();
+
     mockStream.mockImplementation(async (_req, callbacks) => {
       callbacks.onResult(sampleResponse);
     });
@@ -149,9 +170,19 @@ describe('useAnalyze', () => {
     });
 
     await act(async () => {
+      vi.advanceTimersByTime(600);
+    });
+
+    await act(async () => {
       result.current.retry();
     });
 
+    await act(async () => {
+      vi.advanceTimersByTime(600);
+    });
+
     expect(mockStream).toHaveBeenCalledTimes(2);
+
+    vi.useRealTimers();
   });
 });
