@@ -160,3 +160,47 @@ export interface GmvMatchResponse {
   confidence: number | null;
   riders: PriceListEntryDto[] | null;
 }
+
+// --- SSE Analysis Progress Types ---
+
+export type AnalysisStepId =
+  | 'matching_riders'
+  | 'loading_history'
+  | 'fetching_startlist'
+  | 'ml_predictions'
+  | 'breakout_computation'
+  | 'building_results';
+
+export interface AnalysisStep {
+  id: AnalysisStepId;
+  displayName: string;
+  index: number;
+}
+
+export const ANALYSIS_STEPS: readonly AnalysisStep[] = [
+  { id: 'matching_riders', displayName: 'Match Riders', index: 1 },
+  { id: 'loading_history', displayName: 'Load Race History', index: 2 },
+  { id: 'fetching_startlist', displayName: 'Fetch Startlist', index: 3 },
+  { id: 'ml_predictions', displayName: 'Generate ML Predictions', index: 4 },
+  { id: 'breakout_computation', displayName: 'Compute Breakout Analysis', index: 5 },
+  { id: 'building_results', displayName: 'Build Results', index: 6 },
+] as const;
+
+export const TOTAL_ANALYSIS_STEPS = ANALYSIS_STEPS.length;
+
+export interface AnalysisProgressEvent {
+  step: AnalysisStepId;
+  status: 'in_progress' | 'completed';
+  stepIndex: number;
+  totalSteps: number;
+  elapsedMs?: number;
+}
+
+export type AnalysisResultEvent = AnalyzeResponse;
+
+export interface AnalysisErrorEvent {
+  step: AnalysisStepId;
+  message: string;
+}
+
+export type AnalysisSseEventType = 'progress' | 'result' | 'error';

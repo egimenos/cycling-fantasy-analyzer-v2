@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@cycling-analyzer/shared-types": "workspace:*",
+    "@microsoft/fetch-event-source": "^2.0.1",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-popover": "^1.1.15",

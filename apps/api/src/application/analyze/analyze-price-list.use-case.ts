@@ -4,7 +4,9 @@ import {
   MlServiceUnavailableError,
   EmptyStartlistError,
   MlPredictionFailedError,
+  AnalysisCancelledError,
 } from '../../domain/analyze/errors';
+import type { ProgressNotifier } from './ports/progress-notifier.port';
 import {
   RiderMatcherPort,
   RIDER_MATCHER_PORT,
@@ -99,12 +101,16 @@ export class AnalyzePriceListUseCase {
     private readonly fetchStartlist: FetchStartlistUseCase,
   ) {}
 
-  async execute(input: AnalyzeInput): Promise<AnalyzeResponse> {
+  async execute(input: AnalyzeInput, notifier?: ProgressNotifier): Promise<AnalyzeResponse> {
     const entries = mapPriceListEntries(input.riders);
 
     if (entries.length === 0) {
       throw new EmptyPriceListError();
     }
+
+    // Step 1: matching_riders
+    const step1Start = Date.now();
+    notifier?.stepStarted('matching_riders');
 
     const allRiders = await this.riderRepo.findAll();
     const riderMap = new Map<string, Rider>();
@@ -126,6 +132,12 @@ export class AnalyzePriceListUseCase {
       })),
     );
 
+    notifier?.stepCompleted('matching_riders', Date.now() - step1Start);
+
+    // Step 2: loading_history
+    const step2Start = Date.now();
+    notifier?.stepStarted('loading_history');
+
     const matchedRiderIds = matchResults
       .filter((r) => r.match.matchedRiderId !== null)
       .map((r) => r.match.matchedRiderId as string);
@@ -144,6 +156,8 @@ export class AnalyzePriceListUseCase {
         resultsByRider.set(riderId, [result]);
       }
     }
+
+    notifier?.stepCompleted('loading_history', Date.now() - step2Start);
 
     interface MatchedEntry {
       entry: PriceListEntry;
@@ -188,7 +202,7 @@ export class AnalyzePriceListUseCase {
     });
 
     // --- ML prediction enrichment ---
-    const mlPredictions = await this.fetchMlPredictions(input);
+    const mlPredictions = await this.fetchMlPredictions(input, notifier);
 
     const analyzedRiders: AnalyzedRider[] = matchedEntries.map((s) => {
       if (s.unmatched || !s.matchedRider) {
@@ -239,6 +253,10 @@ export class AnalyzePriceListUseCase {
       };
     });
 
+    // Step 5: breakout_computation
+    const step5Start = Date.now();
+    notifier?.stepStarted('breakout_computation');
+
     // --- BPI computation ---
     const p75Pph = computeP75PtsPerHillio(analyzedRiders);
     for (const rider of analyzedRiders) {
@@ -260,6 +278,12 @@ export class AnalyzePriceListUseCase {
       });
     }
 
+    notifier?.stepCompleted('breakout_computation', Date.now() - step5Start);
+
+    // Step 6: building_results
+    const step6Start = Date.now();
+    notifier?.stepStarted('building_results');
+
     analyzedRiders.sort((a, b) => {
       const scoreA = a.totalProjectedPts;
       const scoreB = b.totalProjectedPts;
@@ -271,12 +295,16 @@ export class AnalyzePriceListUseCase {
 
     const totalMatched = analyzedRiders.filter((r) => !r.unmatched).length;
 
-    return {
+    const result: AnalyzeResponse = {
       riders: analyzedRiders,
       totalSubmitted: entries.length,
       totalMatched,
       unmatchedCount: entries.length - totalMatched,
     };
+
+    notifier?.stepCompleted('building_results', Date.now() - step6Start);
+
+    return result;
   }
 
   /**
@@ -284,7 +312,10 @@ export class AnalyzePriceListUseCase {
    * Ensures the race has a startlist in DB (scraped from PCS) so the ML
    * service can discover riders from its own data — no synthetic riderIds.
    */
-  private async fetchMlPredictions(input: AnalyzeInput): Promise<
+  private async fetchMlPredictions(
+    input: AnalyzeInput,
+    notifier?: ProgressNotifier,
+  ): Promise<
     Map<
       string,
       {
@@ -308,6 +339,16 @@ export class AnalyzePriceListUseCase {
       this.logger.debug(
         `ML cache hit for ${input.raceSlug}/${input.year} (model ${modelVersion}, ${cached.length} predictions)`,
       );
+
+      // Emit steps 3 & 4 instantly for cache hits
+      const step3Start = Date.now();
+      notifier?.stepStarted('fetching_startlist');
+      notifier?.stepCompleted('fetching_startlist', Date.now() - step3Start);
+
+      const step4Start = Date.now();
+      notifier?.stepStarted('ml_predictions');
+      notifier?.stepCompleted('ml_predictions', Date.now() - step4Start);
+
       return new Map(
         cached.map((s) => [
           s.riderId,
@@ -327,6 +368,10 @@ export class AnalyzePriceListUseCase {
       );
     }
 
+    // Step 3: fetching_startlist
+    const step3Start = Date.now();
+    notifier?.stepStarted('fetching_startlist');
+
     // Scrape the startlist from PCS and persist it in DB. The ML service reads
     // startlists from DB to discover which riders to predict for — we never
     // pass synthetic riderIds (that inflates rider count and breaks scaling).
@@ -341,6 +386,17 @@ export class AnalyzePriceListUseCase {
     this.logger.log(
       `Startlist ready for ${input.raceSlug}/${input.year}: ${startlistEntries.length} riders`,
     );
+
+    notifier?.stepCompleted('fetching_startlist', Date.now() - step3Start);
+
+    // Cancellation check before the most expensive operation
+    if (notifier?.isCancelled) {
+      throw new AnalysisCancelledError();
+    }
+
+    // Step 4: ml_predictions
+    const step4Start = Date.now();
+    notifier?.stepStarted('ml_predictions');
 
     // Cache miss — call ML service (pass race profile for v4 features)
     const profileForMl = input.profileSummary
@@ -364,6 +420,8 @@ export class AnalyzePriceListUseCase {
     if (!predictions) {
       throw new MlPredictionFailedError(input.raceSlug!, input.year!);
     }
+
+    notifier?.stepCompleted('ml_predictions', Date.now() - step4Start);
 
     this.logger.log(
       `ML predictions received for ${input.raceSlug}/${input.year}: ${predictions.length} riders`,
