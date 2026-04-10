@@ -11,15 +11,47 @@ Orchestrates the full source-by-source pipeline:
   7. Train all sub-models (source-by-source)
 
 Called via: make retrain  (which runs: cd ml && python -m src.retrain)
+
+Detached runs (e.g. `docker exec -d`) lose stdout/stderr, so this script
+also writes a tee'd log to `<cache>/retrain.log` and a `retrain_status.json`
+with exit code, duration, and any error so callers can verify the run.
 """
 
+import json
 import os
+import sys
 import time
+import traceback
+from datetime import datetime, timezone
 
 import pandas as pd
 
 from ..data.loader import load_data
-from ..features.stage_race import extract_all_training_features
+
+
+class _Tee:
+    """Mirror writes to multiple streams (stdout + log file)."""
+
+    def __init__(self, *streams):
+        self._streams = streams
+
+    def write(self, data):
+        for s in self._streams:
+            s.write(data)
+            s.flush()
+
+    def flush(self):
+        for s in self._streams:
+            s.flush()
+
+
+def _write_status(cache_dir: str, payload: dict) -> None:
+    path = os.path.join(cache_dir, 'retrain_status.json')
+    try:
+        with open(path, 'w') as f:
+            json.dump(payload, f, indent=2, sort_keys=True)
+    except Exception as exc:
+        print(f"  WARNING: failed to write {path}: {exc}")
 
 
 def _synthesize_startlists(results_df: pd.DataFrame) -> pd.DataFrame:
@@ -36,16 +68,7 @@ def _synthesize_startlists(results_df: pd.DataFrame) -> pd.DataFrame:
     return sl
 
 
-def main():
-    db_url = os.environ.get(
-        'DATABASE_URL',
-        'postgresql://cycling:cycling@localhost:5432/cycling_analyzer',
-    )
-    model_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
-    cache_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'cache')
-    os.makedirs(model_dir, exist_ok=True)
-    os.makedirs(cache_dir, exist_ok=True)
-
+def _run_pipeline(db_url: str, model_dir: str, cache_dir: str) -> dict:
     t0 = time.time()
     print("=" * 60)
     print("  Source-by-Source Retraining Pipeline")
@@ -132,6 +155,69 @@ def main():
     print(f"  Artifacts: {model_dir}")
     print(f"{'=' * 60}")
 
+    return {
+        'model_version': metadata.get('model_version'),
+        'duration_seconds': round(elapsed, 1),
+        'model_dir': os.path.abspath(model_dir),
+    }
+
+
+def main() -> int:
+    db_url = os.environ.get(
+        'DATABASE_URL',
+        'postgresql://cycling:cycling@localhost:5432/cycling_analyzer',
+    )
+    model_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
+    cache_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'cache')
+    os.makedirs(model_dir, exist_ok=True)
+    os.makedirs(cache_dir, exist_ok=True)
+
+    started_at = datetime.now(timezone.utc).isoformat()
+    started_monotonic = time.time()
+    log_path = os.path.join(cache_dir, 'retrain.log')
+
+    # Tee stdout/stderr to retrain.log so detached runs leave a trace.
+    log_file = open(log_path, 'a', buffering=1)
+    log_file.write(f"\n\n===== retrain started at {started_at} =====\n")
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    sys.stdout = _Tee(original_stdout, log_file)
+    sys.stderr = _Tee(original_stderr, log_file)
+
+    status: dict = {
+        'started_at': started_at,
+        'log_path': os.path.abspath(log_path),
+    }
+
+    try:
+        result = _run_pipeline(db_url, model_dir, cache_dir)
+        status.update({
+            'status': 'success',
+            'exit_code': 0,
+            'completed_at': datetime.now(timezone.utc).isoformat(),
+            'duration_seconds': round(time.time() - started_monotonic, 1),
+            **result,
+        })
+        _write_status(cache_dir, status)
+        return 0
+    except Exception as exc:
+        tb = traceback.format_exc()
+        print(tb)
+        status.update({
+            'status': 'failed',
+            'exit_code': 1,
+            'completed_at': datetime.now(timezone.utc).isoformat(),
+            'duration_seconds': round(time.time() - started_monotonic, 1),
+            'error': f"{type(exc).__name__}: {exc}",
+            'traceback': tb,
+        })
+        _write_status(cache_dir, status)
+        return 1
+    finally:
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+        log_file.close()
+
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

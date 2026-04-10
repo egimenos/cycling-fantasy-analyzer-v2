@@ -74,9 +74,19 @@ async def lifespan(app: FastAPI):
     if source_models:
         loaded = [k for k in source_models if k != "metadata"]
         version = source_models["metadata"].get("model_version", "?")
+        logger.info(
+            "Models loaded",
+            models=loaded,
+            version=version,
+            model_dir=os.path.abspath(MODEL_DIR),
+        )
     else:
         loaded = []
         version = None
+        logger.warning(
+            "No source models found at startup",
+            model_dir=os.path.abspath(MODEL_DIR),
+        )
 
     logger.info("Startup complete", source_models=loaded, version=version)
     yield
@@ -160,10 +170,18 @@ def maybe_reload_models(app_state) -> None:
         logger.info(
             "Model version changed — reloading all source models",
             old_version=app_state.model_version, new_version=current,
+            model_dir=os.path.abspath(app_state.model_dir),
         )
         app_state.models = load_source_models(app_state.model_dir)
         app_state.model_version = current
         app_state.data_cache = None  # Invalidate cached DataFrames
+        loaded = [k for k in app_state.models if k != "metadata"] if app_state.models else []
+        logger.info(
+            "Models reloaded",
+            models=loaded,
+            version=current,
+            model_dir=os.path.abspath(app_state.model_dir),
+        )
 
 
 # ── Cache functions ──────────────────────────────────────────────────
@@ -332,6 +350,12 @@ def predict(req: PredictRequest, request: Request):
 
     # 1. Check models loaded
     if not state.models:
+        logger.error(
+            "No source models loaded",
+            race_slug=req.race_slug,
+            year=req.year,
+            model_dir=os.path.abspath(MODEL_DIR),
+        )
         raise HTTPException(
             status_code=503,
             detail="No source models loaded. Run make retrain first.",
@@ -366,7 +390,18 @@ def predict(req: PredictRequest, request: Request):
     if race_info is None:
         if req.race_type:
             race_type = req.race_type
+            logger.info(
+                "Race not found in DB — using race_type from request",
+                race_slug=req.race_slug,
+                year=req.year,
+                race_type=race_type,
+            )
         else:
+            logger.warning(
+                "Race not found in DB and no race_type fallback provided",
+                race_slug=req.race_slug,
+                year=req.year,
+            )
             raise HTTPException(
                 status_code=404,
                 detail=f"Race not found: {req.race_slug}/{req.year}",
@@ -378,6 +413,11 @@ def predict(req: PredictRequest, request: Request):
     if race_type == 'classic':
         from ..prediction.classics import is_model_available, predict_classic_race
         if not is_model_available():
+            logger.error(
+                "Classic model not available",
+                race_slug=req.race_slug,
+                year=req.year,
+            )
             raise HTTPException(
                 status_code=404,
                 detail=f"Classic model not available for {req.race_slug}",
@@ -391,6 +431,12 @@ def predict(req: PredictRequest, request: Request):
             rider_ids=req.rider_ids,
         )
         if not predictions:
+            logger.warning(
+                "No predictions produced for classic race",
+                race_slug=req.race_slug,
+                year=req.year,
+                rider_count=len(req.rider_ids) if req.rider_ids else None,
+            )
             raise HTTPException(
                 status_code=404,
                 detail=f"No predictions for classic {req.race_slug}/{req.year}",
@@ -420,6 +466,13 @@ def predict(req: PredictRequest, request: Request):
     )
 
     if features_df.empty:
+        logger.warning(
+            "Empty features — no startlist or rider data for race",
+            race_slug=req.race_slug,
+            year=req.year,
+            race_type=race_type,
+            rider_count=len(req.rider_ids) if req.rider_ids else None,
+        )
         raise HTTPException(
             status_code=404,
             detail=f"No features for {req.race_slug}/{req.year} (no startlist?)",
@@ -466,6 +519,13 @@ def predict(req: PredictRequest, request: Request):
     )
 
     if not predictions:
+        logger.error(
+            "Prediction failed — predict_race_sources returned no results",
+            race_slug=req.race_slug,
+            year=req.year,
+            race_type=race_type,
+            rider_count=len(features_df),
+        )
         raise HTTPException(
             status_code=404,
             detail=f"Prediction failed for {req.race_slug}/{req.year}",

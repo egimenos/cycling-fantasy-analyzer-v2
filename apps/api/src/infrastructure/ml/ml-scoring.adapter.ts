@@ -70,8 +70,12 @@ export class MlScoringAdapter implements MlScoringPort {
         predictedScore: p.predicted_score,
         breakdown: p.breakdown ?? DEFAULT_BREAKDOWN,
       }));
-    } catch {
-      this.logger.warn(`ML service unavailable for predictRace(${raceSlug}, ${year})`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `ML service unavailable for predictRace(${raceSlug}, ${year}): ${message}`,
+        err instanceof Error ? err.stack : undefined,
+      );
       return null;
     }
   }

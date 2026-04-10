@@ -418,6 +418,11 @@ export class AnalyzePriceListUseCase {
       input.raceType,
     );
     if (!predictions) {
+      this.logger.error(
+        `ML prediction failed for ${input.raceSlug}/${input.year} ` +
+          `(raceType=${input.raceType}, startlist=${startlistEntries.length}) — ` +
+          `ML service returned no predictions`,
+      );
       throw new MlPredictionFailedError(input.raceSlug!, input.year!);
     }
 
