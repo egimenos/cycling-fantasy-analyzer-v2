@@ -25,7 +25,7 @@ Metrics are not collected yet — see issue #26 follow-ups.
 Inside your stack:
 
 - Click **"Send Logs"** on the Loki tile → copy the **URL** (e.g. `https://logs-prod-XXX.grafana.net`) and the **User** number.
-- Click **"Send Traces"** on the Tempo tile → copy the **URL** (e.g. `https://tempo-prod-XXX.grafana.net:443`) and the **User** number.
+- Click **"Send Traces"** on the Tempo tile → copy the **URL** but **strip the `https://` prefix and any trailing `/tempo` path**. Alloy uses gRPC for Tempo so the endpoint must be in the form `host:port`, e.g. `tempo-prod-10-prod-eu-west-2.grafana.net:443`. Also copy the **User** number (note: this is usually a different number than the Loki user).
 
 ### 3. Create a Cloud Access Policy token
 
