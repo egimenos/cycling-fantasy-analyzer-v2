@@ -1,0 +1,30 @@
+services:
+  alloy:
+    image: grafana/alloy:v1.4.2
+    container_name: alloy
+    restart: unless-stopped
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+    environment:
+      - GRAFANA_CLOUD_LOKI_URL=${GRAFANA_CLOUD_LOKI_URL}
+      - GRAFANA_CLOUD_LOKI_USER=${GRAFANA_CLOUD_LOKI_USER}
+      - GRAFANA_CLOUD_TEMPO_URL=${GRAFANA_CLOUD_TEMPO_URL}
+      - GRAFANA_CLOUD_TEMPO_USER=${GRAFANA_CLOUD_TEMPO_USER}
+      - GRAFANA_CLOUD_TOKEN=${GRAFANA_CLOUD_TOKEN}
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy-data:/var/lib/alloy/data
+    mem_limit: 200m
+    networks:
+      - dokploy-network
+
+volumes:
+  alloy-data:
+
+networks:
+  dokploy-network:
+    external: true
