@@ -219,7 +219,7 @@ Or filter by service across both containers in one query:
 **Common issues:**
 
 - **No data in Grafana Cloud after deploy**: check the Alloy container is running (`docker logs alloy` in the observability project). Bad credentials produce a clear error at startup.
-- **Logs flow but traces don't**: confirm `OTEL_EXPORTER_OTLP_ENDPOINT_API` / `OTEL_EXPORTER_OTLP_ENDPOINT_ML` are set on the cycling services and that `dokploy-network` resolves `alloy` (`docker exec cycling-api getent hosts alloy`).
+- **Logs flow but traces don't**: confirm `OTEL_EXPORTER_OTLP_ENDPOINT_API` / `OTEL_EXPORTER_OTLP_ENDPOINT_ML` are set on the cycling services and that `dokploy-network` resolves `alloy` (`docker exec cycling-api getent hosts alloy`). Also verify `GRAFANA_CLOUD_TEMPO_URL` is in `host:port` form with no `https://` prefix — Alloy uses gRPC for Tempo and a malformed URL will silently drop traces.
 - **Alloy crash-loops**: missing or wrong Grafana Cloud env vars, or token without `logs:write` / `traces:write` scopes. Recreate the Cloud Access Policy token with the correct scopes.
 
 ---
