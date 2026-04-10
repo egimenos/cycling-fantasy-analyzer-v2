@@ -75,10 +75,8 @@ otelcol.processor.batch "default" {
 }
 
 otelcol.auth.basic "grafana_cloud_tempo" {
-  client_auth {
-    username = sys.env("GRAFANA_CLOUD_TEMPO_USER")
-    password = sys.env("GRAFANA_CLOUD_TOKEN")
-  }
+  username = sys.env("GRAFANA_CLOUD_TEMPO_USER")
+  password = sys.env("GRAFANA_CLOUD_TOKEN")
 }
 
 // Use the gRPC OTLP exporter (not HTTP) — this matches what Grafana Cloud
