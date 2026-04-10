@@ -89,6 +89,28 @@ Note: these have dependencies — e.g., train_sources requires cache + stage
 targets + stage features to exist. Use `make retrain` unless you know what
 you're doing.
 
+## Detached / Background Runs
+
+Detached invocations like `docker exec -d ... python -m src.training.retrain` lose
+stdout and stderr. The script always tees its full output to `<cache>/retrain.log`
+and writes `<cache>/retrain_status.json` on completion (success or failure) so you
+can verify the run.
+
+```bash
+# Inspect last run
+cat ml/cache/retrain_status.json   # exit_code, duration_seconds, model_version, error
+tail -n 100 ml/cache/retrain.log
+```
+
+`retrain_status.json` fields:
+
+- `status`: `success` | `failed`
+- `exit_code`: `0` | `1`
+- `started_at`, `completed_at`: ISO-8601 UTC timestamps
+- `duration_seconds`: total wall-clock duration
+- `model_version`: only on success
+- `error`, `traceback`: only on failure
+
 ## Troubleshooting
 
 | Issue                        | Cause                                      | Fix                                                                               |
