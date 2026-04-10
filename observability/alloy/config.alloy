@@ -1,0 +1,89 @@
+// Grafana Alloy configuration for the cycling-analyzer VPS.
+// Collects Docker container logs and OTLP traces from all services on the
+// dokploy-network and forwards them to Grafana Cloud (Loki + Tempo).
+//
+// Required environment variables (set in Dokploy, never commit values):
+//   GRAFANA_CLOUD_LOKI_URL    e.g. https://logs-prod-XXX.grafana.net
+//   GRAFANA_CLOUD_LOKI_USER   numeric instance ID
+//   GRAFANA_CLOUD_TEMPO_URL   e.g. https://tempo-prod-XXX.grafana.net:443
+//   GRAFANA_CLOUD_TEMPO_USER  numeric instance ID
+//   GRAFANA_CLOUD_TOKEN       Cloud Access Policy token with logs:write + traces:write scopes
+
+// ---------------------------------------------------------------------------
+// LOGS PIPELINE: Docker socket -> Loki (Grafana Cloud)
+// ---------------------------------------------------------------------------
+
+discovery.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "5s"
+}
+
+// Map __meta_docker_container_name (e.g. "/cycling-api") to a clean
+// `container` label so we can query `{container="cycling-api"}` in Grafana.
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  targets          = discovery.relabel.containers.output
+  forward_to       = [loki.write.grafana_cloud.receiver]
+  refresh_interval = "5s"
+}
+
+loki.write "grafana_cloud" {
+  endpoint {
+    url = sys.env("GRAFANA_CLOUD_LOKI_URL") + "/loki/api/v1/push"
+
+    basic_auth {
+      username = sys.env("GRAFANA_CLOUD_LOKI_USER")
+      password = sys.env("GRAFANA_CLOUD_TOKEN")
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// TRACES PIPELINE: OTLP receivers -> Tempo (Grafana Cloud)
+// ---------------------------------------------------------------------------
+
+otelcol.receiver.otlp "default" {
+  // gRPC: used by the ML service (Python OTLP gRPC exporter on port 4317)
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  // HTTP: used by the API service (Node OTLP HTTP exporter on port 4318)
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces = [otelcol.processor.batch.default.input]
+  }
+}
+
+otelcol.processor.batch "default" {
+  output {
+    traces = [otelcol.exporter.otlphttp.grafana_cloud.input]
+  }
+}
+
+otelcol.auth.basic "grafana_cloud_tempo" {
+  client_auth {
+    username = sys.env("GRAFANA_CLOUD_TEMPO_USER")
+    password = sys.env("GRAFANA_CLOUD_TOKEN")
+  }
+}
+
+otelcol.exporter.otlphttp "grafana_cloud" {
+  client {
+    endpoint = sys.env("GRAFANA_CLOUD_TEMPO_URL")
+    auth     = otelcol.auth.basic.grafana_cloud_tempo.handler
+  }
+}

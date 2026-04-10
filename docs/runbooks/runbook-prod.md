@@ -174,6 +174,54 @@ Alternatively, use the Dokploy UI log viewer (Project > Service > Logs).
 
 **Correlation IDs:** Requests are tagged with correlation IDs that propagate from API to ML service. Use the correlation ID to trace a request across both services.
 
+### Centralized observability (Grafana Cloud via Alloy)
+
+Logs and traces from every cycling container are also shipped to **Grafana Cloud** by a small Alloy collector running as a separate Dokploy project. Local `docker logs` still works as a quick check, but for cross-service searching and historical queries, use Grafana Cloud.
+
+**Architecture:**
+
+- The `observability` Dokploy project runs a single Grafana Alloy container on the shared `dokploy-network`.
+- Alloy reads container stdout/stderr via the Docker socket and forwards everything to Grafana Cloud Loki, labeled by `container=<name>`.
+- Cycling services (`api` and `ml-service`) export OTLP traces to Alloy. The API uses HTTP on port 4318, the ML service uses gRPC on port 4317. From Alloy, traces are forwarded to Grafana Cloud Tempo.
+- Memory footprint on the VPS: ~80–150 MB for Alloy, capped at 200 MB. All storage lives in Grafana Cloud — nothing accumulates on local disk.
+
+**Required env vars on the cycling Compose** (set in Dokploy under the cycling project):
+
+```env
+OTEL_EXPORTER_OTLP_ENDPOINT_API=http://alloy:4318
+OTEL_EXPORTER_OTLP_ENDPOINT_ML=http://alloy:4317
+```
+
+If these are unset or empty, both services fall back to printing traces to stdout (the default before Alloy was deployed). This is the safe failure mode — cycling continues working even if observability is down.
+
+**Setup and credentials:** see `observability/README.md` for the one-time Grafana Cloud sign-up, access policy creation, Dokploy project setup, and required env vars (`GRAFANA_CLOUD_LOKI_URL`, `GRAFANA_CLOUD_LOKI_USER`, `GRAFANA_CLOUD_TEMPO_URL`, `GRAFANA_CLOUD_TEMPO_USER`, `GRAFANA_CLOUD_TOKEN`).
+
+**Searching logs by correlation ID:**
+
+In Grafana Cloud, open **Drilldown → Logs** and run:
+
+```logql
+{container="cycling-api"} |= "<correlation-id>"
+```
+
+Or filter by service across both containers in one query:
+
+```logql
+{container=~"cycling-api|cycling-ml-service"} |= "<correlation-id>" | json
+```
+
+**Tracing a request end-to-end:**
+
+1. Hit any API endpoint and grab the `x-correlation-id` from the response headers (or from the matching log line).
+2. In Grafana Cloud, open **Drilldown → Traces** and search by the correlation ID.
+3. You should see a trace spanning HTTP request → DB queries → ML service call.
+
+**Common issues:**
+
+- **No data in Grafana Cloud after deploy**: check the Alloy container is running (`docker logs alloy` in the observability project). Bad credentials produce a clear error at startup.
+- **Logs flow but traces don't**: confirm `OTEL_EXPORTER_OTLP_ENDPOINT_API` / `OTEL_EXPORTER_OTLP_ENDPOINT_ML` are set on the cycling services and that `dokploy-network` resolves `alloy` (`docker exec cycling-api getent hosts alloy`).
+- **Alloy crash-loops**: missing or wrong Grafana Cloud env vars, or token without `logs:write` / `traces:write` scopes. Recreate the Cloud Access Policy token with the correct scopes.
+
 ---
 
 ## 4. Troubleshooting
