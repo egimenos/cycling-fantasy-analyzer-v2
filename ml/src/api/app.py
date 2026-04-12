@@ -461,7 +461,7 @@ def predict(req: PredictRequest, request: Request):
             rider_ids=req.rider_ids,
         )
         if not predictions:
-            logger.warning(
+            logger.error(
                 "No predictions produced for classic race",
                 race_slug=req.race_slug,
                 year=req.year,
