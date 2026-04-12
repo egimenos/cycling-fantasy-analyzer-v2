@@ -427,7 +427,7 @@ def predict(req: PredictRequest, request: Request):
                 race_type=race_type,
             )
         else:
-            logger.warning(
+            logger.error(
                 "Race not found in DB and no race_type fallback provided",
                 race_slug=req.race_slug,
                 year=req.year,
@@ -461,7 +461,7 @@ def predict(req: PredictRequest, request: Request):
             rider_ids=req.rider_ids,
         )
         if not predictions:
-            logger.warning(
+            logger.error(
                 "No predictions produced for classic race",
                 race_slug=req.race_slug,
                 year=req.year,
@@ -496,7 +496,7 @@ def predict(req: PredictRequest, request: Request):
     )
 
     if features_df.empty:
-        logger.warning(
+        logger.error(
             "Empty features — no startlist or rider data for race",
             race_slug=req.race_slug,
             year=req.year,
