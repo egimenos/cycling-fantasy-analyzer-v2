@@ -26,7 +26,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from ..data.loader import get_race_info, load_data
+from ..data.loader import get_race_info, load_data, load_startlist_for_race
 from ..features.stage_race import FEATURE_COLS, extract_features_for_race
 from .logging_config import configure_logging
 from .model_version import get_model_version
@@ -381,6 +381,36 @@ def predict(req: PredictRequest, request: Request):
         state.data_cache = (results_df, startlists_df, supply_hist, completion, sprint_ped)
     else:
         results_df, startlists_df, supply_hist, completion, sprint_ped = state.data_cache
+
+    # Refresh the startlist for the requested race on-demand.
+    # The cached `startlists_df` is a snapshot taken at the first request and is
+    # never invalidated afterwards, so freshly-scraped startlists (e.g. the API
+    # persists a new startlist for an upcoming race right before this call) are
+    # invisible to predictions. Query the DB for this specific (race_slug, year)
+    # and merge it into the cached DataFrame if we don't already have it.
+    has_startlist = not startlists_df[
+        (startlists_df["race_slug"] == req.race_slug)
+        & (startlists_df["year"] == req.year)
+    ].empty
+    if not has_startlist:
+        fresh_sl = load_startlist_for_race(DB_URL, req.race_slug, req.year)
+        if not fresh_sl.empty:
+            logger.info(
+                "Loaded fresh startlist for race not in cache",
+                race_slug=req.race_slug,
+                year=req.year,
+                rider_count=len(fresh_sl),
+            )
+            startlists_df = pd.concat([startlists_df, fresh_sl], ignore_index=True)
+            # Persist back into the cache so subsequent requests for the same
+            # race don't re-query the DB.
+            state.data_cache = (
+                results_df,
+                startlists_df,
+                supply_hist,
+                completion,
+                sprint_ped,
+            )
 
     # Get race info — always use today as cutoff so predictions reflect
     # the latest available data (treat every race as "future").
