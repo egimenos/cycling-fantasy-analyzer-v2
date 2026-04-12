@@ -40,6 +40,7 @@ ML-powered fantasy cycling team optimizer for [Grandes miniVueltas](https://gran
 - Training pipelines in `ml/src/training/`.
 - Structured logging with structlog; correlation IDs via asgi-correlation-id.
 - Models saved as joblib in `ml/models/` (gitignored).
+- **Data cache is a lazy in-memory snapshot.** `state.data_cache` (results_df + startlists_df) is loaded from the DB on the first `/predict` request and only invalidated on model hot-reload. The API scrapes fresh startlists into `startlist_entries` right before calling ML, so for the newly-requested race the `/predict` handler must query the DB on-demand via `load_startlist_for_race()` and merge the result into the cached DataFrame. Any new table that the API writes to between ML requests needs the same treatment — don't assume the cache is in sync with the DB.
 
 ## Dependencies & Commands
 
