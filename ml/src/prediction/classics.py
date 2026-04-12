@@ -143,7 +143,7 @@ def predict_classic_race(
             target_rider_ids = race_results["rider_id"].unique().tolist()
 
     if not target_rider_ids:
-        logger.warning("No riders found for %s/%s", race_slug, year)
+        logger.error("No riders found for %s/%s", race_slug, year)
         return []
 
     # Get rider names from results (for response)
