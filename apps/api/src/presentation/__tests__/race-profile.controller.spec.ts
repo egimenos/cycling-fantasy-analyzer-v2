@@ -84,6 +84,23 @@ describe('RaceProfileController', () => {
     expect(mockUseCase.execute).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['localhost', 'http://localhost/race/x/2024'],
+    ['loopback', 'http://127.0.0.1/race/x/2024'],
+    ['private network', 'http://10.0.0.1/race/x/2024'],
+    ['metadata IP', 'http://169.254.169.254/latest/meta-data/'],
+    [
+      'metadata IP with procyclingstats substring bypass',
+      'http://169.254.169.254/?procyclingstats.com/race/x/2024',
+    ],
+    ['credentials bypass', 'https://www.procyclingstats.com@evil.com/race/x/2024'],
+    ['wrong protocol', 'file:///etc/passwd'],
+    ['look-alike host', 'https://evilprocyclingstats.com/race/x/2024'],
+  ])('rejects SSRF payload (%s)', async (_label, url) => {
+    await expect(controller.getRaceProfile(url)).rejects.toThrow(BadRequestException);
+    expect(mockUseCase.execute).not.toHaveBeenCalled();
+  });
+
   it('should propagate NotFoundException from use case', async () => {
     mockUseCase.execute.mockRejectedValueOnce(new NotFoundException('Could not determine profile'));
 

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException } from '@nestjs/common';
 import { AnalyzeController } from '../analyze.controller';
 import {
   AnalyzePriceListUseCase,
@@ -9,6 +10,7 @@ import { ImportPriceListUseCase } from '../../application/analyze/import-price-l
 describe('AnalyzeController', () => {
   let controller: AnalyzeController;
   let mockUseCase: jest.Mocked<Pick<AnalyzePriceListUseCase, 'execute'>>;
+  let mockImportUseCase: jest.Mocked<Pick<ImportPriceListUseCase, 'execute'>>;
 
   const sampleResponse: AnalyzeResponse = {
     riders: [
@@ -43,12 +45,15 @@ describe('AnalyzeController', () => {
     mockUseCase = {
       execute: jest.fn().mockResolvedValue(sampleResponse),
     };
+    mockImportUseCase = {
+      execute: jest.fn().mockResolvedValue({ riders: [] }),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AnalyzeController],
       providers: [
         { provide: AnalyzePriceListUseCase, useValue: mockUseCase },
-        { provide: ImportPriceListUseCase, useValue: { execute: jest.fn() } },
+        { provide: ImportPriceListUseCase, useValue: mockImportUseCase },
       ],
     }).compile();
 
@@ -94,5 +99,43 @@ describe('AnalyzeController', () => {
     // The result event should have been written to the stream
     const resultEvent = written.find((w) => w.startsWith('event: result'));
     expect(resultEvent).toBeDefined();
+  });
+
+  describe('importPriceList', () => {
+    it('accepts the GMV price list URL', async () => {
+      await controller.importPriceList('https://grandesminivueltas.com/precios/2026');
+      expect(mockImportUseCase.execute).toHaveBeenCalledWith(
+        'https://grandesminivueltas.com/precios/2026',
+      );
+    });
+
+    it('accepts GMV subdomains', async () => {
+      await controller.importPriceList('https://www.grandesminivueltas.com/precios/2026');
+      expect(mockImportUseCase.execute).toHaveBeenCalled();
+    });
+
+    it('rejects a missing URL', async () => {
+      await expect(controller.importPriceList('')).rejects.toThrow(BadRequestException);
+      expect(mockImportUseCase.execute).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['localhost', 'http://localhost/precios'],
+      ['loopback', 'http://127.0.0.1/precios'],
+      ['private network', 'http://10.0.0.1/precios'],
+      ['Docker service', 'http://postgres:5432/'],
+      ['metadata IP', 'http://169.254.169.254/latest/meta-data/'],
+      [
+        'metadata IP with grandesminivueltas substring bypass',
+        'http://169.254.169.254/?grandesminivueltas.com/precios',
+      ],
+      ['credentials bypass', 'https://grandesminivueltas.com@evil.com/precios'],
+      ['wrong protocol', 'file:///etc/passwd'],
+      ['unrelated host', 'https://evil.com/precios'],
+      ['look-alike host', 'https://evilgrandesminivueltas.com/precios'],
+    ])('rejects SSRF payload (%s)', async (_label, url) => {
+      await expect(controller.importPriceList(url)).rejects.toThrow(BadRequestException);
+      expect(mockImportUseCase.execute).not.toHaveBeenCalled();
+    });
   });
 });

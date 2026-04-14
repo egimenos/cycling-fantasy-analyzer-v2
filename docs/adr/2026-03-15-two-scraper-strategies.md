@@ -9,7 +9,12 @@ The application scrapes rider and race result data from ProCyclingStats (PCS). P
 
 ## Decision
 
-We implemented scraping behind a port interface (`ScraperPort`) with support for multiple strategy implementations. The primary strategy uses Cheerio for HTML parsing. Strategies are registered with the infrastructure layer and selected based on health status. Scraping is restricted to CLI commands and scheduled cron jobs — no REST endpoints trigger scrapes.
+We implemented scraping behind a port interface (`ScraperPort`) with support for multiple strategy implementations. The primary strategy uses Cheerio for HTML parsing. Strategies are registered with the infrastructure layer and selected based on health status.
+
+Two scraping modes coexist with different exposure rules:
+
+- **Bulk / historical scraping** (database seeding, weekly retraining ingestion) is restricted to CLI commands and scheduled cron jobs. No REST endpoint triggers a batch scrape.
+- **On-demand per-race scraping** (startlist, stage profile, and price list for the single race the user is currently analyzing) is reached from public REST endpoints because it is the core product flow. These endpoints MUST enforce a hostname allow-list on any user-supplied URL (`procyclingstats.com`, `grandesminivueltas.com`) to prevent SSRF.
 
 ## Consequences
 
@@ -18,7 +23,8 @@ We implemented scraping behind a port interface (`ScraperPort`) with support for
 - Resilient to site structure changes: if one strategy breaks, others can take over
 - Easy to add new scraper implementations without modifying existing code
 - Port interface makes scraping fully testable with stub implementations
-- CLI-only execution prevents abuse via public API endpoints
+- Bulk scraping is CLI-only, preventing abuse of expensive multi-race jobs via public API
+- On-demand scraping is allow-listed at the hostname level, preventing SSRF into `dokploy-network`
 
 ### Negative
 
