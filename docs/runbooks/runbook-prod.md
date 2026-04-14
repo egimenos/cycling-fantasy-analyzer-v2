@@ -243,6 +243,7 @@ Or filter by service across both containers in one query:
 3. Verify ML service is healthy (API requires it for all scoring — there is no fallback)
 4. Check disk space: `df -h`
 5. Check for missing required environment variables in Dokploy env settings
+6. If logs show `CORS_ORIGIN must be set in production`, the fail-fast guard caught a missing env var. Add `CORS_ORIGIN` in Dokploy > Service > Environment with the web frontend URL (e.g. `https://cycling.yourdomain.com`) and redeploy.
 
 ### ML service unhealthy
 
@@ -311,6 +312,8 @@ Or filter by service across both containers in one query:
 | Bulk scraping      | CLI/cron only — no REST endpoint triggers batch scrapes                                                                                                                                                                                                                                        |
 | On-demand scraping | REST endpoints restricted by hostname allow-list (PCS, GMV)                                                                                                                                                                                                                                    |
 | Rate limiting      | Global 60/min per IP; 5/min on `/api/analyze`; 15/min on external-scrape routes (`/api/race-profile`, `/api/race-profile-by-slug`, `/api/import-price-list`, `/api/gmv-match`). Requires `trust proxy: 1` in `main.ts` so `req.ip` is the real client behind Traefik, not the proxy container. |
+| HTTP headers       | `helmet()` with defaults — emits `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Strict-Transport-Security` (when forwarded as HTTPS), and removes `X-Powered-By`. JSON-only API, so CSP/frameguard are inert but harmless.                                                             |
+| CORS               | `CORS_ORIGIN` is **required** when `NODE_ENV=production`. Missing value crashes the container at boot instead of silently serving with a useless localhost policy.                                                                                                                             |
 | Database           | Not exposed publicly — accessible only via internal Docker network                                                                                                                                                                                                                             |
 | Secrets            | Managed via Dokploy environment variables, not committed to repo                                                                                                                                                                                                                               |
 | OS updates         | Applied monthly on VPS                                                                                                                                                                                                                                                                         |
@@ -382,14 +385,14 @@ SEED_YEARS=3 ./scripts/weekly-pipeline.sh
 
 ### API (`cycling-api`)
 
-| Variable                | Example                                   | Description                                                     |
-| ----------------------- | ----------------------------------------- | --------------------------------------------------------------- |
-| `DATABASE_URL`          | `postgresql://user:pass@host:5432/dbname` | PostgreSQL connection string (hostname from Dokploy DB service) |
-| `PORT`                  | `3001`                                    | API listen port                                                 |
-| `CORS_ORIGIN`           | `https://cycling.yourdomain.com`          | Allowed origin for web frontend                                 |
-| `ML_SERVICE_URL`        | `http://ml-service:8000`                  | Internal ML service URL                                         |
-| `PCS_REQUEST_DELAY_MS`  | `1500`                                    | Delay between PCS scraping requests (ms)                        |
-| `FUZZY_MATCH_THRESHOLD` | `-10000`                                  | Rider name fuzzy matching threshold                             |
+| Variable                | Example                                   | Description                                                                                                                                            |
+| ----------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`          | `postgresql://user:pass@host:5432/dbname` | PostgreSQL connection string (hostname from Dokploy DB service)                                                                                        |
+| `PORT`                  | `3001`                                    | API listen port                                                                                                                                        |
+| `CORS_ORIGIN`           | `https://cycling.yourdomain.com`          | **Required in production.** Allowed origin for web frontend. The API crashes on boot with a clear error if this is missing when `NODE_ENV=production`. |
+| `ML_SERVICE_URL`        | `http://ml-service:8000`                  | Internal ML service URL                                                                                                                                |
+| `PCS_REQUEST_DELAY_MS`  | `1500`                                    | Delay between PCS scraping requests (ms)                                                                                                               |
+| `FUZZY_MATCH_THRESHOLD` | `-10000`                                  | Rider name fuzzy matching threshold                                                                                                                    |
 
 ### Web (`cycling-web`)
 

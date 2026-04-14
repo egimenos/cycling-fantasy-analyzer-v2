@@ -39,6 +39,7 @@
     "express": "^5.2.1",
     "fuzzysort": "^3.1.0",
     "got-scraping": "^4.2.1",
+    "helmet": "^8.1.0",
     "nest-commander": "^3.20.1",
     "nestjs-pino": "^4.6.1",
     "pg": "^8.20.0",
