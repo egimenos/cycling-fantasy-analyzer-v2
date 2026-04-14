@@ -1,11 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { json, Request, Response } from 'express';
+import helmet from 'helmet';
 import { randomUUID } from 'node:crypto';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './infrastructure/observability/all-exceptions.filter';
 import { CorrelationStore } from './infrastructure/observability/correlation.store';
+import { assertCorsOriginConfigured } from './bootstrap/assert-cors-origin';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -25,11 +27,11 @@ async function bootstrap() {
   });
 
   app.useGlobalFilters(app.get(AllExceptionsFilter));
+  app.use(helmet());
   app.use(json({ limit: '5mb' }));
 
-  app.enableCors({
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000',
-  });
+  const corsOrigin = assertCorsOriginConfigured(process.env);
+  app.enableCors({ origin: corsOrigin ?? 'http://localhost:3000' });
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.enableShutdownHooks();
 

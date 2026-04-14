@@ -42,18 +42,18 @@ The API uses `@nestjs/config` to load env files with this priority:
 
 Both are optional. If neither exists, built-in defaults apply.
 
-| Variable                      | Default                                                        | Description                                                         |
-| ----------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `DATABASE_URL`                | `postgresql://cycling:cycling@localhost:5432/cycling_analyzer` | PostgreSQL connection string                                        |
-| `PORT`                        | `3001`                                                         | API server port                                                     |
-| `CORS_ORIGIN`                 | `http://localhost:3000`                                        | Allowed CORS origin for the frontend                                |
-| `PCS_REQUEST_DELAY_MS`        | `1500`                                                         | Delay between PCS scrape requests                                   |
-| `FUZZY_MATCH_THRESHOLD`       | `-10000`                                                       | Minimum score for fuzzy rider name matching                         |
-| `ML_SERVICE_URL`              | `http://localhost:8000`                                        | ML scoring microservice URL                                         |
-| `VITE_API_URL`                | `http://localhost:3001`                                        | API URL for the frontend (build-time)                               |
-| `LOG_LEVEL`                   | `info` (prod) / `debug` (dev)                                  | Log level for API and ML service                                    |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | _(disabled)_                                                   | OTLP collector URL — enables distributed tracing                    |
-| `THROTTLE_DISABLE`            | _(unset)_                                                      | Set to `true` to bypass rate limiting (CI/E2E only — never in prod) |
+| Variable                      | Default                                                        | Description                                                                                                     |
+| ----------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                | `postgresql://cycling:cycling@localhost:5432/cycling_analyzer` | PostgreSQL connection string                                                                                    |
+| `PORT`                        | `3001`                                                         | API server port                                                                                                 |
+| `CORS_ORIGIN`                 | `http://localhost:3000`                                        | Allowed CORS origin for the frontend. **Required** when `NODE_ENV=production` — API crashes on boot if missing. |
+| `PCS_REQUEST_DELAY_MS`        | `1500`                                                         | Delay between PCS scrape requests                                                                               |
+| `FUZZY_MATCH_THRESHOLD`       | `-10000`                                                       | Minimum score for fuzzy rider name matching                                                                     |
+| `ML_SERVICE_URL`              | `http://localhost:8000`                                        | ML scoring microservice URL                                                                                     |
+| `VITE_API_URL`                | `http://localhost:3001`                                        | API URL for the frontend (build-time)                                                                           |
+| `LOG_LEVEL`                   | `info` (prod) / `debug` (dev)                                  | Log level for API and ML service                                                                                |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | _(disabled)_                                                   | OTLP collector URL — enables distributed tracing                                                                |
+| `THROTTLE_DISABLE`            | _(unset)_                                                      | Set to `true` to bypass rate limiting (CI/E2E only — never in prod)                                             |
 
 > **Note:** If you have a `DATABASE_URL` already exported in your shell (e.g. from another project), it will take precedence over `.env` files. Use `.env.local` or `unset DATABASE_URL` to fix this.
 
