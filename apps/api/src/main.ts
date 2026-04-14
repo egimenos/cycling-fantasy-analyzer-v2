@@ -11,6 +11,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
 
+  // Trust exactly one proxy hop (Traefik in prod). `true` would let clients
+  // forge X-Forwarded-For and bypass rate limiting; `1` pins req.ip to the
+  // real client IP behind our own reverse proxy.
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
   // Correlation ID middleware — runs before pino-http to populate AsyncLocalStorage
   const correlationStore = app.get(CorrelationStore);
   app.use((req: Request, _res: Response, next: () => void) => {
