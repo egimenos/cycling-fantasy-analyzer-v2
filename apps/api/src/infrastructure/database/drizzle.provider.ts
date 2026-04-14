@@ -9,10 +9,11 @@ export type DrizzleDatabase = NodePgDatabase<typeof schema>;
 export const drizzleProvider = {
   provide: DRIZZLE,
   useFactory: (): DrizzleDatabase => {
-    const pool = new Pool({
-      connectionString:
-        process.env.DATABASE_URL ?? 'postgresql://cycling:cycling@localhost:5432/cycling_analyzer',
-    });
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error('DATABASE_URL environment variable is required');
+    }
+    const pool = new Pool({ connectionString });
     return drizzle(pool, { schema });
   },
 };
