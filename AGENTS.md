@@ -96,7 +96,9 @@ make dev           # starts all services
 
 ## Security Rules
 
-- **Scraping operations are CLI/cron only** — never expose scraping behind REST endpoints.
+- **Bulk / historical scraping is CLI/cron only.** Seeding the database with historical race results, weekly retraining ingestion, and any multi-race batch scrape must run from `presentation/cli/` or a Dokploy scheduled task — never behind a REST endpoint. These flows iterate over many races and would be trivially abusable if exposed publicly.
+- **On-demand per-race scraping is allowed from REST endpoints**, because it is the core product flow: when the user picks the race they are about to analyze, the API fetches that race's startlist, stage profile, and the GMV price list at request time. Allowed endpoints today: `GET /api/race-profile`, `GET /api/race-profile-by-slug`, `GET /api/import-price-list`, and the startlist fetch inside `POST /api/analyze`.
+- **Any REST endpoint that performs an outbound fetch from a user-supplied URL must enforce a hostname allow-list** (`grandesminivueltas.com` for price lists, `procyclingstats.com` for race/profile pages). Parse with `new URL(...)`, compare `.hostname`, and reject anything else with `BadRequestException` at the controller boundary. Never rely on substring checks like `url.includes('…')` — they are trivially bypassable (`http://169.254.169.254/?procyclingstats.com/race/x/2024`).
 - Never commit `.env`, `.env.local`, credentials, or API keys.
 - Validate all external input at system boundaries (controllers, API endpoints).
 

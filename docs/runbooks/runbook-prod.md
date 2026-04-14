@@ -140,11 +140,21 @@ DELETE FROM ml_scores WHERE race_slug = 'tour-de-france' AND year = 2026;
 
 ### Scraping
 
-Scraping operations are CLI-only. No REST endpoints are exposed for scraping (security policy).
+The system has two distinct scraping modes. They have different security policies — do not conflate them.
+
+**Bulk / historical scraping (CLI/cron only).** Seeding the database with years of historical results and the weekly retraining ingestion are CLI-only. They must never be triggered by a REST endpoint.
 
 - Initial data population runs via the `seed-database` CLI command (see above)
-- Production scraping should be scheduled via Dokploy scheduled tasks, not run ad-hoc
+- Production bulk scraping runs via Dokploy scheduled tasks (`./scripts/weekly-pipeline.sh`), not ad-hoc
 - Configure scheduled tasks in Dokploy > Project > Scheduled Tasks
+
+**On-demand per-race scraping (REST, allow-listed).** When a user selects the race they are about to analyze, the API fetches that single race's startlist, stage profile, and the GMV price list at request time. This is the core product flow and runs from public REST endpoints:
+
+- `GET /api/race-profile` / `GET /api/race-profile-by-slug` — PCS stage profiles
+- `GET /api/import-price-list` — GMV rider prices
+- Startlist fetch inside `POST /api/analyze`
+
+All three are restricted by hostname allow-list (`procyclingstats.com`, `grandesminivueltas.com`) to prevent SSRF. Substring checks on the URL are not acceptable — use `new URL(...).hostname`.
 
 ---
 
@@ -298,7 +308,8 @@ Or filter by service across both containers in one query:
 | SSH                | Key-only authentication, no root login                             |
 | Firewall           | Only ports 22, 80, 443, 3000 (Dokploy dashboard) open              |
 | Containers         | Run as non-root (UID 1001)                                         |
-| Scraping endpoints | None exposed publicly — CLI/cron only                              |
+| Bulk scraping      | CLI/cron only — no REST endpoint triggers batch scrapes            |
+| On-demand scraping | REST endpoints restricted by hostname allow-list (PCS, GMV)        |
 | Database           | Not exposed publicly — accessible only via internal Docker network |
 | Secrets            | Managed via Dokploy environment variables, not committed to repo   |
 | OS updates         | Applied monthly on VPS                                             |

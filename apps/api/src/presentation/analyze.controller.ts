@@ -28,6 +28,9 @@ import {
 } from '../domain/analyze/errors';
 import type { AnalysisStepId } from '@cycling-analyzer/shared-types';
 import { SseProgressNotifier } from './sse-progress-notifier';
+import { assertAllowedHost } from './validation/assert-allowed-host';
+
+const PRICE_LIST_ALLOWED_HOSTS = ['grandesminivueltas.com'];
 
 class PriceListEntryDto {
   @IsString()
@@ -172,6 +175,7 @@ export class AnalyzeController {
       throw new BadRequestException('url query parameter is required');
     }
 
+    assertAllowedHost(trimmedUrl, PRICE_LIST_ALLOWED_HOSTS);
     return this.importPriceListUseCase.execute(trimmedUrl);
   }
 }
