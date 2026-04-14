@@ -303,16 +303,17 @@ Or filter by service across both containers in one query:
 
 ## 6. Security Checklist
 
-| Area               | Policy                                                             |
-| ------------------ | ------------------------------------------------------------------ |
-| SSH                | Key-only authentication, no root login                             |
-| Firewall           | Only ports 22, 80, 443, 3000 (Dokploy dashboard) open              |
-| Containers         | Run as non-root (UID 1001)                                         |
-| Bulk scraping      | CLI/cron only — no REST endpoint triggers batch scrapes            |
-| On-demand scraping | REST endpoints restricted by hostname allow-list (PCS, GMV)        |
-| Database           | Not exposed publicly — accessible only via internal Docker network |
-| Secrets            | Managed via Dokploy environment variables, not committed to repo   |
-| OS updates         | Applied monthly on VPS                                             |
+| Area               | Policy                                                                                                                                                                                                                                                                                         |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SSH                | Key-only authentication, no root login                                                                                                                                                                                                                                                         |
+| Firewall           | Only ports 22, 80, 443, 3000 (Dokploy dashboard) open                                                                                                                                                                                                                                          |
+| Containers         | Run as non-root (UID 1001)                                                                                                                                                                                                                                                                     |
+| Bulk scraping      | CLI/cron only — no REST endpoint triggers batch scrapes                                                                                                                                                                                                                                        |
+| On-demand scraping | REST endpoints restricted by hostname allow-list (PCS, GMV)                                                                                                                                                                                                                                    |
+| Rate limiting      | Global 60/min per IP; 5/min on `/api/analyze`; 15/min on external-scrape routes (`/api/race-profile`, `/api/race-profile-by-slug`, `/api/import-price-list`, `/api/gmv-match`). Requires `trust proxy: 1` in `main.ts` so `req.ip` is the real client behind Traefik, not the proxy container. |
+| Database           | Not exposed publicly — accessible only via internal Docker network                                                                                                                                                                                                                             |
+| Secrets            | Managed via Dokploy environment variables, not committed to repo                                                                                                                                                                                                                               |
+| OS updates         | Applied monthly on VPS                                                                                                                                                                                                                                                                         |
 
 ---
 

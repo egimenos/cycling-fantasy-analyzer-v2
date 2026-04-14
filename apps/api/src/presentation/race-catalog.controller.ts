@@ -1,8 +1,10 @@
 import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ListRacesUseCase } from '../application/analyze/list-races.use-case';
 import { GmvAutoImportUseCase } from '../application/analyze/gmv-auto-import.use-case';
 import { FetchRaceProfileUseCase } from '../application/analyze/fetch-race-profile.use-case';
 import { RaceType } from '../domain/shared/race-type.enum';
+import { THROTTLE_EXTERNAL_SCRAPE } from './throttle.constants';
 import type {
   RaceListResponse,
   GmvMatchResponse,
@@ -45,6 +47,7 @@ export class RaceCatalogController {
   }
 
   @Get('gmv-match')
+  @Throttle(THROTTLE_EXTERNAL_SCRAPE)
   async getGmvMatch(
     @Query('raceSlug') raceSlug?: string,
     @Query('raceName') raceName?: string,
@@ -64,6 +67,7 @@ export class RaceCatalogController {
   }
 
   @Get('race-profile-by-slug')
+  @Throttle(THROTTLE_EXTERNAL_SCRAPE)
   async getRaceProfileBySlug(
     @Query('raceSlug') raceSlug?: string,
     @Query('year') year?: string,

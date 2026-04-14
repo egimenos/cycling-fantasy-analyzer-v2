@@ -28,6 +28,7 @@ jobs:
       ML_SERVICE_URL: http://localhost:8000
       LOG_LEVEL: error
       SKIP_EXTERNAL: 'true'
+      THROTTLE_DISABLE: 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

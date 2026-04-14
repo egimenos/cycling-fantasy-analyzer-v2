@@ -77,6 +77,7 @@ NODE_ENV=test \
 ML_SERVICE_URL="http://localhost:${CI_ML_PORT}" \
 LOG_LEVEL=error \
 SKIP_EXTERNAL=true \
+THROTTLE_DISABLE=true \
   node "$ROOT/apps/api/dist/main.js" &
 API_PID=$!
 

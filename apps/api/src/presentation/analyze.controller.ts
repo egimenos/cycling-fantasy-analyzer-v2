@@ -1,4 +1,5 @@
 import { Controller, Post, Get, Query, Body, BadRequestException, Req, Res } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import {
   IsString,
   IsNotEmpty,
@@ -29,6 +30,7 @@ import {
 import type { AnalysisStepId } from '@cycling-analyzer/shared-types';
 import { SseProgressNotifier } from './sse-progress-notifier';
 import { assertAllowedHost } from './validation/assert-allowed-host';
+import { THROTTLE_ANALYZE, THROTTLE_EXTERNAL_SCRAPE } from './throttle.constants';
 
 const PRICE_LIST_ALLOWED_HOSTS = ['grandesminivueltas.com'];
 
@@ -116,6 +118,7 @@ export class AnalyzeController {
   ) {}
 
   @Post('analyze')
+  @Throttle(THROTTLE_ANALYZE)
   async analyze(
     @Body() dto: AnalyzeRequestDto,
     @Req() req: Request,
@@ -169,6 +172,7 @@ export class AnalyzeController {
   }
 
   @Get('import-price-list')
+  @Throttle(THROTTLE_EXTERNAL_SCRAPE)
   async importPriceList(@Query('url') url: string): Promise<{ riders: ParsedPriceEntry[] }> {
     const trimmedUrl = url?.trim();
     if (!trimmedUrl) {
