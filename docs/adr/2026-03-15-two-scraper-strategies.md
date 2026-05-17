@@ -35,3 +35,4 @@ Two scraping modes coexist with different exposure rules:
 
 - Only one scraper needs to work at any given time
 - Rate limiting (`PCS_REQUEST_DELAY_MS`) is applied at the infrastructure level, not per-strategy
+- HTTP client choice is per-upstream, not global: PCS uses `got-scraping` (Cloudflare requires TLS impersonation), GMV uses native `fetch` (Hostinger hcdn 403s got-scraping's synthetic Chrome fingerprint intermittently). Do not unify these.
