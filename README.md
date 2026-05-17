@@ -35,12 +35,12 @@ The web frontend runs at `http://localhost:3000` and the API at `http://localhos
 
 ## Environment Variables
 
-The API uses `@nestjs/config` to load env files with this priority:
+The API uses `@nestjs/config` to load env files with this priority (both live at the **repo root**, not inside `apps/api/`):
 
 1. **`.env.local`** — personal overrides, gitignored
 2. **`.env`** — local defaults, gitignored (copy from `.env.example`)
 
-Both are optional. If neither exists, built-in defaults apply.
+Both are optional during boot, but `DATABASE_URL` is required — the API fails fast at startup if it is missing. Either define it in one of the files above or export it in your shell.
 
 | Variable                      | Default                                                        | Description                                                                                                     |
 | ----------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |

@@ -13,7 +13,10 @@ import { HealthController } from './presentation/health.controller';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: ['.env.local', '.env'],
+      // Local dev cwd is `apps/api/`, so we also look at the monorepo root (`../../`)
+      // where the shared `.env` actually lives. In Docker, cwd is `/app` and env vars
+      // are injected directly — these paths just resolve to nothing and are ignored.
+      envFilePath: ['.env.local', '.env', '../../.env.local', '../../.env'],
       isGlobal: true,
     }),
     ThrottlerModule.forRoot({
