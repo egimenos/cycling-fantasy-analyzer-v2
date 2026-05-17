@@ -226,6 +226,23 @@ Or filter by service across both containers in one query:
 2. In Grafana Cloud, open **Drilldown → Traces** and search by the correlation ID.
 3. You should see a trace spanning HTTP request → DB queries → ML service call.
 
+**Searching logs by structured event name:**
+
+Some use cases emit a stable `event` field alongside the message so silent product-level failures (which return HTTP 200 but degrade the response) can still trigger alerts. Use `event=` for dashboards and alerting, not the free-text message — the message can change, the event name must not.
+
+```logql
+{container="cycling-api"} | json | event="gmv_price_list_import_failed"
+```
+
+| Event name                     | Level | Meaning                                                                                |
+| ------------------------------ | ----- | -------------------------------------------------------------------------------------- |
+| `gmv_price_list_import_failed` | error | Matched a GMV post but failed to fetch/parse the price list — user sees no prices.     |
+| `gmv_posts_unavailable`        | warn  | GMV WP API is down or the cache is empty — fuzzy match cannot run.                     |
+| `gmv_no_match`                 | debug | No GMV post fuzzy-matched the requested race/year (expected for upcoming/minor races). |
+| `gmv_matched`                  | info  | GMV post matched and used as the price list source.                                    |
+
+When adding a new "log this as an error" path, prefer `pinoLogger.error({ err, event: '<stable_name>', ... }, '<message>')` over `logger.error('<string>')` so it indexes the same way.
+
 **Common issues:**
 
 - **No data in Grafana Cloud after deploy**: check the Alloy container is running (`docker logs alloy` in the observability project). Bad credentials produce a clear error at startup.
