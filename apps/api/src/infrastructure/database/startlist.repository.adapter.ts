@@ -62,6 +62,33 @@ export class StartlistRepositoryAdapter implements StartlistRepositoryPort {
     return count;
   }
 
+  async replaceForRace(raceSlug: string, year: number, entries: StartlistEntry[]): Promise<number> {
+    return this.db.transaction(async (tx) => {
+      await tx
+        .delete(startlistEntries)
+        .where(and(eq(startlistEntries.raceSlug, raceSlug), eq(startlistEntries.year, year)));
+
+      if (entries.length === 0) return 0;
+
+      await tx.insert(startlistEntries).values(
+        entries.map((entry) => {
+          const props = entry.toProps();
+          return {
+            id: props.id,
+            raceSlug: props.raceSlug,
+            year: props.year,
+            riderId: props.riderId,
+            teamName: props.teamName,
+            bibNumber: props.bibNumber,
+            scrapedAt: props.scrapedAt,
+          };
+        }),
+      );
+
+      return entries.length;
+    });
+  }
+
   private toDomain(row: typeof startlistEntries.$inferSelect): StartlistEntry {
     return StartlistEntry.reconstitute({
       id: row.id,

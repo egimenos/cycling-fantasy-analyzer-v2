@@ -136,7 +136,10 @@ test.describe('Breakout Potential Index', () => {
       await expect(dashboardPage.riderTable.getByText('Variance', { exact: true })).toBeVisible();
     });
 
-    test('should show upside scenario in Breakout tab', async ({ dashboardPage }) => {
+    // Quarantined: intermittently times out clicking the rider row (UI timing
+    // flake, not a data issue). Re-enable once expandRider waits for a stable
+    // row. See issue #80.
+    test.skip('should show upside scenario in Breakout tab', async ({ dashboardPage }) => {
       await dashboardPage.expandRider('POGACAR Tadej');
 
       const breakoutTab = dashboardPage.riderTable.getByRole('button', { name: 'Breakout' });

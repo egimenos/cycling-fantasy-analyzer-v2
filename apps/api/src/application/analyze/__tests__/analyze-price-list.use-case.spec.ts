@@ -10,7 +10,7 @@ import { RaceResult } from '../../../domain/race-result/race-result.entity';
 import { RaceType } from '../../../domain/shared/race-type.enum';
 import { RaceClass } from '../../../domain/shared/race-class.enum';
 import { ResultCategory } from '../../../domain/shared/result-category.enum';
-import { FetchStartlistUseCase } from '../../benchmark/fetch-startlist.use-case';
+import { StartlistRepositoryPort } from '../../../domain/startlist/startlist.repository.port';
 
 function createMockRider(
   overrides: Partial<{
@@ -127,9 +127,12 @@ describe('AnalyzePriceListUseCase', () => {
       deleteAll: jest.fn().mockResolvedValue(0),
     };
 
-    const mockFetchStartlist = {
-      execute: jest.fn().mockResolvedValue({ entries: [], fromCache: true }),
-    } as unknown as FetchStartlistUseCase;
+    const mockStartlistRepo = {
+      findByRace: jest.fn().mockResolvedValue([]),
+      existsForRace: jest.fn().mockResolvedValue(false),
+      saveMany: jest.fn().mockResolvedValue(0),
+      replaceForRace: jest.fn().mockResolvedValue(0),
+    } as unknown as StartlistRepositoryPort;
 
     useCase = new AnalyzePriceListUseCase(
       mockMatcher,
@@ -137,7 +140,7 @@ describe('AnalyzePriceListUseCase', () => {
       mockResultRepo,
       mockMlScoring,
       mockMlScoreRepo,
-      mockFetchStartlist,
+      mockStartlistRepo,
     );
   });
 
@@ -405,6 +408,19 @@ describe('AnalyzePriceListUseCase', () => {
         raceSlug: 'tour-de-france',
         year: new Date().getFullYear(),
         predictedScore: 100,
+        modelVersion: 'v1',
+        gcPts: 0,
+        stagePts: 0,
+        mountainPts: 0,
+        sprintPts: 0,
+        createdAt: new Date(),
+      },
+      {
+        id: '2',
+        riderId: 'r2',
+        raceSlug: 'tour-de-france',
+        year: new Date().getFullYear(),
+        predictedScore: 90,
         modelVersion: 'v1',
         gcPts: 0,
         stagePts: 0,

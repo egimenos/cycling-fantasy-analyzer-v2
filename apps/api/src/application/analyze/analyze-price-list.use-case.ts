@@ -2,7 +2,6 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import {
   EmptyPriceListError,
   MlServiceUnavailableError,
-  EmptyStartlistError,
   MlPredictionFailedError,
   AnalysisCancelledError,
 } from '../../domain/analyze/errors';
@@ -26,7 +25,11 @@ import {
   ML_SCORE_REPOSITORY_PORT,
 } from '../../domain/ml-score/ml-score.repository.port';
 import { RaceType } from '../../domain/shared/race-type.enum';
-import { FetchStartlistUseCase } from '../benchmark/fetch-startlist.use-case';
+import {
+  StartlistRepositoryPort,
+  STARTLIST_REPOSITORY_PORT,
+} from '../../domain/startlist/startlist.repository.port';
+import { StartlistEntry } from '../../domain/startlist/startlist-entry.entity';
 import { Rider } from '../../domain/rider/rider.entity';
 import { mapPriceListEntries, PriceListEntry, PriceListEntryDto } from './price-list-entry';
 import type {
@@ -98,7 +101,7 @@ export class AnalyzePriceListUseCase {
     @Inject(RACE_RESULT_REPOSITORY_PORT) private readonly resultRepo: RaceResultRepositoryPort,
     @Inject(ML_SCORING_PORT) private readonly mlScoring: MlScoringPort,
     @Inject(ML_SCORE_REPOSITORY_PORT) private readonly mlScoreRepo: MlScoreRepositoryPort,
-    private readonly fetchStartlist: FetchStartlistUseCase,
+    @Inject(STARTLIST_REPOSITORY_PORT) private readonly startlistRepo: StartlistRepositoryPort,
   ) {}
 
   async execute(input: AnalyzeInput, notifier?: ProgressNotifier): Promise<AnalyzeResponse> {
@@ -202,7 +205,22 @@ export class AnalyzePriceListUseCase {
     });
 
     // --- ML prediction enrichment ---
-    const mlPredictions = await this.fetchMlPredictions(input, notifier);
+    // The field for this race is the matched price-list riders — the freshest,
+    // most complete source of "who is racing" (the frontend imports the GMV
+    // price list on demand). We drive the ML off this field, not a separately
+    // scraped/persisted PCS startlist that can be stale.
+    const fieldByRiderId = new Map<string, { riderId: string; teamName: string | null }>();
+    for (const m of matchedEntries) {
+      if (!m.unmatched && m.matchedRider) {
+        fieldByRiderId.set(m.matchedRider.id, {
+          riderId: m.matchedRider.id,
+          teamName: m.matchedRider.currentTeam || null,
+        });
+      }
+    }
+    const field = [...fieldByRiderId.values()];
+
+    const mlPredictions = await this.fetchMlPredictions(input, field, notifier);
 
     const analyzedRiders: AnalyzedRider[] = matchedEntries.map((s) => {
       if (s.unmatched || !s.matchedRider) {
@@ -314,6 +332,7 @@ export class AnalyzePriceListUseCase {
    */
   private async fetchMlPredictions(
     input: AnalyzeInput,
+    field: { riderId: string; teamName: string | null }[],
     notifier?: ProgressNotifier,
   ): Promise<
     Map<
@@ -333,11 +352,29 @@ export class AnalyzePriceListUseCase {
       throw new MlServiceUnavailableError();
     }
 
-    // Check cache first
+    // No matched riders → nothing to score. Emit the remaining steps so the
+    // progress stream completes and return an empty map (every rider is
+    // unmatched and will be null anyway).
+    if (field.length === 0) {
+      const s3 = Date.now();
+      notifier?.stepStarted('fetching_startlist');
+      notifier?.stepCompleted('fetching_startlist', Date.now() - s3);
+      const s4 = Date.now();
+      notifier?.stepStarted('ml_predictions');
+      notifier?.stepCompleted('ml_predictions', Date.now() - s4);
+      return new Map();
+    }
+
+    // Check cache first. Only serve it when it covers the *current* field:
+    // riders in the price list that have no cached score mean the field grew
+    // (or the model/startlist changed) since the cache was written, so we must
+    // re-predict instead of silently returning null for the newcomers.
     const cached = await this.mlScoreRepo.findByRace(input.raceSlug!, input.year!, modelVersion);
-    if (cached.length > 0) {
+    const cachedRiderIds = new Set(cached.map((s) => s.riderId));
+    const cacheCoversField = field.length > 0 && field.every((f) => cachedRiderIds.has(f.riderId));
+    if (cached.length > 0 && cacheCoversField) {
       this.logger.debug(
-        `ML cache hit for ${input.raceSlug}/${input.year} (model ${modelVersion}, ${cached.length} predictions)`,
+        `ML cache hit for ${input.raceSlug}/${input.year} (model ${modelVersion}, ${cached.length} predictions, field ${field.length})`,
       );
 
       // Emit steps 3 & 4 instantly for cache hits
@@ -372,19 +409,24 @@ export class AnalyzePriceListUseCase {
     const step3Start = Date.now();
     notifier?.stepStarted('fetching_startlist');
 
-    // Scrape the startlist from PCS and persist it in DB. The ML service reads
-    // startlists from DB to discover which riders to predict for — we never
-    // pass synthetic riderIds (that inflates rider count and breaks scaling).
-    // The persisted startlist is also reused for benchmarks and future training.
-    const { entries: startlistEntries } = await this.fetchStartlist.execute({
-      raceSlug: input.raceSlug!,
-      year: input.year!,
-    });
-    if (startlistEntries.length === 0) {
-      throw new EmptyStartlistError(input.raceSlug!, input.year!);
-    }
+    // Persist the matched price-list riders as the authoritative startlist for
+    // this race, replacing any stale/partial rows. The ML service reads the
+    // startlist from the DB to discover which riders to predict for, so this
+    // fresh field (with team names) is exactly what gets scored. PCS-scraped
+    // startlists are only used by the benchmark flow, which has no price list.
+    const startlistEntries = field.map((f) =>
+      StartlistEntry.create({
+        raceSlug: input.raceSlug!,
+        year: input.year!,
+        riderId: f.riderId,
+        teamName: f.teamName,
+        bibNumber: null,
+        scrapedAt: new Date(),
+      }),
+    );
+    await this.startlistRepo.replaceForRace(input.raceSlug!, input.year!, startlistEntries);
     this.logger.log(
-      `Startlist ready for ${input.raceSlug}/${input.year}: ${startlistEntries.length} riders`,
+      `Startlist ready for ${input.raceSlug}/${input.year}: ${startlistEntries.length} riders (from price-list field)`,
     );
 
     notifier?.stepCompleted('fetching_startlist', Date.now() - step3Start);
