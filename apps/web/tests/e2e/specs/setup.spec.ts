@@ -38,7 +38,10 @@ test.describe('Setup Tab', () => {
   });
 
   // T022 — Race URL auto-detect (manual fallback)
-  test('should auto-detect race profile from PCS URL via manual fallback', async ({
+  // Quarantined: hits procyclingstats.com live, which intermittently 403s /
+  // rate-limits in CI. Re-enable once the PCS response is recorded/mocked.
+  // See issue #80.
+  test.skip('should auto-detect race profile from PCS URL via manual fallback', async ({
     setupPage,
     page,
   }) => {
