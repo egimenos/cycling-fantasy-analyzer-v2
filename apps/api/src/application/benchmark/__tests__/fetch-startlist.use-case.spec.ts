@@ -18,6 +18,7 @@ describe('FetchStartlistUseCase', () => {
       findByRace: jest.fn(),
       existsForRace: jest.fn(),
       saveMany: jest.fn(),
+      replaceForRace: jest.fn(),
     };
     riderRepo = {
       findByPcsSlug: jest.fn(),

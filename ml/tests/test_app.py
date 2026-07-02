@@ -134,17 +134,25 @@ class TestPredictEndpoint:
         # the point of this test is the refresh side-effect, not the outcome.
         assert resp.status_code == 404
 
-    def test_predict_does_not_refetch_startlist_when_already_in_cache(
+    def test_predict_always_refreshes_and_replaces_startlist_for_requested_race(
         self, client_with_model
     ):
-        """If the requested race is already present in the cached snapshot we
-        must NOT hit the DB again — the refresh path is strictly for cache
-        misses."""
-        cached_startlists = pd.DataFrame(
+        """Even when the requested race is already in the cached snapshot, the
+        startlist must be reloaded from the DB and REPLACE the cached rows.
+
+        The cached ``startlists_df`` is loaded once at process start (via
+        ``load_data``, which pulls ALL startlists) and never invalidated, so a
+        stale or partial startlist already in the snapshot would otherwise
+        shadow the fresh field. The API upserts the authoritative field (the GMV
+        price list) into ``startlist_entries`` right before calling us, so a
+        merge-if-absent policy would silently drop the newly-added riders.
+        """
+        # Stale snapshot: only 1 rider for the race.
+        stale_startlists = pd.DataFrame(
             [
                 {
                     'race_slug': 'tour-de-france',
-                    'year': 2025,
+                    'year': 2026,
                     'rider_id': 'rider-1',
                     'team_name': 'Team Y',
                 }
@@ -152,20 +160,48 @@ class TestPredictEndpoint:
         )
         app.state.data_cache = (
             pd.DataFrame(),
-            cached_startlists,
+            stale_startlists,
             {},
             {},
             {},
         )
 
+        # The DB now holds the full field (2 riders) for the same race.
+        fresh_startlist = pd.DataFrame(
+            [
+                {
+                    'race_slug': 'tour-de-france',
+                    'year': 2026,
+                    'rider_id': 'rider-1',
+                    'team_name': 'Team Y',
+                },
+                {
+                    'race_slug': 'tour-de-france',
+                    'year': 2026,
+                    'rider_id': 'rider-2',
+                    'team_name': 'Team Z',
+                },
+            ]
+        )
+
         with patch(
-            'src.api.app.load_startlist_for_race'
+            'src.api.app.load_startlist_for_race', return_value=fresh_startlist
         ) as mock_load_sl, patch(
             'src.api.app.get_race_info', return_value=None
         ):
             client_with_model.post(
                 '/predict',
-                json={'race_slug': 'tour-de-france', 'year': 2025},
+                json={'race_slug': 'tour-de-france', 'year': 2026},
             )
 
-        mock_load_sl.assert_not_called()
+        # The DB is queried even though the race was already in the snapshot.
+        mock_load_sl.assert_called_once()
+
+        _, cached_startlists, *_ = app.state.data_cache
+        race_rows = cached_startlists[
+            (cached_startlists['race_slug'] == 'tour-de-france')
+            & (cached_startlists['year'] == 2026)
+        ]
+        # Replaced, not duplicated: exactly the fresh field, no stale leftovers.
+        assert len(race_rows) == 2
+        assert set(race_rows['rider_id']) == {'rider-1', 'rider-2'}

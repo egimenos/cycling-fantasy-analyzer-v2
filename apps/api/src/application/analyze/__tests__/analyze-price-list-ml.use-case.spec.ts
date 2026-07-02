@@ -19,7 +19,7 @@ import { RaceResult } from '../../../domain/race-result/race-result.entity';
 import { RaceType } from '../../../domain/shared/race-type.enum';
 import { RaceClass } from '../../../domain/shared/race-class.enum';
 import { ResultCategory } from '../../../domain/shared/result-category.enum';
-import { FetchStartlistUseCase } from '../../benchmark/fetch-startlist.use-case';
+import { StartlistRepositoryPort } from '../../../domain/startlist/startlist.repository.port';
 
 function createMockRider(
   overrides: Partial<{
@@ -95,6 +95,7 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
   let mockResultRepo: jest.Mocked<RaceResultRepositoryPort>;
   let mockMlScoring: jest.Mocked<MlScoringPort>;
   let mockMlScoreRepo: jest.Mocked<MlScoreRepositoryPort>;
+  let mockStartlistRepo: jest.Mocked<StartlistRepositoryPort>;
 
   beforeEach(() => {
     mockMatcher = {
@@ -136,9 +137,12 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
       deleteAll: jest.fn().mockResolvedValue(0),
     };
 
-    const mockFetchStartlist = {
-      execute: jest.fn().mockResolvedValue({ entries: [], fromCache: true }),
-    } as unknown as FetchStartlistUseCase;
+    mockStartlistRepo = {
+      findByRace: jest.fn().mockResolvedValue([]),
+      existsForRace: jest.fn().mockResolvedValue(false),
+      saveMany: jest.fn().mockResolvedValue(0),
+      replaceForRace: jest.fn().mockResolvedValue(0),
+    };
 
     useCase = new AnalyzePriceListUseCase(
       mockMatcher,
@@ -146,7 +150,7 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
       mockResultRepo,
       mockMlScoring,
       mockMlScoreRepo,
-      mockFetchStartlist,
+      mockStartlistRepo,
     );
   });
 
@@ -396,5 +400,85 @@ describe('AnalyzePriceListUseCase — ML integration', () => {
     expect(rider.categoryScores).toHaveProperty('stage');
     expect(rider.categoryScores).toHaveProperty('mountain');
     expect(rider.categoryScores).toHaveProperty('sprint');
+  });
+
+  it('re-predicts when the price-list field grows beyond the cached startlist', async () => {
+    const currentYear = new Date().getFullYear();
+    const riderA = createMockRider({
+      id: 'rA',
+      fullName: 'Pogacar Tadej',
+      pcsSlug: 'pogacar-tadej',
+      currentTeam: 'UAE',
+    });
+    const riderB = createMockRider({
+      id: 'rB',
+      fullName: 'Van der Poel Mathieu',
+      pcsSlug: 'van-der-poel-mathieu',
+      currentTeam: 'Alpecin',
+    });
+    mockRiderRepo.findAll.mockResolvedValue([riderA, riderB]);
+    mockMatcher.matchRider.mockImplementation(async (rawName: string) =>
+      rawName.toUpperCase().includes('POGACAR')
+        ? { matchedRiderId: 'rA', confidence: 0.95, unmatched: false }
+        : { matchedRiderId: 'rB', confidence: 0.95, unmatched: false },
+    );
+    mockResultRepo.findByRiderIds.mockResolvedValue([]);
+
+    mockMlScoring.getModelVersion.mockResolvedValue('v1');
+    // Cache only covers rA (stale/partial startlist); rB is a newcomer in the field.
+    mockMlScoreRepo.findByRace.mockResolvedValue([
+      {
+        id: '1',
+        riderId: 'rA',
+        raceSlug: 'tour-de-france',
+        year: currentYear,
+        predictedScore: 250,
+        modelVersion: 'v1',
+        gcPts: 150,
+        stagePts: 60,
+        mountainPts: 25,
+        sprintPts: 15,
+        createdAt: new Date(),
+      },
+    ]);
+    // A fresh prediction covers the full field.
+    mockMlScoring.predictRace.mockResolvedValue([
+      {
+        riderId: 'rA',
+        predictedScore: 250,
+        breakdown: { gc: 150, stage: 60, mountain: 25, sprint: 15 },
+      },
+      {
+        riderId: 'rB',
+        predictedScore: 300,
+        breakdown: { gc: 0, stage: 200, mountain: 0, sprint: 100 },
+      },
+    ]);
+
+    const result = await useCase.execute({
+      riders: [
+        { name: 'POGACAR Tadej', team: 'UAE', price: 300 },
+        { name: 'VAN DER POEL Mathieu', team: 'Alpecin', price: 200 },
+      ],
+      raceType: RaceType.GRAND_TOUR,
+      raceSlug: 'tour-de-france',
+      year: currentYear,
+      budget: 2000,
+    });
+
+    // Partial cache must NOT be served — we re-predict...
+    expect(mockMlScoring.predictRace).toHaveBeenCalledTimes(1);
+    // ...and persist the full price-list field as the authoritative startlist.
+    expect(mockStartlistRepo.replaceForRace).toHaveBeenCalledTimes(1);
+    const [slug, yr, entries] = mockStartlistRepo.replaceForRace.mock.calls[0];
+    expect(slug).toBe('tour-de-france');
+    expect(yr).toBe(currentYear);
+    expect(entries).toHaveLength(2);
+
+    // No rider is left without a prediction (the original bug).
+    const byId = new Map(result.riders.map((r) => [r.matchedRider?.id, r]));
+    expect(byId.get('rA')?.totalProjectedPts).toBe(250);
+    expect(byId.get('rB')?.totalProjectedPts).toBe(300);
+    expect(result.riders.every((r) => r.totalProjectedPts !== null)).toBe(true);
   });
 });
